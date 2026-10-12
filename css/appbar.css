@@ -1,0 +1,18 @@
+/* Navigationsleiste oben: Lobby, Spielcode + Stand, Rollenwechsel, Rückgängig */
+:root { --appbar-h: 0px; }
+body.has-appbar { --appbar-h: 44px; }
+.appbar { display: none; position: sticky; top: 0; z-index: 40; height: 44px; align-items: center; gap: 8px; padding: 0 8px;
+  background: var(--panel2); border-bottom: 1px solid var(--line); font-size: .85rem; }
+.appbar.show { display: flex; }
+.ab-home { font-size: 1.25rem; text-decoration: none; color: var(--text); width: 36px; height: 36px; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; }
+.ab-home:active, .ab-role:active { background: var(--sunk, rgba(0,0,0,.3)); }
+.ab-code { font-family: var(--font-title); font-weight: 700; letter-spacing: .06em; white-space: nowrap; }
+.ab-stage { font-family: var(--font-body); font-weight: 500; color: var(--muted); letter-spacing: 0; }
+.ab-roles { display: flex; gap: 4px; margin-left: auto; overflow-x: auto; scrollbar-width: none; }
+.ab-roles::-webkit-scrollbar { display: none; }
+.ab-role { text-decoration: none; color: var(--muted); padding: 6px 10px; border-radius: 999px; border: 1px solid transparent; white-space: nowrap; min-height: 32px; display: inline-flex; align-items: center; }
+.ab-role.on { color: var(--text); border-color: var(--line); background: var(--panel); }
+.ab-role.p0.on { border-color: var(--p0); } .ab-role.p1.on { border-color: var(--p1); }
+.ab-undo { width: 36px; height: 36px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel); color: var(--text); font-size: 1.1rem; }
+.ab-undo:disabled { opacity: .35; }
+@media (max-width: 420px) { .ab-code .ab-stage { display: none; } .ab-role { padding: 6px 8px; } }

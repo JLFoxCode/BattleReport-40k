@@ -1,0 +1,6 @@
+BSData/wh40k-11e
+branch: main
+commit: 1b1ddfd2d064a9b5e7dbed7a63a2a4dd3aedfa29
+commit date: 2026-10-12T04:16:33Z
+downloaded: 2026-10-12
+source: https://github.com/BSData/wh40k-11e (14 changed files applied via the compare API)

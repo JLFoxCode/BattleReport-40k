@@ -1,0 +1,1479 @@
+{
+ "faction": "tau-empire",
+ "name": "T'au Empire",
+ "version": {
+  "bsdata": "3988a8bdd210f9d31ea5b6782d0016688ccb6815",
+  "wahapedia": "2026-10-11"
+ },
+ "sources": {
+  "rules": "bsdata (fallback wahapedia)",
+  "stratagems": "wahapedia",
+  "enhancements": "bsdata (fallback wahapedia)"
+ },
+ "armyRules": [
+  {
+   "name": "For the Greater Good",
+   "text": "If your Army Faction is **T’AU EMPIRE**, at the start of your Shooting phase you can select units from your army with this ability to become Observer units.\n\nDuring your Shooting phase, for each Observer unit from your army that has not been selected to shoot this phase and is eligible to shoot (excluding **FORTIFICATION** and Battle-shocked units) select one enemy unit that is visible to be marked as their Spotted unit until the end of the phase. Each enemy unit can only be marked as a Spotted unit once per phase.\n\nUnits from your army with the For the Greater Good ability (excluding Observer units) are Guided units while targeting one or more Spotted units.\n\nUntil the end of the phase, each time a model from your army in a Guided unit makes an attack that targets a Spotted unit, improve the Ballistic Skill characteristic of that attack by 1 and, if the Spotted unit was marked by an Observer unit that has the Markerlight keyword, that attack has the **[IGNORES COVER]** ability.",
+   "src": "bsdata"
+  }
+ ],
+ "detachments": {
+  "Mont'ka": {
+   "name": "Mont'ka",
+   "source": {
+    "rule": "bsdata",
+    "enhancements": "bsdata",
+    "stratagems": "wahapedia"
+   },
+   "rule": [
+    {
+     "name": "Killing Blow",
+     "text": "During the first, second and third battle rounds, ranged weapons equipped by **T’AU EMPIRE** models from your army have the **[ASSAULT]** ability. During the first, second and third battle rounds, while a unit is a Guided unit (see For the Greater Good), its ranged weapons have the **[LETHAL HITS]** ability."
+    },
+    {
+     "name": "Assault",
+     "text": "Units containing one or more models with an **[ASSAULT]** weapon can shoot using **assault shooting** (10.05)."
+    },
+    {
+     "name": "Lethal Hits",
+     "text": "Each time an attack made with a **[LETHAL HITS]** weapon results in a **critical hit**, you can choose for that attack to automatically wound the target. \n***Designer’s Note:** Choosing to automatically wound the target means that no **wound roll** is made for that attack. You may decide against this, as it means that attack cannot result in a **critical wound** and so cannot trigger other abilities such as [DEVASTATING WOUNDS].*"
+    }
+   ],
+   "stratagems": {
+    "Pinpoint Counter-Offensive": {
+     "name": "PINPOINT COUNTER-OFFENSIVE",
+     "cost": 1,
+     "costText": "1CP",
+     "detachment": "Mont’ka",
+     "category": "Battle Tactic",
+     "when": "Any phase.",
+     "target": "One T’AU EMPIRE unit (excluding KROOT units) from your army that was just destroyed. You can use this Stratagem on that unit even though it was just destroyed.",
+     "effect": "Until the end of the battle, each time a T’AU EMPIRE unit (excluding KROOT units) from your army makes an attack that targets the enemy unit that just destroyed your unit, you can re-roll the Hit roll.",
+     "restrictions": "",
+     "text": "WHEN: Any phase.\n\nTARGET: One T’AU EMPIRE unit (excluding KROOT units) from your army that was just destroyed. You can use this Stratagem on that unit even though it was just destroyed.\n\nEFFECT: Until the end of the battle, each time a T’AU EMPIRE unit (excluding KROOT units) from your army makes an attack that targets the enemy unit that just destroyed your unit, you can re-roll the Hit roll.",
+     "flavour": "Mont’ka emphasises rapid evolving threat-analysis and the application of overwhelming firepower to eliminate emergent high-priority targets.",
+     "src": "wahapedia"
+    },
+    "Aggressive Mobility": {
+     "name": "AGGRESSIVE MOBILITY",
+     "cost": 1,
+     "costText": "1CP",
+     "detachment": "Mont’ka",
+     "category": "Battle Tactic",
+     "when": "Your Movement phase.",
+     "target": "One T’AU EMPIRE unit from your army that has not been selected to move this phase.",
+     "effect": "Until the end of the phase, if your unit Advances, do not make an Advance roll for it. Instead, until the end of the phase, add 6\" to the Move characteristic of models in your unit.",
+     "restrictions": "",
+     "text": "WHEN: Your Movement phase.\n\nTARGET: One T’AU EMPIRE unit from your army that has not been selected to move this phase.\n\nEFFECT: Until the end of the phase, if your unit Advances, do not make an Advance roll for it. Instead, until the end of the phase, add 6\" to the Move characteristic of models in your unit.",
+     "flavour": "By advancing swiftly into commanding positions, Mont’ka forces maximise the benefits of their enemies' shock and disorientation.",
+     "src": "wahapedia"
+    },
+    "Focused Fire": {
+     "name": "FOCUSED FIRE",
+     "cost": 1,
+     "costText": "1CP",
+     "detachment": "Mont’ka",
+     "category": "Battle Tactic",
+     "when": "Start of your Shooting phase.",
+     "target": "Two T’AU EMPIRE units from your army that have not been selected to shoot this phase, and one enemy unit.",
+     "effect": "Until the end of the phase, each time a model in either of your units makes an attack, it can only target that enemy unit (and only if it is an eligible target for that attack), and when resolving that attack, improve the Armour Penetration characteristic by 1.",
+     "restrictions": "You cannot use this Stratagem during the fourth or fifth battle rounds.",
+     "text": "WHEN: Start of your Shooting phase.\n\nTARGET: Two T’AU EMPIRE units from your army that have not been selected to shoot this phase, and one enemy unit.\n\nEFFECT: Until the end of the phase, each time a model in either of your units makes an attack, it can only target that enemy unit (and only if it is an eligible target for that attack), and when resolving that attack, improve the Armour Penetration characteristic by 1.\n\nRESTRICTIONS: You cannot use this Stratagem during the fourth or fifth battle rounds.",
+     "flavour": "Mont’ka doctrine heavily emphasises the massed concentration of fire upon a single target at a time, obliterating each component of the enemy force in succession with a series of unrelenting barrages.",
+     "src": "wahapedia"
+    },
+    "Combat Debarkation": {
+     "name": "COMBAT DEBARKATION",
+     "cost": 1,
+     "costText": "1CP",
+     "detachment": "Mont’ka",
+     "category": "Battle Tactic",
+     "when": "Your Shooting phase.",
+     "target": "One T’AU EMPIRE INFANTRY unit from your army that disembarked from a TRANSPORT this turn.",
+     "effect": "Until the end of the phase, each time a model in your unit makes an attack that targets the closest enemy unit, you can re-roll the Wound roll.",
+     "restrictions": "",
+     "text": "WHEN: Your Shooting phase.\n\nTARGET: One T’AU EMPIRE INFANTRY unit from your army that disembarked from a TRANSPORT this turn.\n\nEFFECT: Until the end of the phase, each time a model in your unit makes an attack that targets the closest enemy unit, you can re-roll the Wound roll.",
+     "flavour": "The most aggressive Fire caste warriors sometimes spring from moving transports, roll with the impact of landing, and come up with weapons already blazing.",
+     "src": "wahapedia"
+    },
+    "Pulse Onslaught": {
+     "name": "PULSE ONSLAUGHT",
+     "cost": 2,
+     "costText": "2CP",
+     "detachment": "Mont’ka",
+     "category": "Strategic Ploy",
+     "when": "Your Shooting phase.",
+     "target": "One T’AU EMPIRE INFANTRY unit (excluding KROOT units) from your army that has just shot, and one enemy unit (excluding MONSTERS and VEHICLES) hit by one or more of those attacks.",
+     "effect": "Until the end of your opponent’s next turn, that enemy unit is shaken. While a unit is shaken, subtract 2 from its Move characteristic and subtract 2 from Advance and Charge rolls made for it.",
+     "restrictions": "",
+     "text": "WHEN: Your Shooting phase.\n\nTARGET: One T’AU EMPIRE INFANTRY unit (excluding KROOT units) from your army that has just shot, and one enemy unit (excluding MONSTERS and VEHICLES) hit by one or more of those attacks.\n\nEFFECT: Until the end of your opponent’s next turn, that enemy unit is shaken. While a unit is shaken, subtract 2 from its Move characteristic and subtract 2 from Advance and Charge rolls made for it.",
+     "flavour": "Rather than charge into hand-to-hand combat, T’au soldiery instead intensify their fire patterns, pinning their advancing foes and staving off their onslaught.",
+     "src": "wahapedia"
+    },
+    "Counterfire Defence Systems": {
+     "name": "COUNTERFIRE DEFENCE SYSTEMS",
+     "cost": 2,
+     "costText": "2CP",
+     "detachment": "Mont’ka",
+     "category": "Wargear",
+     "when": "Your opponent’s Shooting phase, just after an enemy unit has selected its targets.",
+     "target": "One T’AU EMPIRE unit from your army that was selected as the target of one or more of the attacking unit’s attacks.",
+     "effect": "Until the end of the phase, each time an attack is allocated to your unit, subtract 1 from the Damage characteristic of that attack.",
+     "restrictions": "",
+     "text": "WHEN: Your opponent’s Shooting phase, just after an enemy unit has selected its targets.\n\nTARGET: One T’AU EMPIRE unit from your army that was selected as the target of one or more of the attacking unit’s attacks.\n\nEFFECT: Until the end of the phase, each time an attack is allocated to your unit, subtract 1 from the Damage characteristic of that attack.",
+     "flavour": "Point-defence systems trigger as incoming fire is detected, blasting projectiles from the air and lessening the power of the enemy fusillade.",
+     "src": "wahapedia"
+    }
+   },
+   "enhancements": [
+    {
+     "name": "- Coordinated Exploitation",
+     "cost": 30,
+     "text": "**T’AU EMPIRE** model only (excluding **KROOT SHAPER** models). While the bearer is leading a unit, each time that unit is an Observer unit, until the end of the phase, ranged weapons equipped by models in a Guided unit have the **[SUSTAINED HITS 1]** ability while targeting their Spotted unit.",
+     "src": "bsdata"
+    },
+    {
+     "name": "- Exemplar of the Mont’ka",
+     "cost": 10,
+     "text": "**^^T’au Empire^^** model only (excluding **^^Kroot Shaper^^** models). While the bearer is leading a unit, the Killing Blow Detachment rule applies to that unit during the fourth battle round as well.",
+     "src": "bsdata"
+    },
+    {
+     "name": "- Strategic Conqueror",
+     "cost": 15,
+     "text": "**^^T’au Empire^^** model only. At the start of the first battle round, before the first turn begins, select one objective marker on the battlefield. While a friendly **^^T’au Empire^^** model is within range of that objective marker and the bearer is on the battlefield, add 1 to that friendly model's Objective Control characteristic.",
+     "src": "bsdata"
+    },
+    {
+     "name": "- Strike Swiftly",
+     "cost": 45,
+     "text": "In the Resolve Pre-battle Abilities step, you can select up to two friendly **T’AU EMPIRE** units within 6\" of this model that do not have the **Scouts** ability. Until the end of the battle, all models in the selected units have the **Scouts 6\"** ability.",
+     "src": "bsdata"
+    }
+   ],
+   "dp": 3
+  },
+  "Retaliation Cadre": {
+   "name": "Retaliation Cadre",
+   "source": {
+    "rule": "bsdata",
+    "enhancements": "bsdata",
+    "stratagems": "wahapedia"
+   },
+   "rule": [
+    {
+     "name": "Bonded Heroes",
+     "text": "Each time a **T’AU EMPIRE BATTLESUIT** model from your army makes a ranged attack that targets a unit within 12\", improve the Strength characteristic of that attack by 1. If that attack targets a unit within 8\", improve the Armour Penetration characteristic of that attack by 1 as well."
+    }
+   ],
+   "stratagems": {
+    "Fail-Safe Detonator": {
+     "name": "FAIL-SAFE DETONATOR",
+     "cost": 2,
+     "costText": "2CP",
+     "detachment": "Retaliation Cadre",
+     "category": "Epic Deed",
+     "when": "Any phase, just after a T’AU EMPIRE BATTLESUIT model from your army is destroyed.",
+     "target": "That destroyed model’s unit. You can use this Stratagem on that unit even if that unit was just destroyed.",
+     "effect": "Before removing your model from play, if it has the Deadly Demise ability, do not roll for that ability; instead, you can choose whether the result of that roll is a 1 or a 6. If your model does not have the Deadly Demise ability, roll one D6 for each unit within 6\" of it: on a 4+, that unit suffers D3 mortal wounds.",
+     "restrictions": "",
+     "text": "WHEN: Any phase, just after a T’AU EMPIRE BATTLESUIT model from your army is destroyed.\n\nTARGET: That destroyed model’s unit. You can use this Stratagem on that unit even if that unit was just destroyed.\n\nEFFECT: Before removing your model from play, if it has the Deadly Demise ability, do not roll for that ability; instead, you can choose whether the result of that roll is a 1 or a 6. If your model does not have the Deadly Demise ability, roll one D6 for each unit within 6\" of it: on a 4+, that unit suffers D3 mortal wounds.",
+     "flavour": "Devices are incorporated into some battlesuits either to prevent high-ranking pilots being taken alive for interrogation or to prevent just such fatal explosions.",
+     "src": "wahapedia"
+    },
+    "Stimm Injectors": {
+     "name": "STIMM INJECTORS",
+     "cost": 1,
+     "costText": "1CP",
+     "detachment": "Retaliation Cadre",
+     "category": "Wargear",
+     "when": "Your opponent’s Shooting phase or the Fight phase, just after an enemy unit has selected its targets.",
+     "target": "One T’AU EMPIRE BATTLESUIT unit from your army that was selected as the target of one or more of the attacking unit’s attacks.",
+     "effect": "Until the end of the phase, models in your unit have the Feel No Pain 6+ ability.",
+     "restrictions": "",
+     "text": "WHEN: Your opponent’s Shooting phase or the Fight phase, just after an enemy unit has selected its targets.\n\nTARGET: One T’AU EMPIRE BATTLESUIT unit from your army that was selected as the target of one or more of the attacking unit’s attacks.\n\nEFFECT: Until the end of the phase, models in your unit have the Feel No Pain 6+ ability.",
+     "flavour": "On-board hypodermics shunt pain-blockers and chemical stimulants into the pilot's system.",
+     "src": "wahapedia"
+    },
+    "The Shortened Blade": {
+     "name": "THE SHORTENED BLADE",
+     "cost": 2,
+     "costText": "2CP",
+     "detachment": "Retaliation Cadre",
+     "category": "Strategic Ploy",
+     "when": "Your Movement phase.",
+     "target": "One T’AU EMPIRE BATTLESUIT unit from your army that is arriving using the Deep Strike ability this phase.",
+     "effect": "Your unit can be set up anywhere on the battlefield that is more than 6\" horizontally away from all enemy models.",
+     "restrictions": "A unit targeted with this Stratagem is not eligible to declare a charge in the same turn.",
+     "text": "WHEN: Your Movement phase.\n\nTARGET: One T’AU EMPIRE BATTLESUIT unit from your army that is arriving using the Deep Strike ability this phase.\n\nEFFECT: Your unit can be set up anywhere on the battlefield that is more than 6\" horizontally away from all enemy models.\n\nRESTRICTIONS: A unit targeted with this Stratagem is not eligible to declare a charge in the same turn.",
+     "flavour": "Made famous by Commander Farsight and his protege Brightsword, this philosophy encourages pilots to drop into the very teeth of the enemy army and apply their firepower at point-blank range.",
+     "src": "wahapedia"
+    },
+    "The Arro'kon Protocol": {
+     "name": "THE ARRO’KON PROTOCOL",
+     "cost": 1,
+     "costText": "1CP",
+     "detachment": "Retaliation Cadre",
+     "category": "Battle Tactic",
+     "when": "Your Shooting phase.",
+     "target": "One T’AU EMPIRE BATTLESUIT unit from your army that has not been selected to shoot this phase.",
+     "effect": "Until the end of the phase, each time a model in your unit makes an attack that targets an enemy unit that contains 6 or more models, that attack has the [SUSTAINED HITS 1] ability. If that attack targets an enemy unit that contains 11 or more models, it has the [SUSTAINED HITS 2] ability instead.",
+     "restrictions": "",
+     "text": "WHEN: Your Shooting phase.\n\nTARGET: One T’AU EMPIRE BATTLESUIT unit from your army that has not been selected to shoot this phase.\n\nEFFECT: Until the end of the phase, each time a model in your unit makes an attack that targets an enemy unit that contains 6 or more models, that attack has the [SUSTAINED HITS 1] ability. If that attack targets an enemy unit that contains 11 or more models, it has the [SUSTAINED HITS 2] ability instead.",
+     "flavour": "Commander Arro’kon’s teachings are considered pre-eminent in the art of engaging and eliminating numerically overwhelming enemy formations.",
+     "src": "wahapedia"
+    },
+    "The Torchstar Gambit": {
+     "name": "THE TORCHSTAR GAMBIT",
+     "cost": 1,
+     "costText": "1CP",
+     "detachment": "Retaliation Cadre",
+     "category": "Strategic Ploy",
+     "when": "Your Shooting phase.",
+     "target": "One T’AU EMPIRE BATTLESUIT unit from your army that can FLY whose attacks have been resolved this phase.",
+     "effect": "If your unit is not within Engagement Range of one or more enemy units, it can make a Normal move. If it does, your unit cannot declare a charge this turn",
+     "restrictions": "",
+     "text": "WHEN: Your Shooting phase.\n\nTARGET: One T’AU EMPIRE BATTLESUIT unit from your army that can FLY whose attacks have been resolved this phase.\n\nEFFECT: If your unit is not within Engagement Range of one or more enemy units, it can make a Normal move. If it does, your unit cannot declare a charge this turn",
+     "flavour": "Though now disgraced by association with O'Shovah, Sub-Commander Torchstar’s strike-and-fade tactics are still taught - albeit officially under other names - in many Fire caste academies.",
+     "src": "wahapedia"
+    },
+    "Grav-Inhibitor Field": {
+     "name": "GRAV-INHIBITOR FIELD",
+     "cost": 1,
+     "costText": "1CP",
+     "detachment": "Retaliation Cadre",
+     "category": "Strategic Ploy",
+     "when": "Your opponent’s Charge phase, just after an enemy unit has declared a charge.",
+     "target": "One T’AU EMPIRE BATTLESUIT unit from your army that was selected as a target of that charge.",
+     "effect": "That enemy unit must immediately take a Battle-shock test and you must roll one D6 for each model in that enemy unit: for each 6, that enemy unit suffers 1 mortal wound.",
+     "restrictions": "",
+     "text": "WHEN: Your opponent’s Charge phase, just after an enemy unit has declared a charge.\n\nTARGET: One T’AU EMPIRE BATTLESUIT unit from your army that was selected as a target of that charge.\n\nEFFECT: That enemy unit must immediately take a Battle-shock test and you must roll one D6 for each model in that enemy unit: for each 6, that enemy unit suffers 1 mortal wound.",
+     "flavour": "First used by O’Jir during the battle for Laguna Shard, these battlesuit-mounted emitters batter advancing foes backwards with gravitic pulse waves.",
+     "src": "wahapedia"
+    }
+   },
+   "enhancements": [
+    {
+     "name": "- Internal Grenade Racks",
+     "cost": 20,
+     "text": "**^^T’au Empire Battlesuit^^** model only. The bearer has the **^^Grenades^^** keyword, and each time the bearer ends a Normal move, you can select one enemy unit that it moved over during that move. If you do, roll six D6: for each 4+, that enemy unit suffers 1 mortal wound.",
+     "src": "bsdata"
+    },
+    {
+     "name": "- Prototype Weapon System",
+     "cost": 15,
+     "text": "**^^T’au Empire Battlesuit^^** model only. Each time the bearer is select to shoot, select either the **[LETHAL HITS]** or **[SUSTAINED HITS 1]** ability. Until those attacks are resolved, ranged weapons equipped by the bearer have the select ability.",
+     "src": "bsdata"
+    },
+    {
+     "name": "- Puretide Engram Neurochip",
+     "cost": 15,
+     "text": "**T’AU EMPIRE BATTLESUIT** model only. Each time you target the bearer’s unit with a Stratagem, roll one D6: on a 4+, you gain 1CP.",
+     "src": "bsdata"
+    },
+    {
+     "name": "- Starflare Ignition System",
+     "cost": 20,
+     "text": "**^^T’au Empire Battlesuit^^** model only. At the end of your opponent's turn, if the bearer's unit is not within Engagement Range of one or more enemy units, you can remove that unit from the battlefield and place it into Strategic Reserves.",
+     "src": "bsdata"
+    }
+   ],
+   "dp": 3
+  },
+  "Kauyon": {
+   "name": "Kauyon",
+   "source": {
+    "rule": "bsdata",
+    "enhancements": "bsdata",
+    "stratagems": "wahapedia"
+   },
+   "rule": [
+    {
+     "name": "Patient Hunter",
+     "text": "During the third, fourth and fifth battle rounds, ranged weapons equipped by **T’AU EMPIRE** models from your army have the **[SUSTAINED HITS 1]** ability. During the third, fourth and fifth battle rounds, while a unit is a Guided unit (see For the Greater Good), each time a ranged attack is made by a model in that unit that targets a Spotted unit, you can ignore any or all modifiers to that attack’s Ballistic skill characteristics and/or all modifiers to the Hit roll."
+    },
+    {
+     "name": "Sustained Hits",
+     "text": "This ability always takes the form **[SUSTAINED HITS X]**. Each time an attack made with a **[SUSTAINED HITS]** weapon results in a **critical hit**, that attack results in a number of additional hits on the target as denoted by **X**.\n***Example:** An attack made with a **[SUSTAINED HITS 2]** weapon results in a **critical hit**. That attack therefore hits the target three times (once from the **critical hit**, and twice more from the **[SUSTAINED HITS 2]** ability).*"
+    }
+   ],
+   "stratagems": {
+    "A Tempting Trap": {
+     "name": "A TEMPTING TRAP",
+     "cost": 1,
+     "costText": "1CP",
+     "detachment": "Kauyon",
+     "category": "Battle Tactic",
+     "when": "Your Shooting phase.",
+     "target": "One T’AU EMPIRE unit from your army that has not been selected to shoot this phase. The first time you use this Stratagem, you must also select one objective marker that is not in your opponent’s deployment zone; until the end of the battle, this becomes your Trap objective marker.",
+     "effect": "Until the end of the phase, each time a model in your unit makes a ranged attack that targets an enemy unit within range of your Trap objective marker, add 1 to the Wound roll.",
+     "restrictions": "You cannot use this Stratagem during the first or second battle rounds.",
+     "text": "WHEN: Your Shooting phase.\n\nTARGET: One T’AU EMPIRE unit from your army that has not been selected to shoot this phase. The first time you use this Stratagem, you must also select one objective marker that is not in your opponent’s deployment zone; until the end of the battle, this becomes your Trap objective marker.\n\nEFFECT: Until the end of the phase, each time a model in your unit makes a ranged attack that targets an enemy unit within range of your Trap objective marker, add 1 to the Wound roll.\n\nRESTRICTIONS: You cannot use this Stratagem during the first or second battle rounds.",
+     "flavour": "Kauyon teaches that many things can be used to bait a trap, luring the foe into position.",
+     "src": "wahapedia"
+    },
+    "Point-Blank Ambush": {
+     "name": "POINT-BLANK AMBUSH",
+     "cost": 1,
+     "costText": "1CP",
+     "detachment": "Kauyon",
+     "category": "Battle Tactic",
+     "when": "Your Shooting phase.",
+     "target": "One T’AU EMPIRE unit from your army that has not been selected to shoot this phase.",
+     "effect": "Until the end of the phase, each time a model in your unit makes a ranged attack that targets an enemy unit within 9\", improve the Armour Penetration characteristic of that attack by 1.",
+     "restrictions": "You cannot use this Stratagem during the first or second battle rounds.",
+     "text": "WHEN: Your Shooting phase.\n\nTARGET: One T’AU EMPIRE unit from your army that has not been selected to shoot this phase.\n\nEFFECT: Until the end of the phase, each time a model in your unit makes a ranged attack that targets an enemy unit within 9\", improve the Armour Penetration characteristic of that attack by 1.\n\nRESTRICTIONS: You cannot use this Stratagem during the first or second battle rounds.",
+     "flavour": "Devastating firepower need not be applied from afar, especially when striking an unsuspecting foe.",
+     "src": "wahapedia"
+    },
+    "Coordinate to Engage": {
+     "name": "COORDINATE TO ENGAGE",
+     "cost": 1,
+     "costText": "1CP",
+     "detachment": "Kauyon",
+     "category": "Battle Tactic",
+     "when": "Your Shooting phase.",
+     "target": "One T’AU EMPIRE unit from your army that has just been selected as an Observer unit (see For the Greater Good).",
+     "effect": "Until the end of the phase, each time a model in your unit makes an attack that targets their Spotted unit, improve the Ballistic Skill characteristic of that attack by 1 and, if your unit has the MARKERLIGHT keyword, that attack has the [IGNORES COVER] ability.",
+     "restrictions": "",
+     "text": "WHEN: Your Shooting phase.\n\nTARGET: One T’AU EMPIRE unit from your army that has just been selected as an Observer unit (see For the Greater Good).\n\nEFFECT: Until the end of the phase, each time a model in your unit makes an attack that targets their Spotted unit, improve the Ballistic Skill characteristic of that attack by 1 and, if your unit has the MARKERLIGHT keyword, that attack has the [IGNORES COVER] ability.",
+     "flavour": "T’au Hunter Cadres work in close coordination to destroy the most dangerous enemy targets.",
+     "src": "wahapedia"
+    },
+    "Combat Embarkation": {
+     "name": "COMBAT EMBARKATION",
+     "cost": 1,
+     "costText": "1CP",
+     "detachment": "Kauyon",
+     "category": "Wargear",
+     "when": "Your opponent’s Charge phase, just after an enemy unit has declared a charge.",
+     "target": "One T’AU EMPIRE INFANTRY unit from your army that was selected as one of the targets of that charge, and one friendly TRANSPORT.",
+     "effect": "Your unit can embark within that TRANSPORT. If it does, your opponent can select new targets for that charge.",
+     "restrictions": "Every model in your T’AU EMPIRE INFANTRY unit must be within 3\" of that TRANSPORT and there must be sufficient transport capacity to embark the entire unit.",
+     "text": "WHEN: Your opponent’s Charge phase, just after an enemy unit has declared a charge.\n\nTARGET: One T’AU EMPIRE INFANTRY unit from your army that was selected as one of the targets of that charge, and one friendly TRANSPORT.\n\nEFFECT: Your unit can embark within that TRANSPORT. If it does, your opponent can select new targets for that charge.\n\nRESTRICTIONS: Every model in your T’AU EMPIRE INFANTRY unit must be within 3\" of that TRANSPORT and there must be sufficient transport capacity to embark the entire unit.",
+     "flavour": "Those who act as the lure in the Kauyon must be ready to make a hasty withdrawal once the enemy closes into killing range, lest they be trapped.",
+     "src": "wahapedia"
+    },
+    "Photon Grenades": {
+     "name": "PHOTON GRENADES",
+     "cost": 1,
+     "costText": "1CP",
+     "detachment": "Kauyon",
+     "category": "Wargear",
+     "when": "Your opponent's charge phase, just after an enemy unit has selected its charge target.",
+     "target": "One T’AU EMPIRE GRENADES unit from your army that was selected as one of the targets of that charge.",
+     "effect": "That enemy unit must immediately take a Battle-shock test, and until the end of the phase, subtract 2 from Charge rolls made for that enemy unit.",
+     "restrictions": "You cannot target a unit that is within Engagement Range of one or more enemy units.",
+     "text": "WHEN: Your opponent's charge phase, just after an enemy unit has selected its charge target.\n\nTARGET: One T’AU EMPIRE GRENADES unit from your army that was selected as one of the targets of that charge.\n\nEFFECT: That enemy unit must immediately take a Battle-shock test, and until the end of the phase, subtract 2 from Charge rolls made for that enemy unit.\n\nRESTRICTION: You cannot target a unit that is within Engagement Range of one or more enemy units.",
+     "flavour": "Hurling a volley of photon grenades, the T’au leave their enemies dazzled and disorientated, unable to close the distance into combat at a crucial moment.",
+     "src": "wahapedia"
+    },
+    "Wall of Mirrors": {
+     "name": "WALL OF MIRRORS",
+     "cost": 1,
+     "costText": "1CP",
+     "detachment": "Kauyon",
+     "category": "Battle Tactic",
+     "when": "End of your opponent’s Fight phase.",
+     "target": "One STEALTH, GHOSTKEEL or COMMANDER SHADOWSUN unit from your army.",
+     "effect": "Remove your unit from the battlefield and place it into Strategic Reserves.",
+     "restrictions": "You cannot target a unit that is within Engagement Range of one or more enemy units.",
+     "text": "WHEN: End of your opponent’s Fight phase.\n\nTARGET: One STEALTH, GHOSTKEEL or COMMANDER SHADOWSUN unit from your army.\n\nEFFECT: Remove your unit from the battlefield and place it into Strategic Reserves.\n\nRESTRICTIONS: You cannot target a unit that is within Engagement Range of one or more enemy units.",
+     "flavour": "T’au Stealth Cadres utilise obfuscation fields and wide-band refraction beams to mask their advance.",
+     "src": "wahapedia"
+    }
+   },
+   "enhancements": [
+    {
+     "name": "- Exemplar of the Kauyon",
+     "cost": 20,
+     "text": "**^^T’au Empire^^** model only (excluding **^^Kroot Shaper^^** models). While the bearer is leading a unit, the Patient Hunter Detachment rule applies to that unit from the second battle round onwards instead of the third.",
+     "src": "bsdata"
+    },
+    {
+     "name": "- Precision of the Patient Hunter",
+     "cost": 15,
+     "text": "**^^T’au Empire^^** model only. Each time the bearer makes a ranged attack, add 1 to the Hit roll. From the third battle round onwards, add 1 to the Wound roll as well.",
+     "src": "bsdata"
+    },
+    {
+     "name": "- Solid-image Projection Unit",
+     "cost": 20,
+     "text": "**^^T’au Empire^^** model only. After both players have deployed their armies, select up to three **^^T’au Empire^^** units from your army and redeploy them. When doing so, you can set those units up in Strategic Reserves if you wish, regardless of how many units are already in Strategic Reserves.",
+     "src": "bsdata"
+    },
+    {
+     "name": "- Through Unity, Devastation",
+     "cost": 30,
+     "text": "**T’AU EMPIRE** model only (excluding **KROOT SHAPER** models). While the bearer is leading a unit, each time that unit is an Observer unit, until the end of the phase, ranged weapons equipped by models in a Guided unit have the **[LETHAL HITS]** ability while targeting their Spotted unit.",
+     "src": "bsdata"
+    }
+   ],
+   "dp": 2
+  },
+  "Kroot Hunting Pack": {
+   "name": "Kroot Hunting Pack",
+   "source": {
+    "rule": "bsdata",
+    "enhancements": "bsdata",
+    "stratagems": "wahapedia"
+   },
+   "rule": [
+    {
+     "name": "Hunter's Instincts",
+     "text": "Each time a **^^Kroot^^** model from your army makes an attack, add 1 to the Hit roll if the target of that attack is below its Starting Strength, and add 1 to the Wound roll as well if the target of that attack is Below Half-strength."
+    },
+    {
+     "name": "Skirmish Fighters",
+     "text": "**^^Kroot^^** models from your army have a 6+ invulnerable save against melee attacks and a 5+ invulnerable save against ranged attacks."
+    }
+   ],
+   "stratagems": {
+    "Join the Hunt": {
+     "name": "JOIN THE HUNT",
+     "cost": 2,
+     "costText": "2CP",
+     "detachment": "Kroot Hunting Pack",
+     "category": "Battle Tactic",
+     "when": "Any phase.",
+     "target": "One KROOT INFANTRY or KROOT HOUNDS unit from your army that was just destroyed. You can use this Stratagem on that unit even though it was just destroyed.",
+     "effect": "Add a new unit to your army identical to your destroyed unit, in Strategic Reserves, at its Starting Strength.",
+     "restrictions": "This Stratagem cannot be used to return destroyed CHARACTER units to Attached units. You can only use this Stratagem once per battle.",
+     "text": "WHEN: Any phase.\n\nTARGET: One KROOT INFANTRY or KROOT HOUNDS unit from your army that was just destroyed. You can use this Stratagem on that unit even though it was just destroyed.\n\nEFFECT: Add a new unit to your army identical to your destroyed unit, in Strategic Reserves, at its Starting Strength.\n\nRESTRICTIONS: This Stratagem cannot be used to return destroyed CHARACTER units to Attached units. You can only use this Stratagem once per battle.",
+     "flavour": "When a Kroot Hunting Pack closes in on its prey, there are often other hunters waiting to join in the fray and take their share of any spoils.",
+     "src": "wahapedia"
+    },
+    "A Trap Well Laid": {
+     "name": "A TRAP WELL LAID",
+     "cost": 1,
+     "costText": "1CP",
+     "detachment": "Kroot Hunting Pack",
+     "category": "Battle Tactic",
+     "when": "Your Shooting phase or the Fight phase.",
+     "target": "One KROOT unit from your army that has not been selected to shoot or fight this phase.",
+     "effect": "After your unit has resolved its attacks this phase, select one enemy unit that was hit by one or more of those attacks. Until the end of the phase, each time a KROOT model from your army makes an attack that targets that enemy unit, unless the attacking unit is Battle-shocked, improve the Armour Penetration characteristic of that attack by 1.",
+     "restrictions": "",
+     "text": "WHEN: Your Shooting phase or the Fight phase.\n\nTARGET: One KROOT unit from your army that has not been selected to shoot or fight this phase.\n\nEFFECT: After your unit has resolved its attacks this phase, select one enemy unit that was hit by one or more of those attacks. Until the end of the phase, each time a KROOT model from your army makes an attack that targets that enemy unit, unless the attacking unit is Battle-shocked, improve the Armour Penetration characteristic of that attack by 1.",
+     "flavour": "The Kroot have long perfected the art of ambush hunting, their packs working in deadly concert.",
+     "src": "wahapedia"
+    },
+    "EMP Grenades": {
+     "name": "EMP GRENADES",
+     "cost": 1,
+     "costText": "1CP",
+     "detachment": "Kroot Hunting Pack",
+     "category": "Wargear",
+     "when": "Your opponent’s Shooting phase or the Fight phase, just after an enemy VEHICLE unit is selected to shoot or fight.",
+     "target": "One KROOT GRENADES unit from your army within 8\" of that enemy VEHICLE unit.",
+     "effect": "Until the end of the phase, worsen the Weapon Skill and Ballistic Skill characteristics of that enemy VEHICLE unit’s weapons by 1.",
+     "restrictions": "",
+     "text": "WHEN: Your opponent’s Shooting phase or the Fight phase, just after an enemy VEHICLE unit is selected to shoot or fight.\n\nTARGET: One KROOT GRENADES unit from your army within 8\" of that enemy VEHICLE unit.\n\nEFFECT: Until the end of the phase, worsen the Weapon Skill and Ballistic Skill characteristics of that enemy VEHICLE unit’s weapons by 1.",
+     "flavour": "Furnished by T’au allies or returning Farstalkers, these electromagnetic grenades wreak havoc with the animuses of armoured fighting vehicles.",
+     "src": "wahapedia"
+    },
+    "The Grisly Feast": {
+     "name": "THE GRISLY FEAST",
+     "cost": 1,
+     "costText": "1CP",
+     "detachment": "Kroot Hunting Pack",
+     "category": "Strategic Ploy",
+     "when": "Fight phase.",
+     "target": "One KROOT unit from your army that destroyed one or more enemy units this phase.",
+     "effect": "In your opponent’s next Command phase, each enemy unit within 6\" of your unit must take a Battle-shock test. If the unit taking that test is Below Half-strength, subtract 1 from that test. Enemy units affected by this Stratagem do not need to take any other Battle-shock tests in the same phase.",
+     "restrictions": "",
+     "text": "WHEN: Fight phase.\n\nTARGET: One KROOT unit from your army that destroyed one or more enemy units this phase.\n\nEFFECT: In your opponent’s next Command phase, each enemy unit within 6\" of your unit must take a Battle-shock test. If the unit taking that test is Below Half-strength, subtract 1 from that test. Enemy units affected by this Stratagem do not need to take any other Battle-shock tests in the same phase.",
+     "flavour": "The psychological impact of witnessing one's comrades being dismembered and devoured by gore-splattered Kroot cannot be overstated.",
+     "src": "wahapedia"
+    },
+    "Guerrilla Warriors": {
+     "name": "GUERRILLA WARRIORS",
+     "cost": 1,
+     "costText": "1CP",
+     "detachment": "Kroot Hunting Pack",
+     "category": "Strategic Ploy",
+     "when": "Your Movement phase, just after a KROOT unit from your army Falls Back.",
+     "target": "That KROOT unit.",
+     "effect": "Until the end of the turn, your unit is eligible to shoot and declare a charge.",
+     "restrictions": "",
+     "text": "WHEN: Your Movement phase, just after a KROOT unit from your army Falls Back.\n\nTARGET: That KROOT unit.\n\nEFFECT: Until the end of the turn, your unit is eligible to shoot and declare a charge.",
+     "flavour": "Kroot see no value in stand-up fights, caring little for honour or glory. They hit and fade, frustrating their foes and bleeding them by degrees until - weakened and out of position - they are rendered vulnerable.",
+     "src": "wahapedia"
+    },
+    "Hidden Hunters": {
+     "name": "HIDDEN HUNTERS",
+     "cost": 1,
+     "costText": "1CP",
+     "detachment": "Kroot Hunting Pack",
+     "category": "Strategic Ploy",
+     "when": "Your opponent’s Shooting phase, just after an enemy unit has selected its targets.",
+     "target": "One KROOT unit from your army that was selected as the target of one or more of the attacking unit’s attacks.",
+     "effect": "Until the end of the phase, your unit can only be selected as the target of a ranged attack if the attacking model is within 18\".",
+     "restrictions": "",
+     "text": "WHEN: Your opponent’s Shooting phase, just after an enemy unit has selected its targets.\n\nTARGET: One KROOT unit from your army that was selected as the target of one or more of the attacking unit’s attacks.\n\nEFFECT: Until the end of the phase, your unit can only be selected as the target of a ranged attack if the attacking model is within 18\".",
+     "flavour": "The Kroot are experts in camouflage and concealment, able to utilise cover in ways most foes would never consider and - to their great misfortune - do not anticipate.",
+     "src": "wahapedia"
+    }
+   },
+   "enhancements": [
+    {
+     "name": "- Borthrod Gland",
+     "cost": 15,
+     "text": "**^^Kroot Flesh Shaper^^** only. While the bearer is leading a unit, each time a model in that unit makes a melee attack, an unmodified Hit roll of 5+ scores a Critical Hit.",
+     "src": "bsdata"
+    },
+    {
+     "name": "- Kroothawk Flock",
+     "cost": 10,
+     "text": "**^^Kroot^^** model only. Ranged weapons equipped by models in the bearer's unit have the **[IGNORES COVER]** ability, and enemy units that are set up on the battlefield as Reinforcements cannot be set up within 12\" horizontally of the bearer.",
+     "src": "bsdata"
+    },
+    {
+     "name": "- Nomadic Hunter",
+     "cost": 20,
+     "text": "**^^Kroot Trail Shaper^^** model only. While the bearer is leading a unit, add 3\" to the Move characteristic of models in that unit and ranged weapons equipped by the models in that unit have the **[ASSAULT]** ability.",
+     "src": "bsdata"
+    },
+    {
+     "name": "- Root-carved Weapons",
+     "cost": 10,
+     "text": "**^^Kroot War Shaper^^** model only. All weapons equipped by the bearer have the **[PRECISION]** and **[DEVASTATING WOUNDS]** abilities.",
+     "src": "bsdata"
+    }
+   ],
+   "dp": 2
+  },
+  "Auxiliary Cadre": {
+   "name": "Auxiliary Cadre",
+   "source": {
+    "rule": "bsdata",
+    "enhancements": "bsdata",
+    "stratagems": "wahapedia"
+   },
+   "rule": [
+    {
+     "name": "Integrated Command Structure",
+     "text": "Friendly **KROOT/VESPID STINGWINGS** units have the Harnessed Alien Instincts ability.\n\nFriendly **GHOSTKEEL BATTLESUIT/STEALTH BATTLESUITS** units have the Localised Stealth Projectors (Aura) ability\n\nThis **detachment** has the **AUXILIARIES** tag and cannot be taken with another **AUXILIARIES detachment**."
+    },
+    {
+     "name": "Localised Stealth Projectors (Aura)",
+     "text": "When a friendly **KROOT/VESPID STINGWINGS** unit within 6\" of this unit has shot, those attacks do not prevent that unit from being **hidden**."
+    },
+    {
+     "name": "Harnessed Alien Instincts",
+     "text": "In your Shooting phase, this unit can select one **visible** enemy unit within 12\". That enemy unit is **prey‑marked**:\n- While a unit is **prey‑marked**, that unit has +3\" **detection range**."
+    }
+   ],
+   "stratagems": {
+    "Experimental Modifications": {
+     "name": "EXPERIMENTAL MODIFICATIONS",
+     "cost": 1,
+     "costText": "1CP",
+     "detachment": "Auxiliary Cadre",
+     "category": "",
+     "when": "Your Shooting phase or the Fight phase, when a friendly KROOT/VESPID STINGWINGS unit is selected to attack.",
+     "target": "That KROOT/VESPID STINGWINGS unit.",
+     "effect": "Your unit’s attacks have +1 AP.",
+     "restrictions": "",
+     "text": "WHEN: Your Shooting phase or the Fight phase, when a friendly KROOT/VESPID STINGWINGS unit is selected to attack.\n\nTARGET: That KROOT/VESPID STINGWINGS unit.\n\nEFFECT: Your unit’s attacks have +1 AP.",
+     "flavour": "These experimental Earth caste weapon upgrades can only activate for short bursts at a time, but the extra stopping power they provide is formidable.",
+     "src": "wahapedia"
+    },
+    "Alien Expertise": {
+     "name": "ALIEN EXPERTISE",
+     "cost": 1,
+     "costText": "1CP",
+     "detachment": "Auxiliary Cadre",
+     "category": "",
+     "when": "Your Movement phase, when a friendly KROOT/VESPID STINGWINGS unit is selected to make an advance move.",
+     "target": "That KROOT/VESPID STINGWINGS unit.",
+     "effect": "That move does not prevent your unit from being eligible to declare a charge.",
+     "restrictions": "",
+     "text": "WHEN: Your Movement phase, when a friendly KROOT/VESPID STINGWINGS unit is selected to make an advance move.\n\nTARGET: That KROOT/VESPID STINGWINGS unit.\n\nEFFECT: That move does not prevent your unit from being eligible to declare a charge.",
+     "flavour": "There is much that the alien auxiliaries of the T’au empire can teach the Fire caste, not least through practical and deadly battlefield demonstrations.",
+     "src": "wahapedia"
+    },
+    "Guided Fire": {
+     "name": "GUIDED FIRE",
+     "cost": 1,
+     "costText": "1CP",
+     "detachment": "Auxiliary Cadre",
+     "category": "",
+     "when": "Your Shooting phase, when a friendly T’AU EMPIRE unit (excluding KROOT/VESPID STINGWINGS units) is selected to shoot.",
+     "target": "That T’AU EMPIRE unit.",
+     "effect": "Your unit’s ranged attacks that target a unit within 9\" of a friendly KROOT/VESPID STINGWINGS unit have [LETHAL HITS].",
+     "restrictions": "",
+     "text": "WHEN: Your Shooting phase, when a friendly T’AU EMPIRE unit (excluding KROOT/VESPID STINGWINGS units) is selected to shoot.\n\nTARGET: That T’AU EMPIRE unit.\n\nEFFECT: Your unit’s ranged attacks that target a unit within 9\" of a friendly KROOT/VESPID STINGWINGS unit have [LETHAL HITS].",
+     "flavour": "Firing on coordinates provided by selfless alien auxiliaries, the T’au are able to scythe down their targets with pinpoint precision.",
+     "src": "wahapedia"
+    }
+   },
+   "enhancements": [
+    {
+     "name": "- Student of Kauyon",
+     "cost": 20,
+     "text": "**KROOT SHAPER** model only. In the Declare Battle Formations step, you can select up to three friendly **KROOT CARNIVORES/FARSTALKERS** units. Those units have **Deep Strike**.",
+     "src": "bsdata"
+    },
+    {
+     "name": "- Admired Leader",
+     "cost": 20,
+     "text": "**T’AU EMPIRE** model only (excluding **KROOT** models). In your Command phase, you can select one **KROOT/VESPID STINGWINGS** unit within 12\" of this model. If you do, that unit has +1 **Ld** and **OC** until the start of your next Command phase.",
+     "src": "bsdata"
+    }
+   ],
+   "dp": 1
+  },
+  "Experimental Prototype Cadre": {
+   "name": "Experimental Prototype Cadre",
+   "source": {
+    "rule": "bsdata",
+    "enhancements": "bsdata",
+    "stratagems": "wahapedia"
+   },
+   "rule": [
+    {
+     "name": "Superior Craftmanship",
+     "text": "Friendly **BATTLESUIT CHARACTER** units’ ranged attacks have +6\" **R**.\n\nThis **detachment** has the **BATTLESUIT** tag and cannot be taken with another **BATTLESUIT detachment**."
+    }
+   ],
+   "stratagems": {
+    "Experimental Ammunition": {
+     "name": "EXPERIMENTAL AMMUNITION",
+     "cost": 1,
+     "costText": "1CP",
+     "detachment": "Experimental Prototype Cadre",
+     "category": "",
+     "when": "Your Shooting phase, when a friendly BATTLESUIT CHARACTER unit is selected to shoot.",
+     "target": "That BATTLESUIT CHARACTER unit.",
+     "effect": "Your unit’s ranged attacks have:\n\n- +1 S.\n\n- OR: +1 S, AP and [HAZARDOUS].",
+     "restrictions": "",
+     "text": "WHEN: Your Shooting phase, when a friendly BATTLESUIT CHARACTER unit is selected to shoot.\n\nTARGET: That BATTLESUIT CHARACTER unit.\n\nEFFECT: Your unit’s ranged attacks have:\n\n- +1 S.\n\n- OR: +1 S, AP and [HAZARDOUS].",
+     "flavour": "From hardened warheads and amplified ion capacitors, to hyperaccelerated pulse fields and refined fusion cores, the T’au are forever innovating improvements to improve the lethality of their ammunition.",
+     "src": "wahapedia"
+    }
+   },
+   "enhancements": [
+    {
+     "name": "- Thermoneutronic Projector",
+     "cost": 15,
+     "text": "**BATTLESUIT** model only. In the Declare Battle Formations step, select one of this model’s T’au Flamer weapons. That weapon’s attacks have:\n- +2 **S**\n- +1 **AP** and **D**.",
+     "src": "bsdata"
+    },
+    {
+     "name": "- Plasma Accelerator Rifle",
+     "cost": 20,
+     "text": "**BATTLESUIT** model only. In the Declare Battle Formations step, select one of this model’s Plasma Rifle weapons. That weapon’s attacks have:\n- +2 **S**\n- +1 **A**, **AP** and **D**.",
+     "src": "bsdata"
+    },
+    {
+     "name": "- Supernova Launcher",
+     "cost": 15,
+     "text": "**BATTLESUIT** model only. In the Declare Battle Formations step, select one of this model’s Airbursting Fragmentation Projector weapons. That weapon’s attacks have:\n- +3 **S**\n- +1 **AP** and **D**.",
+     "src": "bsdata"
+    }
+   ],
+   "dp": 1
+  },
+  "Advanced Acquisition Cadre": {
+   "name": "Advanced Acquisition Cadre",
+   "source": {
+    "rule": "bsdata",
+    "enhancements": "mixed",
+    "stratagems": "wahapedia"
+   },
+   "rule": [
+    {
+     "name": "Expert Fieldcraft",
+     "text": "In your Shooting phase, when a friendly **PATHFINDER TEAM/STEALTH BATTLESUITS** unit is **selected to shoot**, those ranged attacks do not prevent your unit from being **hidden**."
+    }
+   ],
+   "stratagems": {
+    "Marker Beacon": {
+     "name": "MARKER BEACON",
+     "cost": 1,
+     "costText": "1CP",
+     "detachment": "Advanced Acquisition Cadre",
+     "category": "",
+     "when": "End of your Movement phase.",
+     "target": "One friendly PATHFINDER TEAM/STEALTH BATTLESUITS unit.",
+     "effect": "Select one objective your unit is controlling. That objective is secured.",
+     "restrictions": "",
+     "text": "WHEN: End of your Movement phase.\n\nTARGET: One friendly PATHFINDER TEAM/STEALTH BATTLESUITS unit.\n\nEFFECT: Select one objective your unit is controlling. That objective is secured.",
+     "flavour": "These small devices emit tightbeam triangulation signals for follow‑up waves of incoming T’au forces, silently marking out strategically vital sites to be secured.",
+     "src": "wahapedia"
+    },
+    "Microdrone Support": {
+     "name": "MICRODRONE SUPPORT",
+     "cost": 1,
+     "costText": "1CP",
+     "detachment": "Advanced Acquisition Cadre",
+     "category": "",
+     "when": "Your Shooting phase, when a friendly PATHFINDER TEAM/ STEALTH BATTLESUITS unit starts an action.",
+     "target": "That PATHFINDER TEAM/STEALTH BATTLESUITS unit.",
+     "effect": "That action does not prevent your unit from being eligible to shoot.",
+     "restrictions": "",
+     "text": "WHEN: Your Shooting phase, when a friendly PATHFINDER TEAM/ STEALTH BATTLESUITS unit starts an action.\n\nTARGET: That PATHFINDER TEAM/STEALTH BATTLESUITS unit.\n\nEFFECT: That action does not prevent your unit from being eligible to shoot.",
+     "flavour": "Deployed from overflights of heavier stealth‑capable carrier drones, these tiny machines provide versatile battlefield support for T’au stealth specialists, even in the midst of vicious firefights.",
+     "src": "wahapedia"
+    },
+    "Autoreactive Camouflage": {
+     "name": "AUTOREACTIVE CAMOUFLAGE",
+     "cost": 1,
+     "costText": "1CP",
+     "detachment": "Advanced Acquisition Cadre",
+     "category": "",
+     "when": "Your opponent’s Shooting phase, when an enemy unit targets a friendly PATHFINDER TEAM/ STEALTH BATTLESUITS unit, if that friendly unit is hidden.",
+     "target": "That PATHFINDER TEAM/STEALTH BATTLESUITS unit.",
+     "effect": "Your unit has +1 Sv.",
+     "restrictions": "",
+     "text": "WHEN: Your opponent’s Shooting phase, when an enemy unit targets a friendly PATHFINDER TEAM/ STEALTH BATTLESUITS unit, if that friendly unit is hidden.\n\nTARGET: That PATHFINDER TEAM/STEALTH BATTLESUITS unit.\n\nEFFECT: Your unit has +1 Sv.",
+     "flavour": "An experimental new form of portable electrocamouflage generators, these small devices interweave active energy shielding with passive sensor damping to further protect T’au soldiery in hiding.",
+     "src": "wahapedia"
+    }
+   },
+   "enhancements": [
+    {
+     "name": "- Negation EmittersUPGRADE",
+     "cost": 15,
+     "text": "STEALTH BATTLESUITS unit only. This unit has -3\" detection range.",
+     "src": "wahapedia"
+    },
+    {
+     "name": "- Unmasking SuiteUPGRADE",
+     "cost": 15,
+     "text": "GHOSTKEEL BATTLESUIT/PATHFINDER TEAM/STEALTH BATTLESUITS unit only. When this unit is selected to shoot, you can select one enemy unit within 24\" of this unit. That enemy unit has +9\" detection range until this unit has shot.",
+     "src": "wahapedia"
+    }
+   ],
+   "dp": 1
+  },
+  "Starfire Cadre (Boarding Actions)": {
+   "name": "Starfire Cadre (Boarding Actions)",
+   "source": {
+    "rule": "wahapedia",
+    "enhancements": "bsdata",
+    "stratagems": "wahapedia"
+   },
+   "rule": [
+    {
+     "name": "Void Combat Discipline",
+     "text": "Units from your army with the For the Greater Good ability lose that ability and T’AU EMPIRE units from your army gain this one.\n\nEach time a model in this unit makes a ranged attack, it can ignore other model in this unit for the purpose of determining visibility. In addition, this unit is eligible to perform the Set Overwatch Tactical Manoeuvre in a turn in which it Advanced or Fell Back."
+    },
+    {
+     "name": "Markerlight Precision",
+     "text": "Each time a T’AU EMPIRE unit from your army (excluding KROOT units) is selected to shoot, ranged weapons equipped by models in your unit have their Ballistic Skill characteristic improved by 1 and have the [SUSTAINED HITS 1] ability while targeting an enemy unit that is visible to one or more friendly MARKERLIGHT units that are not within Engagement Range of one or more enemy models."
+    }
+   ],
+   "stratagems": {
+    "Firing Line": {
+     "name": "FIRING LINE",
+     "cost": 1,
+     "costText": "1CP",
+     "detachment": "Starfire Cadre",
+     "category": "Strategic Ploy",
+     "when": "Fight phase, just after an enemy unit destroys a T’AU EMPIRE unit from your army.",
+     "target": "One FIRE WARRIOR or PATHFINDER TEAM unit from your army that is not within Engagement Range of one or more enemy units, has not fired Overwatch this turn and is within 9\" of that enemy unit.",
+     "effect": "Your unit can shoot as if it were your Shooting phase, but when doing so, models in your unit can only target that enemy unit (and only if it is an eligible target) and, each time a model in your unit makes an attack, an unmodified Hit roll of 5+ is required to score a hit.",
+     "restrictions": "",
+     "text": "WHEN: Fight phase, just after an enemy unit destroys a T’AU EMPIRE unit from your army.\n\nTARGET: One FIRE WARRIOR or PATHFINDER TEAM unit from your army that is not within Engagement Range of one or more enemy units, has not fired Overwatch this turn and is within 9\" of that enemy unit.\n\nEFFECT: Your unit can shoot as if it were your Shooting phase, but when doing so, models in your unit can only target that enemy unit (and only if it is an eligible target) and, each time a model in your unit makes an attack, an unmodified Hit roll of 5+ is required to score a hit.",
+     "flavour": "Should the foe break through one line of Fire caste defence, the next is ready to push them back from vital sites aboard the contested ship.",
+     "src": "wahapedia"
+    },
+    "Retreating Fire": {
+     "name": "RETREATING FIRE",
+     "cost": 1,
+     "costText": "1CP",
+     "detachment": "Starfire Cadre",
+     "category": "Strategic Ploy",
+     "when": "Your Shooting phase.",
+     "target": "One FIRE WARRIOR or PATHFINDER TEAM unit from your army.",
+     "effect": "Until the end of the phase, your unit is eligible to shoot in a turn in which it Fell Back.",
+     "restrictions": "",
+     "text": "WHEN: Your Shooting phase.\n\nTARGET: One FIRE WARRIOR or PATHFINDER TEAM unit from your army.\n\nEFFECT: Until the end of the phase, your unit is eligible to shoot in a turn in which it Fell Back.",
+     "flavour": "Collapsing lines of infantry provide a defence in depth through the shipboard confines, allowing the enemy to overextend even as retreating T'au continue to pour fire into them.",
+     "src": "wahapedia"
+    },
+    "Responsive Volley": {
+     "name": "RESPONSIVE VOLLEY",
+     "cost": 1,
+     "costText": "1CP",
+     "detachment": "Starfire Cadre",
+     "category": "Battle Tactic",
+     "when": "Your Movement phase, just after a FIRE WARRIOR or PATHFINDER TEAM unit from your army opens a Hatchway.",
+     "target": "That FIRE WARRIOR or PATHFINDER TEAM unit.",
+     "effect": "Until the end of the turn, each time a model in your unit makes a ranged attack that targets an enemy unit wholly on the opposite side of that Hatchway from them, a Critical Hit is scored on an unmodified Hit roll of 5+, instead of only a 6.",
+     "restrictions": "",
+     "text": "WHEN: Your Movement phase, just after a FIRE WARRIOR or PATHFINDER TEAM unit from your army opens a Hatchway.\n\nTARGET: That FIRE WARRIOR or PATHFINDER TEAM unit.\n\nEFFECT: Until the end of the turn, each time a model in your unit makes a ranged attack that targets an enemy unit wholly on the opposite side of that Hatchway from them, a Critical Hit is scored on an unmodified Hit roll of 5+, instead of only a 6.",
+     "flavour": "Should enemy forces be suddenly revealed during such close-confines combat, Fire caste soldiery are trained to loose immediate, punishing firepower.",
+     "src": "wahapedia"
+    },
+    "Pulse Barrage": {
+     "name": "PULSE BARRAGE",
+     "cost": 1,
+     "costText": "1CP",
+     "detachment": "Starfire Cadre",
+     "category": "Battle Tactic",
+     "when": "Your opponent’s Movement or Charge phase.",
+     "target": "One FIRE WARRIOR or PATHFINDER TEAM unit from your army that has not fired Overwatch this phase.",
+     "effect": "Until the end of the phase, each time a model in your unit makes an attack while firing Overwatch, an unmodified Hit roll of 5+ is required to score a hit, instead of an unmodified 6.",
+     "restrictions": "",
+     "text": "WHEN: Your opponent’s Movement or Charge phase.\n\nTARGET: One FIRE WARRIOR or PATHFINDER TEAM unit from your army that has not fired Overwatch this phase.\n\nEFFECT: Until the end of the phase, each time a model in your unit makes an attack while firing Overwatch, an unmodified Hit roll of 5+ is required to score a hit, instead of an unmodified 6.",
+     "flavour": "The tight confines of voidship warfare funnel the enemy right into the waiting T'au guns.",
+     "src": "wahapedia"
+    }
+   },
+   "enhancements": [
+    {
+     "name": "Target Optimisation Microdrones",
+     "cost": null,
+     "text": "**^^Cadre Fireblade^^** model only. Once per turn, in your Shooting phase, when a friendly **^^Fire Warrior^^**, **^^Pathfinder Team^^** or **^^Cadre Fireblade^^** unit within 6\" of the bearer is selected to shoot, the bearer use this Enhancement. If it does, until the end of the phase, improve the Armour Penetration characteristic of ranged weapons equipped by models in that unit by 1.",
+     "src": "bsdata"
+    },
+    {
+     "name": "Duty’s Echo",
+     "cost": null,
+     "text": "**^^Ethereal^^** model only. At the end of your Shooting phase, you can select one friendly **^^Fire Warrior^^** or **^^Pathfinder Team^^** unit within 6\" of the bearer. If you do, that unit can make a Normal move of up to 3\" and then counts as having performed the Set Overwatch Tactical Manoeuvre this turn.",
+     "src": "bsdata"
+    }
+   ]
+  },
+  "Kroot Raiding Party (Boarding Actions)": {
+   "name": "Kroot Raiding Party (Boarding Actions)",
+   "source": {
+    "rule": "wahapedia",
+    "enhancements": "bsdata",
+    "stratagems": "wahapedia"
+   },
+   "rule": [
+    {
+     "name": "Void Combat Discipline",
+     "text": "Units from your army with the For the Greater Good ability lose that ability and T’AU EMPIRE units from your army gain this one.\n\nEach time a model in this unit makes a ranged attack, it can ignore other model in this unit for the purpose of determining visibility. In addition, this unit is eligible to perform the Set Overwatch Tactical Manoeuvre in a turn in which it Advanced or Fell Back."
+    },
+    {
+     "name": "Guerrilla Ambushers",
+     "text": "Each time an enemy unit is selected to fire Overwatch, roll one D6: on a 4+, until the end of the turn, that unit cannot make Overwatch attacks that target KROOT units from your army."
+    }
+   ],
+   "stratagems": {
+    "Boarding Blades": {
+     "name": "BOARDING BLADES",
+     "cost": 1,
+     "costText": "1CP",
+     "detachment": "Kroot Raiding Party",
+     "category": "Battle Tactic",
+     "when": "Fight phase.",
+     "target": "One KROOT unit from your army that has not been selected to fight this phase.",
+     "effect": "Until the end of the phase, improve the Armour Penetration characteristic of melee weapons equipped by models in your unit by 1. In addition, each time a model in your unit makes an attack, on a Critical Wound, improve the Armour Penetration characteristic of that attack by an additional 1.",
+     "restrictions": "",
+     "text": "WHEN: Fight phase.\n\nTARGET: One KROOT unit from your army that has not been selected to fight this phase.\n\nEFFECT: Until the end of the phase, improve the Armour Penetration characteristic of melee weapons equipped by models in your unit by 1. In addition, each time a model in your unit makes an attack, on a Critical Wound, improve the Armour Penetration characteristic of that attack by an additional 1.",
+     "flavour": "Expecting close-quarters carnage, these Kroot have adapted the blades on their weapons to slice through even thick armour.",
+     "src": "wahapedia"
+    },
+    "Sweeping Ambush": {
+     "name": "SWEEPING AMBUSH",
+     "cost": 1,
+     "costText": "1CP",
+     "detachment": "Kroot Raiding Party",
+     "category": "Strategic Ploy",
+     "when": "Fight phase.",
+     "target": "One KROOT unit from your army that has not been selected to fight this phase.",
+     "effect": "Until the end of the phase, each time a model in your unit makes a Pile-in or Consolidation move, it can move up to 6\" instead of up to 3\". In addition, when making a Consolidation move, that model can end that move within Engagement Range of the closest enemy unit that was not visible to its unit when it started that move.",
+     "restrictions": "",
+     "text": "WHEN: Fight phase.\n\nTARGET: One KROOT unit from your army that has not been selected to fight this phase.\n\nEFFECT: Until the end of the phase, each time a model in your unit makes a Pile-in or Consolidation move, it can move up to 6\" instead of up to 3\". In addition, when making a Consolidation move, that model can end that move within Engagement Range of the closest enemy unit that was not visible to its unit when it started that move.",
+     "flavour": "Once they spring their ambush these Kroot move fast, hacking through one band of foes and pouncing on the next before the enemy can regain their footing.",
+     "src": "wahapedia"
+    },
+    "Brute Force": {
+     "name": "BRUTE FORCE",
+     "cost": 1,
+     "costText": "1CP",
+     "detachment": "Kroot Raiding Party",
+     "category": "Strategic Ploy",
+     "when": "Your Movement phase, just after a KROOTOX RIDERS unit from your army opens a Hatchway.",
+     "target": "That KROOTOX RIDERS unit.",
+     "effect": "Roll one D6 for each unit that is within 3\" of that Hatchway, if that Hatchway is visible to that unit and that unit is wholly on the opposite side of it from your unit: on a 2-4, that enemy unit suffers 1 mortal wound; on a 5+, that enemy unit suffers 2 mortal wounds.",
+     "restrictions": "",
+     "text": "WHEN: Your Movement phase, just after a KROOTOX RIDERS unit from your army opens a Hatchway.\n\nTARGET: That KROOTOX RIDERS unit.\n\nEFFECT: Roll one D6 for each unit that is within 3\" of that Hatchway, if that Hatchway is visible to that unit and that unit is wholly on the opposite side of it from your unit: on a 2-4, that enemy unit suffers 1 mortal wound; on a 5+, that enemy unit suffers 2 mortal wounds.",
+     "flavour": "Where cunning will not suffice, the brutal strength of Krootox sees hatchways and bulkheads smashed to pieces, filling the corridors beyond with whickering shrapnel.",
+     "src": "wahapedia"
+    },
+    "Tanglebomb Bolas": {
+     "name": "TANGLEBOMB BOLAS",
+     "cost": 1,
+     "costText": "1CP",
+     "detachment": "Kroot Raiding Party",
+     "category": "Wargear",
+     "when": "Your Shooting phase.",
+     "target": "One KROOT unit from your army.",
+     "effect": "Select one enemy unit within 9\" of and visible to your unit and roll one D6: on a 2+, until the start of your next Shooting phase, halve the Move characteristic of models in that enemy unit and halve Advance and Charge rolls made for it.",
+     "restrictions": "",
+     "text": "WHEN: Your Shooting phase.\n\nTARGET: One KROOT unit from your army.\n\nEFFECT: Select one enemy unit within 9\" of and visible to your unit and roll one D6: on a 2+, until the start of your next Shooting phase, halve the Move characteristic of models in that enemy unit and halve Advance and Charge rolls made for it.",
+     "flavour": "Sent spinning in to entangle their targets, these weapons leave their victims easy prey for the screeching Kroot.",
+     "src": "wahapedia"
+    }
+   },
+   "enhancements": [
+    {
+     "name": "Experienced Leader",
+     "cost": null,
+     "text": "At the start of the first battle round, select one enemy unit on the battlefield. Until the end of the battle, each time a **^^Kroot^^** model from your army makes an attack that targets that enemy unit, if the bearer is on the battlefield, you can re-roll the Wound roll.",
+     "src": "bsdata"
+    },
+    {
+     "name": "Quill Marker",
+     "cost": null,
+     "text": "At the start of your Charge phase, select one enemy unit within 12\" of the bearer. Until the end of the phase, each time a **^^Kroot^^** unit from your army declares a charge, if it is within 6\" of that enemy unit, it can include that enemy unit as a target of that charge, even if it is not visible to it.",
+     "src": "bsdata"
+    }
+   ]
+  }
+ },
+ "stratagemsByName": {
+  "atemptingtrap": {
+   "name": "A TEMPTING TRAP",
+   "cost": 1,
+   "costText": "1CP",
+   "detachment": "Kauyon",
+   "category": "Battle Tactic",
+   "when": "Your Shooting phase.",
+   "target": "One T’AU EMPIRE unit from your army that has not been selected to shoot this phase. The first time you use this Stratagem, you must also select one objective marker that is not in your opponent’s deployment zone; until the end of the battle, this becomes your Trap objective marker.",
+   "effect": "Until the end of the phase, each time a model in your unit makes a ranged attack that targets an enemy unit within range of your Trap objective marker, add 1 to the Wound roll.",
+   "restrictions": "You cannot use this Stratagem during the first or second battle rounds.",
+   "text": "WHEN: Your Shooting phase.\n\nTARGET: One T’AU EMPIRE unit from your army that has not been selected to shoot this phase. The first time you use this Stratagem, you must also select one objective marker that is not in your opponent’s deployment zone; until the end of the battle, this becomes your Trap objective marker.\n\nEFFECT: Until the end of the phase, each time a model in your unit makes a ranged attack that targets an enemy unit within range of your Trap objective marker, add 1 to the Wound roll.\n\nRESTRICTIONS: You cannot use this Stratagem during the first or second battle rounds.",
+   "flavour": "Kauyon teaches that many things can be used to bait a trap, luring the foe into position.",
+   "src": "wahapedia"
+  },
+  "pointblankambush": {
+   "name": "POINT-BLANK AMBUSH",
+   "cost": 1,
+   "costText": "1CP",
+   "detachment": "Kauyon",
+   "category": "Battle Tactic",
+   "when": "Your Shooting phase.",
+   "target": "One T’AU EMPIRE unit from your army that has not been selected to shoot this phase.",
+   "effect": "Until the end of the phase, each time a model in your unit makes a ranged attack that targets an enemy unit within 9\", improve the Armour Penetration characteristic of that attack by 1.",
+   "restrictions": "You cannot use this Stratagem during the first or second battle rounds.",
+   "text": "WHEN: Your Shooting phase.\n\nTARGET: One T’AU EMPIRE unit from your army that has not been selected to shoot this phase.\n\nEFFECT: Until the end of the phase, each time a model in your unit makes a ranged attack that targets an enemy unit within 9\", improve the Armour Penetration characteristic of that attack by 1.\n\nRESTRICTIONS: You cannot use this Stratagem during the first or second battle rounds.",
+   "flavour": "Devastating firepower need not be applied from afar, especially when striking an unsuspecting foe.",
+   "src": "wahapedia"
+  },
+  "coordinatetoengage": {
+   "name": "COORDINATE TO ENGAGE",
+   "cost": 1,
+   "costText": "1CP",
+   "detachment": "Kauyon",
+   "category": "Battle Tactic",
+   "when": "Your Shooting phase.",
+   "target": "One T’AU EMPIRE unit from your army that has just been selected as an Observer unit (see For the Greater Good).",
+   "effect": "Until the end of the phase, each time a model in your unit makes an attack that targets their Spotted unit, improve the Ballistic Skill characteristic of that attack by 1 and, if your unit has the MARKERLIGHT keyword, that attack has the [IGNORES COVER] ability.",
+   "restrictions": "",
+   "text": "WHEN: Your Shooting phase.\n\nTARGET: One T’AU EMPIRE unit from your army that has just been selected as an Observer unit (see For the Greater Good).\n\nEFFECT: Until the end of the phase, each time a model in your unit makes an attack that targets their Spotted unit, improve the Ballistic Skill characteristic of that attack by 1 and, if your unit has the MARKERLIGHT keyword, that attack has the [IGNORES COVER] ability.",
+   "flavour": "T’au Hunter Cadres work in close coordination to destroy the most dangerous enemy targets.",
+   "src": "wahapedia"
+  },
+  "combatembarkation": {
+   "name": "COMBAT EMBARKATION",
+   "cost": 1,
+   "costText": "1CP",
+   "detachment": "Kauyon",
+   "category": "Wargear",
+   "when": "Your opponent’s Charge phase, just after an enemy unit has declared a charge.",
+   "target": "One T’AU EMPIRE INFANTRY unit from your army that was selected as one of the targets of that charge, and one friendly TRANSPORT.",
+   "effect": "Your unit can embark within that TRANSPORT. If it does, your opponent can select new targets for that charge.",
+   "restrictions": "Every model in your T’AU EMPIRE INFANTRY unit must be within 3\" of that TRANSPORT and there must be sufficient transport capacity to embark the entire unit.",
+   "text": "WHEN: Your opponent’s Charge phase, just after an enemy unit has declared a charge.\n\nTARGET: One T’AU EMPIRE INFANTRY unit from your army that was selected as one of the targets of that charge, and one friendly TRANSPORT.\n\nEFFECT: Your unit can embark within that TRANSPORT. If it does, your opponent can select new targets for that charge.\n\nRESTRICTIONS: Every model in your T’AU EMPIRE INFANTRY unit must be within 3\" of that TRANSPORT and there must be sufficient transport capacity to embark the entire unit.",
+   "flavour": "Those who act as the lure in the Kauyon must be ready to make a hasty withdrawal once the enemy closes into killing range, lest they be trapped.",
+   "src": "wahapedia"
+  },
+  "photongrenades": {
+   "name": "PHOTON GRENADES",
+   "cost": 1,
+   "costText": "1CP",
+   "detachment": "Kauyon",
+   "category": "Wargear",
+   "when": "Your opponent's charge phase, just after an enemy unit has selected its charge target.",
+   "target": "One T’AU EMPIRE GRENADES unit from your army that was selected as one of the targets of that charge.",
+   "effect": "That enemy unit must immediately take a Battle-shock test, and until the end of the phase, subtract 2 from Charge rolls made for that enemy unit.",
+   "restrictions": "You cannot target a unit that is within Engagement Range of one or more enemy units.",
+   "text": "WHEN: Your opponent's charge phase, just after an enemy unit has selected its charge target.\n\nTARGET: One T’AU EMPIRE GRENADES unit from your army that was selected as one of the targets of that charge.\n\nEFFECT: That enemy unit must immediately take a Battle-shock test, and until the end of the phase, subtract 2 from Charge rolls made for that enemy unit.\n\nRESTRICTION: You cannot target a unit that is within Engagement Range of one or more enemy units.",
+   "flavour": "Hurling a volley of photon grenades, the T’au leave their enemies dazzled and disorientated, unable to close the distance into combat at a crucial moment.",
+   "src": "wahapedia"
+  },
+  "wallofmirrors": {
+   "name": "WALL OF MIRRORS",
+   "cost": 1,
+   "costText": "1CP",
+   "detachment": "Kauyon",
+   "category": "Battle Tactic",
+   "when": "End of your opponent’s Fight phase.",
+   "target": "One STEALTH, GHOSTKEEL or COMMANDER SHADOWSUN unit from your army.",
+   "effect": "Remove your unit from the battlefield and place it into Strategic Reserves.",
+   "restrictions": "You cannot target a unit that is within Engagement Range of one or more enemy units.",
+   "text": "WHEN: End of your opponent’s Fight phase.\n\nTARGET: One STEALTH, GHOSTKEEL or COMMANDER SHADOWSUN unit from your army.\n\nEFFECT: Remove your unit from the battlefield and place it into Strategic Reserves.\n\nRESTRICTIONS: You cannot target a unit that is within Engagement Range of one or more enemy units.",
+   "flavour": "T’au Stealth Cadres utilise obfuscation fields and wide-band refraction beams to mask their advance.",
+   "src": "wahapedia"
+  },
+  "pinpointcounteroffensive": {
+   "name": "PINPOINT COUNTER-OFFENSIVE",
+   "cost": 1,
+   "costText": "1CP",
+   "detachment": "Mont’ka",
+   "category": "Battle Tactic",
+   "when": "Any phase.",
+   "target": "One T’AU EMPIRE unit (excluding KROOT units) from your army that was just destroyed. You can use this Stratagem on that unit even though it was just destroyed.",
+   "effect": "Until the end of the battle, each time a T’AU EMPIRE unit (excluding KROOT units) from your army makes an attack that targets the enemy unit that just destroyed your unit, you can re-roll the Hit roll.",
+   "restrictions": "",
+   "text": "WHEN: Any phase.\n\nTARGET: One T’AU EMPIRE unit (excluding KROOT units) from your army that was just destroyed. You can use this Stratagem on that unit even though it was just destroyed.\n\nEFFECT: Until the end of the battle, each time a T’AU EMPIRE unit (excluding KROOT units) from your army makes an attack that targets the enemy unit that just destroyed your unit, you can re-roll the Hit roll.",
+   "flavour": "Mont’ka emphasises rapid evolving threat-analysis and the application of overwhelming firepower to eliminate emergent high-priority targets.",
+   "src": "wahapedia"
+  },
+  "aggressivemobility": {
+   "name": "AGGRESSIVE MOBILITY",
+   "cost": 1,
+   "costText": "1CP",
+   "detachment": "Mont’ka",
+   "category": "Battle Tactic",
+   "when": "Your Movement phase.",
+   "target": "One T’AU EMPIRE unit from your army that has not been selected to move this phase.",
+   "effect": "Until the end of the phase, if your unit Advances, do not make an Advance roll for it. Instead, until the end of the phase, add 6\" to the Move characteristic of models in your unit.",
+   "restrictions": "",
+   "text": "WHEN: Your Movement phase.\n\nTARGET: One T’AU EMPIRE unit from your army that has not been selected to move this phase.\n\nEFFECT: Until the end of the phase, if your unit Advances, do not make an Advance roll for it. Instead, until the end of the phase, add 6\" to the Move characteristic of models in your unit.",
+   "flavour": "By advancing swiftly into commanding positions, Mont’ka forces maximise the benefits of their enemies' shock and disorientation.",
+   "src": "wahapedia"
+  },
+  "focusedfire": {
+   "name": "FOCUSED FIRE",
+   "cost": 1,
+   "costText": "1CP",
+   "detachment": "Mont’ka",
+   "category": "Battle Tactic",
+   "when": "Start of your Shooting phase.",
+   "target": "Two T’AU EMPIRE units from your army that have not been selected to shoot this phase, and one enemy unit.",
+   "effect": "Until the end of the phase, each time a model in either of your units makes an attack, it can only target that enemy unit (and only if it is an eligible target for that attack), and when resolving that attack, improve the Armour Penetration characteristic by 1.",
+   "restrictions": "You cannot use this Stratagem during the fourth or fifth battle rounds.",
+   "text": "WHEN: Start of your Shooting phase.\n\nTARGET: Two T’AU EMPIRE units from your army that have not been selected to shoot this phase, and one enemy unit.\n\nEFFECT: Until the end of the phase, each time a model in either of your units makes an attack, it can only target that enemy unit (and only if it is an eligible target for that attack), and when resolving that attack, improve the Armour Penetration characteristic by 1.\n\nRESTRICTIONS: You cannot use this Stratagem during the fourth or fifth battle rounds.",
+   "flavour": "Mont’ka doctrine heavily emphasises the massed concentration of fire upon a single target at a time, obliterating each component of the enemy force in succession with a series of unrelenting barrages.",
+   "src": "wahapedia"
+  },
+  "combatdebarkation": {
+   "name": "COMBAT DEBARKATION",
+   "cost": 1,
+   "costText": "1CP",
+   "detachment": "Mont’ka",
+   "category": "Battle Tactic",
+   "when": "Your Shooting phase.",
+   "target": "One T’AU EMPIRE INFANTRY unit from your army that disembarked from a TRANSPORT this turn.",
+   "effect": "Until the end of the phase, each time a model in your unit makes an attack that targets the closest enemy unit, you can re-roll the Wound roll.",
+   "restrictions": "",
+   "text": "WHEN: Your Shooting phase.\n\nTARGET: One T’AU EMPIRE INFANTRY unit from your army that disembarked from a TRANSPORT this turn.\n\nEFFECT: Until the end of the phase, each time a model in your unit makes an attack that targets the closest enemy unit, you can re-roll the Wound roll.",
+   "flavour": "The most aggressive Fire caste warriors sometimes spring from moving transports, roll with the impact of landing, and come up with weapons already blazing.",
+   "src": "wahapedia"
+  },
+  "pulseonslaught": {
+   "name": "PULSE ONSLAUGHT",
+   "cost": 2,
+   "costText": "2CP",
+   "detachment": "Mont’ka",
+   "category": "Strategic Ploy",
+   "when": "Your Shooting phase.",
+   "target": "One T’AU EMPIRE INFANTRY unit (excluding KROOT units) from your army that has just shot, and one enemy unit (excluding MONSTERS and VEHICLES) hit by one or more of those attacks.",
+   "effect": "Until the end of your opponent’s next turn, that enemy unit is shaken. While a unit is shaken, subtract 2 from its Move characteristic and subtract 2 from Advance and Charge rolls made for it.",
+   "restrictions": "",
+   "text": "WHEN: Your Shooting phase.\n\nTARGET: One T’AU EMPIRE INFANTRY unit (excluding KROOT units) from your army that has just shot, and one enemy unit (excluding MONSTERS and VEHICLES) hit by one or more of those attacks.\n\nEFFECT: Until the end of your opponent’s next turn, that enemy unit is shaken. While a unit is shaken, subtract 2 from its Move characteristic and subtract 2 from Advance and Charge rolls made for it.",
+   "flavour": "Rather than charge into hand-to-hand combat, T’au soldiery instead intensify their fire patterns, pinning their advancing foes and staving off their onslaught.",
+   "src": "wahapedia"
+  },
+  "counterfiredefencesystems": {
+   "name": "COUNTERFIRE DEFENCE SYSTEMS",
+   "cost": 2,
+   "costText": "2CP",
+   "detachment": "Mont’ka",
+   "category": "Wargear",
+   "when": "Your opponent’s Shooting phase, just after an enemy unit has selected its targets.",
+   "target": "One T’AU EMPIRE unit from your army that was selected as the target of one or more of the attacking unit’s attacks.",
+   "effect": "Until the end of the phase, each time an attack is allocated to your unit, subtract 1 from the Damage characteristic of that attack.",
+   "restrictions": "",
+   "text": "WHEN: Your opponent’s Shooting phase, just after an enemy unit has selected its targets.\n\nTARGET: One T’AU EMPIRE unit from your army that was selected as the target of one or more of the attacking unit’s attacks.\n\nEFFECT: Until the end of the phase, each time an attack is allocated to your unit, subtract 1 from the Damage characteristic of that attack.",
+   "flavour": "Point-defence systems trigger as incoming fire is detected, blasting projectiles from the air and lessening the power of the enemy fusillade.",
+   "src": "wahapedia"
+  },
+  "failsafedetonator": {
+   "name": "FAIL-SAFE DETONATOR",
+   "cost": 2,
+   "costText": "2CP",
+   "detachment": "Retaliation Cadre",
+   "category": "Epic Deed",
+   "when": "Any phase, just after a T’AU EMPIRE BATTLESUIT model from your army is destroyed.",
+   "target": "That destroyed model’s unit. You can use this Stratagem on that unit even if that unit was just destroyed.",
+   "effect": "Before removing your model from play, if it has the Deadly Demise ability, do not roll for that ability; instead, you can choose whether the result of that roll is a 1 or a 6. If your model does not have the Deadly Demise ability, roll one D6 for each unit within 6\" of it: on a 4+, that unit suffers D3 mortal wounds.",
+   "restrictions": "",
+   "text": "WHEN: Any phase, just after a T’AU EMPIRE BATTLESUIT model from your army is destroyed.\n\nTARGET: That destroyed model’s unit. You can use this Stratagem on that unit even if that unit was just destroyed.\n\nEFFECT: Before removing your model from play, if it has the Deadly Demise ability, do not roll for that ability; instead, you can choose whether the result of that roll is a 1 or a 6. If your model does not have the Deadly Demise ability, roll one D6 for each unit within 6\" of it: on a 4+, that unit suffers D3 mortal wounds.",
+   "flavour": "Devices are incorporated into some battlesuits either to prevent high-ranking pilots being taken alive for interrogation or to prevent just such fatal explosions.",
+   "src": "wahapedia"
+  },
+  "stimminjectors": {
+   "name": "STIMM INJECTORS",
+   "cost": 1,
+   "costText": "1CP",
+   "detachment": "Retaliation Cadre",
+   "category": "Wargear",
+   "when": "Your opponent’s Shooting phase or the Fight phase, just after an enemy unit has selected its targets.",
+   "target": "One T’AU EMPIRE BATTLESUIT unit from your army that was selected as the target of one or more of the attacking unit’s attacks.",
+   "effect": "Until the end of the phase, models in your unit have the Feel No Pain 6+ ability.",
+   "restrictions": "",
+   "text": "WHEN: Your opponent’s Shooting phase or the Fight phase, just after an enemy unit has selected its targets.\n\nTARGET: One T’AU EMPIRE BATTLESUIT unit from your army that was selected as the target of one or more of the attacking unit’s attacks.\n\nEFFECT: Until the end of the phase, models in your unit have the Feel No Pain 6+ ability.",
+   "flavour": "On-board hypodermics shunt pain-blockers and chemical stimulants into the pilot's system.",
+   "src": "wahapedia"
+  },
+  "theshortenedblade": {
+   "name": "THE SHORTENED BLADE",
+   "cost": 2,
+   "costText": "2CP",
+   "detachment": "Retaliation Cadre",
+   "category": "Strategic Ploy",
+   "when": "Your Movement phase.",
+   "target": "One T’AU EMPIRE BATTLESUIT unit from your army that is arriving using the Deep Strike ability this phase.",
+   "effect": "Your unit can be set up anywhere on the battlefield that is more than 6\" horizontally away from all enemy models.",
+   "restrictions": "A unit targeted with this Stratagem is not eligible to declare a charge in the same turn.",
+   "text": "WHEN: Your Movement phase.\n\nTARGET: One T’AU EMPIRE BATTLESUIT unit from your army that is arriving using the Deep Strike ability this phase.\n\nEFFECT: Your unit can be set up anywhere on the battlefield that is more than 6\" horizontally away from all enemy models.\n\nRESTRICTIONS: A unit targeted with this Stratagem is not eligible to declare a charge in the same turn.",
+   "flavour": "Made famous by Commander Farsight and his protege Brightsword, this philosophy encourages pilots to drop into the very teeth of the enemy army and apply their firepower at point-blank range.",
+   "src": "wahapedia"
+  },
+  "thearrokonprotocol": {
+   "name": "THE ARRO’KON PROTOCOL",
+   "cost": 1,
+   "costText": "1CP",
+   "detachment": "Retaliation Cadre",
+   "category": "Battle Tactic",
+   "when": "Your Shooting phase.",
+   "target": "One T’AU EMPIRE BATTLESUIT unit from your army that has not been selected to shoot this phase.",
+   "effect": "Until the end of the phase, each time a model in your unit makes an attack that targets an enemy unit that contains 6 or more models, that attack has the [SUSTAINED HITS 1] ability. If that attack targets an enemy unit that contains 11 or more models, it has the [SUSTAINED HITS 2] ability instead.",
+   "restrictions": "",
+   "text": "WHEN: Your Shooting phase.\n\nTARGET: One T’AU EMPIRE BATTLESUIT unit from your army that has not been selected to shoot this phase.\n\nEFFECT: Until the end of the phase, each time a model in your unit makes an attack that targets an enemy unit that contains 6 or more models, that attack has the [SUSTAINED HITS 1] ability. If that attack targets an enemy unit that contains 11 or more models, it has the [SUSTAINED HITS 2] ability instead.",
+   "flavour": "Commander Arro’kon’s teachings are considered pre-eminent in the art of engaging and eliminating numerically overwhelming enemy formations.",
+   "src": "wahapedia"
+  },
+  "thetorchstargambit": {
+   "name": "THE TORCHSTAR GAMBIT",
+   "cost": 1,
+   "costText": "1CP",
+   "detachment": "Retaliation Cadre",
+   "category": "Strategic Ploy",
+   "when": "Your Shooting phase.",
+   "target": "One T’AU EMPIRE BATTLESUIT unit from your army that can FLY whose attacks have been resolved this phase.",
+   "effect": "If your unit is not within Engagement Range of one or more enemy units, it can make a Normal move. If it does, your unit cannot declare a charge this turn",
+   "restrictions": "",
+   "text": "WHEN: Your Shooting phase.\n\nTARGET: One T’AU EMPIRE BATTLESUIT unit from your army that can FLY whose attacks have been resolved this phase.\n\nEFFECT: If your unit is not within Engagement Range of one or more enemy units, it can make a Normal move. If it does, your unit cannot declare a charge this turn",
+   "flavour": "Though now disgraced by association with O'Shovah, Sub-Commander Torchstar’s strike-and-fade tactics are still taught - albeit officially under other names - in many Fire caste academies.",
+   "src": "wahapedia"
+  },
+  "gravinhibitorfield": {
+   "name": "GRAV-INHIBITOR FIELD",
+   "cost": 1,
+   "costText": "1CP",
+   "detachment": "Retaliation Cadre",
+   "category": "Strategic Ploy",
+   "when": "Your opponent’s Charge phase, just after an enemy unit has declared a charge.",
+   "target": "One T’AU EMPIRE BATTLESUIT unit from your army that was selected as a target of that charge.",
+   "effect": "That enemy unit must immediately take a Battle-shock test and you must roll one D6 for each model in that enemy unit: for each 6, that enemy unit suffers 1 mortal wound.",
+   "restrictions": "",
+   "text": "WHEN: Your opponent’s Charge phase, just after an enemy unit has declared a charge.\n\nTARGET: One T’AU EMPIRE BATTLESUIT unit from your army that was selected as a target of that charge.\n\nEFFECT: That enemy unit must immediately take a Battle-shock test and you must roll one D6 for each model in that enemy unit: for each 6, that enemy unit suffers 1 mortal wound.",
+   "flavour": "First used by O’Jir during the battle for Laguna Shard, these battlesuit-mounted emitters batter advancing foes backwards with gravitic pulse waves.",
+   "src": "wahapedia"
+  },
+  "jointhehunt": {
+   "name": "JOIN THE HUNT",
+   "cost": 2,
+   "costText": "2CP",
+   "detachment": "Kroot Hunting Pack",
+   "category": "Battle Tactic",
+   "when": "Any phase.",
+   "target": "One KROOT INFANTRY or KROOT HOUNDS unit from your army that was just destroyed. You can use this Stratagem on that unit even though it was just destroyed.",
+   "effect": "Add a new unit to your army identical to your destroyed unit, in Strategic Reserves, at its Starting Strength.",
+   "restrictions": "This Stratagem cannot be used to return destroyed CHARACTER units to Attached units. You can only use this Stratagem once per battle.",
+   "text": "WHEN: Any phase.\n\nTARGET: One KROOT INFANTRY or KROOT HOUNDS unit from your army that was just destroyed. You can use this Stratagem on that unit even though it was just destroyed.\n\nEFFECT: Add a new unit to your army identical to your destroyed unit, in Strategic Reserves, at its Starting Strength.\n\nRESTRICTIONS: This Stratagem cannot be used to return destroyed CHARACTER units to Attached units. You can only use this Stratagem once per battle.",
+   "flavour": "When a Kroot Hunting Pack closes in on its prey, there are often other hunters waiting to join in the fray and take their share of any spoils.",
+   "src": "wahapedia"
+  },
+  "atrapwelllaid": {
+   "name": "A TRAP WELL LAID",
+   "cost": 1,
+   "costText": "1CP",
+   "detachment": "Kroot Hunting Pack",
+   "category": "Battle Tactic",
+   "when": "Your Shooting phase or the Fight phase.",
+   "target": "One KROOT unit from your army that has not been selected to shoot or fight this phase.",
+   "effect": "After your unit has resolved its attacks this phase, select one enemy unit that was hit by one or more of those attacks. Until the end of the phase, each time a KROOT model from your army makes an attack that targets that enemy unit, unless the attacking unit is Battle-shocked, improve the Armour Penetration characteristic of that attack by 1.",
+   "restrictions": "",
+   "text": "WHEN: Your Shooting phase or the Fight phase.\n\nTARGET: One KROOT unit from your army that has not been selected to shoot or fight this phase.\n\nEFFECT: After your unit has resolved its attacks this phase, select one enemy unit that was hit by one or more of those attacks. Until the end of the phase, each time a KROOT model from your army makes an attack that targets that enemy unit, unless the attacking unit is Battle-shocked, improve the Armour Penetration characteristic of that attack by 1.",
+   "flavour": "The Kroot have long perfected the art of ambush hunting, their packs working in deadly concert.",
+   "src": "wahapedia"
+  },
+  "empgrenades": {
+   "name": "EMP GRENADES",
+   "cost": 1,
+   "costText": "1CP",
+   "detachment": "Kroot Hunting Pack",
+   "category": "Wargear",
+   "when": "Your opponent’s Shooting phase or the Fight phase, just after an enemy VEHICLE unit is selected to shoot or fight.",
+   "target": "One KROOT GRENADES unit from your army within 8\" of that enemy VEHICLE unit.",
+   "effect": "Until the end of the phase, worsen the Weapon Skill and Ballistic Skill characteristics of that enemy VEHICLE unit’s weapons by 1.",
+   "restrictions": "",
+   "text": "WHEN: Your opponent’s Shooting phase or the Fight phase, just after an enemy VEHICLE unit is selected to shoot or fight.\n\nTARGET: One KROOT GRENADES unit from your army within 8\" of that enemy VEHICLE unit.\n\nEFFECT: Until the end of the phase, worsen the Weapon Skill and Ballistic Skill characteristics of that enemy VEHICLE unit’s weapons by 1.",
+   "flavour": "Furnished by T’au allies or returning Farstalkers, these electromagnetic grenades wreak havoc with the animuses of armoured fighting vehicles.",
+   "src": "wahapedia"
+  },
+  "thegrislyfeast": {
+   "name": "THE GRISLY FEAST",
+   "cost": 1,
+   "costText": "1CP",
+   "detachment": "Kroot Hunting Pack",
+   "category": "Strategic Ploy",
+   "when": "Fight phase.",
+   "target": "One KROOT unit from your army that destroyed one or more enemy units this phase.",
+   "effect": "In your opponent’s next Command phase, each enemy unit within 6\" of your unit must take a Battle-shock test. If the unit taking that test is Below Half-strength, subtract 1 from that test. Enemy units affected by this Stratagem do not need to take any other Battle-shock tests in the same phase.",
+   "restrictions": "",
+   "text": "WHEN: Fight phase.\n\nTARGET: One KROOT unit from your army that destroyed one or more enemy units this phase.\n\nEFFECT: In your opponent’s next Command phase, each enemy unit within 6\" of your unit must take a Battle-shock test. If the unit taking that test is Below Half-strength, subtract 1 from that test. Enemy units affected by this Stratagem do not need to take any other Battle-shock tests in the same phase.",
+   "flavour": "The psychological impact of witnessing one's comrades being dismembered and devoured by gore-splattered Kroot cannot be overstated.",
+   "src": "wahapedia"
+  },
+  "guerrillawarriors": {
+   "name": "GUERRILLA WARRIORS",
+   "cost": 1,
+   "costText": "1CP",
+   "detachment": "Kroot Hunting Pack",
+   "category": "Strategic Ploy",
+   "when": "Your Movement phase, just after a KROOT unit from your army Falls Back.",
+   "target": "That KROOT unit.",
+   "effect": "Until the end of the turn, your unit is eligible to shoot and declare a charge.",
+   "restrictions": "",
+   "text": "WHEN: Your Movement phase, just after a KROOT unit from your army Falls Back.\n\nTARGET: That KROOT unit.\n\nEFFECT: Until the end of the turn, your unit is eligible to shoot and declare a charge.",
+   "flavour": "Kroot see no value in stand-up fights, caring little for honour or glory. They hit and fade, frustrating their foes and bleeding them by degrees until - weakened and out of position - they are rendered vulnerable.",
+   "src": "wahapedia"
+  },
+  "hiddenhunters": {
+   "name": "HIDDEN HUNTERS",
+   "cost": 1,
+   "costText": "1CP",
+   "detachment": "Kroot Hunting Pack",
+   "category": "Strategic Ploy",
+   "when": "Your opponent’s Shooting phase, just after an enemy unit has selected its targets.",
+   "target": "One KROOT unit from your army that was selected as the target of one or more of the attacking unit’s attacks.",
+   "effect": "Until the end of the phase, your unit can only be selected as the target of a ranged attack if the attacking model is within 18\".",
+   "restrictions": "",
+   "text": "WHEN: Your opponent’s Shooting phase, just after an enemy unit has selected its targets.\n\nTARGET: One KROOT unit from your army that was selected as the target of one or more of the attacking unit’s attacks.\n\nEFFECT: Until the end of the phase, your unit can only be selected as the target of a ranged attack if the attacking model is within 18\".",
+   "flavour": "The Kroot are experts in camouflage and concealment, able to utilise cover in ways most foes would never consider and - to their great misfortune - do not anticipate.",
+   "src": "wahapedia"
+  },
+  "markerbeacon": {
+   "name": "MARKER BEACON",
+   "cost": 1,
+   "costText": "1CP",
+   "detachment": "Advanced Acquisition Cadre",
+   "category": "",
+   "when": "End of your Movement phase.",
+   "target": "One friendly PATHFINDER TEAM/STEALTH BATTLESUITS unit.",
+   "effect": "Select one objective your unit is controlling. That objective is secured.",
+   "restrictions": "",
+   "text": "WHEN: End of your Movement phase.\n\nTARGET: One friendly PATHFINDER TEAM/STEALTH BATTLESUITS unit.\n\nEFFECT: Select one objective your unit is controlling. That objective is secured.",
+   "flavour": "These small devices emit tightbeam triangulation signals for follow‑up waves of incoming T’au forces, silently marking out strategically vital sites to be secured.",
+   "src": "wahapedia"
+  },
+  "microdronesupport": {
+   "name": "MICRODRONE SUPPORT",
+   "cost": 1,
+   "costText": "1CP",
+   "detachment": "Advanced Acquisition Cadre",
+   "category": "",
+   "when": "Your Shooting phase, when a friendly PATHFINDER TEAM/ STEALTH BATTLESUITS unit starts an action.",
+   "target": "That PATHFINDER TEAM/STEALTH BATTLESUITS unit.",
+   "effect": "That action does not prevent your unit from being eligible to shoot.",
+   "restrictions": "",
+   "text": "WHEN: Your Shooting phase, when a friendly PATHFINDER TEAM/ STEALTH BATTLESUITS unit starts an action.\n\nTARGET: That PATHFINDER TEAM/STEALTH BATTLESUITS unit.\n\nEFFECT: That action does not prevent your unit from being eligible to shoot.",
+   "flavour": "Deployed from overflights of heavier stealth‑capable carrier drones, these tiny machines provide versatile battlefield support for T’au stealth specialists, even in the midst of vicious firefights.",
+   "src": "wahapedia"
+  },
+  "autoreactivecamouflage": {
+   "name": "AUTOREACTIVE CAMOUFLAGE",
+   "cost": 1,
+   "costText": "1CP",
+   "detachment": "Advanced Acquisition Cadre",
+   "category": "",
+   "when": "Your opponent’s Shooting phase, when an enemy unit targets a friendly PATHFINDER TEAM/ STEALTH BATTLESUITS unit, if that friendly unit is hidden.",
+   "target": "That PATHFINDER TEAM/STEALTH BATTLESUITS unit.",
+   "effect": "Your unit has +1 Sv.",
+   "restrictions": "",
+   "text": "WHEN: Your opponent’s Shooting phase, when an enemy unit targets a friendly PATHFINDER TEAM/ STEALTH BATTLESUITS unit, if that friendly unit is hidden.\n\nTARGET: That PATHFINDER TEAM/STEALTH BATTLESUITS unit.\n\nEFFECT: Your unit has +1 Sv.",
+   "flavour": "An experimental new form of portable electrocamouflage generators, these small devices interweave active energy shielding with passive sensor damping to further protect T’au soldiery in hiding.",
+   "src": "wahapedia"
+  },
+  "experimentalmodifications": {
+   "name": "EXPERIMENTAL MODIFICATIONS",
+   "cost": 1,
+   "costText": "1CP",
+   "detachment": "Auxiliary Cadre",
+   "category": "",
+   "when": "Your Shooting phase or the Fight phase, when a friendly KROOT/VESPID STINGWINGS unit is selected to attack.",
+   "target": "That KROOT/VESPID STINGWINGS unit.",
+   "effect": "Your unit’s attacks have +1 AP.",
+   "restrictions": "",
+   "text": "WHEN: Your Shooting phase or the Fight phase, when a friendly KROOT/VESPID STINGWINGS unit is selected to attack.\n\nTARGET: That KROOT/VESPID STINGWINGS unit.\n\nEFFECT: Your unit’s attacks have +1 AP.",
+   "flavour": "These experimental Earth caste weapon upgrades can only activate for short bursts at a time, but the extra stopping power they provide is formidable.",
+   "src": "wahapedia"
+  },
+  "alienexpertise": {
+   "name": "ALIEN EXPERTISE",
+   "cost": 1,
+   "costText": "1CP",
+   "detachment": "Auxiliary Cadre",
+   "category": "",
+   "when": "Your Movement phase, when a friendly KROOT/VESPID STINGWINGS unit is selected to make an advance move.",
+   "target": "That KROOT/VESPID STINGWINGS unit.",
+   "effect": "That move does not prevent your unit from being eligible to declare a charge.",
+   "restrictions": "",
+   "text": "WHEN: Your Movement phase, when a friendly KROOT/VESPID STINGWINGS unit is selected to make an advance move.\n\nTARGET: That KROOT/VESPID STINGWINGS unit.\n\nEFFECT: That move does not prevent your unit from being eligible to declare a charge.",
+   "flavour": "There is much that the alien auxiliaries of the T’au empire can teach the Fire caste, not least through practical and deadly battlefield demonstrations.",
+   "src": "wahapedia"
+  },
+  "guidedfire": {
+   "name": "GUIDED FIRE",
+   "cost": 1,
+   "costText": "1CP",
+   "detachment": "Auxiliary Cadre",
+   "category": "",
+   "when": "Your Shooting phase, when a friendly T’AU EMPIRE unit (excluding KROOT/VESPID STINGWINGS units) is selected to shoot.",
+   "target": "That T’AU EMPIRE unit.",
+   "effect": "Your unit’s ranged attacks that target a unit within 9\" of a friendly KROOT/VESPID STINGWINGS unit have [LETHAL HITS].",
+   "restrictions": "",
+   "text": "WHEN: Your Shooting phase, when a friendly T’AU EMPIRE unit (excluding KROOT/VESPID STINGWINGS units) is selected to shoot.\n\nTARGET: That T’AU EMPIRE unit.\n\nEFFECT: Your unit’s ranged attacks that target a unit within 9\" of a friendly KROOT/VESPID STINGWINGS unit have [LETHAL HITS].",
+   "flavour": "Firing on coordinates provided by selfless alien auxiliaries, the T’au are able to scythe down their targets with pinpoint precision.",
+   "src": "wahapedia"
+  },
+  "experimentalammunition": {
+   "name": "EXPERIMENTAL AMMUNITION",
+   "cost": 1,
+   "costText": "1CP",
+   "detachment": "Experimental Prototype Cadre",
+   "category": "",
+   "when": "Your Shooting phase, when a friendly BATTLESUIT CHARACTER unit is selected to shoot.",
+   "target": "That BATTLESUIT CHARACTER unit.",
+   "effect": "Your unit’s ranged attacks have:\n\n- +1 S.\n\n- OR: +1 S, AP and [HAZARDOUS].",
+   "restrictions": "",
+   "text": "WHEN: Your Shooting phase, when a friendly BATTLESUIT CHARACTER unit is selected to shoot.\n\nTARGET: That BATTLESUIT CHARACTER unit.\n\nEFFECT: Your unit’s ranged attacks have:\n\n- +1 S.\n\n- OR: +1 S, AP and [HAZARDOUS].",
+   "flavour": "From hardened warheads and amplified ion capacitors, to hyperaccelerated pulse fields and refined fusion cores, the T’au are forever innovating improvements to improve the lethality of their ammunition.",
+   "src": "wahapedia"
+  },
+  "firingline": {
+   "name": "FIRING LINE",
+   "cost": 1,
+   "costText": "1CP",
+   "detachment": "Starfire Cadre",
+   "category": "Strategic Ploy",
+   "when": "Fight phase, just after an enemy unit destroys a T’AU EMPIRE unit from your army.",
+   "target": "One FIRE WARRIOR or PATHFINDER TEAM unit from your army that is not within Engagement Range of one or more enemy units, has not fired Overwatch this turn and is within 9\" of that enemy unit.",
+   "effect": "Your unit can shoot as if it were your Shooting phase, but when doing so, models in your unit can only target that enemy unit (and only if it is an eligible target) and, each time a model in your unit makes an attack, an unmodified Hit roll of 5+ is required to score a hit.",
+   "restrictions": "",
+   "text": "WHEN: Fight phase, just after an enemy unit destroys a T’AU EMPIRE unit from your army.\n\nTARGET: One FIRE WARRIOR or PATHFINDER TEAM unit from your army that is not within Engagement Range of one or more enemy units, has not fired Overwatch this turn and is within 9\" of that enemy unit.\n\nEFFECT: Your unit can shoot as if it were your Shooting phase, but when doing so, models in your unit can only target that enemy unit (and only if it is an eligible target) and, each time a model in your unit makes an attack, an unmodified Hit roll of 5+ is required to score a hit.",
+   "flavour": "Should the foe break through one line of Fire caste defence, the next is ready to push them back from vital sites aboard the contested ship.",
+   "src": "wahapedia"
+  },
+  "retreatingfire": {
+   "name": "RETREATING FIRE",
+   "cost": 1,
+   "costText": "1CP",
+   "detachment": "Starfire Cadre",
+   "category": "Strategic Ploy",
+   "when": "Your Shooting phase.",
+   "target": "One FIRE WARRIOR or PATHFINDER TEAM unit from your army.",
+   "effect": "Until the end of the phase, your unit is eligible to shoot in a turn in which it Fell Back.",
+   "restrictions": "",
+   "text": "WHEN: Your Shooting phase.\n\nTARGET: One FIRE WARRIOR or PATHFINDER TEAM unit from your army.\n\nEFFECT: Until the end of the phase, your unit is eligible to shoot in a turn in which it Fell Back.",
+   "flavour": "Collapsing lines of infantry provide a defence in depth through the shipboard confines, allowing the enemy to overextend even as retreating T'au continue to pour fire into them.",
+   "src": "wahapedia"
+  },
+  "responsivevolley": {
+   "name": "RESPONSIVE VOLLEY",
+   "cost": 1,
+   "costText": "1CP",
+   "detachment": "Starfire Cadre",
+   "category": "Battle Tactic",
+   "when": "Your Movement phase, just after a FIRE WARRIOR or PATHFINDER TEAM unit from your army opens a Hatchway.",
+   "target": "That FIRE WARRIOR or PATHFINDER TEAM unit.",
+   "effect": "Until the end of the turn, each time a model in your unit makes a ranged attack that targets an enemy unit wholly on the opposite side of that Hatchway from them, a Critical Hit is scored on an unmodified Hit roll of 5+, instead of only a 6.",
+   "restrictions": "",
+   "text": "WHEN: Your Movement phase, just after a FIRE WARRIOR or PATHFINDER TEAM unit from your army opens a Hatchway.\n\nTARGET: That FIRE WARRIOR or PATHFINDER TEAM unit.\n\nEFFECT: Until the end of the turn, each time a model in your unit makes a ranged attack that targets an enemy unit wholly on the opposite side of that Hatchway from them, a Critical Hit is scored on an unmodified Hit roll of 5+, instead of only a 6.",
+   "flavour": "Should enemy forces be suddenly revealed during such close-confines combat, Fire caste soldiery are trained to loose immediate, punishing firepower.",
+   "src": "wahapedia"
+  },
+  "pulsebarrage": {
+   "name": "PULSE BARRAGE",
+   "cost": 1,
+   "costText": "1CP",
+   "detachment": "Starfire Cadre",
+   "category": "Battle Tactic",
+   "when": "Your opponent’s Movement or Charge phase.",
+   "target": "One FIRE WARRIOR or PATHFINDER TEAM unit from your army that has not fired Overwatch this phase.",
+   "effect": "Until the end of the phase, each time a model in your unit makes an attack while firing Overwatch, an unmodified Hit roll of 5+ is required to score a hit, instead of an unmodified 6.",
+   "restrictions": "",
+   "text": "WHEN: Your opponent’s Movement or Charge phase.\n\nTARGET: One FIRE WARRIOR or PATHFINDER TEAM unit from your army that has not fired Overwatch this phase.\n\nEFFECT: Until the end of the phase, each time a model in your unit makes an attack while firing Overwatch, an unmodified Hit roll of 5+ is required to score a hit, instead of an unmodified 6.",
+   "flavour": "The tight confines of voidship warfare funnel the enemy right into the waiting T'au guns.",
+   "src": "wahapedia"
+  },
+  "boardingblades": {
+   "name": "BOARDING BLADES",
+   "cost": 1,
+   "costText": "1CP",
+   "detachment": "Kroot Raiding Party",
+   "category": "Battle Tactic",
+   "when": "Fight phase.",
+   "target": "One KROOT unit from your army that has not been selected to fight this phase.",
+   "effect": "Until the end of the phase, improve the Armour Penetration characteristic of melee weapons equipped by models in your unit by 1. In addition, each time a model in your unit makes an attack, on a Critical Wound, improve the Armour Penetration characteristic of that attack by an additional 1.",
+   "restrictions": "",
+   "text": "WHEN: Fight phase.\n\nTARGET: One KROOT unit from your army that has not been selected to fight this phase.\n\nEFFECT: Until the end of the phase, improve the Armour Penetration characteristic of melee weapons equipped by models in your unit by 1. In addition, each time a model in your unit makes an attack, on a Critical Wound, improve the Armour Penetration characteristic of that attack by an additional 1.",
+   "flavour": "Expecting close-quarters carnage, these Kroot have adapted the blades on their weapons to slice through even thick armour.",
+   "src": "wahapedia"
+  },
+  "sweepingambush": {
+   "name": "SWEEPING AMBUSH",
+   "cost": 1,
+   "costText": "1CP",
+   "detachment": "Kroot Raiding Party",
+   "category": "Strategic Ploy",
+   "when": "Fight phase.",
+   "target": "One KROOT unit from your army that has not been selected to fight this phase.",
+   "effect": "Until the end of the phase, each time a model in your unit makes a Pile-in or Consolidation move, it can move up to 6\" instead of up to 3\". In addition, when making a Consolidation move, that model can end that move within Engagement Range of the closest enemy unit that was not visible to its unit when it started that move.",
+   "restrictions": "",
+   "text": "WHEN: Fight phase.\n\nTARGET: One KROOT unit from your army that has not been selected to fight this phase.\n\nEFFECT: Until the end of the phase, each time a model in your unit makes a Pile-in or Consolidation move, it can move up to 6\" instead of up to 3\". In addition, when making a Consolidation move, that model can end that move within Engagement Range of the closest enemy unit that was not visible to its unit when it started that move.",
+   "flavour": "Once they spring their ambush these Kroot move fast, hacking through one band of foes and pouncing on the next before the enemy can regain their footing.",
+   "src": "wahapedia"
+  },
+  "bruteforce": {
+   "name": "BRUTE FORCE",
+   "cost": 1,
+   "costText": "1CP",
+   "detachment": "Kroot Raiding Party",
+   "category": "Strategic Ploy",
+   "when": "Your Movement phase, just after a KROOTOX RIDERS unit from your army opens a Hatchway.",
+   "target": "That KROOTOX RIDERS unit.",
+   "effect": "Roll one D6 for each unit that is within 3\" of that Hatchway, if that Hatchway is visible to that unit and that unit is wholly on the opposite side of it from your unit: on a 2-4, that enemy unit suffers 1 mortal wound; on a 5+, that enemy unit suffers 2 mortal wounds.",
+   "restrictions": "",
+   "text": "WHEN: Your Movement phase, just after a KROOTOX RIDERS unit from your army opens a Hatchway.\n\nTARGET: That KROOTOX RIDERS unit.\n\nEFFECT: Roll one D6 for each unit that is within 3\" of that Hatchway, if that Hatchway is visible to that unit and that unit is wholly on the opposite side of it from your unit: on a 2-4, that enemy unit suffers 1 mortal wound; on a 5+, that enemy unit suffers 2 mortal wounds.",
+   "flavour": "Where cunning will not suffice, the brutal strength of Krootox sees hatchways and bulkheads smashed to pieces, filling the corridors beyond with whickering shrapnel.",
+   "src": "wahapedia"
+  },
+  "tanglebombbolas": {
+   "name": "TANGLEBOMB BOLAS",
+   "cost": 1,
+   "costText": "1CP",
+   "detachment": "Kroot Raiding Party",
+   "category": "Wargear",
+   "when": "Your Shooting phase.",
+   "target": "One KROOT unit from your army.",
+   "effect": "Select one enemy unit within 9\" of and visible to your unit and roll one D6: on a 2+, until the start of your next Shooting phase, halve the Move characteristic of models in that enemy unit and halve Advance and Charge rolls made for it.",
+   "restrictions": "",
+   "text": "WHEN: Your Shooting phase.\n\nTARGET: One KROOT unit from your army.\n\nEFFECT: Select one enemy unit within 9\" of and visible to your unit and roll one D6: on a 2+, until the start of your next Shooting phase, halve the Move characteristic of models in that enemy unit and halve Advance and Charge rolls made for it.",
+   "flavour": "Sent spinning in to entangle their targets, these weapons leave their victims easy prey for the screeching Kroot.",
+   "src": "wahapedia"
+  }
+ }
+}

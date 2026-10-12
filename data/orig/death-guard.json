@@ -1,0 +1,2094 @@
+{
+ "faction": "death-guard",
+ "name": "Death Guard",
+ "version": {
+  "bsdata": "3988a8bdd210f9d31ea5b6782d0016688ccb6815",
+  "wahapedia": "2026-10-11"
+ },
+ "sources": {
+  "rules": "bsdata (fallback wahapedia)",
+  "stratagems": "wahapedia",
+  "enhancements": "bsdata (fallback wahapedia)"
+ },
+ "armyRules": [
+  {
+   "name": "Nurgle’s Gift (Aura)",
+   "text": "If your Army Faction is DEATH GUARD, while an enemy unit is within Contagion Range of one or more ^^**Death Guard^^** units from your army, it is Afflicted.\n\nCONTAGION RANGE\n1st Battle Round: Contagion Range = 3\"\n2nd Battle Round: Contagion Range = 6\"\n3rd Battle Round Onwards: Contagion Range = 9\"\n\nContagion Range cannot be greater than 12\" after modifiers.\n\n**AFFLICTED**\n\nDuring the Declare Battle Formations step, select one of the Plagues below. Until the end of the battle, while an enemy unit is Afflicted, subtract 1 from the Toughness characteristic of models in that unit, and that unit has the effect of your chosen Plague.\n\n**Skullsquirm Blight**\n- Each time a model in this unit makes a ranged attack, enemy units have the benefit of cover against that attack.\n- Each time a model in this unit makes a melee attack, subtract 1 from the Hit roll.\n\n**Rattlejoint Ague**\nWorsen the Save characteristic of models in this unit by 1.\n\n**Scabrous Soulrot**\nWorsen the Move, Leadership and Objective Control characteristics of models in this unit by 1 (this rule can only worsen a model's Objective Control characteristic to a minimum of 1).",
+   "src": "bsdata"
+  },
+  {
+   "name": "Pact of Decay",
+   "text": "When mustering your army, unless specifically stated otherwise, you cannot select PLAGUE LEGIONS as your Army Faction.",
+   "src": "wahapedia"
+  }
+ ],
+ "detachments": {
+  "Virulent Vectorium": {
+   "name": "Virulent Vectorium",
+   "source": {
+    "rule": "bsdata",
+    "enhancements": "bsdata",
+    "stratagems": "wahapedia"
+   },
+   "rule": [
+    {
+     "name": "Worldblight",
+     "text": "At the end of your Command phase, if a friendly DEATH GUARD unit is controlling an objective, that objective is secured. Until you lose control of that objective, while an enemy unit is within range of that objective, that enemy unit is Afflicted."
+    }
+   ],
+   "stratagems": {
+    "Putrid Detonation": {
+     "name": "PUTRID DETONATION",
+     "cost": 1,
+     "costText": "1CP",
+     "detachment": "Virulent Vectorium",
+     "category": "Strategic Ploy",
+     "when": "Any phase.",
+     "target": "One DEATH GUARD VEHICLE or DEATH GUARD MONSTER model from your army with the Deadly Demise ability that was just destroyed. You can use this Stratagem on that model even though it was just destroyed.",
+     "effect": "Do not roll one D6 to determine whether mortal wounds are inflicted by your model’s Deadly Demise ability. Instead, mortal wounds are automatically inflicted. In addition, any enemy units that suffer mortal wounds as a result of this Stratagem are Afflicted until the start of your next turn.",
+     "restrictions": "",
+     "text": "WHEN: Any phase.\n\nTARGET: One DEATH GUARD VEHICLE or DEATH GUARD MONSTER model from your army with the Deadly Demise ability that was just destroyed. You can use this Stratagem on that model even though it was just destroyed.\n\nEFFECT: Do not roll one D6 to determine whether mortal wounds are inflicted by your model’s Deadly Demise ability. Instead, mortal wounds are automatically inflicted. In addition, any enemy units that suffer mortal wounds as a result of this Stratagem are Afflicted until the start of your next turn.",
+     "flavour": "Bloated with putrefaction and swilling with infectious poisons, the demise of this hulking entity is as revolting as it is explosively hazardous.",
+     "src": "wahapedia"
+    },
+    "Disgustingly Resilient": {
+     "name": "DISGUSTINGLY RESILIENT",
+     "cost": 2,
+     "costText": "2CP",
+     "detachment": "Virulent Vectorium",
+     "category": "Battle Tactic",
+     "when": "Your opponent’s Shooting phase or the Fight phase, just after an enemy unit has selected its targets.",
+     "target": "One DEATH GUARD unit from your army that was selected as the target of one or more of the attacking unit’s attacks.",
+     "effect": "Until the end of the phase, each time an attack is allocated to a model in your unit, subtract 1 from the Damage characteristic of that attack.",
+     "restrictions": "",
+     "text": "WHEN: Your opponent’s Shooting phase or the Fight phase, just after an enemy unit has selected its targets.\n\nTARGET: One DEATH GUARD unit from your army that was selected as the target of one or more of the attacking unit’s attacks.\n\nEFFECT: Until the end of the phase, each time an attack is allocated to a model in your unit, subtract 1 from the Damage characteristic of that attack.",
+     "flavour": "Those favoured by Nurgle are inured to pain, their rotting bodies shrugging off all but the most traumatic damage with ease.",
+     "src": "wahapedia"
+    },
+    "Plaguesurge": {
+     "name": "PLAGUESURGE",
+     "cost": 2,
+     "costText": "2CP",
+     "detachment": "Virulent Vectorium",
+     "category": "Epic Deed",
+     "when": "Your Command phase.",
+     "target": "Your DEATH GUARD WARLORD that is on the battlefield.",
+     "effect": "Until the start of your next Command phase, add 3\" to the Contagion Range of models from your army.",
+     "restrictions": "",
+     "text": "WHEN: Your Command phase.\n\nTARGET: Your DEATH GUARD WARLORD that is on the battlefield.\n\nEFFECT: Until the start of your next Command phase, add 3\" to the Contagion Range of models from your army.",
+     "flavour": "The foul miasma around the Death Guard swells and thickens, boiling outward like putrid smog.",
+     "src": "wahapedia"
+    },
+    "Leechspore Eruption": {
+     "name": "LEECHSPORE ERUPTION",
+     "cost": 1,
+     "costText": "1CP",
+     "detachment": "Virulent Vectorium",
+     "category": "Epic Deed",
+     "when": "Your Command phase.",
+     "target": "One DEATH GUARD model your army that has lost one or more wounds.",
+     "effect": "Select one enemy unit within 3\" of your model. Roll a number of D6 equal to the number of wounds your model has lost: for each 5+, that enemy unit suffers one mortal wound (to a maximum of 6 mortal wounds) and your model regains 1 lost wound (to a maximum of 6 lost wounds).",
+     "restrictions": "",
+     "text": "WHEN: Your Command phase.\n\nTARGET: One DEATH GUARD model your army that has lost one or more wounds.\n\nEFFECT: Select one enemy unit within 3\" of your model. Roll a number of D6 equal to the number of wounds your model has lost: for each 5+, that enemy unit suffers one mortal wound (to a maximum of 6 mortal wounds) and your model regains 1 lost wound (to a maximum of 6 lost wounds).",
+     "flavour": "Billowing from this warrior's wounds come clouds of parasitic spores that settle on the foe and drain their vitality, stealing it for the one who spawned them.",
+     "src": "wahapedia"
+    },
+    "Overwhelming Generosity": {
+     "name": "OVERWHELMING GENEROSITY",
+     "cost": 1,
+     "costText": "1CP",
+     "detachment": "Virulent Vectorium",
+     "category": "Wargear",
+     "when": "Start of your Shooting phase.",
+     "target": "One DEATH GUARD CHARACTER unit from your army.",
+     "effect": "Select one enemy unit visible to your unit. Until the end of the phase, each time a DEATH GUARD unit from your army selects that enemy unit as the target of any ranged attacks, you can re-roll the dice to determine how many attacks a weapon equipped by a model in that unit makes.",
+     "restrictions": "",
+     "text": "WHEN: Start of your Shooting phase.\n\nTARGET: One DEATH GUARD CHARACTER unit from your army.\n\nEFFECT: Select one enemy unit visible to your unit. Until the end of the phase, each time a DEATH GUARD unit from your army selects that enemy unit as the target of any ranged attacks, you can re-roll the dice to determine how many attacks a weapon equipped by a model in that unit makes.",
+     "flavour": "Unholy filth gushes from Nurgle's faithful into their guns until the armaments threaten to burst like bloated corpses.",
+     "src": "wahapedia"
+    },
+    "Creeping Blight": {
+     "name": "CREEPING BLIGHT",
+     "cost": 1,
+     "costText": "1CP",
+     "detachment": "Virulent Vectorium",
+     "category": "Wargear",
+     "when": "Your Shooting phase.",
+     "target": "One DEATH GUARD INFANTRY unit from your army that has not been selected to shoot this phase.",
+     "effect": "Until the end of the phase, each time a model in your unit makes a ranged attack that targets an Afflicted unit, you can re-roll the Hit roll and you can re-roll the Wound roll.",
+     "restrictions": "",
+     "text": "WHEN: Your Shooting phase.\n\nTARGET: One DEATH GUARD INFANTRY unit from your army that has not been selected to shoot this phase.\n\nEFFECT: Until the end of the phase, each time a model in your unit makes a ranged attack that targets an Afflicted unit, you can re-roll the Hit roll and you can re-roll the Wound roll.",
+     "flavour": "Those in the grip of Nurgle's unholy plagues become weaker by the moment, barely able to lift their weapons, let alone defend themselves from the attacking Death Guard.",
+     "src": "wahapedia"
+    }
+   },
+   "enhancements": [
+    {
+     "name": "Daemon Weapon of Nurgle",
+     "cost": 10,
+     "text": "Each time the bearer makes a melee attack, an unmodified Hit roll of 5+ scores a Critical Hit.",
+     "src": "bsdata"
+    },
+    {
+     "name": "Furnace of Plagues",
+     "cost": 25,
+     "text": "Add 1 to the Strength and Attacks characteristics of the bearer's melee weapons, and the bearer's melee weapons have the Devastating Wounds abilty.",
+     "src": "bsdata"
+    },
+    {
+     "name": "Revolting Regeneration",
+     "cost": 30,
+     "text": "The bearer has the Feel No Pain 5+ ability.",
+     "src": "bsdata"
+    },
+    {
+     "name": "Arch Contaminator",
+     "cost": 25,
+     "text": "While the bearer's unit is within range of an objective marker you control, each time a model in the bearer's unit makes an attack, you can re-roll the Wound roll.",
+     "src": "bsdata"
+    }
+   ],
+   "dp": 3
+  },
+  "Mortarion's Hammer": {
+   "name": "Mortarion's Hammer",
+   "source": {
+    "rule": "bsdata",
+    "enhancements": "bsdata",
+    "stratagems": "wahapedia"
+   },
+   "rule": [
+    {
+     "name": "Miasmic Bombardment",
+     "text": "At the start of the battle round, select a number of enemy units more than 12\" away from every model in your army that is on the battle field. Until the end of the battle round, those enemy units are Afflicted. The maximum number of units you can select in this way depends on the battle size, as shown below.\n\nIncursion - 1 Unit\nStrike Force - 2 Units\nOnslaught - 3 Units"
+    }
+   ],
+   "stratagems": {
+    "Blighted Land": {
+     "name": "BLIGHTED LAND",
+     "cost": 2,
+     "costText": "2CP",
+     "detachment": "Mortarion’s Hammer",
+     "category": "Strategic Ploy",
+     "when": "End of your Movement phase.",
+     "target": "One DEATH GUARD VEHICLE unit from your army.",
+     "effect": "Select one terrain feature within 24\" of and visible to your unit. Until the start of your next turn, enemy units are Afflicted while they are within 3\" of that terrain feature.",
+     "restrictions": "",
+     "text": "WHEN: End of your Movement phase.\n\nTARGET: One DEATH GUARD VEHICLE unit from your army.\n\nEFFECT: Select one terrain feature within 24\" of and visible to your unit. Until the start of your next turn, enemy units are Afflicted while they are within 3\" of that terrain feature.",
+     "flavour": "Firing diseased submunitions or belching swarms of daemonic parasites from its hull, this war engine befouls the battlefield as it advances.",
+     "src": "wahapedia"
+    },
+    "Relentless Grind": {
+     "name": "RELENTLESS GRIND",
+     "cost": 1,
+     "costText": "1CP",
+     "detachment": "Mortarion’s Hammer",
+     "category": "Strategic Ploy",
+     "when": "Your Movement phase or your Charge phase.",
+     "target": "One DEATH GUARD VEHICLE unit from your army that has not been selected to move or charge this phase.",
+     "effect": "Until the end of the phase, each time your unit makes a Normal, Advance or Charge move, it can move horizontally through terrain features.",
+     "restrictions": "",
+     "text": "WHEN: Your Movement phase or your Charge phase.\n\nTARGET: One DEATH GUARD VEHICLE unit from your army that has not been selected to move or charge this phase.\n\nEFFECT: Until the end of the phase, each time your unit makes a Normal, Advance or Charge move, it can move horizontally through terrain features.",
+     "flavour": "When the armoured vehicles of the Death Guard advance, they plough through - or straight over- anything that stands in their way.",
+     "src": "wahapedia"
+    },
+    "Drawn to Despair": {
+     "name": "DRAWN TO DESPAIR",
+     "cost": 1,
+     "costText": "1CP",
+     "detachment": "Mortarion’s Hammer",
+     "category": "Battle Tactic",
+     "when": "Your Shooting phase.",
+     "target": "One DEATH GUARD unit from your army that has not been selected to shoot this phase.",
+     "effect": "Until the end of the phase, each time a model in your unit makes an attack that targets a visible enemy unit (excluding AIRCRAFT) within your opponent’s deployment zone, you can re-roll the Hit roll.",
+     "restrictions": "",
+     "text": "WHEN: Your Shooting phase.\n\nTARGET: One DEATH GUARD unit from your army that has not been selected to shoot this phase.\n\nEFFECT: Until the end of the phase, each time a model in your unit makes an attack that targets a visible enemy unit (excluding AIRCRAFT) within your opponent’s deployment zone, you can re-roll the Hit roll.",
+     "flavour": "Those who languish in misery or cower in terror make themselves easy targets for the Death Guard.",
+     "src": "wahapedia"
+    },
+    "Font of Filth": {
+     "name": "FONT OF FILTH",
+     "cost": 1,
+     "costText": "1CP",
+     "detachment": "Mortarion’s Hammer",
+     "category": "Strategic Ploy",
+     "when": "Your Shooting phase.",
+     "target": "One DEATH GUARD VEHICLE unit from your army that has not been selected to shoot this phase.",
+     "effect": "Until the end of the phase, ranged weapons equipped by models in your unit have the [ASSAULT] ability.",
+     "restrictions": "",
+     "text": "WHEN: Your Shooting phase.\n\nTARGET: One DEATH GUARD VEHICLE unit from your army that has not been selected to shoot this phase.\n\nEFFECT: Until the end of the phase, ranged weapons equipped by models in your unit have the [ASSAULT] ability.",
+     "flavour": "As though afflicted with some awful vomiting sickness, this vehicle's weapons retch an endless stream of fire at the enemy, heaving themselves empty even as it storms into the enemy lines.",
+     "src": "wahapedia"
+    },
+    "Eyestinger Storm": {
+     "name": "EYESTINGER STORM",
+     "cost": 1,
+     "costText": "1CP",
+     "detachment": "Mortarion’s Hammer",
+     "category": "Strategic Ploy",
+     "when": "Your opponent’s Command phase.",
+     "target": "One DEATH GUARD VEHICLE unit from your army.",
+     "effect": "Select one objective marker visible to one or more models in your unit. Each Afflicted enemy unit within range of that objective marker must take a Battle-shock test. Enemy units affected by this Stratagem do not need to take any other Battle-shock tests in the same phase.",
+     "restrictions": "",
+     "text": "WHEN: Your opponent’s Command phase.\n\nTARGET: One DEATH GUARD VEHICLE unit from your army.\n\nEFFECT: Select one objective marker visible to one or more models in your unit. Each Afflicted enemy unit within range of that objective marker must take a Battle-shock test. Enemy units affected by this Stratagem do not need to take any other Battle-shock tests in the same phase.",
+     "flavour": "Swarms of these revolting insects burrow hives into the hulls of Death Guard vehicles. Drawn to sickened prey, they boil forth in buzzing masses and descend on the foe, spreading panic and horror.",
+     "src": "wahapedia"
+    },
+    "Stinking Mire": {
+     "name": "STINKING MIRE",
+     "cost": 1,
+     "costText": "1CP",
+     "detachment": "Mortarion’s Hammer",
+     "category": "Strategic Ploy",
+     "when": "Start of your opponent’s Charge phase.",
+     "target": "One friendly unengaged DEATH GUARD VEHICLE unit.",
+     "effect": "Select one visible enemy unit within 12\" of your unit. When that enemy unit declares a charge, that enemy unit has -1 to charge rolls.",
+     "restrictions": "",
+     "text": "WHEN: Start of your opponent’s Charge phase.\n\nTARGET: One friendly unengaged DEATH GUARD VEHICLE unit.\n\nEFFECT: Select one visible enemy unit within 12\" of your unit. When that enemy unit declares a charge, that enemy unit has -1 to charge rolls.",
+     "flavour": "Attempting to counterattack Death Guard can leave foes floundering amidst bubbling filth.",
+     "src": "wahapedia"
+    }
+   },
+   "enhancements": [
+    {
+     "name": "Eye of Affliction",
+     "cost": 20,
+     "text": "Ranged weapons equipped by model's in the bearer's unit have the [Ignores Cover] ability while targeting an Afflicted enemy unit.",
+     "src": "bsdata"
+    },
+    {
+     "name": "Bilemaw Blight",
+     "cost": 10,
+     "text": "At the start of your Shooting phase, until the end of the phase, add 12\" to the Range characteristics of the bearer's Plague Wind weapon.",
+     "src": "bsdata"
+    },
+    {
+     "name": "Shriekworm Familiar",
+     "cost": 15,
+     "text": "Once per battle round, you can target the bearer's unit with the Fire Overwatch Stratagem for 0CP.",
+     "src": "bsdata"
+    },
+    {
+     "name": "Tendrilous Emissions",
+     "cost": 30,
+     "text": "While the bearer is within 3\" of one or more friendly ^^**Death Guard Vehicle**^^ units, the bearer has the Lone Operative ability, and each time one of those ^^**Vehicle**^^ units makes a ranged attack that targets an enemy unit visible to the bearer, re-roll a Wound roll of 1.",
+     "src": "bsdata"
+    }
+   ],
+   "dp": 2
+  },
+  "Champions of Contagion": {
+   "name": "Champions of Contagion",
+   "source": {
+    "rule": "bsdata",
+    "enhancements": "bsdata",
+    "stratagems": "wahapedia"
+   },
+   "rule": [
+    {
+     "name": "Manifold Maladies",
+     "text": "At the start of the battle round, you can select one of the Plagues listed in Nurgle's Gift. Until the end of the battle, that is your chosen Plague instead of any previously chosen Plague."
+    }
+   ],
+   "stratagems": {
+    "Blessings of Filth": {
+     "name": "BLESSINGS OF FILTH",
+     "cost": 1,
+     "costText": "1CP",
+     "detachment": "Champions of Contagion",
+     "category": "Battle Tactic",
+     "when": "Your Shooting phase or the Fight phase.",
+     "target": "One DEATH GUARD Attached unit from your army that has not been selected to shoot or fight this phase.",
+     "effect": "Until the end of the phase, each time a model in your unit makes an attack, an unmodified Hit roll of 5+ scores a Critical Hit.",
+     "restrictions": "",
+     "text": "WHEN: Your Shooting phase or the Fight phase.\n\nTARGET: One DEATH GUARD Attached unit from your army that has not been selected to shoot or fight this phase.\n\nEFFECT: Until the end of the phase, each time a model in your unit makes an attack, an unmodified Hit roll of 5+ scores a Critical Hit.",
+     "flavour": "Employing their unique gifts, this champion enhances the weapons of their comrades with even greater levels of infectious malevolence.",
+     "src": "wahapedia"
+    },
+    "Malignance Magnified": {
+     "name": "MALIGNANCE MAGNIFIED",
+     "cost": 2,
+     "costText": "2CP",
+     "detachment": "Champions of Contagion",
+     "category": "Battle Tactic",
+     "when": "Your Shooting phase or the Fight phase.",
+     "target": "One DEATH GUARD Attached unit from your army that has not been selected to shoot or fight this phase.",
+     "effect": "Until the end of the phase, each time a model in your unit makes an attack that targets a unit that is below its Starting Strength, you can re-roll the Hit roll and you can re-roll the Wound roll.",
+     "restrictions": "",
+     "text": "WHEN: Your Shooting phase or the Fight phase.\n\nTARGET: One DEATH GUARD Attached unit from your army that has not been selected to shoot or fight this phase.\n\nEFFECT: Until the end of the phase, each time a model in your unit makes an attack that targets a unit that is below its Starting Strength, you can re-roll the Hit roll and you can re-roll the Wound roll.",
+     "flavour": "The vile talents of such plague specialists act like a filth-smeared lens, focusing and intensifying the infectious gifts of Nurgle.",
+     "src": "wahapedia"
+    },
+    "Grotesque Fortitude": {
+     "name": "GROTESQUE FORTITUDE",
+     "cost": 1,
+     "costText": "1CP",
+     "detachment": "Champions of Contagion",
+     "category": "Battle Tactic",
+     "when": "Your opponent’s Shooting phase or the Fight phase, just after an enemy unit has selected its targets.",
+     "target": "One DEATH GUARD Attached unit from your army that was selected as the target of one or more of the attacking unit’s attacks.",
+     "effect": "Until the end of the phase, add 2 to the Toughness characteristic of models in your unit.",
+     "restrictions": "",
+     "text": "WHEN: Your opponent’s Shooting phase or the Fight phase, just after an enemy unit has selected its targets.\n\nTARGET: One DEATH GUARD Attached unit from your army that was selected as the target of one or more of the attacking unit’s attacks.\n\nEFFECT: Until the end of the phase, add 2 to the Toughness characteristic of models in your unit.",
+     "flavour": "After their champion calls down the blessings of Nurgle, these warriors can fight on no matter the catastrophic, often gruesome, damage done to them by the foe.",
+     "src": "wahapedia"
+    },
+    "Rabid Infusion": {
+     "name": "RABID INFUSION",
+     "cost": 1,
+     "costText": "1CP",
+     "detachment": "Champions of Contagion",
+     "category": "Strategic Ploy",
+     "when": "Start of the Fight phase.",
+     "target": "One DEATH GUARD unit from your army that includes two CHARACTER models.",
+     "effect": "Until the end of the phase, your unit has the Fights First ability.",
+     "restrictions": "",
+     "text": "WHEN: Start of the Fight phase.\n\nTARGET: One DEATH GUARD unit from your army that includes two CHARACTER models.\n\nEFFECT: Until the end of the phase, your unit has the Fights First ability.",
+     "flavour": "The combined talents of these Death Guard champions drive their followers into a foam-jawed fury, be it through injection with a curdled cocktail of stimms or immersion in a fug of infectious agents.",
+     "src": "wahapedia"
+    },
+    "Mobile Vector": {
+     "name": "MOBILE VECTOR",
+     "cost": 1,
+     "costText": "1CP",
+     "detachment": "Champions of Contagion",
+     "category": "Strategic Ploy",
+     "when": "Your Movement phase, before the Reinforcements step.",
+     "target": "One DEATH GUARD CHARACTER unit from your army that is not leading a unit.",
+     "effect": "Select one other friendly DEATH GUARD unit (excluding Battle-shocked units and Attached units that already have two Leader units or one of your CHARACTER units leading it] within 2\" horizontally and 5\" vertically of your unit that your unit can lead (as described in the Leader section of its datasheet]. Your unit attaches to that unit as a Leader. Change that unit’s Starting Strength accordingly.",
+     "restrictions": "",
+     "text": "WHEN: Your Movement phase, before the Reinforcements step.\n\nTARGET: One DEATH GUARD CHARACTER unit from your army that is not leading a unit.\n\nEFFECT: Select one other friendly DEATH GUARD unit (excluding Battle-shocked units and Attached units that already have two Leader units or one of your CHARACTER units leading it] within 2\" horizontally and 5\" vertically of your unit that your unit can lead (as described in the Leader section of its datasheet]. Your unit attaches to that unit as a Leader. Change that unit’s Starting Strength accordingly.",
+     "flavour": "Nurgle's champions move through the Death Guard ranks like squirming parasites.",
+     "src": "wahapedia"
+    },
+    "Death's Heads": {
+     "name": "DEATH’S HEADS",
+     "cost": 1,
+     "costText": "1CP",
+     "detachment": "Champions of Contagion",
+     "category": "Wargear",
+     "when": "Your Shooting phase.",
+     "target": "One BIOLOGUS PUTRIFIER unit from your army that is not within Engagement Range of one or more enemy units and has not been selected to shoot this phase.",
+     "effect": "Select one enemy unit (excluding VEHICLES) that is within 8\" of and visible to your unit. Until the start of your next turn, that unit has the effect of all Plagues (see Nurgle’s Gift).",
+     "restrictions": "",
+     "text": "WHEN: Your Shooting phase.\n\nTARGET: One BIOLOGUS PUTRIFIER unit from your army that is not within Engagement Range of one or more enemy units and has not been selected to shoot this phase.\n\nEFFECT: Select one enemy unit (excluding VEHICLES) that is within 8\" of and visible to your unit. Until the start of your next turn, that unit has the effect of all Plagues (see Nurgle’s Gift).",
+     "flavour": "It takes much effort and sacrifice to fashion the disgusting explosives known as death's heads, but the results are spectacularly horrible.",
+     "src": "wahapedia"
+    }
+   },
+   "enhancements": [
+    {
+     "name": "Final Ingredient",
+     "cost": 20,
+     "text": "Once per battle, after the bearer's unit has fought, if one or more ^^**Character**^^ models were destroyed by those attacks, select one Plague. Until the end of the battle, if an enemy unit is Afflicted, that unit has the effect of the selected Plague in addition to any other.",
+     "src": "bsdata"
+    },
+    {
+     "name": "Visions of Virulence",
+     "cost": 15,
+     "text": "While an enemy unit is enfeebled by the bearer's Pestilent Fallout ability, that unit is also Afflicted.",
+     "src": "bsdata"
+    },
+    {
+     "name": "Needle of Nurgle",
+     "cost": 25,
+     "text": "Each time the bearer uses its Tainted Narthecium ability, you can return up to D3 destroyed models to the bearer's unit (instead of 1).",
+     "src": "bsdata"
+    },
+    {
+     "name": "Cornucophagus",
+     "cost": 35,
+     "text": "In the Declare Battle Formations step, select one Plague. Until the end of the battle, while an enemy is within Contagion Range of the bearer, that enemy unit has the effect of that Plague in addition to any other.",
+     "src": "bsdata"
+    }
+   ],
+   "dp": 2
+  },
+  "Tallyband Summoners": {
+   "name": "Tallyband Summoners",
+   "source": {
+    "rule": "bsdata",
+    "enhancements": "bsdata",
+    "stratagems": "wahapedia"
+   },
+   "rule": [
+    {
+     "name": "Reverberant Rancidity",
+     "text": "While a ^^**Plague Legions^^** unit from your army is within 7\" of one or more ^^**Death Guard^^** units from your army, that ^^**Plague Legions^^** unit has the Nurgle's Gift ability.\n\nWhile a ^^**Death Guard^^** unit from your army is within 7\" of one or more ^^**Plague Legions^^** units from your army, add 3\" to that ^^**Death Guard^^** unit's Contagion Range."
+    }
+   ],
+   "stratagems": {
+    "Persistent Pests": {
+     "name": "PERSISTENT PESTS",
+     "cost": 1,
+     "costText": "1CP",
+     "detachment": "Tallyband Summoners",
+     "category": "Strategic Ploy",
+     "when": "Any phase.",
+     "target": "One NURGLINGS unit from your army that was just destroyed. You can target that unit with this Stratagem even though it was just destroyed.",
+     "effect": "Add a new unit to your army identical to your destroyed unit, in Strategic Reserves, at its Starting Strength and with its full wounds remaining.",
+     "restrictions": "You can only use this Stratagem once per battle.",
+     "text": "WHEN: Any phase.\n\nTARGET: One NURGLINGS unit from your army that was just destroyed. You can target that unit with this Stratagem even though it was just destroyed.\n\nEFFECT: Add a new unit to your army identical to your destroyed unit, in Strategic Reserves, at its Starting Strength and with its full wounds remaining.\n\nRESTRICTIONS: You can only use this Stratagem once per battle.",
+     "flavour": "There is no simple way to wholly cleanse a Nurgling infestation once it has taken root.",
+     "src": "wahapedia"
+    },
+    "Clutching Corruption": {
+     "name": "CLUTCHING CORRUPTION",
+     "cost": 1,
+     "costText": "1CP",
+     "detachment": "Tallyband Summoners",
+     "category": "Battle Tactic",
+     "when": "Fight phase.",
+     "target": "One DEATH GUARD unit from your army that has not been selected to fight this phase.",
+     "effect": "Until the end of the phase, each time a model in your unit makes an attack that targets an enemy unit that is within Engagement Range of one or more PLAGUE LEGIONS units from your army, you can re-roll the Hit roll.",
+     "restrictions": "",
+     "text": "WHEN: Fight phase.\n\nTARGET: One DEATH GUARD unit from your army that has not been selected to fight this phase.\n\nEFFECT: Until the end of the phase, each time a model in your unit makes an attack that targets an enemy unit that is within Engagement Range of one or more PLAGUE LEGIONS units from your army, you can re-roll the Hit roll.",
+     "flavour": "The daemons of Nurgle grasp their victims tightly with rotting talons and coiling tentacles, their clutch as inescapable as entropy itself.",
+     "src": "wahapedia"
+    },
+    "All Is Rot": {
+     "name": "ALL IS ROT",
+     "cost": 1,
+     "costText": "1CP",
+     "detachment": "Tallyband Summoners",
+     "category": "Strategic Ploy",
+     "when": "Your Shooting phase.",
+     "target": "One PLAGUE LEGIONS unit from your army that is within Engagement Range of one or more enemy units.",
+     "effect": "Until the end of the phase, enemy units are not considered to be within Engagement Range of your unit for the purposes of selecting targets of ranged weapons. Until the end of the phase, each time an enemy model loses a wound, while that model’s unit is within Engagement Range of your unit, roll one D6: on a 5+, your unit suffers 1 mortal wound after the attacking unit has finished making its attacks.",
+     "restrictions": "",
+     "text": "WHEN: Your Shooting phase.\n\nTARGET: One PLAGUE LEGIONS unit from your army that is within Engagement Range of one or more enemy units.\n\nEFFECT: Until the end of the phase, enemy units are not considered to be within Engagement Range of your unit for the purposes of selecting targets of ranged weapons. Until the end of the phase, each time an enemy model loses a wound, while that model’s unit is within Engagement Range of your unit, roll one D6: on a 5+, your unit suffers 1 mortal wound after the attacking unit has finished making its attacks.",
+     "flavour": "Death Guard warriors open fire into foes already embattled by Nurgle’s daemons, knowing that no matter who they hit, all will wither and rot.",
+     "src": "wahapedia"
+    },
+    "Fleshy Avalanche": {
+     "name": "FLESHY AVALANCHE",
+     "cost": 1,
+     "costText": "1CP",
+     "detachment": "Tallyband Summoners",
+     "category": "Strategic Ploy",
+     "when": "Your Movement phase or your Charge phase.",
+     "target": "One PLAGUE LEGIONS MONSTER unit from your army that has not been selected to move or charge this phase.",
+     "effect": "Until the end of the phase, each time your unit makes a Normal, Advance or Charge move, it can move horizontally through terrain features.",
+     "restrictions": "",
+     "text": "WHEN: Your Movement phase or your Charge phase.\n\nTARGET: One PLAGUE LEGIONS MONSTER unit from your army that has not been selected to move or charge this phase.\n\nEFFECT: Until the end of the phase, each time your unit makes a Normal, Advance or Charge move, it can move horizontally through terrain features.",
+     "flavour": "The ephemeral structures of realspace have no power to halt the onset of Nurgle's Great Unclean Ones; they crumble, rot and burst apart before their unholy bulk.",
+     "src": "wahapedia"
+    },
+    "Avatars of Decay": {
+     "name": "AVATARS OF DECAY",
+     "cost": 1,
+     "costText": "1CP",
+     "detachment": "Tallyband Summoners",
+     "category": "Strategic Ploy",
+     "when": "Your Shooting phase.",
+     "target": "One PLAGUE LEGIONS unit from your army.",
+     "effect": "Until the end of the phase, while an enemy unit is within 6\" of your unit, that enemy unit is Afflicted.",
+     "restrictions": "",
+     "text": "WHEN: Your Shooting phase.\n\nTARGET: One PLAGUE LEGIONS unit from your army.\n\nEFFECT: Until the end of the phase, while an enemy unit is within 6\" of your unit, that enemy unit is Afflicted.",
+     "flavour": "Countless diseases blossom in the unreal flesh of Nurgle's daemon childer, manifestations of his blessings to be spread to all.",
+     "src": "wahapedia"
+    },
+    "Mireslick": {
+     "name": "MIRESLICK",
+     "cost": 1,
+     "costText": "1CP",
+     "detachment": "Tallyband Summoners",
+     "category": "Strategic Ploy",
+     "when": "Your opponent’s Movement phase, when an enemy unit (excluding MONSTERS and VEHICLES) is selected to Fall Back.",
+     "target": "One PLAGUE LEGIONS unit from your army that is within Engagement Range of that enemy unit.",
+     "effect": "Until the end of the phase, while an enemy unit is within Engagement Range of your unit, each time that unit is selected to Fall Back, it must take a Leadership test. If that test is failed, that unit must Remain Stationary this phase instead.",
+     "restrictions": "",
+     "text": "WHEN: Your opponent’s Movement phase, when an enemy unit (excluding MONSTERS and VEHICLES) is selected to Fall Back.\n\nTARGET: One PLAGUE LEGIONS unit from your army that is within Engagement Range of that enemy unit.\n\nEFFECT: Until the end of the phase, while an enemy unit is within Engagement Range of your unit, each time that unit is selected to Fall Back, it must take a Leadership test. If that test is failed, that unit must Remain Stationary this phase instead.",
+     "flavour": "Beneath the tread of Nurgle’s daemons, even ferrocrete or plasteel soon turns to a quagmire of rotting matter, in which their unlucky enemies begin to sink and become trapped.",
+     "src": "wahapedia"
+    }
+   },
+   "enhancements": [
+    {
+     "name": "Beckoning Blight",
+     "cost": 20,
+     "text": "Each time a ^^**Plague Legions^^** unit from your army is set up on the battle field using the Deep Strike ability, if it is set up wholly within 12\" of the bearer, it can be set up anywhere that is more than 6\" horizontally away from any enemy models, instead of more than 8\".",
+     "src": "bsdata"
+    },
+    {
+     "name": "Fell Harvester",
+     "cost": 10,
+     "text": "Add 2 to the Attacks characteristic of the bearer's melee weapons.",
+     "src": "bsdata"
+    },
+    {
+     "name": "Entropic Knell",
+     "cost": 15,
+     "text": "In the Battle-shock step of your opponent's Command phase, each enemy unit within 6\" of the bearer that is below its Starting Strength must take a Battle-shock test, subtracting 1 from that test.",
+     "src": "bsdata"
+    },
+    {
+     "name": "Tome of Bounteous Blessings",
+     "cost": 20,
+     "text": "Each time a ^^**Plague Legions^^** unit within 12\" of the bearer takes a Battle-shock test, add 1 to that test and, if that test is passed, one model in that unit regains up to D3 lost wounds (if that unit is a ^^**Battleline^^** unit and that test is passed, up to D3 destroyed models can be returned to that unit instead).",
+     "src": "bsdata"
+    }
+   ],
+   "dp": 2
+  },
+  "Shamblerot Vectorium": {
+   "name": "Shamblerot Vectorium",
+   "source": {
+    "rule": "bsdata",
+    "enhancements": "bsdata",
+    "stratagems": "wahapedia"
+   },
+   "rule": [
+    {
+     "name": "Numberless Horde",
+     "text": "In your Command phase in each of the following battle rounds, depending on your chosen battle size, add a new ^^**Poxwalkers**^^ unit with a Starting Strength of 10 to your army, in Strategic Reserves.\n\nIncursion - Battle Rounds 2,3\nStrike Force - Battle Rounds 2,3,4\nOnslaught - Battle Round 2,3,4,5\n\n^^**Poxwalkers**^^ unit from your army gain the ^^**Battleline**^^ keyword."
+    }
+   ],
+   "stratagems": {
+    "Grip of the Walking Pox": {
+     "name": "GRIP OF THE WALKING POX",
+     "cost": 1,
+     "costText": "1CP",
+     "detachment": "Shamblerot Vectorium",
+     "category": "Strategic Ploy",
+     "when": "Fight phase, just after an enemy unit has selected its targets.",
+     "target": "One POXWALKERS unit from your army that was selected as the target of one or more of the attacking unit’s attacks.",
+     "effect": "After the attacking unit has fought, roll one D6 for each model from your unit that was destroyed as a result of those attacks: on a 6, the attacking unit suffers 1 mortal wound. If your unit is not destroyed after the attacking unit has fought, enemy models destroyed as a result of this Stratagem count as enemy models destroyed by an attack made by a model in your unit for the purposes of the Curse of the Walking Pox ability.",
+     "restrictions": "",
+     "text": "WHEN: Fight phase, just after an enemy unit has selected its targets.\n\nTARGET: One POXWALKERS unit from your army that was selected as the target of one or more of the attacking unit’s attacks.\n\nEFFECT: After the attacking unit has fought, roll one D6 for each model from your unit that was destroyed as a result of those attacks: on a 6, the attacking unit suffers 1 mortal wound. If your unit is not destroyed after the attacking unit has fought, enemy models destroyed as a result of this Stratagem count as enemy models destroyed by an attack made by a model in your unit for the purposes of the Curse of the Walking Pox ability.",
+     "flavour": "Those infected by walking pox may fall as though fatally wounded, but they soon rise again.",
+     "src": "wahapedia"
+    },
+    "Smeared with Filth": {
+     "name": "SMEARED WITH FILTH",
+     "cost": 1,
+     "costText": "1CP",
+     "detachment": "Shamblerot Vectorium",
+     "category": "Strategic Ploy",
+     "when": "Fight phase.",
+     "target": "One POXWALKERS unit from your army that was just destroyed. You can target that unit with this Stratagem even though it was just destroyed.",
+     "effect": "Select one enemy unit that made one or more attacks that targeted your unit this phase. Until the end of the battle, that enemy unit is Afflicted.",
+     "restrictions": "",
+     "text": "WHEN: Fight phase.\n\nTARGET: One POXWALKERS unit from your army that was just destroyed. You can target that unit with this Stratagem even though it was just destroyed.\n\nEFFECT: Select one enemy unit that made one or more attacks that targeted your unit this phase. Until the end of the battle, that enemy unit is Afflicted.",
+     "flavour": "Hacking a path through a horde of Poxwalkers leaves aggressors coated in infectious matter.",
+     "src": "wahapedia"
+    },
+    "Gnawing Hunger": {
+     "name": "GNAWING HUNGER",
+     "cost": 1,
+     "costText": "1CP",
+     "detachment": "Shamblerot Vectorium",
+     "category": "Battle Tactic",
+     "when": "Your Command phase.",
+     "target": "One POXWALKERS unit from your army.",
+     "effect": "Until the end of the turn, add 1 to the Move characteristic of models in your unit, and add 1 to the Attacks and Strength characteristics of melee weapons equipped by models in your unit.",
+     "restrictions": "",
+     "text": "WHEN: Your Command phase.\n\nTARGET: One POXWALKERS unit from your army.\n\nEFFECT: Until the end of the turn, add 1 to the Move characteristic of models in your unit, and add 1 to the Attacks and Strength characteristics of melee weapons equipped by models in your unit.",
+     "flavour": "Gripped by a sudden, monstrous hunger, the Poxwalkers surge forward in a ravenous mass.",
+     "src": "wahapedia"
+    },
+    "Hidden Amongst the Dead": {
+     "name": "HIDDEN AMONGST THE DEAD",
+     "cost": 1,
+     "costText": "1CP",
+     "detachment": "Shamblerot Vectorium",
+     "category": "Strategic Ploy",
+     "when": "The Reinforcements step of your Movement phase.",
+     "target": "One POXWALKERS unit from your army that is in Strategic Reserves and that is not an Attached unit.",
+     "effect": "Until the end of the phase, models in that unit have the Deep Strike ability.",
+     "restrictions": "",
+     "text": "WHEN: The Reinforcements step of your Movement phase.\n\nTARGET: One POXWALKERS unit from your army that is in Strategic Reserves and that is not an Attached unit.\n\nEFFECT: Until the end of the phase, models in that unit have the Deep Strike ability.",
+     "flavour": "Another wave of Poxwalkers rises from the battlefield’s carrion heaps.",
+     "src": "wahapedia"
+    },
+    "Shock and Horror": {
+     "name": "SHOCK AND HORROR",
+     "cost": 1,
+     "costText": "1CP",
+     "detachment": "Shamblerot Vectorium",
+     "category": "Strategic Ploy",
+     "when": "Your Charge phase, just after a DEATH GUARD unit from your army ends a Charge move.",
+     "target": "That DEATH GUARD unit.",
+     "effect": "Each enemy unit within Engagement Range of your unit must take a Battle-shock test, subtracting 1 from that test.",
+     "restrictions": "",
+     "text": "WHEN: Your Charge phase, just after a DEATH GUARD unit from your army ends a Charge move.\n\nTARGET: That DEATH GUARD unit.\n\nEFFECT: Each enemy unit within Engagement Range of your unit must take a Battle-shock test, subtracting 1 from that test.",
+     "flavour": "Already dismayed by this living nightmare, the enemy falters before another sudden onslaught.",
+     "src": "wahapedia"
+    },
+    "Shambling Wall": {
+     "name": "SHAMBLING WALL",
+     "cost": 1,
+     "costText": "1CP",
+     "detachment": "Shamblerot Vectorium",
+     "category": "Strategic Ploy",
+     "when": "Your opponent’s Shooting phase, just after an enemy unit has selected its targets.",
+     "target": "One DEATH GUARD unit from your army that was selected as the target of one or more of the attacking unit’s attacks, and one friendly POXWALKERS unit within 3\" of your unit and visible to both your unit and the attacking unit.",
+     "effect": "Until the end of the phase, each time you would allocate an attack to a model in your DEATH GUARD unit, if your POXWALKERS unit is visible to the attacking model and is an eligible target for that attack, no saving throw is made for that attack; instead a number of POXWALKERS from your POXWALKERS unit equal to the Damage characteristic of that attack are destroyed.",
+     "restrictions": "",
+     "text": "WHEN: Your opponent’s Shooting phase, just after an enemy unit has selected its targets.\n\nTARGET: One DEATH GUARD unit from your army that was selected as the target of one or more of the attacking unit’s attacks, and one friendly POXWALKERS unit within 3\" of your unit and visible to both your unit and the attacking unit.\n\nEFFECT: Until the end of the phase, each time you would allocate an attack to a model in your DEATH GUARD unit, if your POXWALKERS unit is visible to the attacking model and is an eligible target for that attack, no saving throw is made for that attack; instead a number of POXWALKERS from your POXWALKERS unit equal to the Damage characteristic of that attack are destroyed.",
+     "flavour": "Lacking even basic self-preservation instincts, Poxwalkers make excellent walking shields.",
+     "src": "wahapedia"
+    }
+   },
+   "enhancements": [
+    {
+     "name": "Lord of the Walking Pox",
+     "cost": 15,
+     "text": "If the bearer is leading a ^^**Poxwalkers**^^ unit, and is in Strategic Reserves, for the purposes of setting up that unit on the battlefield, treat the current battle round as the third battle round.",
+     "src": "bsdata"
+    },
+    {
+     "name": "Talisman of Burgeoning",
+     "cost": 25,
+     "text": "While the bearer is leading a ^^**Poxwalkers**^^ unit, add 1 to the Toughness characteristic of ^^**Poxwalkers**^^ models in that unit.",
+     "src": "bsdata"
+    },
+    {
+     "name": "Witherbone Pipes",
+     "cost": 25,
+     "text": "While the bearer is leading a ^^**Poxwalkers**^^ unit, add 1 to the Objective Control characteristic of models in that unit, and each time that unit takes a Battle-shock or Leadership test, add 1 to that test.",
+     "src": "bsdata"
+    },
+    {
+     "name": "Sorrowsyphon",
+     "cost": 10,
+     "text": "While the bearer is leading a ^^**Poxwalkers**^^ unit, add 1 to the Damage characteristic of the bearer's Plague Wind weapon. Each time the bearer makes one or more attacks with a Plague Wind weapon, after the bearer's unit has resolved its attacks, D3 Bodyguard models from the bearer's unit are destroyed.",
+     "src": "bsdata"
+    }
+   ],
+   "dp": 2
+  },
+  "Death Lord's Chosen": {
+   "name": "Death Lord's Chosen",
+   "source": {
+    "rule": "bsdata",
+    "enhancements": "bsdata",
+    "stratagems": "wahapedia"
+   },
+   "rule": [
+    {
+     "name": "Deadly Vectors",
+     "text": "In your opponent's Command phase, roll 2D6 for each Afflicted enemy unit, subtracting 1 from the result if that unit is Below Half-strength. If the result is 6 or less, that enemy unit suffers D3 mortal wounds."
+    }
+   ],
+   "stratagems": {
+    "Blooming Pestilence": {
+     "name": "BLOOMING PESTILENCE",
+     "cost": 1,
+     "costText": "1CP",
+     "detachment": "Death Lord’s Chosen",
+     "category": "Epic Deed",
+     "when": "Start of any phase.",
+     "target": "One TERMINATOR unit from your army.",
+     "effect": "Until the end of the phase, add 3\" to the Contagion Range of models in your unit.",
+     "restrictions": "",
+     "text": "WHEN: Start of any phase.\n\nTARGET: One TERMINATOR unit from your army.\n\nEFFECT: Until the end of the phase, add 3\" to the Contagion Range of models in your unit.",
+     "flavour": "Death Guard warriors know to chant the sevenfold prayers to unleash Nurgle's bounty on the foe.",
+     "src": "wahapedia"
+    },
+    "Grim Reapers": {
+     "name": "GRIM REAPERS",
+     "cost": 1,
+     "costText": "1CP",
+     "detachment": "Death Lord’s Chosen",
+     "category": "Battle Tactic",
+     "when": "Fight phase.",
+     "target": "One TERMINATOR unit from your army that has not been selected to fight this phase.",
+     "effect": "Until the end of the phase, each time a model in your unit makes an attack that targets an enemy unit (excluding MONSTERS and VEHICLES) you can re-roll the Hit roll.",
+     "restrictions": "",
+     "text": "WHEN: Fight phase.\n\nTARGET: One TERMINATOR unit from your army that has not been selected to fight this phase.\n\nEFFECT: Until the end of the phase, each time a model in your unit makes an attack that targets an enemy unit (excluding MONSTERS and VEHICLES) you can re-roll the Hit roll.",
+     "flavour": "Swollen with bitter arrogance, these warriors carve a path through their perceived lessers and leave them as worm food.",
+     "src": "wahapedia"
+    },
+    "Undying Spite": {
+     "name": "UNDYING SPITE",
+     "cost": 1,
+     "costText": "1CP",
+     "detachment": "Death Lord’s Chosen",
+     "category": "Strategic Ploy",
+     "when": "Fight phase, just after an enemy unit has selected its targets.",
+     "target": "One TERMINATOR unit from your army that was selected as the target of one or more of the attacking unit’s attacks.",
+     "effect": "Until the end of the phase, each time a model in your unit is destroyed, if that model has not fought this phase, roll one D6. On a 4+, do not remove the destroyed model from play; it can fight after the attacking unit has finished making its attacks, and is then removed from play.",
+     "restrictions": "",
+     "text": "WHEN: Fight phase, just after an enemy unit has selected its targets.\n\nTARGET: One TERMINATOR unit from your army that was selected as the target of one or more of the attacking unit’s attacks.\n\nEFFECT: Until the end of the phase, each time a model in your unit is destroyed, if that model has not fought this phase, roll one D6. On a 4+, do not remove the destroyed model from play; it can fight after the attacking unit has finished making its attacks, and is then removed from play.",
+     "flavour": "Driven by bitterness and the putrid vitality of Nurgle's gifts, these warriors fight on for several moments, even after death.",
+     "src": "wahapedia"
+    },
+    "Signal Pox": {
+     "name": "SIGNAL POX",
+     "cost": 1,
+     "costText": "1CP",
+     "detachment": "Death Lord’s Chosen",
+     "category": "Epic Deed",
+     "when": "Your Command phase.",
+     "target": "One LORD OF VIRULENCE model from your army.",
+     "effect": "Select one objective marker within 30\" of and visible to your model. Until the start of your next turn, while an enemy unit is within range of that objective marker, that unit is Afflicted.",
+     "restrictions": "",
+     "text": "WHEN: Your Command phase.\n\nTARGET: One LORD OF VIRULENCE model from your army.\n\nEFFECT: Select one objective marker within 30\" of and visible to your model. Until the start of your next turn, while an enemy unit is within range of that objective marker, that unit is Afflicted.",
+     "flavour": "Guided in by rasping jets of fumes sent up by this Lord of Virulence, plague-ridden artillery fire and airbursting spore-shells saturate the target zone.",
+     "src": "wahapedia"
+    },
+    "Mortarion's Teachings": {
+     "name": "MORTARION'S TEACHINGS",
+     "cost": 1,
+     "costText": "1CP",
+     "detachment": "Death Lord’s Chosen",
+     "category": "Strategic Ploy",
+     "when": "Your Shooting phase.",
+     "target": "One TERMINATOR unit from your army that has not been selected to shoot this phase.",
+     "effect": "Until the end of the phase, ranged weapons equipped by models in your unit have the [ASSAULT] and [HEAVY] abilities.",
+     "restrictions": "",
+     "text": "WHEN: Your Shooting phase.\n\nTARGET: One TERMINATOR unit from your army that has not been selected to shoot this phase.\n\nEFFECT: Until the end of the phase, ranged weapons equipped by models in your unit have the [ASSAULT] and [HEAVY] abilities.",
+     "flavour": "Exemplifying the Daemon Primarch's doctrines on versatile heavy infantry tactics, these warriors position themselves and let fly.",
+     "src": "wahapedia"
+    },
+    "Sickening Impact": {
+     "name": "SICKENING IMPACT",
+     "cost": 1,
+     "costText": "1CP",
+     "detachment": "Death Lord’s Chosen",
+     "category": "Strategic Ploy",
+     "when": "Your Charge phase, just after a TERMINATOR unit from your army ends a Charge move.",
+     "target": "That TERMINATOR unit.",
+     "effect": "Select one enemy unit within Engagement Range of your unit, then roll one D6 for each model in your unit that is within Engagement Range of that enemy unit: for each 2+, that enemy unit suffers 1 mortal wound (to a maximum of 6 mortal wounds).",
+     "restrictions": "",
+     "text": "WHEN: Your Charge phase, just after a TERMINATOR unit from your army ends a Charge move.\n\nTARGET: That TERMINATOR unit.\n\nEFFECT: Select one enemy unit within Engagement Range of your unit, then roll one D6 for each model in your unit that is within Engagement Range of that enemy unit: for each 2+, that enemy unit suffers 1 mortal wound (to a maximum of 6 mortal wounds).",
+     "flavour": "Employing their crushing bulk and contagious gifts, these Terminators slam into their victims and grind them into putrefying mulch.",
+     "src": "wahapedia"
+    }
+   },
+   "enhancements": [
+    {
+     "name": "Face of Death",
+     "cost": 10,
+     "text": "At the start of the Fight phase, each enemy unit within Engagement Range of the bearer's unit must take a Battle-shock test.",
+     "src": "bsdata"
+    },
+    {
+     "name": "Vile Vigour",
+     "cost": 15,
+     "text": "While the bearer is leading a unit, add 1\" to the Movement characteristics of models in that unit and you can re-roll Advance rolls made for that unit.",
+     "src": "bsdata"
+    },
+    {
+     "name": "Warprot Talisman",
+     "cost": 30,
+     "text": "Once per battle, at the end of your opponent's turn, if the bearer's unit is not within Engagement Range of one or more enemy units, you can remove it from the battle field and place it into Strategic Reserves.",
+     "src": "bsdata"
+    },
+    {
+     "name": "Helm of the Fly King",
+     "cost": 20,
+     "text": "While the bearer is leading a unit, models in that unit cannot be targeted by ranged attacks unless the attacking model is within 18\".",
+     "src": "bsdata"
+    }
+   ],
+   "dp": 2
+  },
+  "Paragons of Putrescence": {
+   "name": "Paragons of Putrescence",
+   "source": {
+    "rule": "bsdata",
+    "enhancements": "bsdata",
+    "stratagems": "wahapedia"
+   },
+   "rule": [
+    {
+     "name": "Hypervirulent Strains",
+     "text": "Friendly **DEATH GUARD CHARACTER** units have +3\" to their **Contagion Range** (to a maximum of 12\")."
+    }
+   ],
+   "stratagems": {
+    "Territorial Infection": {
+     "name": "TERRITORIAL INFECTION",
+     "cost": 1,
+     "costText": "1CP",
+     "detachment": "Paragons of Putrescence",
+     "category": "",
+     "when": "Start of the Command phase.",
+     "target": "One friendly DEATH GUARD CHARACTER unit.",
+     "effect": "Your unit has +1 OC until the end of the turn.",
+     "restrictions": "",
+     "text": "WHEN: Start of the Command phase.\n\nTARGET: One friendly DEATH GUARD CHARACTER unit.\n\nEFFECT: Your unit has +1 OC until the end of the turn.",
+     "flavour": "The intensive contagions that flow in abundance from this champion taint everything around them, making taking ground from them a repulsive prospect for the enemy.",
+     "src": "wahapedia"
+    },
+    "Aggravus Spasms": {
+     "name": "AGGRAVUS SPASMS",
+     "cost": 1,
+     "costText": "1CP",
+     "detachment": "Paragons of Putrescence",
+     "category": "",
+     "when": "Start of your Shooting Phase.",
+     "target": "One friendly DEATH GUARD CHARACTER unit.",
+     "effect": "Select one visible enemy unit within Contagion Range of your unit. That enemy unit has +6\" detection range.",
+     "restrictions": "",
+     "text": "WHEN: Start of your Shooting Phase.\n\nTARGET: One friendly DEATH GUARD CHARACTER unit.\n\nEFFECT: Select one visible enemy unit within Contagion Range of your unit. That enemy unit has +6\" detection range.",
+     "flavour": "There is no hiding from contagion, and particular pathogens can incite neurological paroxysms that force their victims to give away their positions in painful throes.",
+     "src": "wahapedia"
+    },
+    "Simultaneous Contamination": {
+     "name": "SIMULTANEOUS CONTAMINATION",
+     "cost": 1,
+     "costText": "1CP",
+     "detachment": "Paragons of Putrescence",
+     "category": "",
+     "when": "Your Shooting phase, when a friendly DEATH GUARD CHARACTER unit starts an action.",
+     "target": "That DEATH GUARD CHARACTER unit.",
+     "effect": "That action does not prevent your unit from being eligible to shoot.",
+     "restrictions": "",
+     "text": "WHEN: Your Shooting phase, when a friendly DEATH GUARD CHARACTER unit starts an action.\n\nTARGET: That DEATH GUARD CHARACTER unit.\n\nEFFECT: That action does not prevent your unit from being eligible to shoot.",
+     "flavour": "The worst infections spread both visibly and subtly. Thus do the Death Guard’s champions attack, ordering vile operations, the two vectors more deadly than either alone.",
+     "src": "wahapedia"
+    }
+   },
+   "enhancements": [
+    {
+     "name": "Host of the Hybridised Pox",
+     "cost": 40,
+     "text": "(Once per battle, per army) In your Command phase, you can use this ability. If you do, select one of the **Plagues** listed in **Nurgle’s Gift** (see Codex: Death Guard). Enemy units within **Contagion Range** of this unit also have the effect of that **Plague** in addition to your army’s chosen **Plague** until the end of the battle.",
+     "src": "bsdata"
+    },
+    {
+     "name": "Rejuvenating Swarm",
+     "cost": 20,
+     "text": "Attacks that target this unit with a **S** greater than this unit’s **T** have ‑1 to **wound rolls**.",
+     "src": "bsdata"
+    }
+   ],
+   "dp": 1
+  },
+  "Contagion Engines": {
+   "name": "Contagion Engines",
+   "source": {
+    "rule": "bsdata",
+    "enhancements": "mixed",
+    "stratagems": "wahapedia"
+   },
+   "rule": [
+    {
+     "name": "Warped and Rusted Animus",
+     "text": "Friendly FOETID BLOAT‑DRONE/FOETID BLOAT‑DRONE WITH HEAVY BLIGHT LAUNCHER/HELBRUTE/MYPHITIC BLIGHT‑HAULER units have CONTAGION ENGINE. \n- Friendly CONTAGION ENGINE units’ ranged attacks have [ASSAULT]."
+    }
+   ],
+   "stratagems": {
+    "Fresh Vectors": {
+     "name": "FRESH VECTORS",
+     "cost": 1,
+     "costText": "1CP",
+     "detachment": "Contagion Engines",
+     "category": "",
+     "when": "Your Shooting phase or the Fight phase, when a friendly CONTAGION ENGINE unit is selected to attack.",
+     "target": "That CONTAGION ENGINE unit.",
+     "effect": "Your unit’s attacks can re-roll wound rolls of 1.",
+     "restrictions": "",
+     "text": "WHEN: Your Shooting phase or the Fight phase, when a friendly CONTAGION ENGINE unit is selected to attack.\n\nTARGET: That CONTAGION ENGINE unit.\n\nEFFECT: Your unit’s attacks can re-roll wound rolls of 1.",
+     "flavour": "As if drawn to flesh and matter yet to be blessed by corruption, infected weapons unerringly find their mark.",
+     "src": "wahapedia"
+    },
+    "Bloodrust Deluge": {
+     "name": "BLOODRUST DELUGE",
+     "cost": 1,
+     "costText": "1CP",
+     "detachment": "Contagion Engines",
+     "category": "",
+     "when": "Your Shooting phase, when a friendly CONTAGION ENGINE unit is selected to shoot.",
+     "target": "That CONTAGION ENGINE unit.",
+     "effect": "Select one visible enemy unit. That enemy unit is Afflicted until your unit has attacked.",
+     "restrictions": "",
+     "text": "WHEN: Your Shooting phase, when a friendly CONTAGION ENGINE unit is selected to shoot.\n\nTARGET: That CONTAGION ENGINE unit.\n\nEFFECT: Select one visible enemy unit. That enemy unit is Afflicted until your unit has attacked.",
+     "flavour": "Warp‑tainted saturation oozes through this aggressive vehicle, leeching into its weapons, which spit the infection into foes at a distance.",
+     "src": "wahapedia"
+    },
+    "Soulrot Flux": {
+     "name": "SOULROT FLUX",
+     "cost": 1,
+     "costText": "1CP",
+     "detachment": "Contagion Engines",
+     "category": "",
+     "when": "Your opponent’s Movement phase, when an enemy unit is selected to make a fall-back move, if that enemy unit is engaged with a friendly CONTAGION ENGINE unit.",
+     "target": "That CONTAGION ENGINE unit.",
+     "effect": "When an enemy unit engaged with your unit is selected to make a fall-back move, roll one D6:\n\n- On a 1, that enemy unit suffers 1 mortal wound.\n\n- On a 2-5, that enemy unit suffers D3 mortal wounds.\n\n- On a 6, that enemy unit suffers 3 mortal wounds.",
+     "restrictions": "",
+     "text": "WHEN: Your opponent’s Movement phase, when an enemy unit is selected to make a fall-back move, if that enemy unit is engaged with a friendly CONTAGION ENGINE unit.\n\nTARGET: That CONTAGION ENGINE unit.\n\nEFFECT: When an enemy unit engaged with your unit is selected to make a fall-back move, roll one D6:\n\n- On a 1, that enemy unit suffers 1 mortal wound.\n\n- On a 2-5, that enemy unit suffers D3 mortal wounds.\n\n- On a 6, that enemy unit suffers 3 mortal wounds.",
+     "flavour": "As courage crumbles in the face of mechanised abhorrence, then does the bloom of soulrot find purchase to spread its cyclic infection.",
+     "src": "wahapedia"
+    }
+   },
+   "enhancements": [
+    {
+     "name": "- Parasitic Woe‑ReaperUPGRADE",
+     "cost": 15,
+     "text": "CONTAGION ENGINE unit only. When this unit has fought, one model in this unit heals D3 wounds.",
+     "src": "wahapedia"
+    },
+    {
+     "name": "- Lancet of the WorldsoreUPGRADE",
+     "cost": 15,
+     "text": "Friendly HELBRUTE/MYPHITIC BLIGHT-HAULER unit only. This unit has MOBILE.",
+     "src": "wahapedia"
+    }
+   ],
+   "dp": 1
+  },
+  "Flyblown Host": {
+   "name": "Flyblown Host",
+   "source": {
+    "rule": "bsdata",
+    "enhancements": "mixed",
+    "stratagems": "wahapedia"
+   },
+   "rule": [
+    {
+     "name": "Verminous Haze",
+     "text": "In the **Declare Battle Formations** step, you can select up to two friendly **PLAGUE MARINES** units. Those units have **Infiltrators**."
+    }
+   ],
+   "stratagems": {
+    "Nauseating Paroxysms": {
+     "name": "NAUSEATING PAROXYSMS",
+     "cost": 1,
+     "costText": "1CP",
+     "detachment": "Flyblown Host",
+     "category": "",
+     "when": "Start of the Fight phase",
+     "target": "One friendly engaged PLAGUE MARINES unit.",
+     "effect": "Select one enemy unit engaged with your unit. That enemy unit makes a battle-shock roll, with -1 to that battle-shock roll.",
+     "restrictions": "",
+     "text": "WHEN: Start of the Fight phase\n\nTARGET: One friendly engaged PLAGUE MARINES unit.\n\nEFFECT: Select one enemy unit engaged with your unit. That enemy unit makes a battle-shock roll, with -1 to that battle-shock roll.",
+     "flavour": "The contagion borne by the Death Guard and their attendant swarms of winged vermin triggers bouts of sickness and convulsion in those they encounter.",
+     "src": "wahapedia"
+    },
+    "Droning Horror": {
+     "name": "DRONING HORROR",
+     "cost": 1,
+     "costText": "1CP",
+     "detachment": "Flyblown Host",
+     "category": "",
+     "when": "Your Shooting phase, when a friendly PLAGUE MARINES unit is selected to shoot.",
+     "target": "That PLAGUE MARINES unit.",
+     "effect": "Your unit’s ranged attacks:\n\n- Can re-roll hit rolls of 1.\n\n- That target a unit within half range, can re-roll wound rolls of 1.",
+     "restrictions": "",
+     "text": "WHEN: Your Shooting phase, when a friendly PLAGUE MARINES unit is selected to shoot.\n\nTARGET: That PLAGUE MARINES unit.\n\nEFFECT: Your unit’s ranged attacks:\n\n- Can re-roll hit rolls of 1.\n\n- That target a unit within half range, can re-roll wound rolls of 1.",
+     "flavour": "Clouds of droning daemon flies sweep across the battlefield to envelop the enemies of the Death Guard. As their victims claw and scratch at the seething swarms, Mortarion’s sons pick off their targets at leisure.",
+     "src": "wahapedia"
+    },
+    "Eye of the Swarm": {
+     "name": "EYE OF THE SWARM",
+     "cost": 1,
+     "costText": "1CP",
+     "detachment": "Flyblown Host",
+     "category": "",
+     "when": "Your Shooting phase, when a friendly PLAGUE MARINES unit is selected to shoot.",
+     "target": "That PLAGUE MARINES unit.",
+     "effect": "Your unit’s ranged attacks have [CLOSE-QUARTERS].",
+     "restrictions": "",
+     "text": "WHEN: Your Shooting phase, when a friendly PLAGUE MARINES unit is selected to shoot.\n\nTARGET: That PLAGUE MARINES unit.\n\nEFFECT: Your unit’s ranged attacks have [CLOSE-QUARTERS].",
+     "flavour": "The vermin swarms intensify as the Death Guard close in upon the enemy. As their foes clutch and tear their crawling skin, pitiless Plague Marines unleash volleys of point‑blank fire into their tormented foes.",
+     "src": "wahapedia"
+    }
+   },
+   "enhancements": [
+    {
+     "name": "- Insectile MurmurationUPGRADE",
+     "cost": 15,
+     "text": "PLAGUE MARINES unit only. When this unit’s attacks target a unit within Contagion Range of a friendly unit, those attacks can re-roll wound rolls of 1.",
+     "src": "wahapedia"
+    },
+    {
+     "name": "- PlagueveilUPGRADE",
+     "cost": 15,
+     "text": "PLAGUE MARINES unit only. This unit has -3\" detection range.",
+     "src": "wahapedia"
+    }
+   ],
+   "dp": 1
+  },
+  "Vectors of Decay (Boarding Actions)": {
+   "name": "Vectors of Decay (Boarding Actions)",
+   "source": {
+    "rule": "wahapedia",
+    "enhancements": "mixed",
+    "stratagems": "wahapedia"
+   },
+   "rule": [
+    {
+     "name": "Slow Decay",
+     "text": "Units from your army with the Nurgle’s Gift ability retain that ability and gain this one.\n\nWhen measuring your units’ Contagion Range, Walls and closed Hatchways are ignored. In addition, Contagion Range changes over the course of the battle as shown below, instead of as specified in the Nurgle’s Gift ability.\n\nBATTLE ROUND | CONTAGION RANGE\n\n1 | 1\"\n\n2 | 3\"\n\n3+ | 6\""
+    },
+    {
+     "name": "Sevenfold Offerings",
+     "text": "For every seven enemy models that have been destroyed, add 2\" to the Contagion Range of units from your army. Note that any increase to the Contagion Range of units from your army as a result of this rule does not take place while a unit from your army is attacking. In such an event, the increase will take effect after such a unit has finished making its attacks."
+    }
+   ],
+   "stratagems": {
+    "Chinks in the Armour": {
+     "name": "CHINKS IN THE ARMOUR",
+     "cost": 1,
+     "costText": "1CP",
+     "detachment": "Vectors of Decay",
+     "category": "Battle Tactic",
+     "when": "Your Shooting phase or the Fight phase.",
+     "target": "One DEATH GUARD unit from your army that has not been selected to shoot or fight this phase.",
+     "effect": "Until the end of the phase, each time a model in your unit makes an attack that targets a unit within Contagion Range of one or more units from your army, a Critical Hit is scored on an unmodified Hit roll of 5+, instead of only a 6.",
+     "restrictions": "",
+     "text": "WHEN: Your Shooting phase or the Fight phase.\n\nTARGET: One DEATH GUARD unit from your army that has not been selected to shoot or fight this phase.\n\nEFFECT: Until the end of the phase, each time a model in your unit makes an attack that targets a unit within Contagion Range of one or more units from your army, a Critical Hit is scored on an unmodified Hit roll of 5+, instead of only a 6.",
+     "flavour": "Even the slightest weakness is enough for the foulness of the Death Guard to find a way in.",
+     "src": "wahapedia"
+    },
+    "Grotesque Demise": {
+     "name": "GROTESQUE DEMISE",
+     "cost": 1,
+     "costText": "1CP",
+     "detachment": "Vectors of Decay",
+     "category": "Strategic Ploy",
+     "when": "Your Shooting phase or the Fight phase, just after a DEATH GUARD unit from your army (excluding CULTISTS and POXWALKERS units) has shot or fought.",
+     "target": "That DEATH GUARD unit.",
+     "effect": "Select one enemy unit that had one or more models destroyed as a result of those attacks. That enemy unit must take a Battle-shock test.",
+     "restrictions": "",
+     "text": "WHEN: Your Shooting phase or the Fight phase, just after a DEATH GUARD unit from your army (excluding CULTISTS and POXWALKERS units) has shot or fought.\n\nTARGET: That DEATH GUARD unit.\n\nEFFECT: Select one enemy unit that had one or more models destroyed as a result of those attacks. That enemy unit must take a Battle-shock test.",
+     "flavour": "Many of the plague weapons and revolting diseases unleashed by the Death Guard inflict endings so hideous that the mere sight of them is enough to send unharmed enemies fleeing in horror.",
+     "src": "wahapedia"
+    },
+    "Infestation": {
+     "name": "INFESTATION",
+     "cost": 1,
+     "costText": "1CP",
+     "detachment": "Embarked Regiment",
+     "category": "Strategic Ploy",
+     "when": "Start or end of any turn, when an enemy unit attempts to Seize an objective marker you have Secured.",
+     "target": "One DEATH GUARD unit from your army (excluding CULTISTS and POXWALKERS units) within Contagion Range of that objective marker.",
+     "effect": "Roll one D6: on a 5+, until the end of your next turn, that objective marker remains Secured by your army and you are considered to control it, regardless of how many enemy models are within range of it.",
+     "restrictions": "You can only use this Stratagem once per battle round.",
+     "text": "WHEN: Start or end of any turn, when an enemy unit attempts to Seize an objective marker you have Secured.\n\nTARGET: One DEATH GUARD unit from your army (excluding CULTISTS and POXWALKERS units) within Contagion Range of that objective marker.\n\nEFFECT: Roll one D6: on a 5+, until the end of your next turn, that objective marker remains Secured by your army and you are considered to control it, regardless of how many enemy models are within range of it.\n\nRESTRICTIONS: You can only use this Stratagem once per battle round.",
+     "flavour": "The taint left by the servants of Nurgle is not easily scoured from the stuff of realspace.",
+     "src": "wahapedia",
+     "fallback": true
+    },
+    "Seeping Corrosion": {
+     "name": "SEEPING CORROSION",
+     "cost": 1,
+     "costText": "1CP",
+     "detachment": "Vectors of Decay",
+     "category": "Strategic Ploy",
+     "when": "Your Movement phase, when a DEATH GUARD unit from your army (excluding CULTISTS and POXWALKERS units) attempts to open a Hatchway.",
+     "target": "That DEATH GUARD unit.",
+     "effect": "Select one enemy unit within 1\" of your unit and on the opposite side of that Hatchway from your unit, and roll one D6: on a 2-4, that enemy unit suffers 1 mortal wound; on a 5+, that enemy unit suffers 2 mortal wounds. Until the end of the phase, if an enemy unit attempts to prevent that Hatchway from being opened, when rolling off, you can re-roll your result.",
+     "restrictions": "",
+     "text": "WHEN: Your Movement phase, when a DEATH GUARD unit from your army (excluding CULTISTS and POXWALKERS units) attempts to open a Hatchway.\n\nTARGET: That DEATH GUARD unit.\n\nEFFECT: Select one enemy unit within 1\" of your unit and on the opposite side of that Hatchway from your unit, and roll one D6: on a 2-4, that enemy unit suffers 1 mortal wound; on a 5+, that enemy unit suffers 2 mortal wounds. Until the end of the phase, if an enemy unit attempts to prevent that Hatchway from being opened, when rolling off, you can re-roll your result.",
+     "flavour": "Crawling tendrils of foulness spread through the voidship at the touch of the Death Guard, poisoning and rotting luckless foes.",
+     "src": "wahapedia"
+    },
+    "THE DEAD RISE": {
+     "name": "THE DEAD RISE",
+     "cost": 1,
+     "costText": "1CP",
+     "detachment": "Vectors of Decay",
+     "category": "Strategic Ploy",
+     "when": "Your Movement phase, at the start of the Reinforcements step.",
+     "target": "One POXWALKERS unit from your army that is in Reserves.",
+     "effect": "Until the end of the phase, your unit has the Deep Strike ability.",
+     "restrictions": "You can only use this Stratagem once.",
+     "text": "WHEN: Your Movement phase, at the start of the Reinforcements step.\n\nTARGET: One POXWALKERS unit from your army that is in Reserves.\n\nEFFECT: Until the end of the phase, your unit has the Deep Strike ability.\n\nRESTRICTIONS: You can only use this Stratagem once.",
+     "flavour": "What appeared moments before to be a mere carrion heap suddenly lurches into foul and grinning unlife.",
+     "src": "wahapedia"
+    }
+   },
+   "enhancements": [
+    {
+     "name": "Foul Constitution",
+     "cost": null,
+     "text": "Each time an attack is allocated to the bearer, subtract 1 from the Damage characteristic of that attack.",
+     "src": "wahapedia"
+    },
+    {
+     "name": "Fountaining Filth",
+     "cost": null,
+     "text": "When the bearer is destroyed, before removing it from the battlefield, select one enemy unit within Engagement Range of the bearer and roll one D6: on a 2-3, that enemy unit suffers 1 mortal wound; on a 4-5, that enemy unit suffers 2 mortal wounds; on a 6, that enemy unit suffers 3 mortal wounds.",
+     "src": "wahapedia"
+    }
+   ]
+  },
+  "Unclean Uprising (Boarding Actions)": {
+   "name": "Unclean Uprising (Boarding Actions)",
+   "source": {
+    "rule": "wahapedia",
+    "enhancements": "mixed",
+    "stratagems": "wahapedia"
+   },
+   "rule": [
+    {
+     "name": "Slow Decay",
+     "text": "Units from your army with the Nurgle’s Gift ability retain that ability and gain this one.\n\nWhen measuring your units’ Contagion Range, Walls and closed Hatchways are ignored. In addition, Contagion Range changes over the course of the battle as shown below, instead of as specified in the Nurgle’s Gift ability.\n\nBATTLE ROUND | CONTAGION RANGE\n\n1 | 1\"\n\n2 | 3\"\n\n3+ | 6\""
+    },
+    {
+     "name": "Relentless Spread",
+     "text": "Each time a DEATH GUARD unit from your army makes a Consolidation move:\n\n- It can move up to D3+3\" instead of up to 3\".\n\n- If it cannot end that move within Engagement Range of one or more enemy units that are visible to it (and in Unit Coherency), it can still make that Consolidation move, and when doing so can move in any direction."
+    }
+   ],
+   "stratagems": {
+    "Pox Flare": {
+     "name": "POX FLARE",
+     "cost": 1,
+     "costText": "1CP",
+     "detachment": "Unclean Uprising",
+     "category": "Battle Tactic",
+     "when": "Fight phase.",
+     "target": "One POXWALKERS unit from your army that has not been selected to fight this phase.",
+     "effect": "Until the end of the phase, improve the Armour Penetration characteristic of melee weapons equipped by models in your unit by 1.",
+     "restrictions": "",
+     "text": "WHEN: Fight phase.\n\nTARGET: One POXWALKERS unit from your army that has not been selected to fight this phase.\n\nEFFECT: Until the end of the phase, improve the Armour Penetration characteristic of melee weapons equipped by models in your unit by 1.",
+     "flavour": "Like fever heat bursting into unclean flame, the diseases infesting these Poxwalkers flare with sudden infectious vitality.",
+     "src": "wahapedia"
+    },
+    "Path of Pestilence": {
+     "name": "PATH OF PESTILENCE",
+     "cost": 1,
+     "costText": "1CP",
+     "detachment": "Unclean Uprising",
+     "category": "Strategic Ploy",
+     "when": "Your Movement phase.",
+     "target": "One DEATH GUARD CULTISTS unit from your army that has not been selected to move this phase and is not within Engagement Range of one or more enemy units.",
+     "effect": "Select one closed Hatchway within 1” of your unit. Your unit can attempt to operate that Hatchway.",
+     "restrictions": "Until the end of the turn, your unit cannot attempt to operate a Hatchway again.",
+     "text": "WHEN: Your Movement phase.\n\nTARGET: One DEATH GUARD CULTISTS unit from your army that has not been selected to move this phase and is not within Engagement Range of one or more enemy units.\n\nEFFECT: Select one closed Hatchway within 1” of your unit. Your unit can attempt to operate that Hatchway.\n\nRESTRICTIONS: Until the end of the turn, your unit cannot attempt to operate a Hatchway again.",
+     "flavour": "Long have lurking cultists planned the uprising and prepared the route for their plague-blessed masters to process to victory.",
+     "src": "wahapedia"
+    },
+    "The Dead Rise": {
+     "name": "THE DEAD RISE",
+     "cost": 1,
+     "costText": "1CP",
+     "detachment": "Vectors of Decay",
+     "category": "Strategic Ploy",
+     "when": "Your Movement phase, at the start of the Reinforcements step.",
+     "target": "One POXWALKERS unit from your army that is in Reserves.",
+     "effect": "Until the end of the phase, your unit has the Deep Strike ability.",
+     "restrictions": "You can only use this Stratagem once.",
+     "text": "WHEN: Your Movement phase, at the start of the Reinforcements step.\n\nTARGET: One POXWALKERS unit from your army that is in Reserves.\n\nEFFECT: Until the end of the phase, your unit has the Deep Strike ability.\n\nRESTRICTIONS: You can only use this Stratagem once.",
+     "flavour": "What appeared moments before to be a mere carrion heap suddenly lurches into foul and grinning unlife.",
+     "src": "wahapedia",
+     "fallback": true
+    },
+    "Shambling Onslaught": {
+     "name": "SHAMBLING ONSLAUGHT",
+     "cost": 1,
+     "costText": "1CP",
+     "detachment": "Unclean Uprising",
+     "category": "Strategic Ploy",
+     "when": "Your opponent's Movement phase, just after an enemy unit is selected to Fall Back.",
+     "target": "One POXWALKERS unit from your army within Engagement Range of that enemy unit.",
+     "effect": "After that enemy unit ends that Fall Back move, if your unit is not within Engagement Range of one or more enemy units, your unit can make a Normal move.",
+     "restrictions": "",
+     "text": "WHEN: Your opponent's Movement phase, just after an enemy unit is selected to Fall Back.\n\nTARGET: One POXWALKERS unit from your army within Engagement Range of that enemy unit.\n\nEFFECT: After that enemy unit ends that Fall Back move, if your unit is not within Engagement Range of one or more enemy units, your unit can make a Normal move.",
+     "flavour": "Relentless, untiring, the plague-rotted hordes press forward in a tide of grasping hands, stinking bodies and gnashing, splintered teeth.",
+     "src": "wahapedia"
+    }
+   },
+   "enhancements": [
+    {
+     "name": "Pox-Bearer",
+     "cost": null,
+     "text": "Once per battle, at the end of your Movement phase, the bearer can use this Enhancement. If it does, select one friendly POXWALKERS unit within 9\" of and visible to the bearer; return up to D3+2 destroyed models to that unit.",
+     "src": "wahapedia"
+    },
+    {
+     "name": "Hand of Nurgle",
+     "cost": null,
+     "text": "In your Command phase, select one objective marker that you control and is within range of the bearer. Roll one D6: on a 2+, that objective marker is Secured by your army",
+     "src": "wahapedia"
+    }
+   ]
+  },
+  "Arch-Contaminators (Boarding Actions)": {
+   "name": "Arch-Contaminators (Boarding Actions)",
+   "source": {
+    "rule": "wahapedia",
+    "enhancements": "mixed",
+    "stratagems": "wahapedia"
+   },
+   "rule": [
+    {
+     "name": "Slow Decay",
+     "text": "Units from your army with the Nurgle’s Gift ability retain that ability and gain this one.\n\nWhen measuring your units’ Contagion Range, Walls and closed Hatchways are ignored. In addition, Contagion Range changes over the course of the battle as shown below, instead of as specified in the Nurgle’s Gift ability.\n\nBATTLE ROUND | CONTAGION RANGE\n\n1 | 1\"\n\n2 | 3\"\n\n3+ | 6\""
+    },
+    {
+     "name": "Inescapable Corruption",
+     "text": "Each time an enemy unit is selected to perform a Tactical Manoeuvre, if that unit is within Contagion Range of one or more units from your army, that enemy unit must take a Leadership test. If that test is failed, that Tactical Manoeuvre has no effect (that enemy unit is still eligible to shoot and declare a charge this turn as normal).\n\nIn addition, in your Command phase, roll one D6 for each objective marker that is within Contagion Range of one or more units from your army and is Secured by your opponent’s army: on a 5+, that objective marker is no longer Secured by your opponent’s army."
+    }
+   ],
+   "stratagems": {
+    "Allies of Entropy": {
+     "name": "ALLIES OF ENTROPY",
+     "cost": 1,
+     "costText": "1CP",
+     "detachment": "Arch-Contaminators",
+     "category": "Strategic Ploy",
+     "when": "Fight phase, just after an enemy unit has selected its targets.",
+     "target": "One DEATH GUARD unit from your army that was selected as the target of one or more of the attacking unit’s attacks.",
+     "effect": "Until the end of the phase, each time a model in your unit is destroyed, if that model has not fought this phase, roll one D6: on a 4+, do not remove the destroyed model from play; it can fight after the attacking unit has finished making its attacks, and is then removed from play.",
+     "restrictions": "",
+     "text": "WHEN: Fight phase, just after an enemy unit has selected its targets.\n\nTARGET: One DEATH GUARD unit from your army that was selected as the target of one or more of the attacking unit’s attacks.\n\nEFFECT: Until the end of the phase, each time a model in your unit is destroyed, if that model has not fought this phase, roll one D6: on a 4+, do not remove the destroyed model from play; it can fight after the attacking unit has finished making its attacks, and is then removed from play.",
+     "flavour": "The foul vitality that flows through these warriors is slow to depart, even in extremis.",
+     "src": "wahapedia"
+    },
+    "Seed of Corruption": {
+     "name": "SEED OF CORRUPTION",
+     "cost": 1,
+     "costText": "1CP",
+     "detachment": "Arch-Contaminators",
+     "category": "Strategic Ploy",
+     "when": "Your Shooting phase.",
+     "target": "One DEATH GUARD TERMINATOR unit from your army that has not been selected to shoot this phase.",
+     "effect": "If your unit was set up on the battlefield this turn, it can perform a Tactical Manoeuvre this phase as if it was not set up on the battlefield this turn.",
+     "restrictions": "",
+     "text": "WHEN: Your Shooting phase.\n\nTARGET: One DEATH GUARD TERMINATOR unit from your army that has not been selected to shoot this phase.\n\nEFFECT: If your unit was set up on the battlefield this turn, it can perform a Tactical Manoeuvre this phase as if it was not set up on the battlefield this turn.",
+     "flavour": "Like infectious spores contaminating their victim, the warriors of the Death Guard teleport into battle then dig in as their foulness slowly spreads around them.",
+     "src": "wahapedia"
+    },
+    "Corrosive Curse": {
+     "name": "CORROSIVE CURSE",
+     "cost": 1,
+     "costText": "1CP",
+     "detachment": "Arch-Contaminators",
+     "category": "Strategic Ploy",
+     "when": "Start of your Shooting phase.",
+     "target": "One DEATH GUARD TERMINATOR unit from your army that is not within Engagement Range of one or more enemy units.",
+     "effect": "Select one objective marker within Contagion Range of and visible to your unit. That objective marker is Secured by your army.",
+     "restrictions": "You can only use this Stratagem once and, until the end of the turn, your unit is not eligible to shoot or declare a charge.",
+     "text": "WHEN: Start of your Shooting phase.\n\nTARGET: One DEATH GUARD TERMINATOR unit from your army that is not within Engagement Range of one or more enemy units.\n\nEFFECT: Select one objective marker within Contagion Range of and visible to your unit. That objective marker is Secured by your army.\n\nRESTRICTIONS: You can only use this Stratagem once and, until the end of the turn, your unit is not eligible to shoot or declare a charge.",
+     "flavour": "Mere proximity to these repulsive plague champions is enough to see vital systems rust and crumble as the taint of Chaos consumes them.",
+     "src": "wahapedia"
+    },
+    "Cloud of Flies": {
+     "name": "CLOUD OF FLIES",
+     "cost": 1,
+     "costText": "1CP",
+     "detachment": "Arch-Contaminators",
+     "category": "Battle Tactic",
+     "when": "Your opponent’s Shooting phase, just after an enemy unit has selected its targets.",
+     "target": "One DEATH GUARD unit from your army that was selected as the target of one or more of the attacking unit's attacks.",
+     "effect": "Until the end of the turn, each time an attack targets your unit, subtract 1 from the Hit roll.",
+     "restrictions": "",
+     "text": "WHEN: Your opponent’s Shooting phase, just after an enemy unit has selected its targets.\n\nTARGET: One DEATH GUARD unit from your army that was selected as the target of one or more of the attacking unit's attacks.\n\nEFFECT: Until the end of the turn, each time an attack targets your unit, subtract 1 from the Hit roll.",
+     "flavour": "Plague flies engulf these warriors in a storm of buzzing wings and pustulent bodies, soaking up incoming enemy fire and obscuring the Death Guard elite from the foe.",
+     "src": "wahapedia"
+    }
+   },
+   "enhancements": [
+    {
+     "name": "Miasmic Odour",
+     "cost": null,
+     "text": "Add 3\" to the Contagion Range of the bearer.",
+     "src": "wahapedia"
+    },
+    {
+     "name": "Disgusting Reinvigoration",
+     "cost": null,
+     "text": "Each time the bearer destroys an enemy model with a melee attack, roll one D6: on a 5+, the bearer regains one lost wound (to a maximum of two lost wounds per phase).",
+     "src": "wahapedia"
+    }
+   ]
+  }
+ },
+ "stratagemsByName": {
+  "putriddetonation": {
+   "name": "PUTRID DETONATION",
+   "cost": 1,
+   "costText": "1CP",
+   "detachment": "Virulent Vectorium",
+   "category": "Strategic Ploy",
+   "when": "Any phase.",
+   "target": "One DEATH GUARD VEHICLE or DEATH GUARD MONSTER model from your army with the Deadly Demise ability that was just destroyed. You can use this Stratagem on that model even though it was just destroyed.",
+   "effect": "Do not roll one D6 to determine whether mortal wounds are inflicted by your model’s Deadly Demise ability. Instead, mortal wounds are automatically inflicted. In addition, any enemy units that suffer mortal wounds as a result of this Stratagem are Afflicted until the start of your next turn.",
+   "restrictions": "",
+   "text": "WHEN: Any phase.\n\nTARGET: One DEATH GUARD VEHICLE or DEATH GUARD MONSTER model from your army with the Deadly Demise ability that was just destroyed. You can use this Stratagem on that model even though it was just destroyed.\n\nEFFECT: Do not roll one D6 to determine whether mortal wounds are inflicted by your model’s Deadly Demise ability. Instead, mortal wounds are automatically inflicted. In addition, any enemy units that suffer mortal wounds as a result of this Stratagem are Afflicted until the start of your next turn.",
+   "flavour": "Bloated with putrefaction and swilling with infectious poisons, the demise of this hulking entity is as revolting as it is explosively hazardous.",
+   "src": "wahapedia"
+  },
+  "disgustinglyresilient": {
+   "name": "DISGUSTINGLY RESILIENT",
+   "cost": 2,
+   "costText": "2CP",
+   "detachment": "Virulent Vectorium",
+   "category": "Battle Tactic",
+   "when": "Your opponent’s Shooting phase or the Fight phase, just after an enemy unit has selected its targets.",
+   "target": "One DEATH GUARD unit from your army that was selected as the target of one or more of the attacking unit’s attacks.",
+   "effect": "Until the end of the phase, each time an attack is allocated to a model in your unit, subtract 1 from the Damage characteristic of that attack.",
+   "restrictions": "",
+   "text": "WHEN: Your opponent’s Shooting phase or the Fight phase, just after an enemy unit has selected its targets.\n\nTARGET: One DEATH GUARD unit from your army that was selected as the target of one or more of the attacking unit’s attacks.\n\nEFFECT: Until the end of the phase, each time an attack is allocated to a model in your unit, subtract 1 from the Damage characteristic of that attack.",
+   "flavour": "Those favoured by Nurgle are inured to pain, their rotting bodies shrugging off all but the most traumatic damage with ease.",
+   "src": "wahapedia"
+  },
+  "plaguesurge": {
+   "name": "PLAGUESURGE",
+   "cost": 2,
+   "costText": "2CP",
+   "detachment": "Virulent Vectorium",
+   "category": "Epic Deed",
+   "when": "Your Command phase.",
+   "target": "Your DEATH GUARD WARLORD that is on the battlefield.",
+   "effect": "Until the start of your next Command phase, add 3\" to the Contagion Range of models from your army.",
+   "restrictions": "",
+   "text": "WHEN: Your Command phase.\n\nTARGET: Your DEATH GUARD WARLORD that is on the battlefield.\n\nEFFECT: Until the start of your next Command phase, add 3\" to the Contagion Range of models from your army.",
+   "flavour": "The foul miasma around the Death Guard swells and thickens, boiling outward like putrid smog.",
+   "src": "wahapedia"
+  },
+  "leechsporeeruption": {
+   "name": "LEECHSPORE ERUPTION",
+   "cost": 1,
+   "costText": "1CP",
+   "detachment": "Virulent Vectorium",
+   "category": "Epic Deed",
+   "when": "Your Command phase.",
+   "target": "One DEATH GUARD model your army that has lost one or more wounds.",
+   "effect": "Select one enemy unit within 3\" of your model. Roll a number of D6 equal to the number of wounds your model has lost: for each 5+, that enemy unit suffers one mortal wound (to a maximum of 6 mortal wounds) and your model regains 1 lost wound (to a maximum of 6 lost wounds).",
+   "restrictions": "",
+   "text": "WHEN: Your Command phase.\n\nTARGET: One DEATH GUARD model your army that has lost one or more wounds.\n\nEFFECT: Select one enemy unit within 3\" of your model. Roll a number of D6 equal to the number of wounds your model has lost: for each 5+, that enemy unit suffers one mortal wound (to a maximum of 6 mortal wounds) and your model regains 1 lost wound (to a maximum of 6 lost wounds).",
+   "flavour": "Billowing from this warrior's wounds come clouds of parasitic spores that settle on the foe and drain their vitality, stealing it for the one who spawned them.",
+   "src": "wahapedia"
+  },
+  "overwhelminggenerosity": {
+   "name": "OVERWHELMING GENEROSITY",
+   "cost": 1,
+   "costText": "1CP",
+   "detachment": "Virulent Vectorium",
+   "category": "Wargear",
+   "when": "Start of your Shooting phase.",
+   "target": "One DEATH GUARD CHARACTER unit from your army.",
+   "effect": "Select one enemy unit visible to your unit. Until the end of the phase, each time a DEATH GUARD unit from your army selects that enemy unit as the target of any ranged attacks, you can re-roll the dice to determine how many attacks a weapon equipped by a model in that unit makes.",
+   "restrictions": "",
+   "text": "WHEN: Start of your Shooting phase.\n\nTARGET: One DEATH GUARD CHARACTER unit from your army.\n\nEFFECT: Select one enemy unit visible to your unit. Until the end of the phase, each time a DEATH GUARD unit from your army selects that enemy unit as the target of any ranged attacks, you can re-roll the dice to determine how many attacks a weapon equipped by a model in that unit makes.",
+   "flavour": "Unholy filth gushes from Nurgle's faithful into their guns until the armaments threaten to burst like bloated corpses.",
+   "src": "wahapedia"
+  },
+  "creepingblight": {
+   "name": "CREEPING BLIGHT",
+   "cost": 1,
+   "costText": "1CP",
+   "detachment": "Virulent Vectorium",
+   "category": "Wargear",
+   "when": "Your Shooting phase.",
+   "target": "One DEATH GUARD INFANTRY unit from your army that has not been selected to shoot this phase.",
+   "effect": "Until the end of the phase, each time a model in your unit makes a ranged attack that targets an Afflicted unit, you can re-roll the Hit roll and you can re-roll the Wound roll.",
+   "restrictions": "",
+   "text": "WHEN: Your Shooting phase.\n\nTARGET: One DEATH GUARD INFANTRY unit from your army that has not been selected to shoot this phase.\n\nEFFECT: Until the end of the phase, each time a model in your unit makes a ranged attack that targets an Afflicted unit, you can re-roll the Hit roll and you can re-roll the Wound roll.",
+   "flavour": "Those in the grip of Nurgle's unholy plagues become weaker by the moment, barely able to lift their weapons, let alone defend themselves from the attacking Death Guard.",
+   "src": "wahapedia"
+  },
+  "blightedland": {
+   "name": "BLIGHTED LAND",
+   "cost": 2,
+   "costText": "2CP",
+   "detachment": "Mortarion’s Hammer",
+   "category": "Strategic Ploy",
+   "when": "End of your Movement phase.",
+   "target": "One DEATH GUARD VEHICLE unit from your army.",
+   "effect": "Select one terrain feature within 24\" of and visible to your unit. Until the start of your next turn, enemy units are Afflicted while they are within 3\" of that terrain feature.",
+   "restrictions": "",
+   "text": "WHEN: End of your Movement phase.\n\nTARGET: One DEATH GUARD VEHICLE unit from your army.\n\nEFFECT: Select one terrain feature within 24\" of and visible to your unit. Until the start of your next turn, enemy units are Afflicted while they are within 3\" of that terrain feature.",
+   "flavour": "Firing diseased submunitions or belching swarms of daemonic parasites from its hull, this war engine befouls the battlefield as it advances.",
+   "src": "wahapedia"
+  },
+  "relentlessgrind": {
+   "name": "RELENTLESS GRIND",
+   "cost": 1,
+   "costText": "1CP",
+   "detachment": "Mortarion’s Hammer",
+   "category": "Strategic Ploy",
+   "when": "Your Movement phase or your Charge phase.",
+   "target": "One DEATH GUARD VEHICLE unit from your army that has not been selected to move or charge this phase.",
+   "effect": "Until the end of the phase, each time your unit makes a Normal, Advance or Charge move, it can move horizontally through terrain features.",
+   "restrictions": "",
+   "text": "WHEN: Your Movement phase or your Charge phase.\n\nTARGET: One DEATH GUARD VEHICLE unit from your army that has not been selected to move or charge this phase.\n\nEFFECT: Until the end of the phase, each time your unit makes a Normal, Advance or Charge move, it can move horizontally through terrain features.",
+   "flavour": "When the armoured vehicles of the Death Guard advance, they plough through - or straight over- anything that stands in their way.",
+   "src": "wahapedia"
+  },
+  "drawntodespair": {
+   "name": "DRAWN TO DESPAIR",
+   "cost": 1,
+   "costText": "1CP",
+   "detachment": "Mortarion’s Hammer",
+   "category": "Battle Tactic",
+   "when": "Your Shooting phase.",
+   "target": "One DEATH GUARD unit from your army that has not been selected to shoot this phase.",
+   "effect": "Until the end of the phase, each time a model in your unit makes an attack that targets a visible enemy unit (excluding AIRCRAFT) within your opponent’s deployment zone, you can re-roll the Hit roll.",
+   "restrictions": "",
+   "text": "WHEN: Your Shooting phase.\n\nTARGET: One DEATH GUARD unit from your army that has not been selected to shoot this phase.\n\nEFFECT: Until the end of the phase, each time a model in your unit makes an attack that targets a visible enemy unit (excluding AIRCRAFT) within your opponent’s deployment zone, you can re-roll the Hit roll.",
+   "flavour": "Those who languish in misery or cower in terror make themselves easy targets for the Death Guard.",
+   "src": "wahapedia"
+  },
+  "fontoffilth": {
+   "name": "FONT OF FILTH",
+   "cost": 1,
+   "costText": "1CP",
+   "detachment": "Mortarion’s Hammer",
+   "category": "Strategic Ploy",
+   "when": "Your Shooting phase.",
+   "target": "One DEATH GUARD VEHICLE unit from your army that has not been selected to shoot this phase.",
+   "effect": "Until the end of the phase, ranged weapons equipped by models in your unit have the [ASSAULT] ability.",
+   "restrictions": "",
+   "text": "WHEN: Your Shooting phase.\n\nTARGET: One DEATH GUARD VEHICLE unit from your army that has not been selected to shoot this phase.\n\nEFFECT: Until the end of the phase, ranged weapons equipped by models in your unit have the [ASSAULT] ability.",
+   "flavour": "As though afflicted with some awful vomiting sickness, this vehicle's weapons retch an endless stream of fire at the enemy, heaving themselves empty even as it storms into the enemy lines.",
+   "src": "wahapedia"
+  },
+  "eyestingerstorm": {
+   "name": "EYESTINGER STORM",
+   "cost": 1,
+   "costText": "1CP",
+   "detachment": "Mortarion’s Hammer",
+   "category": "Strategic Ploy",
+   "when": "Your opponent’s Command phase.",
+   "target": "One DEATH GUARD VEHICLE unit from your army.",
+   "effect": "Select one objective marker visible to one or more models in your unit. Each Afflicted enemy unit within range of that objective marker must take a Battle-shock test. Enemy units affected by this Stratagem do not need to take any other Battle-shock tests in the same phase.",
+   "restrictions": "",
+   "text": "WHEN: Your opponent’s Command phase.\n\nTARGET: One DEATH GUARD VEHICLE unit from your army.\n\nEFFECT: Select one objective marker visible to one or more models in your unit. Each Afflicted enemy unit within range of that objective marker must take a Battle-shock test. Enemy units affected by this Stratagem do not need to take any other Battle-shock tests in the same phase.",
+   "flavour": "Swarms of these revolting insects burrow hives into the hulls of Death Guard vehicles. Drawn to sickened prey, they boil forth in buzzing masses and descend on the foe, spreading panic and horror.",
+   "src": "wahapedia"
+  },
+  "stinkingmire": {
+   "name": "STINKING MIRE",
+   "cost": 1,
+   "costText": "1CP",
+   "detachment": "Mortarion’s Hammer",
+   "category": "Strategic Ploy",
+   "when": "Start of your opponent’s Charge phase.",
+   "target": "One friendly unengaged DEATH GUARD VEHICLE unit.",
+   "effect": "Select one visible enemy unit within 12\" of your unit. When that enemy unit declares a charge, that enemy unit has -1 to charge rolls.",
+   "restrictions": "",
+   "text": "WHEN: Start of your opponent’s Charge phase.\n\nTARGET: One friendly unengaged DEATH GUARD VEHICLE unit.\n\nEFFECT: Select one visible enemy unit within 12\" of your unit. When that enemy unit declares a charge, that enemy unit has -1 to charge rolls.",
+   "flavour": "Attempting to counterattack Death Guard can leave foes floundering amidst bubbling filth.",
+   "src": "wahapedia"
+  },
+  "blessingsoffilth": {
+   "name": "BLESSINGS OF FILTH",
+   "cost": 1,
+   "costText": "1CP",
+   "detachment": "Champions of Contagion",
+   "category": "Battle Tactic",
+   "when": "Your Shooting phase or the Fight phase.",
+   "target": "One DEATH GUARD Attached unit from your army that has not been selected to shoot or fight this phase.",
+   "effect": "Until the end of the phase, each time a model in your unit makes an attack, an unmodified Hit roll of 5+ scores a Critical Hit.",
+   "restrictions": "",
+   "text": "WHEN: Your Shooting phase or the Fight phase.\n\nTARGET: One DEATH GUARD Attached unit from your army that has not been selected to shoot or fight this phase.\n\nEFFECT: Until the end of the phase, each time a model in your unit makes an attack, an unmodified Hit roll of 5+ scores a Critical Hit.",
+   "flavour": "Employing their unique gifts, this champion enhances the weapons of their comrades with even greater levels of infectious malevolence.",
+   "src": "wahapedia"
+  },
+  "malignancemagnified": {
+   "name": "MALIGNANCE MAGNIFIED",
+   "cost": 2,
+   "costText": "2CP",
+   "detachment": "Champions of Contagion",
+   "category": "Battle Tactic",
+   "when": "Your Shooting phase or the Fight phase.",
+   "target": "One DEATH GUARD Attached unit from your army that has not been selected to shoot or fight this phase.",
+   "effect": "Until the end of the phase, each time a model in your unit makes an attack that targets a unit that is below its Starting Strength, you can re-roll the Hit roll and you can re-roll the Wound roll.",
+   "restrictions": "",
+   "text": "WHEN: Your Shooting phase or the Fight phase.\n\nTARGET: One DEATH GUARD Attached unit from your army that has not been selected to shoot or fight this phase.\n\nEFFECT: Until the end of the phase, each time a model in your unit makes an attack that targets a unit that is below its Starting Strength, you can re-roll the Hit roll and you can re-roll the Wound roll.",
+   "flavour": "The vile talents of such plague specialists act like a filth-smeared lens, focusing and intensifying the infectious gifts of Nurgle.",
+   "src": "wahapedia"
+  },
+  "grotesquefortitude": {
+   "name": "GROTESQUE FORTITUDE",
+   "cost": 1,
+   "costText": "1CP",
+   "detachment": "Champions of Contagion",
+   "category": "Battle Tactic",
+   "when": "Your opponent’s Shooting phase or the Fight phase, just after an enemy unit has selected its targets.",
+   "target": "One DEATH GUARD Attached unit from your army that was selected as the target of one or more of the attacking unit’s attacks.",
+   "effect": "Until the end of the phase, add 2 to the Toughness characteristic of models in your unit.",
+   "restrictions": "",
+   "text": "WHEN: Your opponent’s Shooting phase or the Fight phase, just after an enemy unit has selected its targets.\n\nTARGET: One DEATH GUARD Attached unit from your army that was selected as the target of one or more of the attacking unit’s attacks.\n\nEFFECT: Until the end of the phase, add 2 to the Toughness characteristic of models in your unit.",
+   "flavour": "After their champion calls down the blessings of Nurgle, these warriors can fight on no matter the catastrophic, often gruesome, damage done to them by the foe.",
+   "src": "wahapedia"
+  },
+  "rabidinfusion": {
+   "name": "RABID INFUSION",
+   "cost": 1,
+   "costText": "1CP",
+   "detachment": "Champions of Contagion",
+   "category": "Strategic Ploy",
+   "when": "Start of the Fight phase.",
+   "target": "One DEATH GUARD unit from your army that includes two CHARACTER models.",
+   "effect": "Until the end of the phase, your unit has the Fights First ability.",
+   "restrictions": "",
+   "text": "WHEN: Start of the Fight phase.\n\nTARGET: One DEATH GUARD unit from your army that includes two CHARACTER models.\n\nEFFECT: Until the end of the phase, your unit has the Fights First ability.",
+   "flavour": "The combined talents of these Death Guard champions drive their followers into a foam-jawed fury, be it through injection with a curdled cocktail of stimms or immersion in a fug of infectious agents.",
+   "src": "wahapedia"
+  },
+  "mobilevector": {
+   "name": "MOBILE VECTOR",
+   "cost": 1,
+   "costText": "1CP",
+   "detachment": "Champions of Contagion",
+   "category": "Strategic Ploy",
+   "when": "Your Movement phase, before the Reinforcements step.",
+   "target": "One DEATH GUARD CHARACTER unit from your army that is not leading a unit.",
+   "effect": "Select one other friendly DEATH GUARD unit (excluding Battle-shocked units and Attached units that already have two Leader units or one of your CHARACTER units leading it] within 2\" horizontally and 5\" vertically of your unit that your unit can lead (as described in the Leader section of its datasheet]. Your unit attaches to that unit as a Leader. Change that unit’s Starting Strength accordingly.",
+   "restrictions": "",
+   "text": "WHEN: Your Movement phase, before the Reinforcements step.\n\nTARGET: One DEATH GUARD CHARACTER unit from your army that is not leading a unit.\n\nEFFECT: Select one other friendly DEATH GUARD unit (excluding Battle-shocked units and Attached units that already have two Leader units or one of your CHARACTER units leading it] within 2\" horizontally and 5\" vertically of your unit that your unit can lead (as described in the Leader section of its datasheet]. Your unit attaches to that unit as a Leader. Change that unit’s Starting Strength accordingly.",
+   "flavour": "Nurgle's champions move through the Death Guard ranks like squirming parasites.",
+   "src": "wahapedia"
+  },
+  "deathsheads": {
+   "name": "DEATH’S HEADS",
+   "cost": 1,
+   "costText": "1CP",
+   "detachment": "Champions of Contagion",
+   "category": "Wargear",
+   "when": "Your Shooting phase.",
+   "target": "One BIOLOGUS PUTRIFIER unit from your army that is not within Engagement Range of one or more enemy units and has not been selected to shoot this phase.",
+   "effect": "Select one enemy unit (excluding VEHICLES) that is within 8\" of and visible to your unit. Until the start of your next turn, that unit has the effect of all Plagues (see Nurgle’s Gift).",
+   "restrictions": "",
+   "text": "WHEN: Your Shooting phase.\n\nTARGET: One BIOLOGUS PUTRIFIER unit from your army that is not within Engagement Range of one or more enemy units and has not been selected to shoot this phase.\n\nEFFECT: Select one enemy unit (excluding VEHICLES) that is within 8\" of and visible to your unit. Until the start of your next turn, that unit has the effect of all Plagues (see Nurgle’s Gift).",
+   "flavour": "It takes much effort and sacrifice to fashion the disgusting explosives known as death's heads, but the results are spectacularly horrible.",
+   "src": "wahapedia"
+  },
+  "persistentpests": {
+   "name": "PERSISTENT PESTS",
+   "cost": 1,
+   "costText": "1CP",
+   "detachment": "Tallyband Summoners",
+   "category": "Strategic Ploy",
+   "when": "Any phase.",
+   "target": "One NURGLINGS unit from your army that was just destroyed. You can target that unit with this Stratagem even though it was just destroyed.",
+   "effect": "Add a new unit to your army identical to your destroyed unit, in Strategic Reserves, at its Starting Strength and with its full wounds remaining.",
+   "restrictions": "You can only use this Stratagem once per battle.",
+   "text": "WHEN: Any phase.\n\nTARGET: One NURGLINGS unit from your army that was just destroyed. You can target that unit with this Stratagem even though it was just destroyed.\n\nEFFECT: Add a new unit to your army identical to your destroyed unit, in Strategic Reserves, at its Starting Strength and with its full wounds remaining.\n\nRESTRICTIONS: You can only use this Stratagem once per battle.",
+   "flavour": "There is no simple way to wholly cleanse a Nurgling infestation once it has taken root.",
+   "src": "wahapedia"
+  },
+  "clutchingcorruption": {
+   "name": "CLUTCHING CORRUPTION",
+   "cost": 1,
+   "costText": "1CP",
+   "detachment": "Tallyband Summoners",
+   "category": "Battle Tactic",
+   "when": "Fight phase.",
+   "target": "One DEATH GUARD unit from your army that has not been selected to fight this phase.",
+   "effect": "Until the end of the phase, each time a model in your unit makes an attack that targets an enemy unit that is within Engagement Range of one or more PLAGUE LEGIONS units from your army, you can re-roll the Hit roll.",
+   "restrictions": "",
+   "text": "WHEN: Fight phase.\n\nTARGET: One DEATH GUARD unit from your army that has not been selected to fight this phase.\n\nEFFECT: Until the end of the phase, each time a model in your unit makes an attack that targets an enemy unit that is within Engagement Range of one or more PLAGUE LEGIONS units from your army, you can re-roll the Hit roll.",
+   "flavour": "The daemons of Nurgle grasp their victims tightly with rotting talons and coiling tentacles, their clutch as inescapable as entropy itself.",
+   "src": "wahapedia"
+  },
+  "allisrot": {
+   "name": "ALL IS ROT",
+   "cost": 1,
+   "costText": "1CP",
+   "detachment": "Tallyband Summoners",
+   "category": "Strategic Ploy",
+   "when": "Your Shooting phase.",
+   "target": "One PLAGUE LEGIONS unit from your army that is within Engagement Range of one or more enemy units.",
+   "effect": "Until the end of the phase, enemy units are not considered to be within Engagement Range of your unit for the purposes of selecting targets of ranged weapons. Until the end of the phase, each time an enemy model loses a wound, while that model’s unit is within Engagement Range of your unit, roll one D6: on a 5+, your unit suffers 1 mortal wound after the attacking unit has finished making its attacks.",
+   "restrictions": "",
+   "text": "WHEN: Your Shooting phase.\n\nTARGET: One PLAGUE LEGIONS unit from your army that is within Engagement Range of one or more enemy units.\n\nEFFECT: Until the end of the phase, enemy units are not considered to be within Engagement Range of your unit for the purposes of selecting targets of ranged weapons. Until the end of the phase, each time an enemy model loses a wound, while that model’s unit is within Engagement Range of your unit, roll one D6: on a 5+, your unit suffers 1 mortal wound after the attacking unit has finished making its attacks.",
+   "flavour": "Death Guard warriors open fire into foes already embattled by Nurgle’s daemons, knowing that no matter who they hit, all will wither and rot.",
+   "src": "wahapedia"
+  },
+  "fleshyavalanche": {
+   "name": "FLESHY AVALANCHE",
+   "cost": 1,
+   "costText": "1CP",
+   "detachment": "Tallyband Summoners",
+   "category": "Strategic Ploy",
+   "when": "Your Movement phase or your Charge phase.",
+   "target": "One PLAGUE LEGIONS MONSTER unit from your army that has not been selected to move or charge this phase.",
+   "effect": "Until the end of the phase, each time your unit makes a Normal, Advance or Charge move, it can move horizontally through terrain features.",
+   "restrictions": "",
+   "text": "WHEN: Your Movement phase or your Charge phase.\n\nTARGET: One PLAGUE LEGIONS MONSTER unit from your army that has not been selected to move or charge this phase.\n\nEFFECT: Until the end of the phase, each time your unit makes a Normal, Advance or Charge move, it can move horizontally through terrain features.",
+   "flavour": "The ephemeral structures of realspace have no power to halt the onset of Nurgle's Great Unclean Ones; they crumble, rot and burst apart before their unholy bulk.",
+   "src": "wahapedia"
+  },
+  "avatarsofdecay": {
+   "name": "AVATARS OF DECAY",
+   "cost": 1,
+   "costText": "1CP",
+   "detachment": "Tallyband Summoners",
+   "category": "Strategic Ploy",
+   "when": "Your Shooting phase.",
+   "target": "One PLAGUE LEGIONS unit from your army.",
+   "effect": "Until the end of the phase, while an enemy unit is within 6\" of your unit, that enemy unit is Afflicted.",
+   "restrictions": "",
+   "text": "WHEN: Your Shooting phase.\n\nTARGET: One PLAGUE LEGIONS unit from your army.\n\nEFFECT: Until the end of the phase, while an enemy unit is within 6\" of your unit, that enemy unit is Afflicted.",
+   "flavour": "Countless diseases blossom in the unreal flesh of Nurgle's daemon childer, manifestations of his blessings to be spread to all.",
+   "src": "wahapedia"
+  },
+  "mireslick": {
+   "name": "MIRESLICK",
+   "cost": 1,
+   "costText": "1CP",
+   "detachment": "Tallyband Summoners",
+   "category": "Strategic Ploy",
+   "when": "Your opponent’s Movement phase, when an enemy unit (excluding MONSTERS and VEHICLES) is selected to Fall Back.",
+   "target": "One PLAGUE LEGIONS unit from your army that is within Engagement Range of that enemy unit.",
+   "effect": "Until the end of the phase, while an enemy unit is within Engagement Range of your unit, each time that unit is selected to Fall Back, it must take a Leadership test. If that test is failed, that unit must Remain Stationary this phase instead.",
+   "restrictions": "",
+   "text": "WHEN: Your opponent’s Movement phase, when an enemy unit (excluding MONSTERS and VEHICLES) is selected to Fall Back.\n\nTARGET: One PLAGUE LEGIONS unit from your army that is within Engagement Range of that enemy unit.\n\nEFFECT: Until the end of the phase, while an enemy unit is within Engagement Range of your unit, each time that unit is selected to Fall Back, it must take a Leadership test. If that test is failed, that unit must Remain Stationary this phase instead.",
+   "flavour": "Beneath the tread of Nurgle’s daemons, even ferrocrete or plasteel soon turns to a quagmire of rotting matter, in which their unlucky enemies begin to sink and become trapped.",
+   "src": "wahapedia"
+  },
+  "gripofthewalkingpox": {
+   "name": "GRIP OF THE WALKING POX",
+   "cost": 1,
+   "costText": "1CP",
+   "detachment": "Shamblerot Vectorium",
+   "category": "Strategic Ploy",
+   "when": "Fight phase, just after an enemy unit has selected its targets.",
+   "target": "One POXWALKERS unit from your army that was selected as the target of one or more of the attacking unit’s attacks.",
+   "effect": "After the attacking unit has fought, roll one D6 for each model from your unit that was destroyed as a result of those attacks: on a 6, the attacking unit suffers 1 mortal wound. If your unit is not destroyed after the attacking unit has fought, enemy models destroyed as a result of this Stratagem count as enemy models destroyed by an attack made by a model in your unit for the purposes of the Curse of the Walking Pox ability.",
+   "restrictions": "",
+   "text": "WHEN: Fight phase, just after an enemy unit has selected its targets.\n\nTARGET: One POXWALKERS unit from your army that was selected as the target of one or more of the attacking unit’s attacks.\n\nEFFECT: After the attacking unit has fought, roll one D6 for each model from your unit that was destroyed as a result of those attacks: on a 6, the attacking unit suffers 1 mortal wound. If your unit is not destroyed after the attacking unit has fought, enemy models destroyed as a result of this Stratagem count as enemy models destroyed by an attack made by a model in your unit for the purposes of the Curse of the Walking Pox ability.",
+   "flavour": "Those infected by walking pox may fall as though fatally wounded, but they soon rise again.",
+   "src": "wahapedia"
+  },
+  "smearedwithfilth": {
+   "name": "SMEARED WITH FILTH",
+   "cost": 1,
+   "costText": "1CP",
+   "detachment": "Shamblerot Vectorium",
+   "category": "Strategic Ploy",
+   "when": "Fight phase.",
+   "target": "One POXWALKERS unit from your army that was just destroyed. You can target that unit with this Stratagem even though it was just destroyed.",
+   "effect": "Select one enemy unit that made one or more attacks that targeted your unit this phase. Until the end of the battle, that enemy unit is Afflicted.",
+   "restrictions": "",
+   "text": "WHEN: Fight phase.\n\nTARGET: One POXWALKERS unit from your army that was just destroyed. You can target that unit with this Stratagem even though it was just destroyed.\n\nEFFECT: Select one enemy unit that made one or more attacks that targeted your unit this phase. Until the end of the battle, that enemy unit is Afflicted.",
+   "flavour": "Hacking a path through a horde of Poxwalkers leaves aggressors coated in infectious matter.",
+   "src": "wahapedia"
+  },
+  "gnawinghunger": {
+   "name": "GNAWING HUNGER",
+   "cost": 1,
+   "costText": "1CP",
+   "detachment": "Shamblerot Vectorium",
+   "category": "Battle Tactic",
+   "when": "Your Command phase.",
+   "target": "One POXWALKERS unit from your army.",
+   "effect": "Until the end of the turn, add 1 to the Move characteristic of models in your unit, and add 1 to the Attacks and Strength characteristics of melee weapons equipped by models in your unit.",
+   "restrictions": "",
+   "text": "WHEN: Your Command phase.\n\nTARGET: One POXWALKERS unit from your army.\n\nEFFECT: Until the end of the turn, add 1 to the Move characteristic of models in your unit, and add 1 to the Attacks and Strength characteristics of melee weapons equipped by models in your unit.",
+   "flavour": "Gripped by a sudden, monstrous hunger, the Poxwalkers surge forward in a ravenous mass.",
+   "src": "wahapedia"
+  },
+  "hiddenamongstthedead": {
+   "name": "HIDDEN AMONGST THE DEAD",
+   "cost": 1,
+   "costText": "1CP",
+   "detachment": "Shamblerot Vectorium",
+   "category": "Strategic Ploy",
+   "when": "The Reinforcements step of your Movement phase.",
+   "target": "One POXWALKERS unit from your army that is in Strategic Reserves and that is not an Attached unit.",
+   "effect": "Until the end of the phase, models in that unit have the Deep Strike ability.",
+   "restrictions": "",
+   "text": "WHEN: The Reinforcements step of your Movement phase.\n\nTARGET: One POXWALKERS unit from your army that is in Strategic Reserves and that is not an Attached unit.\n\nEFFECT: Until the end of the phase, models in that unit have the Deep Strike ability.",
+   "flavour": "Another wave of Poxwalkers rises from the battlefield’s carrion heaps.",
+   "src": "wahapedia"
+  },
+  "shockandhorror": {
+   "name": "SHOCK AND HORROR",
+   "cost": 1,
+   "costText": "1CP",
+   "detachment": "Shamblerot Vectorium",
+   "category": "Strategic Ploy",
+   "when": "Your Charge phase, just after a DEATH GUARD unit from your army ends a Charge move.",
+   "target": "That DEATH GUARD unit.",
+   "effect": "Each enemy unit within Engagement Range of your unit must take a Battle-shock test, subtracting 1 from that test.",
+   "restrictions": "",
+   "text": "WHEN: Your Charge phase, just after a DEATH GUARD unit from your army ends a Charge move.\n\nTARGET: That DEATH GUARD unit.\n\nEFFECT: Each enemy unit within Engagement Range of your unit must take a Battle-shock test, subtracting 1 from that test.",
+   "flavour": "Already dismayed by this living nightmare, the enemy falters before another sudden onslaught.",
+   "src": "wahapedia"
+  },
+  "shamblingwall": {
+   "name": "SHAMBLING WALL",
+   "cost": 1,
+   "costText": "1CP",
+   "detachment": "Shamblerot Vectorium",
+   "category": "Strategic Ploy",
+   "when": "Your opponent’s Shooting phase, just after an enemy unit has selected its targets.",
+   "target": "One DEATH GUARD unit from your army that was selected as the target of one or more of the attacking unit’s attacks, and one friendly POXWALKERS unit within 3\" of your unit and visible to both your unit and the attacking unit.",
+   "effect": "Until the end of the phase, each time you would allocate an attack to a model in your DEATH GUARD unit, if your POXWALKERS unit is visible to the attacking model and is an eligible target for that attack, no saving throw is made for that attack; instead a number of POXWALKERS from your POXWALKERS unit equal to the Damage characteristic of that attack are destroyed.",
+   "restrictions": "",
+   "text": "WHEN: Your opponent’s Shooting phase, just after an enemy unit has selected its targets.\n\nTARGET: One DEATH GUARD unit from your army that was selected as the target of one or more of the attacking unit’s attacks, and one friendly POXWALKERS unit within 3\" of your unit and visible to both your unit and the attacking unit.\n\nEFFECT: Until the end of the phase, each time you would allocate an attack to a model in your DEATH GUARD unit, if your POXWALKERS unit is visible to the attacking model and is an eligible target for that attack, no saving throw is made for that attack; instead a number of POXWALKERS from your POXWALKERS unit equal to the Damage characteristic of that attack are destroyed.",
+   "flavour": "Lacking even basic self-preservation instincts, Poxwalkers make excellent walking shields.",
+   "src": "wahapedia"
+  },
+  "bloomingpestilence": {
+   "name": "BLOOMING PESTILENCE",
+   "cost": 1,
+   "costText": "1CP",
+   "detachment": "Death Lord’s Chosen",
+   "category": "Epic Deed",
+   "when": "Start of any phase.",
+   "target": "One TERMINATOR unit from your army.",
+   "effect": "Until the end of the phase, add 3\" to the Contagion Range of models in your unit.",
+   "restrictions": "",
+   "text": "WHEN: Start of any phase.\n\nTARGET: One TERMINATOR unit from your army.\n\nEFFECT: Until the end of the phase, add 3\" to the Contagion Range of models in your unit.",
+   "flavour": "Death Guard warriors know to chant the sevenfold prayers to unleash Nurgle's bounty on the foe.",
+   "src": "wahapedia"
+  },
+  "grimreapers": {
+   "name": "GRIM REAPERS",
+   "cost": 1,
+   "costText": "1CP",
+   "detachment": "Death Lord’s Chosen",
+   "category": "Battle Tactic",
+   "when": "Fight phase.",
+   "target": "One TERMINATOR unit from your army that has not been selected to fight this phase.",
+   "effect": "Until the end of the phase, each time a model in your unit makes an attack that targets an enemy unit (excluding MONSTERS and VEHICLES) you can re-roll the Hit roll.",
+   "restrictions": "",
+   "text": "WHEN: Fight phase.\n\nTARGET: One TERMINATOR unit from your army that has not been selected to fight this phase.\n\nEFFECT: Until the end of the phase, each time a model in your unit makes an attack that targets an enemy unit (excluding MONSTERS and VEHICLES) you can re-roll the Hit roll.",
+   "flavour": "Swollen with bitter arrogance, these warriors carve a path through their perceived lessers and leave them as worm food.",
+   "src": "wahapedia"
+  },
+  "undyingspite": {
+   "name": "UNDYING SPITE",
+   "cost": 1,
+   "costText": "1CP",
+   "detachment": "Death Lord’s Chosen",
+   "category": "Strategic Ploy",
+   "when": "Fight phase, just after an enemy unit has selected its targets.",
+   "target": "One TERMINATOR unit from your army that was selected as the target of one or more of the attacking unit’s attacks.",
+   "effect": "Until the end of the phase, each time a model in your unit is destroyed, if that model has not fought this phase, roll one D6. On a 4+, do not remove the destroyed model from play; it can fight after the attacking unit has finished making its attacks, and is then removed from play.",
+   "restrictions": "",
+   "text": "WHEN: Fight phase, just after an enemy unit has selected its targets.\n\nTARGET: One TERMINATOR unit from your army that was selected as the target of one or more of the attacking unit’s attacks.\n\nEFFECT: Until the end of the phase, each time a model in your unit is destroyed, if that model has not fought this phase, roll one D6. On a 4+, do not remove the destroyed model from play; it can fight after the attacking unit has finished making its attacks, and is then removed from play.",
+   "flavour": "Driven by bitterness and the putrid vitality of Nurgle's gifts, these warriors fight on for several moments, even after death.",
+   "src": "wahapedia"
+  },
+  "signalpox": {
+   "name": "SIGNAL POX",
+   "cost": 1,
+   "costText": "1CP",
+   "detachment": "Death Lord’s Chosen",
+   "category": "Epic Deed",
+   "when": "Your Command phase.",
+   "target": "One LORD OF VIRULENCE model from your army.",
+   "effect": "Select one objective marker within 30\" of and visible to your model. Until the start of your next turn, while an enemy unit is within range of that objective marker, that unit is Afflicted.",
+   "restrictions": "",
+   "text": "WHEN: Your Command phase.\n\nTARGET: One LORD OF VIRULENCE model from your army.\n\nEFFECT: Select one objective marker within 30\" of and visible to your model. Until the start of your next turn, while an enemy unit is within range of that objective marker, that unit is Afflicted.",
+   "flavour": "Guided in by rasping jets of fumes sent up by this Lord of Virulence, plague-ridden artillery fire and airbursting spore-shells saturate the target zone.",
+   "src": "wahapedia"
+  },
+  "mortarionsteachings": {
+   "name": "MORTARION'S TEACHINGS",
+   "cost": 1,
+   "costText": "1CP",
+   "detachment": "Death Lord’s Chosen",
+   "category": "Strategic Ploy",
+   "when": "Your Shooting phase.",
+   "target": "One TERMINATOR unit from your army that has not been selected to shoot this phase.",
+   "effect": "Until the end of the phase, ranged weapons equipped by models in your unit have the [ASSAULT] and [HEAVY] abilities.",
+   "restrictions": "",
+   "text": "WHEN: Your Shooting phase.\n\nTARGET: One TERMINATOR unit from your army that has not been selected to shoot this phase.\n\nEFFECT: Until the end of the phase, ranged weapons equipped by models in your unit have the [ASSAULT] and [HEAVY] abilities.",
+   "flavour": "Exemplifying the Daemon Primarch's doctrines on versatile heavy infantry tactics, these warriors position themselves and let fly.",
+   "src": "wahapedia"
+  },
+  "sickeningimpact": {
+   "name": "SICKENING IMPACT",
+   "cost": 1,
+   "costText": "1CP",
+   "detachment": "Death Lord’s Chosen",
+   "category": "Strategic Ploy",
+   "when": "Your Charge phase, just after a TERMINATOR unit from your army ends a Charge move.",
+   "target": "That TERMINATOR unit.",
+   "effect": "Select one enemy unit within Engagement Range of your unit, then roll one D6 for each model in your unit that is within Engagement Range of that enemy unit: for each 2+, that enemy unit suffers 1 mortal wound (to a maximum of 6 mortal wounds).",
+   "restrictions": "",
+   "text": "WHEN: Your Charge phase, just after a TERMINATOR unit from your army ends a Charge move.\n\nTARGET: That TERMINATOR unit.\n\nEFFECT: Select one enemy unit within Engagement Range of your unit, then roll one D6 for each model in your unit that is within Engagement Range of that enemy unit: for each 2+, that enemy unit suffers 1 mortal wound (to a maximum of 6 mortal wounds).",
+   "flavour": "Employing their crushing bulk and contagious gifts, these Terminators slam into their victims and grind them into putrefying mulch.",
+   "src": "wahapedia"
+  },
+  "freshvectors": {
+   "name": "FRESH VECTORS",
+   "cost": 1,
+   "costText": "1CP",
+   "detachment": "Contagion Engines",
+   "category": "",
+   "when": "Your Shooting phase or the Fight phase, when a friendly CONTAGION ENGINE unit is selected to attack.",
+   "target": "That CONTAGION ENGINE unit.",
+   "effect": "Your unit’s attacks can re-roll wound rolls of 1.",
+   "restrictions": "",
+   "text": "WHEN: Your Shooting phase or the Fight phase, when a friendly CONTAGION ENGINE unit is selected to attack.\n\nTARGET: That CONTAGION ENGINE unit.\n\nEFFECT: Your unit’s attacks can re-roll wound rolls of 1.",
+   "flavour": "As if drawn to flesh and matter yet to be blessed by corruption, infected weapons unerringly find their mark.",
+   "src": "wahapedia"
+  },
+  "bloodrustdeluge": {
+   "name": "BLOODRUST DELUGE",
+   "cost": 1,
+   "costText": "1CP",
+   "detachment": "Contagion Engines",
+   "category": "",
+   "when": "Your Shooting phase, when a friendly CONTAGION ENGINE unit is selected to shoot.",
+   "target": "That CONTAGION ENGINE unit.",
+   "effect": "Select one visible enemy unit. That enemy unit is Afflicted until your unit has attacked.",
+   "restrictions": "",
+   "text": "WHEN: Your Shooting phase, when a friendly CONTAGION ENGINE unit is selected to shoot.\n\nTARGET: That CONTAGION ENGINE unit.\n\nEFFECT: Select one visible enemy unit. That enemy unit is Afflicted until your unit has attacked.",
+   "flavour": "Warp‑tainted saturation oozes through this aggressive vehicle, leeching into its weapons, which spit the infection into foes at a distance.",
+   "src": "wahapedia"
+  },
+  "soulrotflux": {
+   "name": "SOULROT FLUX",
+   "cost": 1,
+   "costText": "1CP",
+   "detachment": "Contagion Engines",
+   "category": "",
+   "when": "Your opponent’s Movement phase, when an enemy unit is selected to make a fall-back move, if that enemy unit is engaged with a friendly CONTAGION ENGINE unit.",
+   "target": "That CONTAGION ENGINE unit.",
+   "effect": "When an enemy unit engaged with your unit is selected to make a fall-back move, roll one D6:\n\n- On a 1, that enemy unit suffers 1 mortal wound.\n\n- On a 2-5, that enemy unit suffers D3 mortal wounds.\n\n- On a 6, that enemy unit suffers 3 mortal wounds.",
+   "restrictions": "",
+   "text": "WHEN: Your opponent’s Movement phase, when an enemy unit is selected to make a fall-back move, if that enemy unit is engaged with a friendly CONTAGION ENGINE unit.\n\nTARGET: That CONTAGION ENGINE unit.\n\nEFFECT: When an enemy unit engaged with your unit is selected to make a fall-back move, roll one D6:\n\n- On a 1, that enemy unit suffers 1 mortal wound.\n\n- On a 2-5, that enemy unit suffers D3 mortal wounds.\n\n- On a 6, that enemy unit suffers 3 mortal wounds.",
+   "flavour": "As courage crumbles in the face of mechanised abhorrence, then does the bloom of soulrot find purchase to spread its cyclic infection.",
+   "src": "wahapedia"
+  },
+  "nauseatingparoxysms": {
+   "name": "NAUSEATING PAROXYSMS",
+   "cost": 1,
+   "costText": "1CP",
+   "detachment": "Flyblown Host",
+   "category": "",
+   "when": "Start of the Fight phase",
+   "target": "One friendly engaged PLAGUE MARINES unit.",
+   "effect": "Select one enemy unit engaged with your unit. That enemy unit makes a battle-shock roll, with -1 to that battle-shock roll.",
+   "restrictions": "",
+   "text": "WHEN: Start of the Fight phase\n\nTARGET: One friendly engaged PLAGUE MARINES unit.\n\nEFFECT: Select one enemy unit engaged with your unit. That enemy unit makes a battle-shock roll, with -1 to that battle-shock roll.",
+   "flavour": "The contagion borne by the Death Guard and their attendant swarms of winged vermin triggers bouts of sickness and convulsion in those they encounter.",
+   "src": "wahapedia"
+  },
+  "droninghorror": {
+   "name": "DRONING HORROR",
+   "cost": 1,
+   "costText": "1CP",
+   "detachment": "Flyblown Host",
+   "category": "",
+   "when": "Your Shooting phase, when a friendly PLAGUE MARINES unit is selected to shoot.",
+   "target": "That PLAGUE MARINES unit.",
+   "effect": "Your unit’s ranged attacks:\n\n- Can re-roll hit rolls of 1.\n\n- That target a unit within half range, can re-roll wound rolls of 1.",
+   "restrictions": "",
+   "text": "WHEN: Your Shooting phase, when a friendly PLAGUE MARINES unit is selected to shoot.\n\nTARGET: That PLAGUE MARINES unit.\n\nEFFECT: Your unit’s ranged attacks:\n\n- Can re-roll hit rolls of 1.\n\n- That target a unit within half range, can re-roll wound rolls of 1.",
+   "flavour": "Clouds of droning daemon flies sweep across the battlefield to envelop the enemies of the Death Guard. As their victims claw and scratch at the seething swarms, Mortarion’s sons pick off their targets at leisure.",
+   "src": "wahapedia"
+  },
+  "eyeoftheswarm": {
+   "name": "EYE OF THE SWARM",
+   "cost": 1,
+   "costText": "1CP",
+   "detachment": "Flyblown Host",
+   "category": "",
+   "when": "Your Shooting phase, when a friendly PLAGUE MARINES unit is selected to shoot.",
+   "target": "That PLAGUE MARINES unit.",
+   "effect": "Your unit’s ranged attacks have [CLOSE-QUARTERS].",
+   "restrictions": "",
+   "text": "WHEN: Your Shooting phase, when a friendly PLAGUE MARINES unit is selected to shoot.\n\nTARGET: That PLAGUE MARINES unit.\n\nEFFECT: Your unit’s ranged attacks have [CLOSE-QUARTERS].",
+   "flavour": "The vermin swarms intensify as the Death Guard close in upon the enemy. As their foes clutch and tear their crawling skin, pitiless Plague Marines unleash volleys of point‑blank fire into their tormented foes.",
+   "src": "wahapedia"
+  },
+  "territorialinfection": {
+   "name": "TERRITORIAL INFECTION",
+   "cost": 1,
+   "costText": "1CP",
+   "detachment": "Paragons of Putrescence",
+   "category": "",
+   "when": "Start of the Command phase.",
+   "target": "One friendly DEATH GUARD CHARACTER unit.",
+   "effect": "Your unit has +1 OC until the end of the turn.",
+   "restrictions": "",
+   "text": "WHEN: Start of the Command phase.\n\nTARGET: One friendly DEATH GUARD CHARACTER unit.\n\nEFFECT: Your unit has +1 OC until the end of the turn.",
+   "flavour": "The intensive contagions that flow in abundance from this champion taint everything around them, making taking ground from them a repulsive prospect for the enemy.",
+   "src": "wahapedia"
+  },
+  "aggravusspasms": {
+   "name": "AGGRAVUS SPASMS",
+   "cost": 1,
+   "costText": "1CP",
+   "detachment": "Paragons of Putrescence",
+   "category": "",
+   "when": "Start of your Shooting Phase.",
+   "target": "One friendly DEATH GUARD CHARACTER unit.",
+   "effect": "Select one visible enemy unit within Contagion Range of your unit. That enemy unit has +6\" detection range.",
+   "restrictions": "",
+   "text": "WHEN: Start of your Shooting Phase.\n\nTARGET: One friendly DEATH GUARD CHARACTER unit.\n\nEFFECT: Select one visible enemy unit within Contagion Range of your unit. That enemy unit has +6\" detection range.",
+   "flavour": "There is no hiding from contagion, and particular pathogens can incite neurological paroxysms that force their victims to give away their positions in painful throes.",
+   "src": "wahapedia"
+  },
+  "simultaneouscontamination": {
+   "name": "SIMULTANEOUS CONTAMINATION",
+   "cost": 1,
+   "costText": "1CP",
+   "detachment": "Paragons of Putrescence",
+   "category": "",
+   "when": "Your Shooting phase, when a friendly DEATH GUARD CHARACTER unit starts an action.",
+   "target": "That DEATH GUARD CHARACTER unit.",
+   "effect": "That action does not prevent your unit from being eligible to shoot.",
+   "restrictions": "",
+   "text": "WHEN: Your Shooting phase, when a friendly DEATH GUARD CHARACTER unit starts an action.\n\nTARGET: That DEATH GUARD CHARACTER unit.\n\nEFFECT: That action does not prevent your unit from being eligible to shoot.",
+   "flavour": "The worst infections spread both visibly and subtly. Thus do the Death Guard’s champions attack, ordering vile operations, the two vectors more deadly than either alone.",
+   "src": "wahapedia"
+  },
+  "chinksinthearmour": {
+   "name": "CHINKS IN THE ARMOUR",
+   "cost": 1,
+   "costText": "1CP",
+   "detachment": "Vectors of Decay",
+   "category": "Battle Tactic",
+   "when": "Your Shooting phase or the Fight phase.",
+   "target": "One DEATH GUARD unit from your army that has not been selected to shoot or fight this phase.",
+   "effect": "Until the end of the phase, each time a model in your unit makes an attack that targets a unit within Contagion Range of one or more units from your army, a Critical Hit is scored on an unmodified Hit roll of 5+, instead of only a 6.",
+   "restrictions": "",
+   "text": "WHEN: Your Shooting phase or the Fight phase.\n\nTARGET: One DEATH GUARD unit from your army that has not been selected to shoot or fight this phase.\n\nEFFECT: Until the end of the phase, each time a model in your unit makes an attack that targets a unit within Contagion Range of one or more units from your army, a Critical Hit is scored on an unmodified Hit roll of 5+, instead of only a 6.",
+   "flavour": "Even the slightest weakness is enough for the foulness of the Death Guard to find a way in.",
+   "src": "wahapedia"
+  },
+  "grotesquedemise": {
+   "name": "GROTESQUE DEMISE",
+   "cost": 1,
+   "costText": "1CP",
+   "detachment": "Vectors of Decay",
+   "category": "Strategic Ploy",
+   "when": "Your Shooting phase or the Fight phase, just after a DEATH GUARD unit from your army (excluding CULTISTS and POXWALKERS units) has shot or fought.",
+   "target": "That DEATH GUARD unit.",
+   "effect": "Select one enemy unit that had one or more models destroyed as a result of those attacks. That enemy unit must take a Battle-shock test.",
+   "restrictions": "",
+   "text": "WHEN: Your Shooting phase or the Fight phase, just after a DEATH GUARD unit from your army (excluding CULTISTS and POXWALKERS units) has shot or fought.\n\nTARGET: That DEATH GUARD unit.\n\nEFFECT: Select one enemy unit that had one or more models destroyed as a result of those attacks. That enemy unit must take a Battle-shock test.",
+   "flavour": "Many of the plague weapons and revolting diseases unleashed by the Death Guard inflict endings so hideous that the mere sight of them is enough to send unharmed enemies fleeing in horror.",
+   "src": "wahapedia"
+  },
+  "infestation": {
+   "name": "INFESTATION",
+   "cost": 1,
+   "costText": "1CP",
+   "detachment": "Embarked Regiment",
+   "category": "Strategic Ploy",
+   "when": "Start or end of any turn, when an enemy unit attempts to Seize an objective marker you have Secured.",
+   "target": "One DEATH GUARD unit from your army (excluding CULTISTS and POXWALKERS units) within Contagion Range of that objective marker.",
+   "effect": "Roll one D6: on a 5+, until the end of your next turn, that objective marker remains Secured by your army and you are considered to control it, regardless of how many enemy models are within range of it.",
+   "restrictions": "You can only use this Stratagem once per battle round.",
+   "text": "WHEN: Start or end of any turn, when an enemy unit attempts to Seize an objective marker you have Secured.\n\nTARGET: One DEATH GUARD unit from your army (excluding CULTISTS and POXWALKERS units) within Contagion Range of that objective marker.\n\nEFFECT: Roll one D6: on a 5+, until the end of your next turn, that objective marker remains Secured by your army and you are considered to control it, regardless of how many enemy models are within range of it.\n\nRESTRICTIONS: You can only use this Stratagem once per battle round.",
+   "flavour": "The taint left by the servants of Nurgle is not easily scoured from the stuff of realspace.",
+   "src": "wahapedia"
+  },
+  "seepingcorrosion": {
+   "name": "SEEPING CORROSION",
+   "cost": 1,
+   "costText": "1CP",
+   "detachment": "Vectors of Decay",
+   "category": "Strategic Ploy",
+   "when": "Your Movement phase, when a DEATH GUARD unit from your army (excluding CULTISTS and POXWALKERS units) attempts to open a Hatchway.",
+   "target": "That DEATH GUARD unit.",
+   "effect": "Select one enemy unit within 1\" of your unit and on the opposite side of that Hatchway from your unit, and roll one D6: on a 2-4, that enemy unit suffers 1 mortal wound; on a 5+, that enemy unit suffers 2 mortal wounds. Until the end of the phase, if an enemy unit attempts to prevent that Hatchway from being opened, when rolling off, you can re-roll your result.",
+   "restrictions": "",
+   "text": "WHEN: Your Movement phase, when a DEATH GUARD unit from your army (excluding CULTISTS and POXWALKERS units) attempts to open a Hatchway.\n\nTARGET: That DEATH GUARD unit.\n\nEFFECT: Select one enemy unit within 1\" of your unit and on the opposite side of that Hatchway from your unit, and roll one D6: on a 2-4, that enemy unit suffers 1 mortal wound; on a 5+, that enemy unit suffers 2 mortal wounds. Until the end of the phase, if an enemy unit attempts to prevent that Hatchway from being opened, when rolling off, you can re-roll your result.",
+   "flavour": "Crawling tendrils of foulness spread through the voidship at the touch of the Death Guard, poisoning and rotting luckless foes.",
+   "src": "wahapedia"
+  },
+  "poxflare": {
+   "name": "POX FLARE",
+   "cost": 1,
+   "costText": "1CP",
+   "detachment": "Unclean Uprising",
+   "category": "Battle Tactic",
+   "when": "Fight phase.",
+   "target": "One POXWALKERS unit from your army that has not been selected to fight this phase.",
+   "effect": "Until the end of the phase, improve the Armour Penetration characteristic of melee weapons equipped by models in your unit by 1.",
+   "restrictions": "",
+   "text": "WHEN: Fight phase.\n\nTARGET: One POXWALKERS unit from your army that has not been selected to fight this phase.\n\nEFFECT: Until the end of the phase, improve the Armour Penetration characteristic of melee weapons equipped by models in your unit by 1.",
+   "flavour": "Like fever heat bursting into unclean flame, the diseases infesting these Poxwalkers flare with sudden infectious vitality.",
+   "src": "wahapedia"
+  },
+  "pathofpestilence": {
+   "name": "PATH OF PESTILENCE",
+   "cost": 1,
+   "costText": "1CP",
+   "detachment": "Unclean Uprising",
+   "category": "Strategic Ploy",
+   "when": "Your Movement phase.",
+   "target": "One DEATH GUARD CULTISTS unit from your army that has not been selected to move this phase and is not within Engagement Range of one or more enemy units.",
+   "effect": "Select one closed Hatchway within 1” of your unit. Your unit can attempt to operate that Hatchway.",
+   "restrictions": "Until the end of the turn, your unit cannot attempt to operate a Hatchway again.",
+   "text": "WHEN: Your Movement phase.\n\nTARGET: One DEATH GUARD CULTISTS unit from your army that has not been selected to move this phase and is not within Engagement Range of one or more enemy units.\n\nEFFECT: Select one closed Hatchway within 1” of your unit. Your unit can attempt to operate that Hatchway.\n\nRESTRICTIONS: Until the end of the turn, your unit cannot attempt to operate a Hatchway again.",
+   "flavour": "Long have lurking cultists planned the uprising and prepared the route for their plague-blessed masters to process to victory.",
+   "src": "wahapedia"
+  },
+  "thedeadrise": {
+   "name": "THE DEAD RISE",
+   "cost": 1,
+   "costText": "1CP",
+   "detachment": "Vectors of Decay",
+   "category": "Strategic Ploy",
+   "when": "Your Movement phase, at the start of the Reinforcements step.",
+   "target": "One POXWALKERS unit from your army that is in Reserves.",
+   "effect": "Until the end of the phase, your unit has the Deep Strike ability.",
+   "restrictions": "You can only use this Stratagem once.",
+   "text": "WHEN: Your Movement phase, at the start of the Reinforcements step.\n\nTARGET: One POXWALKERS unit from your army that is in Reserves.\n\nEFFECT: Until the end of the phase, your unit has the Deep Strike ability.\n\nRESTRICTIONS: You can only use this Stratagem once.",
+   "flavour": "What appeared moments before to be a mere carrion heap suddenly lurches into foul and grinning unlife.",
+   "src": "wahapedia"
+  },
+  "shamblingonslaught": {
+   "name": "SHAMBLING ONSLAUGHT",
+   "cost": 1,
+   "costText": "1CP",
+   "detachment": "Unclean Uprising",
+   "category": "Strategic Ploy",
+   "when": "Your opponent's Movement phase, just after an enemy unit is selected to Fall Back.",
+   "target": "One POXWALKERS unit from your army within Engagement Range of that enemy unit.",
+   "effect": "After that enemy unit ends that Fall Back move, if your unit is not within Engagement Range of one or more enemy units, your unit can make a Normal move.",
+   "restrictions": "",
+   "text": "WHEN: Your opponent's Movement phase, just after an enemy unit is selected to Fall Back.\n\nTARGET: One POXWALKERS unit from your army within Engagement Range of that enemy unit.\n\nEFFECT: After that enemy unit ends that Fall Back move, if your unit is not within Engagement Range of one or more enemy units, your unit can make a Normal move.",
+   "flavour": "Relentless, untiring, the plague-rotted hordes press forward in a tide of grasping hands, stinking bodies and gnashing, splintered teeth.",
+   "src": "wahapedia"
+  },
+  "alliesofentropy": {
+   "name": "ALLIES OF ENTROPY",
+   "cost": 1,
+   "costText": "1CP",
+   "detachment": "Arch-Contaminators",
+   "category": "Strategic Ploy",
+   "when": "Fight phase, just after an enemy unit has selected its targets.",
+   "target": "One DEATH GUARD unit from your army that was selected as the target of one or more of the attacking unit’s attacks.",
+   "effect": "Until the end of the phase, each time a model in your unit is destroyed, if that model has not fought this phase, roll one D6: on a 4+, do not remove the destroyed model from play; it can fight after the attacking unit has finished making its attacks, and is then removed from play.",
+   "restrictions": "",
+   "text": "WHEN: Fight phase, just after an enemy unit has selected its targets.\n\nTARGET: One DEATH GUARD unit from your army that was selected as the target of one or more of the attacking unit’s attacks.\n\nEFFECT: Until the end of the phase, each time a model in your unit is destroyed, if that model has not fought this phase, roll one D6: on a 4+, do not remove the destroyed model from play; it can fight after the attacking unit has finished making its attacks, and is then removed from play.",
+   "flavour": "The foul vitality that flows through these warriors is slow to depart, even in extremis.",
+   "src": "wahapedia"
+  },
+  "seedofcorruption": {
+   "name": "SEED OF CORRUPTION",
+   "cost": 1,
+   "costText": "1CP",
+   "detachment": "Arch-Contaminators",
+   "category": "Strategic Ploy",
+   "when": "Your Shooting phase.",
+   "target": "One DEATH GUARD TERMINATOR unit from your army that has not been selected to shoot this phase.",
+   "effect": "If your unit was set up on the battlefield this turn, it can perform a Tactical Manoeuvre this phase as if it was not set up on the battlefield this turn.",
+   "restrictions": "",
+   "text": "WHEN: Your Shooting phase.\n\nTARGET: One DEATH GUARD TERMINATOR unit from your army that has not been selected to shoot this phase.\n\nEFFECT: If your unit was set up on the battlefield this turn, it can perform a Tactical Manoeuvre this phase as if it was not set up on the battlefield this turn.",
+   "flavour": "Like infectious spores contaminating their victim, the warriors of the Death Guard teleport into battle then dig in as their foulness slowly spreads around them.",
+   "src": "wahapedia"
+  },
+  "corrosivecurse": {
+   "name": "CORROSIVE CURSE",
+   "cost": 1,
+   "costText": "1CP",
+   "detachment": "Arch-Contaminators",
+   "category": "Strategic Ploy",
+   "when": "Start of your Shooting phase.",
+   "target": "One DEATH GUARD TERMINATOR unit from your army that is not within Engagement Range of one or more enemy units.",
+   "effect": "Select one objective marker within Contagion Range of and visible to your unit. That objective marker is Secured by your army.",
+   "restrictions": "You can only use this Stratagem once and, until the end of the turn, your unit is not eligible to shoot or declare a charge.",
+   "text": "WHEN: Start of your Shooting phase.\n\nTARGET: One DEATH GUARD TERMINATOR unit from your army that is not within Engagement Range of one or more enemy units.\n\nEFFECT: Select one objective marker within Contagion Range of and visible to your unit. That objective marker is Secured by your army.\n\nRESTRICTIONS: You can only use this Stratagem once and, until the end of the turn, your unit is not eligible to shoot or declare a charge.",
+   "flavour": "Mere proximity to these repulsive plague champions is enough to see vital systems rust and crumble as the taint of Chaos consumes them.",
+   "src": "wahapedia"
+  },
+  "cloudofflies": {
+   "name": "CLOUD OF FLIES",
+   "cost": 1,
+   "costText": "1CP",
+   "detachment": "Arch-Contaminators",
+   "category": "Battle Tactic",
+   "when": "Your opponent’s Shooting phase, just after an enemy unit has selected its targets.",
+   "target": "One DEATH GUARD unit from your army that was selected as the target of one or more of the attacking unit's attacks.",
+   "effect": "Until the end of the turn, each time an attack targets your unit, subtract 1 from the Hit roll.",
+   "restrictions": "",
+   "text": "WHEN: Your opponent’s Shooting phase, just after an enemy unit has selected its targets.\n\nTARGET: One DEATH GUARD unit from your army that was selected as the target of one or more of the attacking unit's attacks.\n\nEFFECT: Until the end of the turn, each time an attack targets your unit, subtract 1 from the Hit roll.",
+   "flavour": "Plague flies engulf these warriors in a storm of buzzing wings and pustulent bodies, soaking up incoming enemy fire and obscuring the Death Guard elite from the foe.",
+   "src": "wahapedia"
+  }
+ }
+}

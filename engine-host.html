@@ -1,0 +1,26 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Engine host</title>
+<!-- Headless engine for the Android app's built-in server (android/src/.../EngineHost.java).
+     Same engine as server.js: Java keeps the action log, this page reduces actions and returns state JSON. -->
+<script type="module">
+import { initialState, reduce } from './engine/index.js';
+const games = new Map(); // code → state
+const fail = e => ({ error: (e && e.message) || String(e) });
+function replay(code, actions) {
+  let s = initialState(code, 0), seq = 0;
+  for (const a of actions) { s = reduce(s, a); s.seq = ++seq; }
+  s.seq = seq;
+  return s;
+}
+window.H = {
+  load(code, actionsJson) { try { const s = replay(code, JSON.parse(actionsJson)); games.set(code, s); return { state: s }; } catch (e) { return fail(e); } },
+  apply(code, actionJson, seq) {
+    try { const s = reduce(games.get(code), JSON.parse(actionJson)); s.seq = seq; games.set(code, s); return { state: s }; }
+    catch (e) { return fail(e); }
+  },
+  init(code, seed) { const s = initialState(code, seed); s.seq = 0; games.set(code, s); return { state: s }; },
+  drop(code) { games.delete(code); return { ok: true }; }
+};
+window.H_READY = true;
+</script>

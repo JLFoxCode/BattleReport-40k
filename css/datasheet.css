@@ -1,0 +1,76 @@
+/* Datenblatt-Karten (Layout wie New Recruit / GW-Datasheet), dunkles Design-System */
+.ds-card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); margin: 10px 0; overflow: hidden; }
+.ds-card.missing { border-style: dashed; }
+.ds-card > summary { list-style: none; cursor: pointer; }
+.ds-card > summary::-webkit-details-marker { display: none; }
+.ds-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding: 10px 12px; background: var(--panel2); border-bottom: 1px solid var(--line); }
+.ds-title { font-family: var(--font-title); font-weight: 700; font-size: 1.15rem; letter-spacing: .02em; text-transform: uppercase; }
+.ds-meta { color: var(--muted); font-size: .85rem; white-space: nowrap; }
+.ds-body { padding: 8px 12px 12px; }
+.ds-profile-name { font-weight: 600; font-size: .85rem; color: var(--muted); margin-top: 6px; text-transform: uppercase; letter-spacing: .04em; }
+.ds-stats { display: flex; gap: 6px; margin: 6px 0 10px; flex-wrap: wrap; }
+.ds-stat { flex: 1 1 44px; min-width: 44px; text-align: center; background: var(--sunk, rgba(0,0,0,.25)); border: 1px solid var(--line); border-radius: 6px; padding: 4px 2px; }
+.ds-stat.inv { border-color: var(--warn); }
+.ds-stat-k { display: block; font-size: .65rem; letter-spacing: .08em; color: var(--muted); }
+.ds-stat-v { display: block; font-family: var(--font-title); font-weight: 700; font-size: 1.25rem; line-height: 1.1; }
+.ds-section { margin-top: 10px; }
+.ds-section-h { font-family: var(--font-title); font-weight: 700; letter-spacing: .06em; font-size: .8rem; color: var(--on-p, #fff); background: var(--pc, var(--p0)); padding: 3px 8px; border-radius: 4px; display: inline-block; margin-bottom: 6px; }
+.ds-weapons { width: 100%; border-collapse: collapse; font-size: .85rem; table-layout: fixed; }
+.ds-weapons th { font-size: .62rem; letter-spacing: .08em; color: var(--muted); text-align: center; padding: 2px 0; border-bottom: 1px solid var(--line); }
+.ds-weapons th:first-child { text-align: left; }
+.ds-weapons td { padding: 5px 2px; text-align: center; border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums; vertical-align: top; }
+.ds-weapons td:first-child { text-align: left; }
+.ds-weapons th:first-child, .ds-weapons td.ds-wcell-name { width: 42%; }
+.ds-wname { font-weight: 600; display: block; }
+.ds-wprofile { font-weight: 400; color: var(--muted); }
+.ds-wabil { display: block; font-size: .72rem; color: var(--muted); letter-spacing: .02em; }
+.ds-wrow.dim { opacity: .45; }
+.ds-wrow.sel td.ds-wcell-name { box-shadow: inset 3px 0 0 var(--ok); padding-left: 6px; }
+.ds-ab { font-size: .9rem; line-height: 1.4; margin: 4px 0; }
+.ds-ab b { font-weight: 700; }
+.ds-inv b { color: var(--warn); }
+.ds-list { margin: 4px 0 0; padding-left: 18px; font-size: .88rem; }
+.ds-options li { color: var(--muted); }
+.ds-keywords { margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--line); font-size: .78rem; display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+.ds-keywords.faction { border-top: 0; padding-top: 0; margin-top: 4px; }
+.ds-kw-label { color: var(--muted); letter-spacing: .06em; font-size: .68rem; margin-right: 4px; }
+.ds-kw { background: var(--sunk, rgba(0,0,0,.25)); border: 1px solid var(--line); border-radius: 4px; padding: 1px 6px; text-transform: uppercase; letter-spacing: .03em; }
+@media (max-width: 400px) { .ds-weapons { font-size: .78rem; } .ds-stat-v { font-size: 1.1rem; } }
+/* Head: title + flags + leader line */
+.ds-head-main { flex: 1 1 auto; min-width: 0; }
+.ds-tag { display: inline-block; vertical-align: middle; font: 600 .62rem/1 var(--font-body, sans-serif); letter-spacing: .08em; text-transform: uppercase; padding: 3px 6px; border-radius: 4px; border: 1px solid var(--line); color: var(--muted); margin-left: 6px; }
+.ds-tag.wl { color: var(--warn); border-color: var(--warn); }
+.ds-attach { font-size: .82rem; margin-top: 2px; color: var(--muted); }
+.ds-attach b { color: var(--text); }
+.ds-attach.leader::before { content: '\2191'; margin-right: 4px; }
+.ds-attach.bodyguard::before { content: '\2193'; margin-right: 4px; }
+.ds-attach.unresolved b { color: var(--muted); text-decoration: line-through; }
+.ds-wcount { font-weight: 700; color: var(--ok); font-size: .78rem; }
+/* Buffs from the leader (bodyguard card) */
+.ds-buffs { background: color-mix(in srgb, var(--ok) 8%, transparent); border: 1px solid color-mix(in srgb, var(--ok) 40%, var(--line)); border-radius: 6px; padding: 8px 10px 6px; }
+.ds-buffs .ds-section-h { background: var(--ok); }
+.ds-buff { padding: 6px 0; border-top: 1px dashed var(--line); }
+.ds-buff:first-of-type { border-top: 0; }
+.ds-buff-head { display: flex; align-items: center; gap: 6px; font-size: .9rem; }
+.ds-buff-head b { flex: 1 1 auto; min-width: 0; }
+.ds-info { width: 28px; min-width: 28px; height: 28px; min-height: 28px; border-radius: 50%; border: 1px solid currentColor; font: 700 .8rem/1 Georgia, serif; font-style: italic; padding: 0; }
+.ds-buff-badges { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin-top: 4px; }
+.ds-buff-scope { font-size: .72rem; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-right: 2px; }
+.ds-ab-buff { border-left: 3px solid var(--ok); padding-left: 6px; }
+
+/* ───────── Leader + led unit as one card (datasheetGroupCard) ───────── */
+.ds-group { --ldr: var(--warn); }
+.ds-group .ldr-name { color: var(--ldr); }
+.ds-group .ds-profile-name.from-leader { color: var(--ldr); }
+.ds-group .ds-tag.ldr { color: var(--ldr); border-color: color-mix(in srgb, var(--ldr) 60%, transparent); }
+.ds-group .ds-wrow.from-leader td { background: color-mix(in srgb, var(--ldr) 10%, transparent); }
+.ds-group .ds-wrow.from-leader td.ds-wcell-name { box-shadow: inset 3px 0 0 var(--ldr); padding-left: 6px; }
+.ds-group .ds-ab.from-leader { border-left: 3px solid var(--ldr); padding-left: 8px; background: color-mix(in srgb, var(--ldr) 8%, transparent); border-radius: 4px; }
+.ds-group .ds-kw.from-leader { color: var(--ldr); border-color: color-mix(in srgb, var(--ldr) 60%, transparent); }
+.ds-wbuffs { display: inline-flex; flex-wrap: wrap; gap: 4px; margin-left: 6px; vertical-align: middle; }
+.ds-wbuff { display: inline-flex; align-items: center; gap: 3px; font: 600 .7rem/1.4 var(--font-mono, ui-monospace, Consolas, monospace); color: var(--ldr); white-space: nowrap; }
+.ds-unitbuffs { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 4px; }
+.ds-unitbuff { display: inline-flex; align-items: center; gap: 4px; font-size: .8rem; padding: 3px 4px 3px 8px; border-radius: 999px; border: 1px solid color-mix(in srgb, var(--ldr) 60%, transparent); color: var(--ldr); }
+.ds-info.ds-info-sm { width: 20px; min-width: 20px; height: 20px; min-height: 20px; font-size: .68rem; color: var(--ldr); }
+.ds-attach-pick { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: .85rem; margin: 2px 0 8px; color: var(--muted); }
+.ds-attach-pick select { font: inherit; color: var(--text); background: var(--bg2, #1b1f25); border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; }

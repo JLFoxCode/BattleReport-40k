@@ -1,0 +1,38 @@
+/* Lobby – ergänzt css/app.css (Design-System). Nur modulspezifische Regeln. */
+.lobby { max-width: 1100px; margin: 0 auto; padding: calc(var(--gap, 12px) * 1.5) var(--gap, 12px) calc(var(--gap, 12px) * 4); display: grid; gap: calc(var(--gap, 12px) * 1.5); }
+.lobby .hero { text-align: center; padding: calc(var(--gap, 12px) * 2) 0 var(--gap, 12px); }
+.lobby .hero-kicker { font-family: 'Saira Condensed', 'Barlow', sans-serif; text-transform: uppercase; letter-spacing: .18em; font-size: .8rem; color: var(--muted, #9aa4b2); }
+.lobby .hero-title { font-size: clamp(2.4rem, 8vw, 4.5rem); line-height: 1; margin: .2em 0 .3em; letter-spacing: .02em; }
+.lobby .hero-actions { justify-content: center; flex-wrap: wrap; margin-top: var(--gap, 12px); }
+
+.lobby .join-form { align-items: stretch; flex-wrap: wrap; }
+.lobby .code-input {
+  font-family: 'Saira Condensed', 'Barlow', sans-serif; font-size: 2rem; font-weight: 700; letter-spacing: .25em;
+  text-transform: uppercase; text-align: center; width: 9ch; min-height: 52px; flex: 0 0 auto;
+}
+.lobby .join-form select { min-height: 52px; flex: 1 1 140px; }
+.lobby .join-form .btn { min-height: 52px; flex: 1 1 140px; }
+.lobby .hint { margin: var(--gap, 12px) 0 0; font-size: .9rem; overflow-wrap: anywhere; }
+.lobby .hint code { font-family: ui-monospace, Consolas, monospace; background: rgba(255,255,255,.06); padding: .1em .35em; border-radius: 4px; }
+
+.lobby .games > .row { margin-bottom: var(--gap, 12px); }
+.lobby .game-grid { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
+.lobby .game { display: grid; gap: calc(var(--gap, 12px) * .6); }
+.lobby .game .code {
+  font-family: 'Saira Condensed', 'Barlow', sans-serif; font-size: 2.8rem; font-weight: 800; letter-spacing: .22em; line-height: 1;
+}
+.lobby .game-players { display: flex; align-items: baseline; gap: .5em; font-size: 1.1rem; font-weight: 600; flex-wrap: wrap; }
+.lobby .game-players .vs { font-weight: 400; font-size: .9rem; }
+.lobby .pname.p0, .lobby .pname.p1 { color: var(--pc); }
+.lobby .roles { flex-wrap: wrap; gap: 6px; }
+.lobby .roles .btn { flex: 1 1 30%; }
+.lobby .game-foot { align-items: center; gap: 6px; flex-wrap: wrap; }
+.lobby .tiny { font-size: .75rem; overflow-wrap: anywhere; }
+.lobby .small { font-size: .85rem; }
+.lobby .empty { text-align: center; padding: calc(var(--gap, 12px) * 2); }
+.lobby .between { justify-content: space-between; align-items: center; }
+
+@media (max-width: 480px) {
+  .lobby .game .code { font-size: 2.2rem; }
+  .lobby .roles .btn { flex-basis: 45%; }
+}

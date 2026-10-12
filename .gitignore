@@ -1,0 +1,7 @@
+# Build output – the APK is published as a GitHub Release
+android/build/
+/app/
+# Signing key stays on the build machine
+*.keystore
+node_modules/
+*.tmp

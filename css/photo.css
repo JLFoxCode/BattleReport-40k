@@ -1,0 +1,87 @@
+@charset "utf-8";
+/* ═══════════════════════════════════════════════════════════════════
+   Fotoansicht (css/photo.css) – Styles für js/ui/photo.js
+   Handy zuerst: Foto füllt die Breite, Werkzeugleiste unten (sticky), Ziele ≥ 44 px.
+   ═══════════════════════════════════════════════════════════════════ */
+
+.photo-page { display: flex; flex-direction: column; min-height: 100vh; min-height: 100dvh; }
+.photo-page .photo-view { flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0; }
+
+.pv { display: flex; flex-direction: column; min-height: 0; flex: 1 1 auto; }
+.pv-head { display: flex; align-items: center; gap: 8px; padding: 8px var(--gap); flex-wrap: nowrap; }
+.pv-head .pv-pick { flex: 1 1 auto; min-width: 0; min-height: 40px; font-size: 14px; padding: 6px 30px 6px 10px; }
+.pv-head .pv-modes { display: flex; gap: 4px; flex: none; }
+.pv-head .badge { flex: none; min-height: 32px; cursor: pointer; font-size: 11px; }
+.pv-head .btn.icon { flex: none; }
+
+.pv-stage {
+  position: relative; flex: 1 1 auto; min-height: 300px; height: calc(100dvh - 230px);
+  background: #000; overflow: hidden; touch-action: none; user-select: none; -webkit-user-select: none;
+  -webkit-touch-callout: none; cursor: crosshair;
+}
+.photo-view .pv-stage { height: auto; }
+.pv.embedded .pv-stage { height: 60vh; min-height: 260px; border-radius: var(--radius); }
+.pv-zoom { position: absolute; left: 0; top: 0; transform-origin: 0 0; will-change: transform; }
+.pv-content { position: relative; }
+.pv-content img.pv-img { position: absolute; left: 0; top: 0; width: 100%; height: 100%; max-width: none; pointer-events: none; }
+.pv-content canvas.pv-rect { position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; }
+.pv-content [hidden] { display: none !important; }
+
+/* Spielfeld-Overlay: transparent, nur Linien/Zonen/Token */
+.pv-mapwrap { position: absolute; left: 0; top: 0; transform-origin: 0 0; pointer-events: none; opacity: .9; }
+.pv-mapwrap .pv-map { width: 100%; height: 100%; }
+.pv-mapwrap .map { background: transparent !important; border-radius: 0; }
+.pv-mapwrap .map-bg { fill: transparent; }
+.pv-mapwrap .map-grid { stroke: rgba(255, 255, 255, .22); }
+.pv-mapwrap .map-grid.major { stroke: rgba(255, 255, 255, .4); }
+.pv-mapwrap .map-edge { stroke: #fff; stroke-opacity: .75; stroke-width: .25; }
+.pv-mapwrap .map-zone { fill-opacity: .08; }
+.pv-mapwrap .unit .body { fill-opacity: .55; }
+.pv-mapwrap .obj-range { fill-opacity: .1; }
+
+/* Zeichenebene (Inhalt-px; Schrift/Striche gegen Zoom konstant) */
+.pv-draw { position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; --zoom: 1; }
+.pv-draw .m-line { stroke: #fff; stroke-width: calc(2.5px / var(--zoom)); stroke-dasharray: calc(10px / var(--zoom)) calc(6px / var(--zoom)); stroke-linecap: round; fill: none; opacity: .75; }
+.pv-draw .m-line.last, .pv-draw .m-line.temp { opacity: 1; stroke: var(--warn); stroke-dasharray: none; stroke-width: calc(3px / var(--zoom)); }
+.pv-draw .m-line.other { stroke: var(--p1); }
+.pv-draw .m-dot { r: calc(5px / var(--zoom)); fill: #fff; stroke: #000; stroke-width: calc(1.5px / var(--zoom)); }
+.pv-draw .m-dot.other { fill: var(--p1); }
+.pv-draw .m-dot.pulse { fill: var(--warn); }
+.pv-draw .m-lbl { font: 700 calc(20px / var(--zoom)) var(--font-title), sans-serif; fill: #fff; text-anchor: middle; paint-order: stroke fill; stroke: rgba(0, 0, 0, .8); stroke-width: calc(4px / var(--zoom)); stroke-linejoin: round; }
+.pv-draw .m-lbl.other { fill: var(--p1); }
+.pv-draw .m-lbl.corner { text-anchor: start; fill: var(--warn); }
+.pv-draw .m-range { fill: rgba(255, 255, 255, .12); stroke: #fff; stroke-width: calc(2.5px / var(--zoom)); stroke-dasharray: calc(10px / var(--zoom)) calc(6px / var(--zoom)); }
+.pv-draw .m-corner { r: calc(8px / var(--zoom)); fill: var(--warn); stroke: #000; stroke-width: calc(2px / var(--zoom)); }
+.pv-draw .m-frame { fill: rgba(236, 170, 72, .12); stroke: var(--warn); stroke-width: calc(2px / var(--zoom)); stroke-dasharray: calc(8px / var(--zoom)) calc(5px / var(--zoom)); }
+
+.pv-empty { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; text-align: center; padding: 24px; color: var(--muted); font-size: 15px; pointer-events: none; }
+.pv-empty[hidden] { display: none; }
+.pv-hint { position: absolute; left: 10px; right: 10px; bottom: 10px; padding: 6px 10px; border-radius: 8px; background: rgba(0, 0, 0, .6); color: #fff; font-size: 13px; pointer-events: none; text-align: center; }
+.pv-hint[hidden] { display: none; }
+.pv-big {
+  position: absolute; right: 10px; top: 10px; padding: 4px 14px; border-radius: 10px;
+  background: rgba(0, 0, 0, .65); color: var(--warn); font-family: var(--font-title); font-size: 40px; font-weight: 700; letter-spacing: .02em;
+  pointer-events: none; animation: fade-in .15s ease-out;
+}
+.pv-big[hidden] { display: none; }
+
+/* Werkzeugleiste */
+.pv-tools { padding: 8px var(--gap) calc(8px + var(--sa-bottom)); background: var(--bg); border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 8px; }
+.pv-toolrow { display: grid; grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); gap: 6px; }
+.pv-toolrow .chip { justify-content: center; padding: 0 8px; font-size: 14px; }
+.pv-toolrow .chip span { font-size: 18px; line-height: 1; }
+.pv-toolextra { min-height: 36px; display: flex; align-items: center; }
+.pv-toolextra > * { width: 100%; }
+.pv-toolextra select { min-height: 44px; }
+.pv-measures { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.pv-measures .chip.sm { font-family: var(--font-title); font-weight: 700; font-size: 16px; }
+.pv-measures .chip.other { border-color: color-mix(in srgb, var(--p1) 55%, transparent); color: var(--p1); }
+
+@media (min-width: 900px) {
+  .pv-toolrow { grid-template-columns: repeat(4, minmax(120px, 160px)); }
+  .pv-tools { flex-direction: row; align-items: center; flex-wrap: wrap; }
+  .pv-toolextra { flex: 1 1 auto; }
+}
+@media (orientation: landscape) and (max-height: 500px) {
+  .pv-stage { height: calc(100dvh - 160px); min-height: 200px; }
+}

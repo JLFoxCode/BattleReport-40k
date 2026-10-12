@@ -1,0 +1,118 @@
+/* Rulebook (#/rules) – complements css/app.css. Sticky search under the app bar, grouped result rows, type badges. */
+.view-rules { padding-bottom: calc(40px + var(--sa-bottom)); }
+
+/* ───────── Sticky search bar ───────── */
+.rb-bar {
+  position: sticky; top: var(--appbar-h, 0px); z-index: 30;
+  display: flex; align-items: center; gap: 8px;
+  padding: calc(8px + var(--sa-top)) var(--gap) 8px;
+  background: color-mix(in srgb, var(--panel) 94%, transparent);
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--line);
+}
+.rb-bar .rb-q { flex: 1 1 auto; min-height: 48px; font-size: 16px; border-radius: 999px; padding-left: 16px; }
+.rb-bar .rb-q::-webkit-search-cancel-button { display: none; }
+.rb-clear { flex: none; width: 44px; }
+.rb-clear[hidden] { display: none; }
+
+/* ───────── Body ───────── */
+.rb-body { max-width: 900px; margin: 0 auto; padding: var(--gap); }
+.rb-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: var(--gap); }
+.rb-chips-label { margin: 0; font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; font-weight: 600; }
+.rb-chips select { width: auto; flex: 1 1 180px; min-height: 40px; padding: 4px 10px; font-size: 15px; }
+.rb-total { margin: 0 0 8px; }
+.rb-empty { padding: 24px 0; }
+.rb-count { font-family: var(--font-title); font-weight: 600; font-size: 13px; color: var(--muted); letter-spacing: .04em; }
+.rb-caret { color: var(--muted); font-size: 14px; flex: none; }
+
+/* ───────── Result groups ───────── */
+.rb-group { margin: 0 0 calc(var(--gap) * 1.5); }
+.rb-group-h { display: flex; align-items: center; gap: 8px; font-family: var(--font-title); font-weight: 700; text-transform: uppercase; letter-spacing: .06em; font-size: 15px; padding: 6px 4px; border-bottom: 2px solid var(--line); margin-bottom: 2px; }
+
+/* ───────── Rows ───────── */
+.rb-row {
+  display: block; min-height: 48px; padding: 10px 8px; border-bottom: 1px solid var(--line);
+  cursor: pointer; -webkit-tap-highlight-color: transparent; border-radius: 0;
+}
+.rb-row:last-child { border-bottom: 0; }
+.rb-row:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
+.rb-row.open { background: var(--panel); border-radius: var(--radius-sm); border-bottom-color: transparent; margin: 4px 0; box-shadow: inset 3px 0 0 var(--line); }
+.rb-row-head { display: flex; align-items: center; gap: 8px; min-height: 24px; }
+.rb-title { flex: 1 1 auto; min-width: 0; font-weight: 600; font-size: 16px; line-height: 1.25; }
+.rb-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.rb-snip { font-size: 14px; color: var(--muted); margin-top: 4px; line-height: 1.35; }
+.rb-full { margin-top: 8px; font-size: 15px; cursor: auto; }
+.rb-text { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.45; }
+.rb-strat-row { margin: 0 0 6px; }
+.rb-strat-row b { font-size: 12px; letter-spacing: .06em; color: var(--muted); }
+.rb-orig-rule { margin: 0 0 8px; }
+.rb-orig-rule b { display: block; margin-bottom: 2px; }
+.rb-conds { margin: 6px 0 0; padding-left: 18px; }
+.rb-conds li { margin-bottom: 6px; }
+.rb-vp { font-family: var(--font-title); font-size: 15px; color: var(--ok); margin-right: 4px; white-space: nowrap; }
+.rb-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
+.rb-tag { font: 600 11px/1 var(--font-body); letter-spacing: .06em; text-transform: uppercase; padding: 4px 6px; border-radius: 4px; background: var(--ok-soft); color: var(--ok); }
+.rb-ds .ds-card { margin: 0; }
+mark { background: color-mix(in srgb, var(--warn) 45%, transparent); color: inherit; border-radius: 2px; padding: 0 1px; }
+
+/* ───────── Type badges ───────── */
+.rb-type {
+  --tc: var(--muted);
+  display: inline-flex; align-items: center; flex: none; min-height: 20px; padding: 1px 7px; border-radius: 999px;
+  font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; line-height: 1; white-space: nowrap;
+  background: color-mix(in srgb, var(--tc) 18%, transparent); color: var(--tc); border: 1px solid color-mix(in srgb, var(--tc) 35%, transparent);
+}
+.rb-type[data-t="core"] { --tc: var(--p1); }
+.rb-type[data-t="step"] { --tc: #7FA6D6; }
+.rb-type[data-t="glossary"] { --tc: var(--ok); }
+.rb-type[data-t="mission"] { --tc: var(--warn); }
+.rb-type[data-t="corestrat"] { --tc: #B48CFF; }
+.rb-type[data-t="armyrule"] { --tc: var(--p0); }
+.rb-type[data-t="detrule"] { --tc: #E39A5A; }
+.rb-type[data-t="strat"] { --tc: #E07BB8; }
+.rb-type[data-t="unit"] { --tc: #3FBFAE; }
+
+/* ───────── Browse sections ───────── */
+.rb-sec { border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); margin: 0 0 10px; overflow: hidden; }
+.rb-sec.lvl2 { border-radius: var(--radius-sm); background: var(--panel2); margin: 0 0 6px; }
+.rb-sec-h {
+  display: flex; align-items: center; gap: 10px; width: 100%; min-height: 52px; padding: 8px 14px; text-align: left;
+  background: transparent; border: 0; color: var(--text); cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+.rb-sec-h .rb-sec-t { flex: 1 1 auto; font-family: var(--font-title); font-weight: 700; text-transform: uppercase; letter-spacing: .05em; font-size: 17px; }
+.rb-sec.lvl2 .rb-sec-h { min-height: 48px; }
+.rb-sec.lvl2 .rb-sec-h .rb-sec-t { font-size: 15px; text-transform: none; letter-spacing: 0; font-family: var(--font-body); font-weight: 600; }
+.rb-sec-b { padding: 0 10px 10px; border-top: 1px solid var(--line); }
+.rb-sec.lvl2 > .rb-sec-b { padding: 0 8px 8px; }
+.rb-sec.lvl1 > .rb-sec-b > .rb-sec:first-child { margin-top: 10px; }
+.rb-order { margin: 10px 0 6px; padding-left: 22px; font-size: 14px; }
+.rb-order li { margin-bottom: 4px; }
+.rb-letter { font-family: var(--font-title); font-weight: 700; font-size: 18px; color: var(--muted); padding: 10px 4px 2px; border-bottom: 1px solid var(--line); }
+
+/* ───────── Factions ───────── */
+.rb-faclist { display: flex; flex-direction: column; }
+.rb-fac {
+  display: flex; align-items: center; gap: 10px; width: 100%; min-height: 52px; padding: 8px 6px; text-align: left;
+  background: transparent; border: 0; border-bottom: 1px solid var(--line); color: var(--text); cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+.rb-fac:last-child { border-bottom: 0; }
+.rb-fac:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
+.rb-fac-name { font-weight: 600; flex: 1 1 auto; }
+.rb-fac-meta { font-size: 12px; color: var(--muted); text-align: right; }
+.rb-facpage { display: flex; flex-direction: column; gap: var(--gap); }
+.rb-fachead { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.rb-factitle { margin: 0; font-size: 26px; flex: 1 1 auto; }
+.rb-blk { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 10px 12px; }
+.rb-blk-t { font-family: var(--font-title); font-weight: 700; text-transform: uppercase; letter-spacing: .06em; font-size: 15px; display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.rb-blk .rb-sec.lvl2 { background: var(--panel2); }
+.rb-res { padding: 10px 12px; }
+.rb-rem { list-style: none; margin: 0; padding: 0; }
+.rb-rem li { padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 14px; }
+.rb-rem li:last-child { border-bottom: 0; }
+.rb-rem-ph { display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--warn); margin-bottom: 2px; }
+.rb-units { margin-top: 6px; }
+
+@media (min-width: 768px) {
+  .rb-row { padding: 10px 12px; }
+  .rb-title { font-size: 17px; }
+}

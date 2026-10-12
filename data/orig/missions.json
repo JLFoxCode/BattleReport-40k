@@ -1,0 +1,377 @@
+{
+ "version": "2026-10-11",
+ "source": "https://wahapedia.ru/wh40k11ed/the-rules/mission-deck-2026-27/",
+ "sequence": [
+  {
+   "n": null,
+   "step": "Chapter Approved Battles",
+   "text": "Chapter Approved battles give you and an opponent a way to play exciting, thematic and balanced games of Warhammer 40,000. In these battles, you will clash to earn Victory Points (VP) by accomplishing a variety of goals. Whichever player gains the most VP wins the battle.\n\nA Chapter Approved battle is waged by following the sequence below."
+  },
+  {
+   "n": 1,
+   "step": "Muster Armies",
+   "text": "Muster armies as described in the Core Rules."
+  },
+  {
+   "n": 2,
+   "step": "Determine Mission",
+   "text": "Each player secretly chooses one Force Disposition card available to them (as determined when mustering armies), then together you reveal your chosen Force Disposition cards.\n\nFind your opponent’s Force Disposition symbol on your Force Disposition card.The Primary Mission that is listed below that symbol is your Primary Mission, which describes howto score VP.\n\nDesigner’s Note: If you both have the same Force Disposition cord,you will have the same Primary Mission. There are two copies of each of these cards, so thatyou can have one.\n\nTake and Hold\n\nDisruption\n\nPurge the Foe\n\nPriority Assets\n\nReconnaissance"
+  },
+  {
+   "n": 3,
+   "step": "Determine Deployment",
+   "text": "Shuffle the Deployment cards face-down and draw one. This describes where to place terrain objectives and where you can deploy your armies.\n\nOptional Step: Twist\nIf both players want to play with an additional rule that can dramatically alter the battle, choose one Twist card. Both players must agree on which Twist card to use."
+  },
+  {
+   "n": 4,
+   "step": "Create The Battlefield",
+   "text": "Missions are played on rectangular battlefields 44\" by 60\" in size.\n\nWe recommend using the suggested battlefield layouts in the Warhammer 40,000 app. These layouts were designed for Chapter Approved battles.\n\nIf you wish to create your own layout, use the following instructions.\n\nRoll one D6. On a 1-5, use the single central objective point as shown at the centre of the Deployment card. On a 6, instead use two central objective points: locate these 6\" either side of the single central objective point, along the dashed line used to separate the players’ territories.\n\nRoll off, then take turns placing terrain features, starting with the winner.\n\n- For each objective point, set up one terrain feature so that it covers that point on the battlefield. A terrain feature set up in this way is a terrain objective.\n\n- Then set up any remaining terrain features."
+  },
+  {
+   "n": 5,
+   "step": "Determine Attacker and Defender",
+   "text": "Players look at the Deployment card drawn and agree which edges of your battlefield correspond with the Attacker’s and Defender’s battlefield edges labelled on the card.\n\nRoll off: the winner decides who will be the Attacker and who will be the Defender."
+  },
+  {
+   "n": 6,
+   "step": "Select Secondary Missions",
+   "text": "Secondary Mission cards detail additional ways to score VP. There is a deck for the Attacker and a deck for the Defender: the cards in each deck are identical.\n\nDesigner’s Note: If you or your opponent are new to Warhammer 40,000, you can play without Secondary Missions for a simpler experience while you’re starting out.\n\nPlayers now secretly note down whether they will use Tactical or Fixed Secondary Missions. If using Fixed Missions, they also note down which two Fixed Missions they will use (see below). Players then reveal these decisions.\n\nFixed Secondary Missions\nFixed Missions are those marked with the symbol shown on the left. If you are using Fixed Missions, display your selected Fixed Mission cards face-up. Fixed Missions cannot be discarded and are active for you throughout the battle.\n\nTactical Secondary Missions\nIf you are using Tactical Missions, shuffle your Secondary Mission deck face-down.\n\n- At the start of your Command phase, draw two Secondary Missions face-up from your Secondary Missions deck; these Secondary Missions are active for you.\n\n- (Once per battle) At the end of your Command phase, you can spend 1CP to discard one of your active Secondary Mission cards and draw one new Secondary Mission card.\n\nAchieving Secondary Missions\nAt the end of each player’s turn, each player does the following, starting with the player whose turn it is:\n\n- First, if you met the conditions on one or more Secondary Missions, you can gain the VP specified on that card. If you do, and if you are using Tactical Secondary Missions, discard that Secondary Mission - it is achieved.\n\n- Then, if it is your turn and you are using Tactical Secondary Missions, you can discard one or more of your active Secondary Missions. If you do, you gain 1CP."
+  },
+  {
+   "n": 7,
+   "step": "Declare Battle Formations",
+   "text": "Players secretly note down, in order:\n\n- Which of their units will start the battle embarked within which TRANSPORTS.\n\n- Which of their units will start the battle in strategic reserves.\n\nPlayers then reveal these decisions."
+  },
+  {
+   "n": 8,
+   "step": "Deploy Armies",
+   "text": "Players take it in turns to set up their units (excluding those in strategic reserves) one at a time, wholly within their deployment zone, starting with the Defender. If you set up a TITANIC unit when it is your turn to set up a unit, skip your next turn to set up a unit. Once you have finished setting up your units, if your opponent has any units that have not been set up, they set up those units."
+  },
+  {
+   "n": 9,
+   "step": "Redeploy Units",
+   "text": "Some rules let you redeploy certain units after both armies are deployed. Unless otherwise stated, you resolve those rules in this step. Players alternate resolving any such rules, starting with the Attacker. Units placed in strategic reserves in this step do not count towards the combined points value of your strategic reserves units."
+  },
+  {
+   "n": 10,
+   "step": "Determine First Turn",
+   "text": "Roll off: the winner takes the first turn."
+  },
+  {
+   "n": 11,
+   "step": "Resolve Pre-battle Rules",
+   "text": "Players alternate resolving any pre-battle rules units from their army may have, starting with the player who will take the first turn."
+  },
+  {
+   "n": 12,
+   "step": "Begin the Battle",
+   "text": "The first battle round begins."
+  },
+  {
+   "n": 13,
+   "step": "End the Battle",
+   "text": "The battle ends after five battle rounds have been completed. Even if you have no models remaining in your army at the start of your turn, players continue to play out their turns until the battle ends."
+  },
+  {
+   "n": 14,
+   "step": "Determine Victor",
+   "text": "Each player scores 10VP if their army is painted to a Battle Ready standard. At the end of the battle, the player with the most VP is the victor. If the players are tied, the battle is a draw. The maximum VP that can be scored from each source of VP is listed below. Any VP you score in excess of these maximums are ignored.\n\nVP SOURCE | MAXIMUM VP\n\nPRIMARY MISSION | 45VP\nUp to 15VP per battle round\n\nSECONDARY MISSIONS | 45VP\nUp to 15VP per battle round*\n\nBATTLE READY ARMY | 10VP\n\n* In addition, you can gain a maximum of 20VP per Fixed Secondary Mission card."
+  }
+ ],
+ "deployments": {
+  "Tipping Point": {
+   "name": "TIPPING POINT",
+   "text": "",
+   "image": "https://wahapedia.ru/wh40k11ed/img/maps/cards/CA7_TippingPoint.png"
+  },
+  "Sweeping Engagement": {
+   "name": "SWEEPING ENGAGEMENT",
+   "text": "",
+   "image": "https://wahapedia.ru/wh40k11ed/img/maps/cards/CA7_SweepingEngagement.png"
+  },
+  "Search and Destroy": {
+   "name": "SEARCH AND DESTROY",
+   "text": "",
+   "image": "https://wahapedia.ru/wh40k11ed/img/maps/cards/CA7_SearchAndDestroy.png"
+  },
+  "Hammer and Anvil": {
+   "name": "HAMMER AND ANVIL",
+   "text": "",
+   "image": "https://wahapedia.ru/wh40k11ed/img/maps/cards/CA7_HammerAndAnvil.png"
+  },
+  "Dawn of War": {
+   "name": "DAWN OF WAR",
+   "text": "",
+   "image": "https://wahapedia.ru/wh40k11ed/img/maps/cards/CA7_DawnOfWar.png"
+  },
+  "Crucible of Battle": {
+   "name": "CRUCIBLE OF BATTLE",
+   "text": "",
+   "image": "https://wahapedia.ru/wh40k11ed/img/maps/cards/CA7_CrucibleOfBattle.png"
+  }
+ },
+ "primary": {
+  "battlefield_dominance": {
+   "name": "BATTLEFIELD DOMINANCE",
+   "text": "FIRST AND SECOND BATTLE ROUND\n\nWHEN: End of your turn.\n\nYou control more objectives than your opponent. — 2VP\n\nSECOND BATTLE ROUND ONWARDS\n\nWHEN: End of your Command phase (or the end of your turn in the fifth battle round).\n\nFor each objective you control. — 3VP\n\n+ For each of those objectives (excluding your home objective) if you control your home objective. — +2VP CUMULATIVE",
+   "flavour": "This battlefield holds great significance for the wider war effort. You must seize control of it. Let nothing stand in your way."
+  },
+  "immovable_object": {
+   "name": "IMMOVABLE OBJECT",
+   "text": "ANY BATTLE ROUND\n\nWHEN: End of your turn.\n\nYou control one or more central objectives. — 3VP\n\nSECOND TO FOURTH BATTLE ROUND\n\nWHEN: End of your Command phase.\n\nFor each objective you control (excluding your home objective). — 5VP\n\nFIFTH BATTLE ROUND\n\nWHEN: End of your turn.\n\nFor each objective you control (excluding your home objective). — 5VP",
+   "flavour": "Obstinance is often the key to victory. Weather everything the enemy throws at you. If your opponent is to take any ground, they will have to wade through their own dead to do so."
+  },
+  "determined_acquisition": {
+   "name": "DETERMINED ACQUISITION",
+   "text": "ANY BATTLE ROUND\n\nWHEN: End of your turn.\n\nFor each objective you control that you did not control at the start of the turn (excluding your home objective). — 2VP\n\nSECOND BATTLE ROUND ONWARDS\n\nWHEN: End of your Command phase (or the end of your turn in the fifth battle round).\n\nFor each objective you control. — 3VP\n\n+ For each of those objectives that is within your opponent’s territory. — +3VP CUMULATIVE",
+   "flavour": "The resistance arrayed against you is formidable indeed, yet your orders are clear; take and hold the ground ahead, heedless of the cost."
+  },
+  "purge_and_secure": {
+   "name": "PURGE AND SECURE",
+   "text": "ANY BATTLE ROUND\n\nWHEN: End of your turn.\n\nOne or more enemy units were destroyed this turn by a friendly unit that was within range of one or more objectives. — 3VP\n\nOR One or more enemy units that started the turn within range of one or more objectives were destroyed this turn. — 3VP\n\nSECOND BATTLE ROUND ONWARDS\n\nWHEN: End of your Command phase (or the end of your turn in the fifth battle round).\n\nFor each objective you control (excluding your home objective). — 4VP\n\nWHEN: End of your turn.\n\nYou control one or more objectives you did not control at the start of the turn (excluding your home objective). — 3VP",
+   "flavour": "Enemy pickets and reconnaissance have engaged your vanguard. Move forward, seize defensive positions and repel the assault at all costs."
+  },
+  "inescapable_dominion": {
+   "name": "INESCAPABLE DOMINION",
+   "text": "ANY BATTLE ROUND\n\nWHEN: End of your turn.\n\nYou control three or more objectives. — 4VP\n\nSECOND BATTLE ROUND ONWARDS\n\nWHEN: End of your Command phase (or the end of your turn in the fifth battle round).\n\nYou control two or more objectives. — 5VP\n\nYou control more objectives than your opponent. — 4VP\n\nEND OF THE BATTLE\n\nYou control your opponent’s home objective. — 5VP",
+   "flavour": "Your first priority must be to dominate the battlefield. Seize strongpoints and dig in. Only then may you turn your full attention to slaughtering the foe."
+  },
+  "unstoppable_force": {
+   "name": "UNSTOPPABLE FORCE",
+   "text": "ANY BATTLE ROUND\n\nWHEN: End of your turn.\n\nOne or more enemy units were destroyed this turn. — 3VP\n\nSECOND BATTLE ROUND ONWARDS\n\nWHEN: End of your Command phase (or the end of your turn in the fifth battle round).\n\nFor each objective you control (excluding your home objective). — 4VP\n\nWHEN: End of your turn.\n\nYou control one or more objectives you did not control at the start of the turn (excluding your home objective). — 3VP\n\nEND OF THE BATTLE\n\nYou control one or more central objectives. — 5VP",
+   "flavour": "The enemy are arrayed before you in number, and well prepared for the coming assault. Smash through their defences. Grind them to dust."
+  },
+  "meatgrinder": {
+   "name": "MEATGRINDER",
+   "text": "ANY BATTLE ROUND\n\nWHEN: End of your turn.\n\nOne or more enemy units were destroyed this turn. — 3VP\n\nSECOND BATTLE ROUND ONWARDS\n\nWHEN: End of your Command phase (or the end of your turn in the fifth battle round).\n\nYou control one or more objectives (excluding your home objective). — 4VP\n\nSECOND BATTLE ROUND ONWARDS\n\nWHEN: End of your turn.\n\nMore enemy units were destroyed this turn than friendly units were destroyed in the previous turn. — 5VP\n\nYou control your opponent’s home objective. — 5VP",
+   "flavour": "Vicious and without relent, this battle has descended into base savagery. Only one path to victory remains: kill more of the enemy than they can kill of you."
+  },
+  "punishment": {
+   "name": "PUNISHMENT",
+   "text": "START OF YOUR TURN: Select one to three enemy units that are on the battlefield and within range of objectives and/or that destroyed one or more friendly units in the previous turn. If you cannot, select one enemy unit that is on the battlefield. Until the start of your next turn, those units are condemned.\n\nANY BATTLE ROUND\n\nWHEN: End of a turn.\n\nOne or more condemned enemy units left the battlefield this turn. — 5VP\n\nSECOND BATTLE ROUND ONWARDS\n\nWHEN: End of your Command phase (or the end of your turn in the fifth battle round).\n\nYou control one or more objectives (excluding your home objective). — 4VP\n\nYou control more objectives than your opponent. — 5VP\n\nEND OF THE BATTLE\n\nYou control your opponent’s home objective. — 8VP",
+   "flavour": "Those who resist must be punished. Make a bloody example of them, and leave none in doubt as to your mastery."
+  },
+  "consecrate": {
+   "name": "CONSECRATE",
+   "text": "Each time a friendly unit destroys a unit, that friendly unit becomes a consecration unit. At the end of your turn, for each of your consecration units, you can select one objective it is within range of (excluding your home objective) that has not been consecrated. If you do, place one of your operation markers within range of that objective – that objective is consecrated and that unit is no longer a consecration unit.\n\nANY BATTLE ROUND\n\nWHEN: End of your turn.\n\nOne or two objectives are consecrated. — 3VP\n\nOR Three or more objectives are consecrated. — 6VP\n\nSECOND BATTLE ROUND ONWARDS\n\nWHEN: End of your Command phase (or the end of your turn in the fifth battle round).\n\nYou control one or more objectives (excluding your home objective). — 4VP\n\nYou control more objectives than your opponent. — 4VP\n\nEND OF THE BATTLE\n\nYour opponent’s home objective is consecrated. — 5VP",
+   "flavour": "Whether in the name of grand ideals or simply to satisfy the thirst of their terrible gods, your warriors must consecrate this battlefield with the blood of their foes."
+  },
+  "destroyers_wrath": {
+   "name": "DESTROYER'S WRATH",
+   "text": "ANY BATTLE ROUND\n\nWHEN: End of your turn.\n\nOne or more enemy units were destroyed this turn. — 3VP\n\nSECOND BATTLE ROUND ONWARDS\n\nWHEN: End of your Command phase (or the end of your turn in the fifth battle round).\n\nYou control one or more objectives (excluding your home objective). — 4VP\n\nYou control more objectives than your opponent. — 6VP\n\nWHEN: End of your turn.\n\nMore enemy units were destroyed this turn than friendly units were destroyed in the previous turn. — 4VP",
+   "flavour": "Victory here shall not be measured in ground taken or plunder seized, but in the mangled corpses of your foes and the grisly trophies hewn from their bodies."
+  },
+  "death_trap": {
+   "name": "DEATH TRAP",
+   "text": "ANY BATTLE ROUND\n\nWHEN: End of your turn.\n\nFor each terrain area trapped this turn (see below). — 2VP\n\n+ For each of those terrain areas that is an objective. — +3VP CUMULATIVE\n\nANY BATTLE ROUND\n\nWHEN: End of your turn.\n\nOne or more enemy units that started the turn within a terrain area were destroyed, if that terrain area is trapped. — 3VP\n\nSECOND BATTLE ROUND ONWARDS\n\nWHEN: End of your Command phase (or the end of your turn in the fifth battle round).\n\nYou control one or more objectives (excluding your home objective). — 4VP\n\nBOOBY TRAP\n\nOBJECTIVE ACTION\n\nSTARTS: Your Shooting phase.\n\nUNITS: One friendly unit within range of one objective (excluding your home objective) or within one terrain area that is not within your deployment zone, that you have not yet trapped (see below).\n\nUSE LIMIT: Unlimited. Each unit that starts this action this phase must be within a different terrain area.\n\nCOMPLETES: Immediately.\n\nEFFECT: That terrain area is trapped: place one of your operation markers within that terrain area.",
+   "flavour": "Even the most potent enemy force can be undone with sufficient preparation. Lay minefields, dig trenches and draw the enemy into pre-prepared killing zones."
+  },
+  "delaying_action": {
+   "name": "DELAYING ACTION",
+   "text": "ANY BATTLE ROUND\n\nWHEN: End of your turn.\n\nFor each enemy unit destroyed this turn. — 2VP\n\nSECOND BATTLE ROUND ONWARDS\n\nWHEN: End of your Command phase (or the end of your turn in the fifth battle round).\n\nYou control one or more objectives (excluding your home objective). — 4VP\n\nWHEN: End of your turn.\n\nYou control one or more central objectives and one or more expansion objectives. — 3VP",
+   "flavour": "Your enemies are on the march. Commit your warriors to battle and make the foe pay a bloody price for every foot of ground."
+  },
+  "outmanoeuvre": {
+   "name": "OUTMANOEUVRE",
+   "text": "ANY BATTLE ROUND\n\nWHEN: End of your turn.\n\nYou control your opponent’s home objective. — 10VP\n\nFIRST BATTLE ROUND\n\nWHEN: End of your turn.\n\nFor each objective you control (excluding your home objective). — 4VP\n\nSECOND AND THIRD BATTLE ROUND\n\nWHEN: End of your Command phase.\n\nFor each objective you control (excluding your home objective). — 5VP\n\nFOURTH BATTLE ROUND ONWARDS\n\nWHEN: End of your turn.\n\nFor each objective you control (excluding your home objective). — 6VP",
+   "flavour": "Speed and positioning are key in any battle. Outflank the enemy, seize high ground and routes of resupply. Choke them to death."
+  },
+  "smoke_and_mirrors": {
+   "name": "SMOKE AND MIRRORS",
+   "text": "ANY BATTLE ROUND\n\nWHEN: End of your turn.\n\nFor each objective that is decoyed (see below). — 2VP\n\n+ For each of those objectives that is within your opponent’s territory. — +2VP CUMULATIVE\n\nSECOND BATTLE ROUND ONWARDS\n\nWHEN: End of your Command phase (or the end of your turn in the fifth battle round).\n\nYou control one or more objectives (excluding your home objective). — 4VP\n\nEND OF THE BATTLE\n\nFour or more objectives are decoyed. — 10VP\n\nDECOY\n\nOBJECTIVE ACTION\n\nSTARTS: Your Shooting phase.\n\nUNITS: One friendly unit within range of one objective (excluding your home objective) that is not decoyed (see below).\n\nUSE LIMIT: Unlimited. Each unit that starts this action this phase must be within range of a different objective.\n\nCOMPLETES: End of your turn, if your unit controls that objective.\n\nEFFECT: That objective is decoyed: place one of your operation markers within range of that objective.",
+   "flavour": "Cunning is as potent a weapon as overwhelming force. Outnumbered or outgunned, you must make use of subterfuge and misdirection to pick the enemy apart."
+  },
+  "locate_and_deny": {
+   "name": "LOCATE AND DENY",
+   "text": "START OF THE BATTLE: Select five terrain areas not within your deployment zone; for each one, place one of your operation markers within it. If you cannot, do so for each terrain area that is not within your deployment zone.\n\nANY BATTLE ROUND\n\nWHEN: End of your turn.\n\nOne or more enemy units that started the turn within range of one or more objectives are destroyed. — 4VP\n\nOnly one of your operation markers is on the battlefield (see below), if one or more of your units are within the same terrain area as that marker, and no enemy units are within that terrain area. — 4VP\n\nSECOND BATTLE ROUND ONWARDS\n\nWHEN: End of your Command phase (or the end of your turn in the fifth battle round).\n\nYou control one or more objectives (excluding your home objective). — 4VP\n\nEND OF THE BATTLE\n\nOnly one of your operation markers is on the battlefield, if one or more of your units are within the same terrain area as that marker, and no enemy units are within that terrain area. — 5VP\n\nSENSOR SWEEP\n\nOBJECTIVE ACTION\n\nSTARTS: Your Shooting phase.\n\nUNITS: One friendly unit within range of one central objective.\n\nUSE LIMIT: Once per turn.\n\nCOMPLETES: End of your turn, if your unit controls that objective.\n\nEFFECT: Your unit performs a sensor sweep: remove one operation marker from the battlefield.\n\nRESTRICTIONS: A unit cannot start this action if there is only one operation marker on the battlefield.",
+   "flavour": "The enemy is searching for an asset of value. By cunning or by force of arms, prevent its retrieval."
+  },
+  "reconnaissance_sweep": {
+   "name": "RECONNAISSANCE SWEEP",
+   "text": "ANY BATTLE ROUND\n\nWHEN: End of your turn.\n\nThree or more friendly units are wholly within three different table quarters and not within 6\" of the centre of the battlefield. — 3VP\n\nOR Four or more friendly units are wholly within four different table quarters and not within 6\" of the centre of the battlefield. — 6VP\n\nANY BATTLE ROUND\n\nWHEN: End of your turn.\n\nFor each enemy unit destroyed this turn. — 1VP\n\nSECOND BATTLE ROUND ONWARDS\n\nWHEN: End of your Command phase (or the end of your turn in the fifth battle round).\n\nYou control one or more objectives (excluding your home objective). — 3VP",
+   "flavour": "Enemy movements have aroused suspicion. Disperse your forces, probe their lines and decipher their intentions."
+  },
+  "triangulation": {
+   "name": "TRIANGULATION",
+   "text": "SECOND BATTLE ROUND ONWARDS\n\nWHEN: End of your Command phase (or the end of your turn in the fifth battle round).\n\nYou control one or more objectives (excluding your home objective). — 4VP\n\nSECOND BATTLE ROUND ONWARDS\n\nWHEN: End of your turn.\n\nOne objective is triangulated (see below). — 3VP\n\nOR Two objectives are triangulated. — 6VP\n\nOR Three or more objectives are triangulated. — 10VP\n\nEND OF THE BATTLE\n\nYou control four or more objectives. — 10VP\n\nTRIANGULATE\n\nOBJECTIVE ACTION\n\nSTARTS: Your Shooting phase, from the second battle round onwards.\n\nUNITS: One friendly unit within range of one objective (excluding your home objective).\n\nUSE LIMIT: Once per turn.\n\nCOMPLETES: End of your turn, if your unit controls that objective.\n\nEFFECT: That objective is triangulated: place one of your operation markers within range of that objective.",
+   "flavour": "By acquiring and transmitting precise coordinates, your forces will be able to summon reinforcements, saturate the battlefield with artillery fire or call in other means of support."
+  },
+  "surveil_the_foe": {
+   "name": "SURVEIL THE FOE",
+   "text": "Each time a friendly unit ends a move within range of one objective that has any of your opponent’s operation markers within range of it, remove those operation markers from the battlefield.\n\nANY BATTLE ROUND\n\nWHEN: End of your turn.\n\nOne or more enemy units were surveilled this turn (see below), unless each of those units is within range of one or more objectives that have one or more operation markers within range of them. — 4VP\n\nSECOND BATTLE ROUND ONWARDS\n\nWHEN: End of your Command phase (or the end of your turn in the fifth battle round).\n\nYou control one or more objectives (excluding your home objective). — 4VP\n\nYou control more objectives than your opponent. — 4VP\n\nWHEN: End of your turn.\n\nNone of your opponent’s operation markers are on the battlefield. — 5VP\n\nSURVEIL THE FOE\n\nOBJECTIVE ACTION\n\nSTARTS: Your Shooting phase.\n\nUNITS: One friendly unit.\n\nUSE LIMIT: Unlimited.\n\nCOMPLETES: Immediately.\n\nEFFECT: Select one enemy unit within 18\" of and visible to your unit that has not been surveilled this turn: until the end of the turn, that enemy unit is surveilled.",
+   "flavour": "Information is power. Evaluate the strengths and weaknesses of the enemy and feed this crucial information back to your superiors."
+  },
+  "gather_intel": {
+   "name": "GATHER INTEL",
+   "text": "FIRST BATTLE ROUND\n\nWHEN: End of your turn.\n\nYou control one or more central objectives. — 6VP\n\nSECOND BATTLE ROUND ONWARDS\n\nWHEN: End of your Command phase (or the end of your turn in the fifth battle round).\n\nYou control one or more objectives (excluding your home objective). — 4VP\n\nSECOND BATTLE ROUND ONWARDS\n\nWHEN: End of your turn.\n\nFor each friendly unit that completed the Extract Intelligence action this turn (see below). — 7VP\n\nEND OF THE BATTLE\n\nThree or more of your operation markers are on the battlefield. — 5VP\n\nOne of your operation markers is within range of your opponent’s home objective. — 5VP\n\nEXTRACT INTELLIGENCE\n\nOBJECTIVE ACTION\n\nSTARTS: Your Shooting phase, from the second battle round onwards.\n\nUNITS: One unit within range of one objective (excluding your home objective) that does not have any of your operation markers within range of it.\n\nUSE LIMIT: Unlimited. Each unit that starts this action this phase must be within range of a different objective.\n\nCOMPLETES: End of your turn, if your unit controls that objective.\n\nEFFECT: Place one of your operation markers within range of that objective.",
+   "flavour": "The nature and motivation of the foe remains unclear. Test their mettle and seize pertinent intelligence from the field of battle."
+  },
+  "search_and_scour": {
+   "name": "SEARCH AND SCOUR",
+   "text": "ANY BATTLE ROUND\n\nWHEN: End of your turn.\n\nYou control one or more central objectives. — 3VP\n\nOne or more enemy units that started the turn within a terrain area are destroyed. — 2VP\n\nSECOND BATTLE ROUND ONWARDS\n\nWHEN: End of your Command phase (or the end of your turn in the fifth battle round).\n\nFor each objective you control (excluding your home objective). — 4VP\n\nEND OF THE BATTLE\n\nNo enemy units are wholly within your territory. — 5VP",
+   "flavour": "Forward elements report enemy movement in this sector. Move out, locate the foes and halt their operation before it gathers momentum."
+  },
+  "secure_asset": {
+   "name": "SECURE ASSET",
+   "text": "ANY BATTLE ROUND\n\nWHEN: End of your turn.\n\nA friendly unit secured the asset this turn (see below). — 4VP\n\nOne or more enemy units that started the turn within range of one or more central objectives are destroyed. — 2VP\n\nSECOND BATTLE ROUND ONWARDS\n\nWHEN: End of your Command phase (or the end of your turn in the fifth battle round).\n\nYou control one or more objectives (excluding your home objective). — 4VP\n\nYou control three or more objectives. — 4VP\n\nSECURE ASSET\n\nOBJECTIVE ACTION\n\nSTARTS: Your Shooting phase.\n\nUNITS: One friendly unit within range of one objective (excluding your home objective).\n\nUSE LIMIT: Once per turn.\n\nCOMPLETES: End of your turn, if your unit controls that objective.\n\nEFFECT: Your unit secures the asset.",
+   "flavour": "A vital asset has been lost amidst the chaos of battle. You must secure the item at all costs."
+  },
+  "vital_link": {
+   "name": "VITAL LINK",
+   "text": "ANY BATTLE ROUND\n\nWHEN: End of your turn.\n\nYou control one or more central objectives. — 2VP\n\n+ For each of your operation markers within range of one of those objectives (see below). — +1VP CUMULATIVE\n\nSECOND BATTLE ROUND ONWARDS\n\nWHEN: End of your Command phase (or the end of your turn in the fifth battle round).\n\nYou control one or more objectives (excluding your home objective). — 4VP\n\n+ One or more of those objectives is a central objective. — +4VP CUMULATIVE\n\nEND OF THE BATTLE\n\nYou control your opponent’s home objective. — 10VP\n\nMAINTAIN CONTROL\n\nOBJECTIVE ACTION\n\nSTARTS: Your Shooting phase.\n\nUNITS: One friendly unit within range of one central objective.\n\nUSE LIMIT: Once per turn.\n\nCOMPLETES: End of your turn, if your unit controls that objective.\n\nEFFECT: Place one of your operation markers within range of that objective.",
+   "flavour": "A key communications node is located in the midst of this battlefield. Control of this node is crucial to the continued success of your armies. Ensure it does not fall into enemy hands."
+  },
+  "extract_relic": {
+   "name": "EXTRACT RELIC",
+   "text": "ANY BATTLE ROUND\n\nWHEN: End of your turn.\n\nA friendly unit performed a sensor sweep this turn (see below). — 4VP\n\nOne or more enemy units that started the turn within range of one or more objectives are destroyed. — 3VP\n\nOnly one of your opponent’s operation markers is on the battlefield, if one or more of your units are within the same terrain area as that operation marker, and no enemy units are within that terrain area. — 4VP\n\nSECOND BATTLE ROUND ONWARDS\n\nWHEN: End of your Command phase (or the end of your turn in the fifth battle round).\n\nYou control one or more objectives (excluding your home objective). — 4VP\n\nEND OF THE BATTLE\n\nOnly one of your opponent’s operation markers is on the battlefield, if one or more of your units are within the same terrain area as that operation marker, and no enemy units are within that terrain area. — 5VP\n\nSENSOR SWEEP\n\nOBJECTIVE ACTION\n\nSTARTS: Your Shooting phase.\n\nUNITS: One friendly unit within range of one central objective.\n\nUSE LIMIT: Once per turn.\n\nCOMPLETES: End of your turn, if your unit controls that objective.\n\nEFFECT: Your unit performs a sensor sweep: remove one operation marker from the battlefield.\n\nRESTRICTIONS: A unit cannot start this action if there is only one operation marker on the battlefield.",
+   "flavour": "A priceless relic saturated with eldritch power lies somewhere on the field of battle. Secure the sensor array at the heart of the battlefield and direct its energies to locating the prize."
+  },
+  "vanguard_operation": {
+   "name": "VANGUARD OPERATION",
+   "text": "ANY BATTLE ROUND\n\nWHEN: End of your turn.\n\nA friendly unit performed a vanguard operation this turn (see below). — 4VP\n\nOne or more enemy units were destroyed this turn. — 2VP\n\nSECOND BATTLE ROUND ONWARDS\n\nWHEN: End of your Command phase (or the end of your turn in the fifth battle round).\n\nYou control one or more objectives (excluding your home objective). — 4VP\n\nEND OF THE BATTLE\n\nYou control your opponent’s home objective. — 10VP\n\nVANGUARD OPERATION\n\nOBJECTIVE ACTION\n\nSTARTS: Your Shooting phase.\n\nUNITS: One friendly unit within one terrain area that is within your opponent’s territory.\n\nUSE LIMIT: Once per turn.\n\nCOMPLETES: End of your turn, if no enemy units are within that terrain area.\n\nEFFECT: Your unit performs a vanguard operation.",
+   "flavour": "Striking deep beyond the front lines, your forces must employ speed and cunning to secure their objectives before the enemy responds."
+  },
+  "sabotage": {
+   "name": "SABOTAGE",
+   "text": "ANY BATTLE ROUND\n\nWHEN: End of your turn.\n\nFor each friendly unit that committed sabotage this turn (see below). — 3VP\n\n+ For each of those units that is within range of one or more objectives in your opponent’s territory. — +2VP CUMULATIVE\n\nSECOND BATTLE ROUND ONWARDS\n\nWHEN: End of your Command phase (or the end of your turn in the fifth battle round).\n\nYou control one or more objectives (excluding your home objective). — 4VP\n\nSABOTAGE\n\nOBJECTIVE ACTION\n\nSTARTS: Your Shooting phase.\n\nUNITS: One unit within range of one objective (excluding your home objective).\n\nUSE LIMIT: Unlimited. Each unit that starts this action this phase must be within range of a different objective.\n\nCOMPLETES: End of your turn, if that unit controls that objective.\n\nEFFECT: Your unit commits sabotage.",
+   "flavour": "Strike deep behind enemy lines, sabotage supply routes, fortifications and heavy weapons. By doing so you may lay the groundwork for future offensives."
+  }
+ },
+ "secondary": {
+  "no_prisoners": {
+   "name": "NO PRISONERS",
+   "text": "ANY BATTLE ROUND\n\nWHEN: End of a turn.\n\nFor each enemy unit destroyed this turn. — 2VP (UP TO 5VP)",
+   "flavour": "Show no mercy. Exterminate your enemies."
+  },
+  "overwhelming_force": {
+   "name": "OVERWHELMING FORCE",
+   "text": "ANY BATTLE ROUND\n\nWHEN: End of a turn.\n\nFor each enemy unit that started the turn within range of one or more objectives and is destroyed. — 3VP (UP TO 5VP)",
+   "flavour": "The enemy holds your assigned objectives. Commit your forces in full and sweep them from these locations post-haste."
+  },
+  "plunder": {
+   "name": "PLUNDER",
+   "text": "WHEN DRAWN: If the Cleanse Secondary Mission is active for you, you can draw one new Secondary Mission card and shuffle this card back into your Secondary Mission deck.\n\nPLUNDER\n\nOBJECTIVE ACTION\n\nSTARTS: Your Shooting phase.\n\nUNITS: One unit within a terrain area that is not within your territory.\n\nUSE LIMIT: Once per turn.\n\nCOMPLETES: Immediately.\n\nEFFECT: That terrain area is plundered.\n\nANY BATTLE ROUND\n\nWHEN: End of your turn.\n\nA terrain area was plundered this turn. — 5VP",
+   "flavour": "Unguarded prizes lie strewn across the field of battle. Secure them and deny them to the enemy."
+  },
+  "display_of_might": {
+   "name": "DISPLAY OF MIGHT",
+   "text": "ANY BATTLE ROUND\n\nWHEN: End of your turn.\n\nThere are more friendly units than enemy units (excluding AIRCRAFT and battle-shocked units) wholly within No Man’s Land. — 2VP\n\nANY BATTLE ROUND\n\nWHEN: End of your opponent’s turn.\n\nThere are more friendly units than enemy units (excluding AIRCRAFT and battle-shocked units) wholly within No Man’s Land. — 5VP",
+   "flavour": "Intimidation is a potent weapon. Demonstrate your battlefield supremacy with a brutal show of force and erode what remains of the enemy's morale."
+  },
+  "outflank": {
+   "name": "OUTFLANK",
+   "text": "ANY BATTLE ROUND\n\nWHEN: End of your turn.\n\nOne or more friendly units (excluding AIRCRAFT and battle-shocked units) are within 6\" of one or more battlefield edges and not within your territory. — 3VP\n\nOR Two or more friendly units (excluding AIRCRAFT and battle-shocked units) are within 6\" of opposite battlefield edges and one or more of those units is not within your territory. — 5VP\n\nDesigner’s Note: Opposite battlefield edges are those parallel to each other.",
+   "flavour": "Exploit the flanks; use your speed and momentum to surround the foe and catch them in the jaws of a trap."
+  },
+  "beacon": {
+   "name": "BEACON",
+   "text": "WHEN DRAWN: Select one friendly unit on the battlefield or embarked within a TRANSPORT on the battlefield to be your beacon unit.\n\nANY BATTLE ROUND\n\nWHEN: End of your opponent’s turn or the end of the fifth battle round (whichever comes first).\n\nYour beacon unit is on the battlefield and not within your deployment zone. — 3VP\n\nOR Your beacon unit is on the battlefield and not within your territory. — 5VP",
+   "flavour": "Bold and defiant, your chosen champions taunt the foe, drawing them on. Should they hold fast in the face of the inevitable response, the enemy’s momentum will surely falter."
+  },
+  "cleanse": {
+   "name": "CLEANSE",
+   "text": "WHEN DRAWN: If the Plunder Secondary Mission is active for you, you can draw one new Secondary Mission card and shuffle this card back into your Secondary Mission deck.\n\nCLEANSE\n\nOBJECTIVE ACTION\n\nSTARTS: Your Shooting phase.\n\nUNITS: One friendly unit within range of one objective (excluding your home objective).\n\nUSE LIMIT: Unlimited. Each unit that starts this action this phase must be within range of a different objective.\n\nCOMPLETES: End of your turn, if that unit is controlling that objective.\n\nEFFECT: That objective is cleansed by your army.\n\nANY BATTLE ROUND\n\nWHEN: End of your turn.\n\nOne objective was cleansed by your army this turn. — 2VP\n\nOR Two or more objectives were cleansed by your army this turn. — 5VP",
+   "flavour": "Your forces have identified a series of tainted objectives in this area. Purify these locations."
+  },
+  "grievous_blow": {
+   "name": "A GRIEVOUS BLOW",
+   "text": "WHEN DRAWN: If there are no enemy units with a starting strength of 13+ on the battlefield, you can discard this card and draw one new Secondary Mission card.\n\nANY BATTLE ROUND\n\nWHEN: End of a turn.\n\nFor each enemy unit with a starting strength of 13+ destroyed this turn. — 4VP FIXED — 5VP TACTICAL (UP TO 5VP)",
+   "flavour": "Target and eliminate the most numerous and potent of enemy infantry to shatter their battle line.",
+   "fixed": true
+  },
+  "defend_stronghold": {
+   "name": "DEFEND STRONGHOLD",
+   "text": "WHEN DRAWN: If it is the first battle round, draw one new Secondary Mission card and shuffle this card back into your Secondary Mission deck.\n\nSECOND BATTLE ROUND ONWARDS\n\nWHEN: End of your opponent’s turn or the end of the fifth battle round (whichever comes first).\n\nYou control your home objective. — 3VP\n\n+ No enemy units are within your deployment zone. — +2VP CUMULATIVE",
+   "flavour": "You are charged with the defence of a critical objective. It must not be permitted to fall into enemy hands."
+  },
+  "engage_on_all_fronts": {
+   "name": "ENGAGE ON ALL FRONTS",
+   "text": "If one or more friendly units (excluding AIRCRAFT and battle-shocked units) are wholly within a table quarter, and those units are not within 6\" of the centre of the battlefield, you have a presence in that table quarter.\n\nANY BATTLE ROUND\n\nWHEN: End of your turn.\n\nYou have a presence in three table quarters. — 2VP FIXED — 3VP TACTICAL\n\nOR You have a presence in four table quarters. — 4VP FIXED — 5VP TACTICAL",
+   "flavour": "Probe their lines and engage any resistance. Stretch the foe to breaking point.",
+   "fixed": true
+  },
+  "secure_no_mans_land": {
+   "name": "SECURE NO MAN'S LAND",
+   "text": "ANY BATTLE ROUND\n\nWHEN: End of your turn.\n\nYou control two or more objectives within No Man’s Land (excluding your home objective). — 5VP",
+   "flavour": "You must advance swiftly into no man’s land and seize it before the enemy can, lest they take control of the battlefield."
+  },
+  "forward_position": {
+   "name": "FORWARD POSITION",
+   "text": "WHEN DRAWN: If it is the first battle round, you can draw one new Secondary Mission card and shuffle this card back into your Secondary Mission deck.\n\nANY BATTLE ROUND\n\nWHEN: End of your turn.\n\nYou control your opponent’s home objective and/or each expansion objective. — 5VP",
+   "flavour": "You must break the enemy line and establish a forward position to launch fresh assaults."
+  },
+  "centre_ground": {
+   "name": "CENTRE GROUND",
+   "text": "ANY BATTLE ROUND\n\nWHEN: End of your turn.\n\nOne or more friendly units (excluding AIRCRAFT and battle-shocked units) are within 3\" of the centre of the battlefield, and no enemy units are within 3\" of the centre of the battlefield. — 3VP\n\nOR One or more friendly units (excluding AIRCRAFT and battle-shocked units) are within 3\" of the centre of the battlefield, and no enemy units are within 6\" of the centre of the battlefield. — 5VP",
+   "flavour": "The heart of the battlefield is key to victory. Dominate the centre ground, and you shall be one step closer to achieving your goals."
+  },
+  "assassination": {
+   "name": "ASSASSINATION",
+   "text": "ANY BATTLE ROUND\n\nWHEN: End of a turn.\n\nFor each enemy CHARACTER model destroyed this turn. — 3VP FIXED\n\n+ For each of those models with a W of 4 or more. — +1VP FIXED CUMULATIVE\n\nOne or more enemy CHARACTER models were destroyed this turn, or all enemy CHARACTER models have been destroyed during the battle. — 5VP TACTICAL",
+   "flavour": "The enemy looks to their champions for courage. Identify and eliminate them with extreme prejudice.",
+   "fixed": true
+  },
+  "tempting_target": {
+   "name": "A TEMPTING TARGET",
+   "text": "WHEN DRAWN: Your opponent selects one objective (excluding home objectives) within No Man’s Land to be your tempting target.\n\nANY BATTLE ROUND\n\nWHEN: End of your turn.\n\nYou control your tempting target. — 5VP",
+   "flavour": "An opportunity to seize a valuable asset has been identified, but the enemy are likely to use it as bait in a trap. Move to secure the site, but be wary of enemy ambushes."
+  },
+  "behind_enemy_lines": {
+   "name": "BEHIND ENEMY LINES",
+   "text": "WHEN DRAWN: If it is the first battle round, you can draw one new Secondary Mission card and shuffle this card back into your Secondary Mission deck.\n\nANY BATTLE ROUND\n\nWHEN: End of your turn.\n\nFor each friendly unit (excluding AIRCRAFT and battle-shocked units) wholly within your opponent’s deployment zone. — 3VP (UP TO 5VP)",
+   "flavour": "Your orders are clear: break through the enemy and cut off their escape routes."
+  },
+  "bring_it_down": {
+   "name": "BRING IT DOWN",
+   "text": "WHEN DRAWN: If there are no enemy models with a W of 10 or more on the battlefield, you can discard this card and draw one new Secondary Mission card.\n\nANY BATTLE ROUND\n\nWHEN: End of a turn.\n\nFor each enemy model with a W of 10 or more destroyed this turn. — 4VP FIXED — 5VP TACTICAL (UP TO 5VP)",
+   "flavour": "Prioritise the destruction of heavily armoured assets. Bring them down at all costs.",
+   "fixed": true
+  },
+  "burden_of_trust": {
+   "name": "BURDEN OF TRUST",
+   "text": "WHEN DRAWN/START OF YOUR TURN: For each objective, you can select one friendly unit on the battlefield to guard that objective. Until the start of your next turn, while that unit is within range of that objective and while you control that objective, that objective is guarded by your army.\n\nANY BATTLE ROUND\n\nWHEN: End of your opponent’s turn or the end of the fifth battle round (whichever comes first).\n\nFor each objective guarded by your army. — 2VP (UP TO 5VP)",
+   "flavour": "The strategic prizes in this region must be guarded at all costs – a duty that falls upon a chosen few."
+  }
+ },
+ "twists": {
+  "nowhere": {
+   "name": "NOWHERE TO HIDE",
+   "text": "Terrain features do not have the Solid rule.\n\nDesigner’s Note: This twist lets models draw line of sight through any gap in a terrain feature, allowing more ‘true line of sight’ and more lethal shooting.",
+   "flavour": "This battlefield only affords the illusion of cover – nowhere is safe."
+  },
+  "mirrored": {
+   "name": "MIRRORED WORLD",
+   "text": "The players both replace their Primary Mission card with the same one of the following Primary Mission cards. If both players agree on one of them, use that Primary Mission card; otherwise, roll a D6 and consult the table below.\n\nPRIMARY MISSION\n\nBattlefield Dominance — 1\n\nMeatgrinder — 2\n\nOutmanoeuvre — 3\n\nGather Intel — 4\n\nSabotage — 5\n\n(Roll again) — 6\n\nDesigner’s Note: This is a great twist for players who want to play a simpler battle of Warhammer 40,000, as both players will be trying to achieve the same Primary Mission.",
+   "flavour": "As destinies converge, rival warlords find themselves on parallel paths, competing with one another to achieve near-identical outcomes and objectives."
+  },
+  "scrambled": {
+   "name": "SCRAMBLED COMMUNICATIONS",
+   "text": "The players exchange their Primary Mission cards.\n\nDesigner’s Note: This is a great twist to shake things up in a regular match-up, or for players who love to embrace chaos!",
+   "flavour": "Scrambled communications and intertwined vox-channels have disrupted the chain of command, leaving your orders and objectives unclear."
+  },
+  "pride": {
+   "name": "MARTIAL PRIDE",
+   "text": "A BATTLELINE unit can start an action in a turn in which it made an advance move. A BATTLELINE unit can shoot in a turn in which it started an action.\n\nDesigner’s Note: This is a great twist for Incursion battles.",
+   "flavour": "The rank and file of your armies are determined to demonstrate their value, advancing relentlessly toward their assigned objectives whilst maintaining a punishing rate of fire."
+  },
+  "ruin": {
+   "name": "RUINSCAPE",
+   "text": "When a unit makes a normal or advance move, models in that unit have the MOBILE keyword until that move ends.\n\nDesigner’s Note: For players who want to play with a lot of terrain and/or with many large models, this twist can help keep the battle flowing.",
+   "flavour": "Decades of war have reduced the structures on this battlefield to hollow ruins. Your warriors stalk and scramble through the skeletal remnants of half-destroyed buildings as they close in upon their enemies."
+  },
+  "night": {
+   "name": "NIGHT FIGHTING",
+   "text": "Each unit is not visible to enemy models unless they are within 18\" of that unit, and each unit cannot be targeted by [INDIRECT FIRE] weapons unless the attacking model is within 18\" of that unit.\n\nDesigner’s Note: This is a great twist for players who do not yet have a battlefield’s worth of terrain.",
+   "flavour": "A shroud of darkness has fallen across the battlefield, obscuring the vision of your warriors and providing them with cover beneath which to advance."
+  }
+ },
+ "general": {
+  "Select Secondary Missions": "Secondary Mission cards detail additional ways to score VP. There is a deck for the Attacker and a deck for the Defender: the cards in each deck are identical.\n\nDesigner’s Note: If you or your opponent are new to Warhammer 40,000, you can play without Secondary Missions for a simpler experience while you’re starting out.\n\nPlayers now secretly note down whether they will use Tactical or Fixed Secondary Missions. If using Fixed Missions, they also note down which two Fixed Missions they will use (see below). Players then reveal these decisions.",
+  "Fixed Missions": "Fixed Missions are those marked with the symbol shown on the left. If you are using Fixed Missions, display your selected Fixed Mission cards face-up. Fixed Missions cannot be discarded and are active for you throughout the battle.",
+  "Tactical Missions": "If you are using Tactical Missions, shuffle your Secondary Mission deck face-down.\n\n- At the start of your Command phase, draw two Secondary Missions face-up from your Secondary Missions deck; these Secondary Missions are active for you.\n\n- (Once per battle) At the end of your Command phase, you can spend 1CP to discard one of your active Secondary Mission cards and draw one new Secondary Mission card.",
+  "Achieving Secondary Missions": "At the end of each player’s turn, each player does the following, starting with the player whose turn it is:\n\n- First, if you met the conditions on one or more Secondary Missions, you can gain the VP specified on that card. If you do, and if you are using Tactical Secondary Missions, discard that Secondary Mission - it is achieved.\n\n- Then, if it is your turn and you are using Tactical Secondary Missions, you can discard one or more of your active Secondary Missions. If you do, you gain 1CP.",
+  "Victory Points": "Each player scores 10VP if their army is painted to a Battle Ready standard. At the end of the battle, the player with the most VP is the victor. If the players are tied, the battle is a draw. The maximum VP that can be scored from each source of VP is listed below. Any VP you score in excess of these maximums are ignored.\n\nVP SOURCE | MAXIMUM VP\n\nPRIMARY MISSION | 45VP\nUp to 15VP per battle round\n\nSECONDARY MISSIONS | 45VP\nUp to 15VP per battle round*\n\nBATTLE READY ARMY | 10VP\n\n* In addition, you can gain a maximum of 20VP per Fixed Secondary Mission card.",
+  "Battle Length": "The battle ends after five battle rounds have been completed. Even if you have no models remaining in your army at the start of your turn, players continue to play out their turns until the battle ends.",
+  "Deployment Card Key": "Dense Terrain (coloured green)\n\nLight Terrain (coloured yellow)\n\nThe letters marking each terrain feature correspond with the component markings on the Battlefields: Armageddon terrain set.\n\nSeparate Terrain Areas\n\nSingle Terrain Area\n\nATTACKER’S DEPLOYMENT ZONE\nThe Attacker sets up their units wholly within this area.\n\nDEFENDER’S DEPLOYMENT ZONE\nThe Defender sets up their units wholly within this area.\n\nNO MAN’S LAND\nThe region of the battlefield that is not within either player’s deployment zone.\n\nATTACKER’S TERRITORY\nThe half of the battlefield that includes the Attacker’s deployment zone.\n\nDEFENDER’S TERRITORY\nThe half of the battlefield that includes the Defender’s deployment zone.\n\nATTACKER’S BATTLEFIELD EDGE\n\nDEFENDER’S BATTLEFIELD EDGE\n\nOBJECTIVE POINTS\nThe type, quantity and locations of objectives are shown with these icons:\n\nHome Objective\n\nCentral Objective\n\nExpansion Objective"
+ }
+}

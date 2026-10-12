@@ -1,0 +1,110 @@
+@charset "utf-8";
+/* ═══════════════════════════════════════════════════════════════════
+   Spielfeld (css/map.css) – Styles für js/ui/map.js
+   SVG-Einheit = Zoll. In SVG entspricht 1px einer Benutzer-Einheit,
+   deshalb sind alle Maße hier in "px" = Zoll angegeben.
+   ═══════════════════════════════════════════════════════════════════ */
+
+.map {
+  --map-bg: #171D22;
+  --map-grid: rgba(255, 255, 255, .07);
+  --map-edge: rgba(255, 255, 255, .22);
+  --map-line: rgba(255, 255, 255, .6);
+  --map-terrain: rgba(255, 255, 255, .13);
+  --map-terrain-edge: rgba(255, 255, 255, .4);
+  --map-label: #FFFFFF;
+  position: relative; width: 100%; margin: 0 auto;
+  background: var(--map-bg); border-radius: var(--radius, 12px); overflow: hidden;
+  user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+}
+:root[data-theme="light"] .map {
+  --map-bg: #D9DED8; --map-grid: rgba(0, 0, 0, .08); --map-edge: rgba(0, 0, 0, .3);
+  --map-line: rgba(0, 0, 0, .55); --map-terrain: rgba(0, 0, 0, .14); --map-terrain-edge: rgba(0, 0, 0, .4);
+}
+.map.fill { width: 100%; height: 100%; max-width: none; max-height: none; aspect-ratio: auto; }
+.map.flat { border-radius: 0; }
+.map svg {
+  display: block; width: 100%; height: 100%;
+  touch-action: none; -webkit-tap-highlight-color: transparent;
+  font-family: var(--font-title, 'Saira Condensed', sans-serif);
+}
+.map.interactive svg { cursor: default; }
+.map.tool-measure svg, .map.tool-range svg, .map.placing svg { cursor: crosshair; }
+
+/* Hintergrund + Raster */
+.map-bg { fill: var(--map-bg); }
+.map-grid { stroke: var(--map-grid); stroke-width: .06; fill: none; }
+.map-grid.major { stroke: var(--map-edge); stroke-width: .1; }
+.map-edge { fill: none; stroke: var(--map-edge); stroke-width: .18; }
+
+/* Aufstellungszonen & Grenzlinie */
+.map-zone { fill: var(--pc); fill-opacity: .16; stroke: var(--pc); stroke-width: .14; stroke-dasharray: .7 .4; stroke-opacity: .8; }
+.map-zone.own { fill-opacity: .24; stroke-opacity: 1; }
+.map-zone-circle { fill: none; stroke: var(--map-edge); stroke-width: .08; stroke-dasharray: .4 .3; }
+.map-line { fill: none; stroke: var(--map-line); stroke-width: .14; stroke-dasharray: 1.2 .7; }
+
+/* Gelände */
+.terrain { fill: var(--map-terrain); stroke: var(--map-terrain-edge); stroke-width: .1; }
+.terrain.ruin { fill: rgba(190, 170, 140, .22); stroke: rgba(220, 200, 170, .55); }
+.terrain.wall { fill: rgba(200, 200, 200, .4); stroke: rgba(240, 240, 240, .7); }
+.terrain.crate { fill: rgba(160, 130, 90, .3); stroke: rgba(210, 180, 130, .6); stroke-dasharray: .3 .2; }
+.terrain.crater { fill: rgba(120, 90, 70, .25); stroke: rgba(170, 130, 100, .5); }
+.terrain.wood { fill: rgba(70, 140, 80, .22); stroke: rgba(110, 190, 120, .55); stroke-dasharray: .25 .2; }
+.terrain-label { font-size: .9px; fill: var(--map-label); fill-opacity: .5; text-anchor: middle; dominant-baseline: central; pointer-events: none; }
+
+/* Missionsziele */
+.obj { --oc: var(--used, #6B757D); cursor: pointer; }
+.obj.c0 { --oc: var(--p0); }
+.obj.c1 { --oc: var(--p1); }
+.obj-range { fill: var(--oc); fill-opacity: .07; stroke: var(--oc); stroke-width: .1; stroke-dasharray: .5 .35; stroke-opacity: .75; }
+.obj-marker { fill: var(--oc); stroke: var(--map-label); stroke-width: .12; }
+.obj-home { fill: none; stroke: var(--oc); stroke-width: .12; }
+.obj-home-icon { fill: var(--map-label); stroke: none; pointer-events: none; }
+.obj-exp { fill: none; stroke: var(--oc); stroke-width: .08; stroke-dasharray: .25 .2; }
+.obj-mark circle { stroke: var(--map-bg); stroke-width: .08; }
+.obj-mark.p0 circle { fill: var(--p0); }
+.obj-mark.p1 circle { fill: var(--p1); }
+.obj-mark text { font-size: .55px; font-weight: 700; fill: var(--on-p, #000); text-anchor: middle; dominant-baseline: central; pointer-events: none; }
+.obj.tapped .obj-marker { stroke-width: .25; }
+
+/* Einheiten-Token */
+.unit { --pc: var(--used); }
+.unit.p0 { --pc: var(--p0); }
+.unit.p1 { --pc: var(--p1); }
+.unit .body { fill: var(--pc); stroke: color-mix(in srgb, var(--pc) 55%, #000); stroke-width: .14; }
+.unit text { fill: var(--map-label); font-weight: 700; text-anchor: middle; dominant-baseline: central; pointer-events: none; paint-order: stroke fill; stroke: rgba(0, 0, 0, .55); stroke-width: .12; stroke-linejoin: round; letter-spacing: .02em; }
+.unit .ring-shock, .unit .ring-sel { fill: none; display: none; }
+.unit.shocked .ring-shock { display: block; stroke: var(--warn); stroke-width: .2; stroke-dasharray: .45 .3; }
+.unit.selected .ring-sel { display: block; stroke: #fff; stroke-width: .28; }
+.unit.selected .body { stroke: #fff; }
+.unit.draggable { cursor: grab; }
+.unit.dragging { cursor: grabbing; }
+.unit.dragging .body { stroke: #fff; stroke-width: .18; filter: drop-shadow(0 .3px .4px rgba(0, 0, 0, .6)); }
+.unit.invalid .body { animation: map-flash .7s ease-out; }
+.map .unit.ghost-dim { opacity: .35; }
+@keyframes map-flash {
+  0%, 60% { fill: var(--bad); stroke: var(--bad); }
+  100% { fill: var(--pc); }
+}
+
+/* Overlay: Drag-Linie, Messen, Reichweite, Geist */
+.map-overlay { pointer-events: none; }
+.drag-line, .measure-line { fill: none; stroke: #fff; stroke-width: .12; stroke-dasharray: .5 .3; stroke-linecap: round; }
+.drag-line.over { stroke: var(--warn); }
+.drag-dot, .measure-dot { fill: #fff; }
+.drag-label, .measure-label, .range-label {
+  font-size: 1.6px; font-weight: 700; fill: #fff; text-anchor: middle; dominant-baseline: central;
+  paint-order: stroke fill; stroke: rgba(0, 0, 0, .7); stroke-width: .3; stroke-linejoin: round;
+}
+.drag-label.over { fill: var(--warn); }
+.range-circle { fill: #fff; fill-opacity: .08; stroke: #fff; stroke-width: .12; stroke-dasharray: .5 .3; }
+.move-range { fill: var(--pc); fill-opacity: .08; stroke: var(--pc); stroke-width: .08; stroke-dasharray: .35 .25; pointer-events: none; }
+.map .ghost { opacity: .7; pointer-events: none; }
+.ghost circle { fill: var(--pc); fill-opacity: .35; stroke: var(--pc); stroke-width: .14; stroke-dasharray: .4 .3; }
+
+/* Vorschaubild (mapThumb) */
+.map-thumb { width: 100%; height: auto; display: block; border-radius: 6px; background: var(--map-bg, #171D22); }
+.map-thumb .map-zone { stroke-width: .5; stroke-dasharray: none; fill-opacity: .3; }
+.map-thumb .map-line { stroke-width: .5; stroke-dasharray: 2 1.5; }
+.map-thumb .obj-marker { stroke-width: .4; }
+.map-thumb .obj-range { stroke-width: .3; }

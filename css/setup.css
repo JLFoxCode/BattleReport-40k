@@ -1,0 +1,148 @@
+@charset "utf-8";
+/* ═══════════════════════════════════════════════════════════════════
+   Setup-Assistent (css/setup.css) – ergänzt css/app.css. Phone-first.
+   ═══════════════════════════════════════════════════════════════════ */
+.setup { padding-bottom: calc(var(--gap) * 2); }
+.setup .min0 { min-width: 0; }
+.setup .self-center { align-self: center; }
+.setup code { font-family: ui-monospace, Consolas, monospace; background: rgba(255, 255, 255, .06); padding: .1em .35em; border-radius: 4px; overflow-wrap: anywhere; }
+.setup .grid4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.setup .grid4.two { grid-template-columns: 1fr 1fr; }
+
+/* ───────── Kopf & Schritt-Chips ───────── */
+.setup-head { margin-bottom: var(--gap); }
+.setup-head h1 { font-size: 26px; margin: 0; }
+.steps { display: flex; gap: 6px; margin: 10px calc(-1 * var(--gap)) 0; padding: 2px var(--gap) 6px; scroll-snap-type: x proximity; }
+.step-chip {
+  display: inline-flex; align-items: center; gap: 8px; flex: none;
+  min-height: var(--touch); padding: 0 12px 0 6px; border-radius: 999px;
+  border: 1px solid var(--line); background: var(--panel); color: var(--muted);
+  font: inherit; font-weight: 600; font-size: 14px; cursor: pointer; scroll-snap-align: start; -webkit-tap-highlight-color: transparent;
+}
+.step-chip .step-dot {
+  display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 50%;
+  background: var(--panel2); color: var(--text); font-family: var(--font-title); font-weight: 700; font-size: 15px; flex: none;
+}
+.step-chip.ok .step-dot { background: var(--ok); color: #05210F; }
+.step-chip.warn .step-dot { background: var(--warn); color: #1A1200; }
+.step-chip.cur { background: var(--text); color: var(--bg); border-color: transparent; }
+.step-chip.cur .step-dot { background: var(--bg); color: var(--text); }
+.step-chip.cur.ok .step-dot { background: var(--ok); color: #05210F; }
+.step-title { display: flex; align-items: center; gap: 10px; font-size: 22px; margin: 4px 0 var(--gap); }
+.step-title .step-no { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 50%; background: var(--panel2); font-size: 16px; }
+.step-nav { display: flex; gap: 8px; align-items: center; margin-top: var(--gap); }
+.step-nav .btn.primary { flex: 1 1 auto; max-width: 420px; }
+.step-body { display: flex; flex-direction: column; gap: var(--gap); }
+.step-body > h3.title { font-size: 17px; margin: 6px 0 0; color: var(--muted); }
+
+/* ───────── Spielerspalten: Handy = Tabs, breit = nebeneinander ───────── */
+.setup-tabs { display: flex; gap: 8px; }
+.setup-tabs .chip { flex: 1 1 0; justify-content: center; }
+.setup-cols { display: grid; grid-template-columns: 1fr; gap: var(--gap); }
+.pcol { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.pcol-head { display: flex; align-items: center; gap: 8px; font-family: var(--font-title); font-weight: 700; font-size: 18px; color: var(--pc); text-transform: uppercase; letter-spacing: .04em; }
+.pcol-head .dot { background: var(--pc); width: 12px; height: 12px; }
+@media (max-width: 859px) {
+  .setup-cols.tab0:not(.single):not(.always) .pcol[data-p="1"],
+  .setup-cols.tab1:not(.single):not(.always) .pcol[data-p="0"] { display: none; }
+}
+@media (min-width: 860px) {
+  .setup-tabs { display: none; }
+  .setup-cols:not(.single) { grid-template-columns: 1fr 1fr; align-items: start; }
+}
+
+/* ───────── Schritt 1: Spieler ───────── */
+.opts-grid { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+.lock-text { margin: 6px 0 10px; line-height: 1.45; }
+.swatches { display: flex; flex-wrap: wrap; gap: 10px; margin: 4px 0 6px; }
+.swatch {
+  position: relative; width: var(--touch); height: var(--touch); padding: 0; border-radius: 50%; overflow: hidden;
+  border: 2px solid var(--line); background: none; cursor: pointer; display: grid; grid-template-columns: 1fr 1fr; -webkit-tap-highlight-color: transparent;
+}
+.swatch .sw-l { background: var(--swl); } .swatch .sw-d { background: var(--sw); }
+.swatch.on { border-color: var(--text); box-shadow: 0 0 0 3px var(--bg), 0 0 0 5px var(--sw); }
+.swatch:disabled { opacity: .3; cursor: not-allowed; }
+.swatch:disabled::after { content: '✕'; position: absolute; inset: 0; display: grid; place-items: center; color: #fff; font-weight: 700; text-shadow: 0 0 3px #000; }
+
+/* ───────── Schritt 2: Armee ───────── */
+.fac-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.fac-btn { flex-direction: column; align-items: flex-start; gap: 2px; min-height: 56px; padding: 8px 12px; white-space: normal; text-align: left; }
+.fac-btn .fac-name { font-weight: 700; }
+.fac-list .divider { margin: 10px 0 6px; }
+.fac-card .card-head .btn { flex: none; }
+.dp-row { margin-top: 4px; }
+.dp-row .title { font-size: 17px; }
+.dp-meter { font-family: var(--font-title); font-weight: 700; font-size: 20px; padding: 2px 12px; border-radius: 999px; background: var(--panel2); border: 1px solid var(--line); }
+.dp-meter.ok { color: var(--ok); border-color: var(--ok); }
+.dp-meter.warn { color: var(--warn); border-color: var(--warn); }
+.dp-meter.bad { color: var(--bad); border-color: var(--bad); }
+.det-list, .sec-grid { display: grid; gap: 8px; grid-template-columns: 1fr; }
+.det-card, .sec-card { cursor: pointer; padding: 12px; transition: border-color .12s, background .12s; -webkit-tap-highlight-color: transparent; }
+.det-card.on, .sec-card.on { border-color: var(--ok); background: color-mix(in srgb, var(--ok) 8%, var(--panel)); }
+.det-card.disabled { opacity: .5; cursor: not-allowed; }
+.det-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-height: 32px; }
+.det-name { flex: 1 1 auto; font-weight: 700; font-size: 16px; min-width: 0; }
+.det-check { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 50%; border: 2px solid var(--line); background: var(--sunk); color: #05210F; font-weight: 800; flex: none; }
+.on > .det-head .det-check { background: var(--ok); border-color: var(--ok); }
+.det-card details.rule { margin-top: 6px; }
+.det-norule { margin-top: 4px; }
+
+/* ───────── Schritt 3: Armeeliste ───────── */
+.units-head { align-items: flex-end; }
+.units-head .kpi b { font-size: 30px; }
+.unit-item .pts { font-family: var(--font-title); font-weight: 700; font-size: 20px; white-space: nowrap; }
+.unit-item .pts small { font-size: 11px; color: var(--muted); font-weight: 600; }
+.unit-item .kw { font-size: 12px; letter-spacing: .03em; color: var(--muted); }
+.unit-item .name .badge { margin-left: 4px; vertical-align: middle; }
+.unit-list .list-item { padding-left: 12px; padding-right: 12px; }
+.empty { padding: 24px 16px; }
+.unit-form { display: flex; flex-direction: column; gap: 10px; }
+.unit-form .check { margin: -2px 0; }
+
+/* ───────── Schritt 4: Mission ───────── */
+.dep-grid, .terrain-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+@media (min-width: 600px) { .dep-grid, .terrain-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); } }
+.dep-card, .terrain-card { padding: 8px; cursor: pointer; text-align: center; -webkit-tap-highlight-color: transparent; }
+.dep-card .map-thumb, .terrain-card .map-thumb { width: 100%; height: auto; aspect-ratio: 44 / 60; border-radius: 6px; }
+.dep-card.active, .terrain-card.active { outline: 2px solid var(--text); outline-offset: -1px; background: var(--panel2); }
+.dep-name { margin-top: 6px; font-weight: 600; font-size: 13px; line-height: 1.2; }
+.disp-chips .chip.disp { flex-direction: column; align-items: flex-start; gap: 0; min-height: 50px; padding: 6px 14px; line-height: 1.15; }
+.disp-chips .chip.disp .xs { opacity: .75; }
+.prim-card.empty { padding: 20px 14px; }
+.cond-list { list-style: none; margin: 6px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; font-size: 14px; }
+.cond-list li { display: flex; gap: 10px; align-items: baseline; }
+.cond-list li.sub { padding-left: 14px; color: var(--muted); }
+.cond-list .vp { flex: none; min-width: 44px; font-family: var(--font-title); font-weight: 700; font-size: 15px; color: var(--ok); text-align: right; }
+.twist-row { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+.twist-text { line-height: 1.45; }
+.setup-cols.always .pcol .chips { margin-bottom: 4px; }
+
+/* ───────── Schritt 5: Sekundär ───────── */
+.mode-chips { align-items: center; }
+.sec-rules ul { margin: 6px 0 0; padding-left: 18px; }
+.sec-rules li { margin: 2px 0; }
+
+/* ───────── Schritt 6: Prüfen & Start ───────── */
+.checklist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.checklist li { display: flex; gap: 12px; align-items: flex-start; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.checklist li:last-child { border-bottom: 0; }
+.checklist .ck { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 50%; font-weight: 800; flex: none; margin-top: 1px; }
+.checklist li.ok .ck { background: var(--ok); color: #05210F; }
+.checklist li.warn .ck { background: var(--warn); color: #1A1200; }
+.checklist .ck-t { font-weight: 600; }
+.ready-row { display: grid; grid-template-columns: 1fr; gap: 10px; }
+.ready-btn { min-height: 72px; flex-direction: column; gap: 2px; }
+.ready-btn .ready-lbl { font-size: 14px; font-weight: 600; opacity: .85; }
+.ready-btn .ready-state { font-size: 22px; }
+.btn.not-yet { opacity: .75; }
+@media (min-width: 600px) { .ready-row { grid-template-columns: 1fr 1fr; } }
+
+/* ───────── Zusammenfassung ───────── */
+.role-grid { display: grid; grid-template-columns: 1fr; gap: 8px; }
+@media (min-width: 600px) { .role-grid { grid-template-columns: 1fr 1fr; } }
+
+@media (max-width: 420px) {
+  .dep-grid, .terrain-grid { grid-template-columns: repeat(2, 1fr); }
+  .setup .grid4 { grid-template-columns: 1fr 1fr; }
+  .setup-head h1 { font-size: 22px; }
+}

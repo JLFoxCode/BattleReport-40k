@@ -1,0 +1,87 @@
+@charset "utf-8";
+/* ═══════════════════════════════════════════════════════════════════
+   Deckenkamera (css/camera.css) – Styles für js/ui/camera.js
+   und die Marker-Druckseite js/ui/markers.js
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ───────── Kamera-Tab ───────── */
+.cam { display: flex; flex-direction: column; min-height: 100vh; }
+.cam-main { display: grid; grid-template-columns: 1fr; gap: var(--gap); padding: var(--gap); align-items: start; }
+@media (min-width: 980px) { .cam-main { grid-template-columns: minmax(0, 1fr) 380px; } }
+.cam-preview {
+  position: relative; background: #000; border-radius: var(--radius); overflow: hidden;
+  aspect-ratio: 16 / 9; display: flex; align-items: center; justify-content: center; border: 1px solid var(--line);
+}
+.cam-preview video, .cam-preview canvas.cam-frame { width: 100%; height: 100%; object-fit: contain; display: block; }
+.cam-preview canvas.cam-overlay { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.cam-preview .cam-res { position: absolute; left: 10px; top: 10px; font-family: var(--font-title); font-size: 14px; font-weight: 700; letter-spacing: .05em; padding: 3px 8px; border-radius: 6px; background: rgba(0, 0, 0, .55); color: #fff; }
+.cam-preview .cam-nocam { color: var(--muted); text-align: center; padding: 24px; }
+.cam-preview.flash::after { content: ''; position: absolute; inset: 0; background: #fff; animation: cam-flash .35s ease-out forwards; pointer-events: none; }
+@keyframes cam-flash { from { opacity: .9; } to { opacity: 0; } }
+.cam-preview .cam-countdown { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-family: var(--font-title); font-size: 96px; font-weight: 700; color: #fff; text-shadow: 0 2px 12px rgba(0, 0, 0, .7); background: rgba(0, 0, 0, .25); pointer-events: none; }
+
+.cam-side { display: flex; flex-direction: column; gap: var(--gap); }
+.cam-side .card .title { font-size: 16px; }
+.cam-status dl { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin: 0; font-size: 14px; }
+.cam-status dt { color: var(--muted); font-weight: 600; }
+.cam-status dd { margin: 0; font-weight: 500; }
+.cam-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.cam-actions .btn.cta { grid-column: 1 / -1; }
+.cam-triggers .check { min-height: 40px; }
+.cam-log { font-family: ui-monospace, Consolas, monospace; font-size: 12px; max-height: 180px; overflow: auto; background: var(--sunk); border-radius: var(--radius-sm); padding: 8px; white-space: pre-wrap; color: var(--muted); }
+.cam-log .ok { color: var(--ok); } .cam-log .bad { color: var(--bad); } .cam-log .warn { color: var(--warn); }
+
+/* ───────── Kalibrierung (Vollbild-Panel) ───────── */
+.cam-calib { position: fixed; inset: 0; z-index: 90; background: var(--bg); display: flex; flex-direction: column; }
+.cam-calib .topbar { flex: none; }
+.cam-calib-body { flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: 1fr; gap: var(--gap); padding: var(--gap); }
+@media (min-width: 980px) { .cam-calib-body { grid-template-columns: minmax(0, 1fr) 360px; } }
+.cam-calib-stage { position: relative; background: #000; border-radius: var(--radius); overflow: hidden; min-height: 320px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--line); }
+.cam-calib-stage .stage-inner { position: relative; }
+.cam-calib-stage canvas, .cam-calib-stage img { display: block; max-width: 100%; max-height: calc(100vh - 140px); }
+.cam-calib-stage svg.cam-pick { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; cursor: crosshair; }
+.cam-pick .pt { fill: var(--warn); stroke: #000; stroke-width: 1.5; cursor: grab; }
+.cam-pick .pt.done { fill: var(--ok); }
+.cam-pick .pt-lbl { font: 700 14px var(--font-title); fill: #fff; paint-order: stroke; stroke: #000; stroke-width: 3px; pointer-events: none; }
+.cam-pick .frame { fill: rgba(79, 197, 127, .12); stroke: var(--ok); stroke-width: 2; stroke-dasharray: 8 5; pointer-events: none; }
+.cam-calib-side { display: flex; flex-direction: column; gap: var(--gap); overflow: auto; }
+.cam-calib-side ol { padding-left: 20px; margin: 0; }
+.cam-calib-side li { margin-bottom: 4px; }
+.cam-marker-list { font-size: 14px; }
+.cam-marker-list .row { padding: 4px 0; border-bottom: 1px solid var(--line); gap: 8px; }
+.cam-marker-list .row:last-child { border-bottom: 0; }
+.cam-rect { position: relative; background: #000; overflow: hidden; }
+.cam-rect .warp { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+.cam-rect .grid-overlay { position: absolute; left: 0; top: 0; pointer-events: none; }
+.cam-rect .grid-overlay .map { background: transparent !important; border-radius: 0; }
+.cam-rect .grid-overlay .map-bg { fill: transparent; }
+.cam-rect .grid-overlay .map-grid { stroke: rgba(255, 255, 255, .35); }
+.cam-rect .grid-overlay .map-edge { stroke: #fff; stroke-opacity: .9; stroke-width: .3; }
+
+/* ───────── Marker-Druckseite ───────── */
+.markers-page .markers-controls .row > .field { min-width: 160px; }
+.markers-hint { font-size: 14px; line-height: 1.5; }
+.markers-hint code { background: var(--sunk); padding: 1px 5px; border-radius: 4px; }
+.markers-sheet { display: flex; flex-wrap: wrap; gap: 16px; margin-top: var(--gap); background: #fff; padding: 16px; border-radius: var(--radius); }
+.marker { background: #fff; break-inside: avoid; page-break-inside: avoid; }
+.marker .marker-svg-wrap { display: inline-block; line-height: 0; }
+.marker svg { display: block; }
+.markers-ruler-wrap { margin-top: var(--gap); background: #fff; color: #000; padding: 18px 16px 42px; border-radius: var(--radius); break-inside: avoid; page-break-inside: avoid; }
+.markers-ruler { position: relative; width: 5in; height: 28px; }
+.markers-ruler .bar { position: absolute; left: 0; top: 0; width: 5in; height: 0; border-top: 2px solid #000; }
+.markers-ruler .tick { position: absolute; top: 0; width: 0; }
+.markers-ruler .tick i { display: block; width: 0; height: 12px; border-left: 2px solid #000; margin-left: -1px; }
+.markers-ruler .tick b { position: absolute; top: 14px; left: 0; transform: translateX(-50%); font: 600 11px Arial, sans-serif; white-space: nowrap; }
+.markers-ruler .caption { position: absolute; top: 34px; left: 0; font: 11px Arial, sans-serif; color: #333; white-space: nowrap; }
+
+@media print {
+  @page { size: A4 portrait; margin: 10mm; }
+  html, body { background: #fff !important; color: #000 !important; }
+  body { padding: 0 !important; }
+  .no-print, .statusbar, .toasts, .toast, .topbar { display: none !important; }
+  .markers-page .wrap { max-width: none; padding: 0; margin: 0; }
+  .markers-sheet { display: block; padding: 0; margin: 0; border-radius: 0; background: #fff; }
+  .markers-sheet .marker { display: block; margin: 0 0 8mm 0; }
+  .markers-sheet[data-size="4"] .marker:nth-child(2n), .markers-sheet[data-size="5"] .marker, .markers-sheet[data-size="3"] .marker:nth-child(3n) { page-break-after: always; break-after: page; }
+  .markers-ruler-wrap { page-break-before: always; break-before: page; border-radius: 0; padding-left: 0; }
+}
