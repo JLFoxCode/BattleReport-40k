@@ -3,6 +3,7 @@
  * LAN IPv4 from GET /api/info. qrSvg(text) is synchronous once the vendor lib is loaded; prepareQr() loads both
  * and resolves true when something changed (caller re-renders). */
 import { ensureQrLib } from '../geo/markers.js';
+import { sheet, esc as escHtml } from './components.js';
 
 let base = null, pending = null;
 const isLocal = h => /^(localhost|127\.|\[::1\]|::1)/.test(h);
@@ -31,4 +32,20 @@ export function qrSvg(text, px = 180) {
   let d = '';
   for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) if (qr.isDark(r, c)) d += `M${c + q} ${r + q}h1v1h-1z`;
   return `<svg class="qr" viewBox="0 0 ${N} ${N}" width="${px}" height="${px}" shape-rendering="crispEdges" role="img" aria-label="QR code"><rect width="${N}" height="${N}" fill="#fff"/><path d="${d}" fill="#000"/></svg>`;
+}
+
+/* "Join with another device": QR codes for both players and the score view – any time during the game (the
+ * roll-off step is not the only place). Browsers cannot discover games in the Wi-Fi, so this is their way in. */
+const routeUrl = (code, route) => `${base || location.origin}/index.html#/g/${code}/${route}`;
+export async function openJoinSheet(code, names = []) {
+  await prepareQr().catch(() => {});
+  const items = [['p/0', names[0] || 'Player 1', 'p0'], ['p/1', names[1] || 'Player 2', 'p1'], ['table', 'Score (tablet)', '']];
+  sheet({
+    title: 'Join with another device',
+    cls: 'join-sheet',
+    body: `<p class="muted small">Scan with the phone camera (same Wi-Fi). Devices with the app also find the game under "Games nearby".</p>
+      <div class="join-grid">${items.map(([route, label, cls]) => `<div class="join-card ${cls}">${qrReady() ? qrSvg(routeUrl(code, route), 200) : ''}
+        <div class="join-label${cls ? ' text-' + cls : ''}">${escHtml(label)}</div><div class="join-url xs muted">${escHtml(routeUrl(code, route))}</div></div>`).join('')}</div>`,
+    actions: [{ label: 'Close', kind: 'ghost' }]
+  });
 }

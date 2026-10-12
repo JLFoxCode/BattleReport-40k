@@ -35,3 +35,5 @@ body.has-appbar { --appbar-h: 44px; }
   .ab-drop-row button { flex: 1; min-height: 40px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel); color: var(--text); font: inherit; }
   .ab-drop-row button:disabled { opacity: .35; }
 }
+.ab-join { width: auto; padding: 0 10px; font-size: .8rem; font-weight: 700; letter-spacing: .06em; }
+.ab-drop-join { background: none; border: 1px solid var(--line); color: var(--text); font: inherit; text-align: left; cursor: pointer; }

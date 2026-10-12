@@ -377,3 +377,10 @@ details.rule dd { margin: 0; }
 .orig-text { white-space: pre-wrap; font-size: .92rem; line-height: 1.45; }
 details.rule dl .orig-block { margin-top: 8px; }
 details.rule > .rule-text { white-space: pre-line; }
+/* Join sheet (QR codes for other devices) */
+.join-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-top: 8px; }
+.join-card { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 10px; border-radius: 12px; border: 2px solid var(--line); text-align: center; }
+.join-card.p0 { border-color: var(--p0); } .join-card.p1 { border-color: var(--p1); }
+.join-card .qr { width: 100%; max-width: 200px; height: auto; border-radius: 6px; }
+.join-label { font-weight: 700; }
+.join-url { word-break: break-all; }

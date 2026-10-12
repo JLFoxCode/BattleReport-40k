@@ -22,6 +22,7 @@ import { createNet, api } from './net.js';
 import { saveFinished, archiveHref } from './archive.js';
 import * as archiveView from './ui/archive-view.js';
 import { checkOnOpen } from './ui/update-popup.js';
+import { openJoinSheet } from './ui/qr.js';
 import { toast, esc } from './ui/components.js';
 import * as lobby from './ui/lobby.js';
 import * as setup from './ui/setup.js';
@@ -108,10 +109,12 @@ function renderAppbar() {
     <span class="ab-code">${esc(code)}${stage ? ` <span class="ab-stage">${esc({ setup: 'Setup', deploy: 'Deployment', battle: 'Round ' + (state.round || 0), over: 'Finished' }[stage] || stage)}</span>` : ''}</span>
     ${curItem ? `<span class="ab-cur${typeof curItem[1] === 'number' ? ' p' + curItem[1] : ''}">${esc(curItem[3])}</span>` : ''}
     <div class="ab-roles">${links}</div>
+    <button class="ab-undo ab-wide ab-join" type="button" data-ab="join" title="Join with another device (QR codes)">QR</button>
     <button class="ab-undo ab-wide" type="button" data-ab="undo" title="Undo"${canUndo ? '' : ' disabled'}>↶</button>
     <button class="ab-undo ab-reload ab-wide" type="button" data-ab="reload" title="Reload">↻</button>
     <button class="ab-undo ab-menu" type="button" data-ab="menu" title="Menu" aria-haspopup="true" aria-expanded="false">☰</button>
     <div class="ab-drop" role="menu">${links}
+      <button type="button" class="ab-role ab-drop-join" data-ab="join">Join with another device (QR)</button>
       <div class="ab-drop-row"><button type="button" data-ab="undo"${canUndo ? '' : ' disabled'}>↶ Undo</button><button type="button" data-ab="reload">↻ Reload</button></div>
     </div>`;
 }
@@ -120,6 +123,7 @@ appbar.addEventListener('click', async e => {
   if (!b) return;
   if (b.dataset.ab === 'undo') { b.disabled = true; try { await undo(); } finally { renderAppbar(); } }
   if (b.dataset.ab === 'reload') location.reload();
+  if (b.dataset.ab === 'join') { appbar.classList.remove('menu-open'); openJoinSheet(store.code, store.state && store.state.players ? store.state.players.map(p => p.name) : []); }
   if (b.dataset.ab === 'menu') { const open = appbar.classList.toggle('menu-open'); b.setAttribute('aria-expanded', String(open)); }
 });
 // close the ☰ menu on navigation or a tap outside
