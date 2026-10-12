@@ -90,7 +90,12 @@ function renderAppbar() {
     return;
   }
   const names = state && state.players ? state.players.map(p => p.name) : ['Player 1', 'Player 2'];
-  const items = [
+  const items = store.spectator ? [
+    ['table', 'desktop', `#/g/${code}/watch`, 'Score'],
+    ['player', 0, `#/g/${code}/watch/0`, names[0]],
+    ['player', 1, `#/g/${code}/watch/1`, names[1]],
+    ['rules', null, `#/g/${code}/rules`, 'Rulebook']
+  ] : [
     ['table', 'desktop', `#/g/${code}/table`, 'Score'],
     ['player', 0, `#/g/${code}/p/0`, names[0]],
     ['player', 1, `#/g/${code}/p/1`, names[1]],
@@ -99,13 +104,14 @@ function renderAppbar() {
   ];
   const cur = (v, m) => view === v && (v !== 'player' || store.me === m);
   const stage = state ? state.stage : '';
-  const canUndo = state && state.seq > 1;
+  const canUndo = state && state.seq > 1 && !store.spectator;
   appbar.classList.add('show');
   // Wide screens: all views in the bar. Phones: code + current view, everything else in the ☰ menu (no crowding).
   const curItem = items.find(([v, m]) => cur(v, m));
   const links = items.map(([v, m, href, label]) => `<a class="ab-role${cur(v, m) ? ' on' : ''}${typeof m === 'number' ? ' p' + m : ''}" href="${href}">${esc(label)}</a>`).join('');
   appbar.innerHTML = `
     <a class="ab-home" href="#/" title="Lobby">⌂</a>
+    ${store.spectator ? '<span class="ab-spec" title="View only – nothing can be changed">Spectator</span>' : ''}
     <span class="ab-code">${esc(code)}${stage ? ` <span class="ab-stage">${esc({ setup: 'Setup', deploy: 'Deployment', battle: 'Round ' + (state.round || 0), over: 'Finished' }[stage] || stage)}</span>` : ''}</span>
     ${curItem ? `<span class="ab-cur${typeof curItem[1] === 'number' ? ' p' + curItem[1] : ''}">${esc(curItem[3])}</span>` : ''}
     <div class="ab-roles">${links}</div>
@@ -153,6 +159,8 @@ export function parseHash(hash = location.hash) {
   const v = parts[2] || 'setup';
   const idx = parts[3] != null && /^[01]$/.test(parts[3]) ? Number(parts[3]) : null;
   if (v === 'p') return { view: 'player', code, me: idx == null ? 0 : idx };
+  // Spectator: follows the game read-only – score view (watch) or a player's army (watch/0, watch/1)
+  if (v === 'watch') return idx == null ? { view: 'table', code, me: 'desktop', spectator: true } : { view: 'player', code, me: idx, spectator: true };
   if (v === 'desktop') return { view: 'desktop', code, me: 'desktop' };
   if (v === 'table') return { view: 'table', code, me: 'desktop' };
   if (v === 'camera') return { view: 'camera', code, me: 'camera' };
@@ -198,6 +206,7 @@ async function route() {
   const codeChanged = r.code !== store.code;
   store.view = r.view;
   store.me = r.me;
+  store.spectator = !!r.spectator;
   store.archive = r.archive || null;
   if (codeChanged) {
     disconnect();
@@ -207,7 +216,7 @@ async function route() {
     if (r.code) await connect(r.code);
     if (my !== routeSeq) return; // inzwischen neue Route – die übernimmt
   }
-  if (r.code) remember(r.code, r.me, r.view);
+  if (r.code && !r.spectator) remember(r.code, r.me, r.view);
   lastRoute = r;
   updateStatusbar();
   render();
@@ -275,6 +284,7 @@ function pushState(s) {
 // ---------------------------------------------------------------- Dispatch
 /** dispatch(action) → Promise<state|null>; Fehler werden als Toast gezeigt (Promise löst mit null auf). */
 async function dispatch(action) {
+  if (store.spectator) { toast('Spectator – view only', 'warn', 1800); return null; }
   if (!net) { toast('No game connected', 'bad'); return null; }
   if (!action || typeof action.type !== 'string') { toast('Invalid action', 'bad'); return null; }
   const a = Object.assign({}, action);
@@ -288,6 +298,7 @@ async function dispatch(action) {
   }
 }
 async function undo() {
+  if (store.spectator) { toast('Spectator – view only', 'warn', 1800); return null; }
   if (!net) return null;
   try {
     const s = await net.undo();
@@ -307,7 +318,7 @@ const mapInstances = new WeakMap();
 function buildCtx() {
   return {
     state: store.state, derived: store.derived, me: store.me, code: store.code, view: store.view, online: store.online,
-    dispatch, undo, nav, net, rerender: render, data, roleHash, lastGame, forgetGame, archive: store.archive
+    dispatch, undo, nav, net, rerender: render, data, roleHash, lastGame, forgetGame, archive: store.archive, spectator: !!store.spectator
   };
 }
 
@@ -319,6 +330,7 @@ function render() {
     const view = store.view;
     document.body.dataset.view = view;
     document.body.dataset.me = String(store.me);
+    if (store.spectator) document.body.dataset.spectator = '1'; else delete document.body.dataset.spectator;
     const mod = MODULES[view] || lobby;
     const root = rootFor(view, store.code, store.me);
     renderAppbar();

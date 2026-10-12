@@ -384,3 +384,16 @@ details.rule > .rule-text { white-space: pre-line; }
 .join-card .qr { width: 100%; max-width: 200px; height: auto; border-radius: 6px; }
 .join-label { font-weight: 700; }
 .join-url { word-break: break-all; }
+
+/* ───────── Spectator (#/g/CODE/watch…): view only. Navigation, tabs, filters and info buttons work; everything that
+   would change the game is inert (dispatch is blocked in main.js anyway), pure action buttons are hidden. ───────── */
+body[data-spectator] [data-action]:not([data-action="tab"]):not([data-action="nav"]):not([data-action="go"]):not([data-action="sfilter"]):not([data-action="log-more"]):not([data-action*="info"]):not([data-action="strat.open"]):not([data-action="strat.goto"]) { pointer-events: none; }
+body[data-spectator] .stepper button,
+body[data-spectator] [data-action="next"], body[data-spectator] [data-action="open-score"], body[data-spectator] [data-action="battle"],
+body[data-spectator] [data-action="first"], body[data-spectator] [data-action="end-game"], body[data-spectator] [data-action="undo"],
+body[data-spectator] [data-action="phase-set"], body[data-spectator] [data-action="sec-draw"], body[data-spectator] [data-action="sec-discard"],
+body[data-spectator] [data-action="sec-achieve"], body[data-spectator] [data-action="draw-now"], body[data-spectator] [data-action="army-import"],
+body[data-spectator] [data-action="strat.undo"], body[data-spectator] [data-action="more.open"], body[data-spectator] [data-change],
+body[data-spectator] .strat-foot, body[data-spectator] .ds-attach-pick { display: none !important; }
+.ab-spec { flex: none; padding: 3px 8px; border-radius: 999px; font-size: .7rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--bg, #0f1216); background: var(--warn); }

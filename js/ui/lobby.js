@@ -19,6 +19,7 @@ const ROLES = [
   { view: 'table', label: 'Score (tablet)', kind: 'primary' },
   { view: 'player', me: 0, label: 'Player 1 (phone)', kind: 'primary', cls: 'p0' },
   { view: 'player', me: 1, label: 'Player 2 (phone)', kind: 'primary', cls: 'p1' },
+  { view: 'watch', label: 'Spectator', kind: 'ghost' },
   { view: 'setup', label: 'Setup', kind: 'ghost' }
 ];
 
@@ -104,7 +105,8 @@ function nearbySection() {
           <div class="row roles">
             ${btn({ label: `${g.p0 || 'Player 1'} (phone)`, kind: 'primary', cls: 'p0', small: true, action: 'remote', data: { route: 'p/0' } })}
             ${btn({ label: `${g.p1 || 'Player 2'} (phone)`, kind: 'primary', cls: 'p1', small: true, action: 'remote', data: { route: 'p/1' } })}
-            ${btn({ label: 'Score', kind: 'ghost', small: true, action: 'remote', data: { route: 'table' } })}
+            ${btn({ label: 'Scoreboard', kind: 'ghost', small: true, action: 'remote', data: { route: 'table' } })}
+            ${btn({ label: 'Spectator', kind: 'ghost', small: true, action: 'remote', data: { route: 'watch' } })}
           </div>
         </article>`).join('')}</div>`
       : '<p class="muted small">Searching the Wi-Fi … A game appears here as soon as a device in the same network creates one with this app.</p>'}

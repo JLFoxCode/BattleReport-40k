@@ -543,6 +543,7 @@ function pendingKey(s) { const p = s.pending; return p ? (p.key || `${s.round}:$
 /** Nach jedem State-Push: Wertungs-Sheet öffnen/schließen. */
 function syncSheet() {
   const { ctx, ui } = cur;
+  if (ctx.spectator) return;   // spectators never get the scoring / draw popups
   const s = ctx.state;
   const key = s && s.pending && s.pending.kind === 'score' && s.stage === 'battle' ? pendingKey(s) : null;
   if (ui.sheet && ui.sheet.kind === 'score' && ui.sheet.key !== key) { ui.sheet.close(); ui.sheet = null; }
