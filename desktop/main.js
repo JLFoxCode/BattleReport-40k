@@ -141,7 +141,8 @@ sync('deleteGame', code => {
   return null;
 });
 
-// Release app update (update popup, GitHub Releases): download the setup, start it, quit. Errors → window.__appUpdateError
+// Release app update (update popup, GitHub Releases): download the setup, run it silently (/S, no setup window) and let it
+// start the new version afterwards (--force-run), then quit so the files can be replaced. Errors → window.__appUpdateError
 ipcMain.on('br:installUpdate', (e, url) => {
   if (typeof url !== 'string' || !url.startsWith('https://')) return;
   const sender = e.sender;
@@ -151,7 +152,7 @@ ipcMain.on('br:installUpdate', (e, url) => {
   };
   const file = path.join(os.tmpdir(), `BattleReport40k-Setup-update-${Date.now()}.exe`);
   download(url, file).then(() => {
-    const child = spawn(file, [], { detached: true, stdio: 'ignore' });
+    const child = spawn(file, ['/S', '--force-run'], { detached: true, stdio: 'ignore' });
     child.on('error', fail);
     child.unref();
     setTimeout(() => app.quit(), 300);

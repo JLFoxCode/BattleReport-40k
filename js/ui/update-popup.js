@@ -20,6 +20,7 @@ export function askDataUpdate(info) {
  *  BattleReport40k-Setup-*.exe for Windows). Newer than the installed version → popup → download + installer
  *  (Android: BR.installApk → system installer; Windows: BR.installUpdate → setup, the app restarts). DEV app: skipped,
  *  it updates itself from the PC. Returns true if the user started an app update. */
+let appState = 'unknown';   // last result of the app version check: current | available
 async function checkAppUpdate() {
   let rel = {}, me = {};
   try { rel = JSON.parse(window.BR.releaseInfo ? window.BR.releaseInfo() : '{}'); me = JSON.parse(window.BR.devInfo ? window.BR.devInfo() : '{}'); } catch {}
@@ -31,11 +32,12 @@ async function checkAppUpdate() {
   const latest = await r.json();
   const code = Number(String(latest.tag_name || '').split(/[.\-]/).pop()) || 0;
   const apk = (latest.assets || []).find(a => (platform === 'windows' ? /setup.*\.exe$/i : /\.apk$/i).test(a.name));
-  if (!apk || !(code > Number(me.versionCode || 0))) return false;
+  if (!apk || !(code > Number(me.versionCode || 0))) { appState = 'current'; return false; }
+  appState = 'available';
   const ok = await confirmSheet({
     title: 'New app version available',
     text: `Battle Report 40k ${latest.tag_name}${latest.published_at ? ' from ' + fmt(latest.published_at) : ''} is available (installed: ${me.versionCode}).`
-      + (latest.body ? ' ' + String(latest.body).slice(0, 300) : '') + (platform === 'windows' ? ' The installer starts and the app restarts; your games stay on this computer.' : ' Android will ask you to confirm the installation; your games stay on the device.'),
+      + (latest.body ? ' ' + String(latest.body).slice(0, 300) : '') + (platform === 'windows' ? ' The update installs in the background and the app restarts by itself; your games stay on this computer.' : ' Android will ask you to confirm the installation; your games stay on the device.'),
     ok: 'Update now', cancel: 'Later'
   });
   if (!ok) return false;
@@ -43,6 +45,17 @@ async function checkAppUpdate() {
   toast('Downloading the new app version …', 'ok', 4000);
   if (window.BR.installUpdate) window.BR.installUpdate(apk.browser_download_url); else window.BR.installApk(apk.browser_download_url);
   return true;
+}
+
+/** "Check for updates" button (lobby): app version first, then unit data – each offered in a popup. */
+export async function checkForUpdates() {
+  if (!window.BR) return;
+  if (!navigator.onLine) { toast('No internet – the app keeps working with what it has.', 'warn'); return; }
+  toast('Checking for updates …', 'ok', 2000);
+  try { if (await checkAppUpdate()) return; } catch (e) { console.warn('app update check', e); }
+  const st = await checkDataUpdate({ ask: askDataUpdate });
+  if (appState === 'current' && st.state === 'current') toast('Everything is up to date – app and unit data.', 'ok', 4000);
+  else if (st.state === 'error') toast('Could not check for new unit data.', 'warn', 4000);
 }
 
 let started = false;

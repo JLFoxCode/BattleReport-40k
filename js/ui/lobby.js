@@ -3,7 +3,7 @@ import { api } from '../net.js';
 import { esc, btn, sheet, confirmSheet, toast, badge } from './components.js';
 import { listFinished } from '../archive.js';
 import { checkDataUpdate, getDataStatus, onDataStatus, loadDataInfo } from '../data-update.js';
-import { askDataUpdate } from './update-popup.js';
+import { askDataUpdate, checkForUpdates } from './update-popup.js';
 
 let games = null;      // zuletzt geladene Liste
 let loading = false;
@@ -148,7 +148,7 @@ function devInfoHtml() {
   let i = null;
   try { i = window.BR && window.BR.devInfo ? JSON.parse(window.BR.devInfo()) : null; } catch { i = null; }
   if (!i) return '';
-  if (!i.dev) return '<p class="muted hint">App version ' + esc(i.versionCode) + ' · new versions and unit data are offered when the app opens with internet.</p>';
+  if (!i.dev) return '<p class="muted hint">App version ' + esc(i.versionCode) + ' · new versions and unit data are offered when the app opens with internet. ' + btn({ label: 'Check for updates', kind: 'ghost', small: true, action: 'app-update-check' }) + '</p>';
   const ago = t => (t ? Math.round((Date.now() - t) / 1000) + ' s ago' : 'never');
   const ok = i.lastOk && Date.now() - i.lastOk < 30000;
   return `<p class="hint ${ok ? 'text-ok' : 'text-warn'}">DEV app ${esc(i.versionCode)} · auto-update from ${esc(i.server)} · last contact: ${esc(ago(i.lastOk))}${i.lastError && !ok ? ' · error: ' + esc(i.lastError) : ''}</p>`;
@@ -235,6 +235,7 @@ function onClick(e) {
   const code = card ? card.dataset.code : null;
   if (action === 'new') return newGame();
   if (action === 'data-check') { checkDataUpdate({ ask: askDataUpdate }); return; }
+  if (action === 'app-update-check') { checkForUpdates(); return; }
   if (action === 'remote') {
     const c = b.closest('[data-ncode]');
     if (c) location.href = `http://${c.dataset.host}:${c.dataset.port}/index.html#/g/${c.dataset.ncode}/${b.dataset.route}`;
