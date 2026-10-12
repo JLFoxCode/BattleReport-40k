@@ -660,37 +660,35 @@ function openScoreSheet() {
   const maxOf = it => (it.max != null ? Number(it.max) : 15);
   const mod = { vp: 0 };   // manual modifier (corrections, rules the card list cannot express)
   let edited = false;
+  // Two kinds of input only (user decision): YES / NO – named stages (e.g. Cleanse "one objective" / "two or more")
+  // become one yes/no line each, a yes clears the others – and "X VP each" as a counter (− n +) that stops at the max.
+  const yesNo = (vp, on, unset) => `<div class="score-yn">
+      <button type="button" class="score-no${on ? '' : ' on'}" data-opt="0"${unset != null ? ` data-unset="${esc(unset)}"` : ''}>No</button>
+      <button type="button" class="score-yes${on ? ' on' : ''}" data-opt="${esc(vp)}">Yes · ${esc(vp)} VP</button></div>`;
   const rowHtml = (it, i) => {
     let ctl, sub = '';
     if (it.opts) {
-      ctl = `<div class="chips score-opts">${chip({ label: 'Not achieved (0)', on: it.vp === 0, action: 'opt', data: { opt: 0 }, cls: 'sm' })}${it.opts.map(o => chip({ label: `${o.t} (${o.vp} VP)`, on: it.vp === o.vp, action: 'opt', data: { opt: o.vp }, cls: 'sm' })).join('')}</div>`;
-    } else if (it.k === 'per' && it.max != null && it.unit > 0) {
-      // Capped "per" condition: the only meaningful choices are 0, 1, … up to the count that reaches the cap ("n+")
-      const opts = [];
-      for (let n = 1; n * it.unit < it.max; n++) opts.push({ label: `${n} (${n * it.unit} VP)`, vp: n * it.unit });
-      const nCap = opts.length + 1;
-      opts.push({ label: `${nCap} (${it.max} VP)`, vp: it.max });
-      sub = `${esc(it.unit)} VP each · max. ${esc(it.max)} VP`;
-      ctl = `<div class="chips score-opts">${chip({ label: 'Not achieved (0)', on: it.vp === 0, action: 'opt', data: { opt: 0 }, cls: 'sm' })}${opts.map(o => chip({ label: o.label, on: it.vp === o.vp, action: 'opt', data: { opt: o.vp }, cls: 'sm' })).join('')}</div>`;
+      ctl = `<div class="score-stages">${it.opts.map(o => { const v = Number(o.vp) || 0;
+        return `<div class="score-stage"><span class="score-stage-t">${esc(o.t)}</span>${yesNo(v, it.vp === v, v)}</div>`; }).join('')}</div>`;
     } else if (it.k === 'per') {
-      const cap = it.max != null ? it.max : 15;
+      const cap = maxOf(it);
       sub = `${esc(it.unit)} VP each${it.max != null ? ` · max. ${esc(it.max)} VP` : ''}`;
-      ctl = `<div class="score-count"><span class="muted xs">Count</span><div class="stepper sm p${player}">
+      ctl = `<div class="score-count"><div class="stepper sm p${player}">
           <button type="button" data-n="-1" ${it.n <= 0 ? 'disabled' : ''} aria-label="Fewer">−</button>
           <span class="stepper-value">${esc(it.n)}</span>
-          <button type="button" data-n="1" ${(it.n + 1) * it.unit > cap ? 'disabled' : ''} aria-label="More">+</button>
+          <button type="button" data-n="1" ${it.vp >= cap ? 'disabled' : ''} aria-label="More">+</button>
         </div><span class="score-eq">= <b>${esc(it.vp)} VP</b></span></div>`;
     } else {
       sub = `${esc(it.unit)} VP`;
-      ctl = `<button type="button" class="cond-tap ${it.vp > 0 ? 'on' : ''}" data-ach="1"><span class="cond-vp">${esc(it.unit)} VP</span><span class="cond-state">${it.vp > 0 ? 'achieved' : 'not achieved'}</span></button>`;
+      ctl = yesNo(it.unit, it.vp > 0);
     }
     return `<div class="score-item" data-i="${i}">
       <div class="score-main">
         <div class="score-card">${badge(SRC_LABEL[it.src] || it.src, it.src === 'primary' ? 'ok' : 'warn')} <b>${esc(it.name)}</b></div>
         <div class="score-text">${esc(it.text || '')}</div>
-        <div class="score-sub muted xs">${sub}${it.already ? (sub ? ' · ' : '') + '<span class="text-ok">' + esc(it.already) + ' VP already booked</span>' : ''}</div>
+        ${sub || it.already ? `<div class="score-sub muted xs">${sub}${it.already ? (sub ? ' · ' : '') + '<span class="text-ok">' + esc(it.already) + ' VP already booked</span>' : ''}</div>` : ''}
       </div>
-      <div class="score-ctl">${ctl}</div>
+      <div class="score-ctl2">${ctl}</div>
     </div>`;
   };
   const totalVp = () => items.reduce((a, i) => a + i.vp, 0) + mod.vp;
@@ -742,8 +740,8 @@ function openScoreSheet() {
         if (!row) return;
         const it = items[Number(row.dataset.i)];
         if (!it) return;
-        if (n) { it.n = Math.max(0, it.n + Number(n.dataset.n)); it.vp = Math.min(maxOf(it), it.n * it.unit); }
-        else if (o) it.vp = Number(o.dataset.opt) || 0;
+        if (n) { it.n = Math.max(0, it.n + Number(n.dataset.n)); it.vp = Math.min(maxOf(it), it.n * it.unit); if (Number(n.dataset.n) > 0 && it.vp >= maxOf(it)) it.n = Math.ceil(it.vp / it.unit); }
+        else if (o) { if (o.dataset.unset == null || Number(o.dataset.unset) === it.vp) it.vp = Number(o.dataset.opt) || 0; }
         else it.vp = it.vp > 0 ? 0 : it.unit;
         edited = items.some(x => x.vp !== x.suggest);
         el.querySelector('.sheet-body').innerHTML = bodyHtml();

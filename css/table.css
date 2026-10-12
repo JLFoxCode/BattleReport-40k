@@ -247,3 +247,36 @@
 .dep-list .qr-card .qr { width: 100%; max-width: 200px; height: auto; border-radius: 6px; }
 .dep-list .qr-wait { height: 180px; display: grid; place-items: center; }
 .sheet.tbl-score .score-banner { margin: 0 0 8px; padding: 10px 12px; border-radius: 10px; font-size: 15px; border-left: 4px solid var(--pc); background: color-mix(in srgb, var(--pc) 14%, transparent); }
+
+/* ───────── Scoring popup: one control for every condition – a full-width row of equal option buttons ───────── */
+.sheet.tbl-score .score-list .score-item { display: block; }
+.sheet.tbl-score .score-card { flex-wrap: wrap; }
+.score-optbar { display: flex; gap: 6px; margin-top: 8px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: thin; }
+.score-opt { flex: 0 0 auto; min-width: 64px; max-width: 170px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
+  padding: 6px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel); color: var(--text); font: inherit; cursor: pointer; }
+.score-opt b { font-family: var(--font-title); font-size: 19px; line-height: 1; }
+.score-opt b small { font-size: 11px; font-family: var(--font-body); font-weight: 600; opacity: .75; }
+.score-opt span { font-size: 11px; line-height: 1.15; color: var(--muted); text-align: center; max-width: 150px;
+  overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.score-opt.on { background: var(--ok); border-color: transparent; color: #05210F; }
+.score-opt.on span { color: #05210F; }
+.score-opt[data-opt="0"].on { background: var(--panel2, #222); color: var(--text); border-color: var(--text); }
+.score-opt[data-opt="0"].on span { color: var(--muted); }
+/* named options with long texts (e.g. Outflank): full width, complete text – numbers must never be cut off */
+.score-optbar.wrap { flex-wrap: wrap; overflow-x: visible; }
+.score-opt.long { flex: 1 1 100%; max-width: none; flex-direction: row; justify-content: flex-start; gap: 12px; text-align: left; }
+.score-opt.long b { flex: none; min-width: 52px; }
+.score-opt.long span { max-width: none; text-align: left; display: block; overflow: visible; font-size: 12px; }
+/* Scoring popup (final): YES/NO and counter, control under the text, full width */
+.sheet.tbl-score .score-ctl2 { margin-top: 8px; display: flex; justify-content: flex-end; }
+.score-yn { display: inline-flex; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; flex: none; }
+.score-yn button { min-height: 38px; padding: 0 14px; border: 0; background: var(--panel); color: var(--muted); font: 600 14px/1 var(--font-body); cursor: pointer; white-space: nowrap; }
+.score-yn button + button { border-left: 1px solid var(--line); }
+.score-yn .score-no.on { background: var(--panel2, #2a2f36); color: var(--text); }
+.score-yn .score-yes.on { background: var(--ok); color: #05210F; }
+.score-stages { display: flex; flex-direction: column; gap: 6px; width: 100%; }
+.score-stage { display: flex; align-items: center; gap: 10px; justify-content: space-between; padding: 6px 0 6px 10px; border-left: 3px solid var(--line); }
+.score-stage-t { font-size: 13px; line-height: 1.25; min-width: 0; }
+.sheet.tbl-score .score-count { gap: 10px; }
+.sheet.tbl-score .score-count .stepper button { min-width: 40px; min-height: 38px; }
+.sheet.tbl-score .score-eq b { font-size: 18px; }
