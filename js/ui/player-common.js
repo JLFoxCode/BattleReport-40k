@@ -392,7 +392,6 @@ export function stratCard(s, ctx, ui, opts = {}) {
   const phase = stratPhaseId(s, opts.phase, state.phase);
   const { use, used, fits, cpOnly, dim, inBattle } = stratUseState(s, ctx);
   const kws = stratKwList(s);
-  const hits = affectedUnits(myUnits(state, me), kws, ctx);
   const open = `data-action="strat.open" data-strat="${esc(s.id)}"`;
   // Verbatim original WHEN/EFFECT, no summaries (avoids errors); TARGET is covered by the keyword chips.
   const o = origForStrat(s, ctx) || { when: s.when, effect: s.effect || s.t };
@@ -413,7 +412,6 @@ export function stratCard(s, ctx, ui, opts = {}) {
     ${o.effect ? `<p class="strat-orig"><b>EFFECT</b> ${esc(cleanOrig(o.effect))}</p>` : ''}
     ${dim && s.reason ? `<div class="strat-reason xs text-warn">Not available: ${esc(s.reason)}</div>` : cpOnly && !used ? `<div class="strat-reason xs muted">${esc(s.reason)} – usable with a CP reduction</div>` : ''}
     ${kwLine(kws)}
-    ${hits.length ? `<div class="affects xs"><span class="muted">Affects:</span> ${hits.map(u => esc(u.name)).join(', ')}</div>` : ''}
     ${foot ? `<div class="strat-foot">${foot}</div>` : ''}
   </article>`;
 }

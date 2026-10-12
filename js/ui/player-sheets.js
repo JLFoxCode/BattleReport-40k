@@ -44,7 +44,6 @@ export function openStratSheet(ctx, ui, stratId) {
   const hits = new Set(affectedUnits(units, kws, c0).map(u => u.id));
   const sorted = units.slice().sort((a, b) => (hits.has(b.id) ? 1 : 0) - (hits.has(a.id) ? 1 : 0));
   const unitOpts = sorted.map(u => `<option value="${esc(u.id)}"${u.status === 'shocked' ? ' disabled' : ''}>${esc(u.name)} (${u.models})${hits.has(u.id) ? ' ✓' : ''}${u.status === 'shocked' ? ' – Battle-shocked' : ''}</option>`).join('');
-  const affected = units.filter(u => hits.has(u.id));
   const reds = fits && !used ? cpReductions(c0) : [];
   // Stratagem add-ons bought with an army resource (data/effects stratAddons, e.g. +1 YP: [SUSTAINED HITS 1])
   const addons = stratAddonsOf(c0, s).map(a => Object.assign({}, a, { res: resourceFor(state, me, a.resource) }));
@@ -159,7 +158,7 @@ export function openStratSheet(ctx, ui, stratId) {
       ${stratOrigBlock(s, c0)}
       ${s.plus && s.plus.name ? `<div class="orig-block"><div class="orig-label">${esc(s.plus.name)} (${Number(s.plus.cost) || 0} CP)</div><div class="orig-text">${esc(cleanOrig(s.plus.text || ''))}</div></div>` : ''}
       ${kwLine(kws)}
-      ${affected.length ? `<div class="affects xs"><span class="muted">Affects:</span> ${affected.map(u => esc(u.name)).join(', ')}</div>` : ''}
+      
       ${addons.length && !canUse ? `<div class="strat-addons-info">${addonRow()}</div>` : ''}
       ${useHtml}`,
     actions,
