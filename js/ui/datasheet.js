@@ -143,15 +143,35 @@ export function datasheetMissing(unit, opt = {}) {
  * chips under the stats. (i) opens the full text of the leader ability (data-action="buff.info").
  *
  * group = { body: { ds, unit, enh }, leaders: [{ ds, unit, enh, buffs: [{ name, text, src, badges, scope }] }] }  */
-const WEAPON_AB = () => /\[[A-Z][A-Z0-9 :'’+\-\/]*\]/g;
+// Weapon abilities in any spelling ("[LETHAL HITS]", "[Lethal Hits]") – shown uppercase like on the datasheets
+const WEAPON_AB = () => /\[[A-Za-z][A-Za-z0-9 :'’+\-\/]*\]/g;
+const clean = t => String(t || '').replace(/\^\^|\*\*/g, '');
 /** Which weapons a leader buff gives a weapon ability to: 'ranged' | 'melee' | 'all' | null (no weapon ability). */
 function buffWeaponScope(text) {
-  const t = String(text || '');
+  const t = clean(text);
   if (!WEAPON_AB().test(t)) return null;
   const r = /ranged (?:weapons|attacks)/i.test(t), m = /melee (?:weapons|attacks)/i.test(t);
   if (r && !m) return 'ranged';
   if (m && !r) return 'melee';
-  return /weapons|attacks/i.test(t) ? 'all' : null;
+  // "weapons … have [X]" or "models in that unit have the [X] ability" → every weapon of the unit
+  return /weapons|attacks|models in that unit|that unit has/i.test(t) ? 'all' : null;
+}
+/** What a leader buff gives the whole unit, taken word for word from its text (numbers and terms unchanged):
+ *  "5+ invulnerable save", "Feel No Pain 4+ against Psychic Attacks", "Scouts 6"", "+1 Objective Control" …
+ *  Empty if the wording is not recognised – then only the name is shown (full text behind (i)). */
+export function buffEffects(text) {
+  const t = clean(text).replace(/\s+/g, ' ');
+  const out = [];
+  const add = s => { s = s.trim(); if (s && !out.includes(s)) out.push(s); };
+  for (const m of t.matchAll(/(\d\+) invulnerable save/gi)) add(m[1] + ' invulnerable save');
+  for (const m of t.matchAll(/Feel No Pain (\d\+)(?: ability)?( against [^.,;]+)?/gi)) add('Feel No Pain ' + m[1] + (m[2] ? m[2].replace(/ ability$/i, '') : ''));
+  for (const m of t.matchAll(/ha(?:ve|s) the ((?:Scouts \d+"|Infiltrators|Deep Strike|Fights First|Stealth|Lone Operative|Feel No Pain \d\+)[^.,;]*?) abilit/gi)) if (!/Feel No Pain/i.test(m[1])) add(m[1]);
+  if (/ha(?:ve|s) the Benefit of Cover/i.test(t)) add('Benefit of Cover');
+  for (const m of t.matchAll(/add (\d+"?|one) to the ([A-Z][A-Za-z]+(?: [A-Z][A-Za-z]+)?) characteristic/g)) add('+' + (m[1] === 'one' ? '1' : m[1]) + ' ' + m[2]);
+  for (const m of t.matchAll(/add (\d+|one) to (Advance and Charge|Advance|Charge|Hit|Wound) rolls?/gi)) add('+' + (m[1] === 'one' ? '1' : m[1]) + ' to ' + m[2] + ' rolls');
+  for (const m of t.matchAll(/re-roll (Advance and Charge|Advance|Charge|Hit|Wound|Battle-shock) rolls?/gi)) add('re-roll ' + m[1] + ' rolls');
+  for (const m of t.matchAll(/eligible to ((?:shoot|declare a charge)(?: and (?:shoot|declare a charge))?) in a turn in which it ((?:Advanced|Fell Back)(?: or (?:Advanced|Fell Back))?)/gi)) add(m[1] + ' after ' + m[2]);
+  return out;
 }
 const chosenMap = unit => (unit && Array.isArray(unit.wargear) && unit.wargear.length
   ? new Map(unit.wargear.map(w => [normName(typeof w === 'string' ? w : w.name), typeof w === 'string' ? 1 : (Number(w.count) || 1)])) : null);
@@ -183,7 +203,11 @@ export function datasheetGroupCard(group, opt = {}) {
   };
   // ── unit-wide buffs (no weapon ability): chips under the stats
   const unitBuffs = buffs.filter(b => !b.scope);
-  const unitBuffHtml = unitBuffs.length ? `<div class="ds-unitbuffs">${unitBuffs.map(b => `<span class="ds-unitbuff">${esc(b.buff.name)}<span class="muted"> · ${esc(b.leaderName)}</span>${info(b)}</span>`).join('')}</div>` : '';
+  // the effect itself first ("5+ invulnerable save"), the ability and the leader small underneath
+  const unitBuffHtml = unitBuffs.length ? `<div class="ds-unitbuffs">${unitBuffs.map(b => {
+    const fx = buffEffects(b.buff.text);
+    return `<span class="ds-unitbuff">${fx.length ? `<b>${fx.map(esc).join(' · ')}</b><span class="ds-unitbuff-src">${esc(b.buff.name)} · ${esc(b.leaderName)}</span>` : `${esc(b.buff.name)}<span class="ds-unitbuff-src">${esc(b.leaderName)}</span>`}${info(b)}</span>`;
+  }).join('')}</div>` : '';
   // ── weapons: unit + leaders in one table per kind; same weapon in both → one row
   const weaponRows = kind => {
     const rows = new Map();
@@ -203,8 +227,8 @@ export function datasheetGroupCard(group, opt = {}) {
     const skill = kind === 'ranged' ? 'BS' : 'WS';
     const html = rows.map(r => {
       const own = (r.w.abilities || []).map(a => `[${String(a).toUpperCase()}]`);
-      const marks = buffs.filter(b => b.scope === 'all' || b.scope === kind).flatMap(b => (String(b.buff.text).match(WEAPON_AB()) || [])
-        .filter(x => !own.includes(x.toUpperCase())).map(x => `<span class="ds-wbuff">${esc(x)}*${info(b)}</span>`));
+      const marks = buffs.filter(b => b.scope === 'all' || b.scope === kind).flatMap(b => (clean(b.buff.text).match(WEAPON_AB()) || [])
+        .map(x => x.toUpperCase()).filter(x => !own.includes(x)).map(x => `<span class="ds-wbuff">${esc(x)}*${info(b)}</span>`));
       const leaderOnly = r.owner !== 'unit' && r.owner !== 'both';
       return `<tr class="ds-wrow${leaderOnly ? ' from-leader' : ''}"><td class="ds-wcell-name">${weaponName(r.w, r.n)}${leaderOnly ? tagOf(r.owner) : ''}${marks.length ? `<span class="ds-wbuffs">${[...new Set(marks)].join('')}</span>` : ''}</td><td>${esc(String(r.w.range ?? ''))}</td><td>${esc(String(r.w.A ?? ''))}</td><td>${esc(String(r.w[skill] ?? ''))}</td><td>${esc(String(r.w.S ?? ''))}</td><td>${esc(String(r.w.AP ?? ''))}</td><td>${esc(String(r.w.D ?? ''))}</td></tr>`;
     }).join('');
