@@ -19,7 +19,13 @@ const SERVER_DIR = fs.existsSync(path.join(HERE, 'server', 'game-server.js')) ? 
 const BSDATA_DIR = PACKED ? null : path.resolve(HERE, '..', 'vendor-data', 'bsdata', 'wh40k-11e-main');
 const ICON = path.join(WEB_ROOT, 'icons', 'icon-512.png');
 const PORT0 = 8417;
-const RELEASE = { repo: 'JLFoxCode/BattleReport-40k' };
+// Repo of the releases + shell version (release/app-release.json; packaged: www/app-release.json)
+const RELEASE = (() => {
+  for (const f of [path.join(WEB_ROOT, 'app-release.json'), path.resolve(HERE, '..', 'release', 'app-release.json')]) {
+    try { return JSON.parse(fs.readFileSync(f, 'utf8')); } catch {}
+  }
+  return { repo: 'JLFoxCode/BattleReport-40k', shell: {} };
+})();
 
 if (!app.requestSingleInstanceLock()) { app.quit(); process.exit(0); }
 
@@ -28,6 +34,12 @@ const GAMES_DIR = path.join(USER, 'games');
 const OVERLAY_DIR = path.join(USER, 'data-overlay');
 const FINISHED_DIR = path.join(USER, 'finished');
 const VERSION_CODE = Number(String(app.getVersion()).split('.')[2]) || 0;
+// Partial update (only the changed web files of a newer release): written straight into the installed app (per-user,
+// writable); web-version.txt = version they belong to. A full update (installer) replaces all files anyway.
+const WEB_VERSION_FILE = path.join(USER, 'web-version.txt');
+const webVersion = () => { try { const v = Number(fs.readFileSync(WEB_VERSION_FILE, 'utf8').trim()) || 0; return v > VERSION_CODE ? v : 0; } catch { return 0; } };
+const WEB_PATH_OK = rel => typeof rel === 'string' && !rel.includes('..') && !rel.includes('\\') && !rel.startsWith('/') && !rel.startsWith('data/datasheets/')
+  && (/^(index\.html|engine-host\.html|manifest\.webmanifest|sw\.js|web-index\.json)$/.test(rel) || /^(js|css|engine|data|vendor|icons)\/[A-Za-z0-9_./ '’()+,-]+$/.test(rel));
 
 let win = null, srv = null, mdns = null, lanIps = () => [];
 let port = PORT0;
@@ -108,7 +120,31 @@ sync('lanIps', () => JSON.stringify(lanIps()));
 sync('port', () => port);
 sync('platform', () => 'windows');
 sync('releaseInfo', () => JSON.stringify(RELEASE));
-sync('devInfo', () => JSON.stringify({ versionCode: VERSION_CODE, dev: false }));
+sync('devInfo', () => JSON.stringify({ versionCode: Math.max(VERSION_CODE, webVersion()), installed: VERSION_CODE, shell: Number((RELEASE.shell || {}).windows) || 0, dev: false }));
+// Partial app update (js/ui/update-popup.js): one changed web file (base64) → into the app; then version; then restart
+// Downloaded files go to a staging folder first and are copied into the app all at once in applyWebUpdate, so an
+// interrupted download never leaves a half-updated app (the staging folder is discarded on the next start).
+const STAGING = path.join(USER, 'web-staging');
+sync('saveWeb', (rel, b64) => {
+  if (!PACKED || !WEB_PATH_OK(rel)) return false;
+  const f = path.join(STAGING, rel);
+  if (!path.resolve(f).startsWith(path.resolve(STAGING) + path.sep)) return false;
+  fs.mkdirSync(path.dirname(f), { recursive: true });
+  fs.writeFileSync(f, Buffer.from(String(b64 || ''), 'base64'));
+  return true;
+});
+let pendingWebVersion = 0;
+sync('setWebVersion', code => { pendingWebVersion = Number(code) || 0; return null; });
+sync('applyWebUpdate', () => {
+  const copy = (from, to) => { for (const e of fs.readdirSync(from, { withFileTypes: true })) { const s = path.join(from, e.name), d = path.join(to, e.name); if (e.isDirectory()) { fs.mkdirSync(d, { recursive: true }); copy(s, d); } else fs.copyFileSync(s, d); } };
+  try {
+    if (fs.existsSync(STAGING)) copy(STAGING, WEB_ROOT);
+    if (pendingWebVersion) fs.writeFileSync(WEB_VERSION_FILE, String(pendingWebVersion));
+  } finally { fs.rmSync(STAGING, { recursive: true, force: true }); }
+  setTimeout(() => { app.relaunch(); app.exit(0); }, 200);
+  return null;
+});
+try { fs.rmSync(STAGING, { recursive: true, force: true }); } catch {}   // leftover of an interrupted update
 // Unit data update (js/data-update.js): only data/datasheets/*.json and bsdata/*.json, into userData/data-overlay
 sync('saveData', (rel, text) => {
   if (typeof rel !== 'string' || !/^(data\/datasheets|bsdata)\/[^/\\]+\.json$/.test(rel) || rel.includes('..')) return false;

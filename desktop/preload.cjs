@@ -10,12 +10,15 @@ contextBridge.exposeInMainWorld('BR', {
   port: () => s('port'),                                       // number
   platform: () => 'windows',
   releaseInfo: () => s('releaseInfo'),                         // JSON: { repo }
-  devInfo: () => s('devInfo'),                                 // JSON: { versionCode, dev: false }
+  devInfo: () => s('devInfo'),                                 // JSON: { versionCode, installed, shell, dev: false }
   saveData: (rel, text) => s('saveData', str(rel), str(text)), // boolean
   clearData: () => { s('clearData'); },
   saveGame: (code, meta, full) => { s('saveGame', str(code), str(meta), str(full)); },
   listGames: () => s('listGames'),                             // JSON: metas, savedAt desc
   loadGame: code => s('loadGame', str(code)),                  // string | null
   deleteGame: code => { s('deleteGame', str(code)); },
-  installUpdate: url => { ipcRenderer.send('br:installUpdate', str(url)); }
+  installUpdate: url => { ipcRenderer.send('br:installUpdate', str(url)); },
+  saveWeb: (rel, b64) => s('saveWeb', str(rel), str(b64)),       // boolean – partial update: one changed web file
+  setWebVersion: code => { s('setWebVersion', str(code)); },
+  applyWebUpdate: () => { s('applyWebUpdate'); }                  // restarts the app with the new files
 });

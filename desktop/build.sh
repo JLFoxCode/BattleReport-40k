@@ -14,6 +14,9 @@ cp ../vendor-data/bsdata/wh40k-11e-main/*.json www/bsdata/
 cp ../server/*.js server/
 CODE=${VERSION_CODE:-$(( ($(date +%s) - 1767225600) / 60 ))}   # minutes since 2026-01-01 → always increasing (as android/build.sh)
 echo "Version 2.0.$CODE"
+# Updates: release config (repo + shell version) and the hashed list of web files for partial updates
+cp ../release/app-release.json www/app-release.json
+( cd .. && node release/web-index.mjs "$CODE" ) && cp ../release/web-index.json www/web-index.json
 npx electron-builder --win nsis --x64 --publish never \
   -c.extraMetadata.version="2.0.$CODE" \
   -c.nsis.artifactName="BattleReport40k-Setup-$CODE.exe"

@@ -19,6 +19,7 @@ public class MainActivity extends Activity {
     static final String LOCAL = "http://127.0.0.1:" + HostService.PORT + "/index.html";
     static final String ACTION_INSTALL_STATUS = "de.schlachtbericht.app.INSTALL_STATUS";
     static volatile MainActivity instance;
+    private volatile long pendingWebVersion;
     private WebView web;
     private Discovery discovery;
 
@@ -44,14 +45,27 @@ public class MainActivity extends Activity {
             try (java.io.InputStream in = getAssets().open("app-release.json")) { return new String(Net.readAll(in), java.nio.charset.StandardCharsets.UTF_8); }
             catch (Exception e) { return "{}"; }
         }
-        /** { versionCode, dev:false } – shown in the lobby, used by the update check. */
+        /** { versionCode (installed or newer partial update), installed, shell, dev:false } – lobby + update check. */
         @JavascriptInterface public String devInfo() {
             try {
                 org.json.JSONObject o = new org.json.JSONObject();
-                o.put("versionCode", getPackageManager().getPackageInfo(getPackageName(), 0).getLongVersionCode());
+                long installed = getPackageManager().getPackageInfo(getPackageName(), 0).getLongVersionCode();
+                o.put("versionCode", Math.max(installed, WebUpdate.version(MainActivity.this)));
+                o.put("installed", installed);
+                int shell = 0;
+                try { shell = new org.json.JSONObject(releaseInfo()).getJSONObject("shell").optInt("android", 0); } catch (Exception ignored) {}
+                o.put("shell", shell);
                 o.put("dev", false);
                 return o.toString();
             } catch (Exception e) { return "{}"; }
+        }
+        @JavascriptInterface public String platform() { return "android"; }
+        // Partial app update (js/ui/update-popup.js): store one changed web file (base64), then the version, then apply
+        @JavascriptInterface public boolean saveWeb(String rel, String base64) { return WebUpdate.save(MainActivity.this, rel, base64); }
+        @JavascriptInterface public void setWebVersion(String code) { try { pendingWebVersion = Long.parseLong(code); } catch (Exception ignored) {} }
+        @JavascriptInterface public void applyWebUpdate() {
+            WebUpdate.commit(MainActivity.this, pendingWebVersion);
+            HostService h = HostService.instance; if (h != null) h.applyWebUpdate(); else reloadWeb();
         }
         // Unit data update (js/data-update.js): only data/datasheets/*.json and bsdata/*.json, into files/data-overlay
         @JavascriptInterface public boolean saveData(String rel, String text) {

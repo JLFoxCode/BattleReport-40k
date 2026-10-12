@@ -43,6 +43,7 @@ public class HostService extends Service {
         goForeground("Ready – no game hosted");
         wake = ((PowerManager) getSystemService(POWER_SERVICE)).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "br40k:server");
         wake.acquire();
+        WebUpdate.dropIfObsolete(this);
         engine = new EngineHost();
         server = new GameServer(this, PORT, engine, this::gamesChanged);
         try { server.start(); } catch (Exception e) { android.util.Log.e("HostService", "server start", e); }
@@ -122,6 +123,15 @@ public class HostService extends Service {
         if (wake != null && wake.isHeld()) wake.release();
         instance = null;
         super.onDestroy();
+    }
+
+    /** Partial update installed: load the new engine (games are replayed into it), then the new app page. */
+    void applyWebUpdate() {
+        new Thread(() -> {
+            try { engine.reload(); server.reloadEngine(); } catch (Exception e) { android.util.Log.w("HostService", "engine reload", e); }
+            MainActivity a = MainActivity.instance;
+            if (a != null) a.reloadWeb();
+        }, "web-update").start();
     }
 
     @Override public IBinder onBind(Intent intent) { return null; }

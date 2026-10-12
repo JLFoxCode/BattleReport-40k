@@ -21,6 +21,51 @@ export function askDataUpdate(info) {
  *  (Android: BR.installApk → system installer; Windows: BR.installUpdate → setup, the app restarts). DEV app: skipped,
  *  it updates itself from the PC. Returns true if the user started an app update. */
 let appState = 'unknown';   // last result of the app version check: current | available
+
+/* ── Partial update: release/web-index.json of the release tag (SHA-1 per web file) vs. the app's own /web-index.json;
+ *    only files with a different hash are downloaded (raw files of the tag), stored by the app (BR.saveWeb) and applied
+ *    (BR.applyWebUpdate: Android reloads engine + page, Windows restarts). Returns true (started) / false (declined) /
+ *    null (not possible → full update). */
+const rawUrl = (repo, tag, p) => `https://raw.githubusercontent.com/${repo}/${encodeURIComponent(tag)}/${p.split('/').map(encodeURIComponent).join('/')}`;
+const kb = n => (n >= 1e6 ? (n / 1e6).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB');
+function toBase64(buf) {
+  const bytes = new Uint8Array(buf);
+  let s = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+  return btoa(s);
+}
+async function partialUpdate(repo, latest, code, me, platform) {
+  if (!window.BR.saveWeb || !window.BR.applyWebUpdate) return null;
+  const tag = latest.tag_name;
+  const rel = await (await fetch(rawUrl(repo, tag, 'release/app-release.json'), { cache: 'no-store' })).json();
+  const needShell = Number((rel.shell || {})[platform]) || 0;
+  if (!needShell || needShell > (Number(me.shell) || 0)) return null;                 // native part changed → full update
+  const remoteText = await (await fetch(rawUrl(repo, tag, 'release/web-index.json'), { cache: 'no-store' })).text();
+  const remote = JSON.parse(remoteText);
+  let local = { files: {} };
+  try { local = await (await fetch('/web-index.json', { cache: 'no-store' })).json(); } catch {}
+  const changed = Object.entries(remote.files || {}).filter(([p, f]) => !(local.files || {})[p] || local.files[p].h !== f.h);
+  const bytes = changed.reduce((t, [, f]) => t + (f.s || 0), 0);
+  const ok = await confirmSheet({
+    title: 'New app version available',
+    text: `Battle Report 40k ${tag}${latest.published_at ? ' from ' + fmt(latest.published_at) : ''} is available (installed: ${me.versionCode}). `
+      + `Only the changes are downloaded: ${changed.length} file${changed.length === 1 ? '' : 's'}, ${kb(bytes)}.`
+      + (latest.body ? ' ' + String(latest.body).slice(0, 300) : '') + ' Your games stay on this device.',
+    ok: 'Update now', cancel: 'Later'
+  });
+  if (!ok) return false;
+  toast(`Downloading ${changed.length} changed file${changed.length === 1 ? '' : 's'} (${kb(bytes)}) …`, 'ok', 4000);
+  for (const [p] of changed) {
+    const r = await fetch(rawUrl(repo, tag, p), { cache: 'no-store' });
+    if (!r.ok) throw new Error(`${r.status} ${p}`);
+    if (!window.BR.saveWeb(p, toBase64(await r.arrayBuffer()))) throw new Error('could not store ' + p);
+  }
+  window.BR.saveWeb('web-index.json', toBase64(new TextEncoder().encode(remoteText)));   // the app's list now = this release
+  window.BR.setWebVersion(String(code));
+  toast(`Updated to ${tag} – restarting …`, 'ok', 3000);
+  setTimeout(() => window.BR.applyWebUpdate(), 800);
+  return true;
+}
 async function checkAppUpdate() {
   let rel = {}, me = {};
   try { rel = JSON.parse(window.BR.releaseInfo ? window.BR.releaseInfo() : '{}'); me = JSON.parse(window.BR.devInfo ? window.BR.devInfo() : '{}'); } catch {}
@@ -34,6 +79,9 @@ async function checkAppUpdate() {
   const apk = (latest.assets || []).find(a => (platform === 'windows' ? /setup.*\.exe$/i : /\.apk$/i).test(a.name));
   if (!apk || !(code > Number(me.versionCode || 0))) { appState = 'current'; return false; }
   appState = 'available';
+  // Partial update if the native part (shell) of the new version is the one installed: only the changed web files
+  try { const done = await partialUpdate(rel.repo, latest, code, me, platform); if (done !== null) return done; }
+  catch (e) { console.warn('partial update', e); }   // → full update below
   const ok = await confirmSheet({
     title: 'New app version available',
     text: `Battle Report 40k ${latest.tag_name}${latest.published_at ? ' from ' + fmt(latest.published_at) : ''} is available (installed: ${me.versionCode}).`

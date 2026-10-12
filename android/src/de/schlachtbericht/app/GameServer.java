@@ -43,6 +43,8 @@ class GameServer {
     private final File dir;
     /** Unit data updated on the device (BSData from GitHub, js/data-update.js) – served before the bundled data. */
     private final File dataOverlay;
+    /** App files from a partial update (only the changed files of a newer release, see WebUpdate). */
+    private final File webOverlay;
     private final EngineHost engine;
     private final Listener listener;
     private final Map<String, Game> games = new ConcurrentHashMap<>();
@@ -58,6 +60,7 @@ class GameServer {
         this.port = port; this.assets = ctx.getAssets(); this.engine = engine; this.listener = listener;
         this.dir = new File(ctx.getFilesDir(), "games"); dir.mkdirs();
         this.dataOverlay = new File(ctx.getFilesDir(), "data-overlay");
+        this.webOverlay = WebUpdate.dir(ctx);
     }
 
     void start() throws IOException {
@@ -416,8 +419,11 @@ class GameServer {
         if (rel.contains("..") || rel.indexOf('\0') >= 0) throw new HttpErr(404, "Not found");
         String asset = "www" + rel;
         byte[] data;
+        // Order: unit data updated on the device, then app files of a partial update (web-overlay), then the bundled app
         File ovFile = new File(dataOverlay, rel.substring(1));
+        File webFile = new File(webOverlay, rel.substring(1));
         if (ovFile.isFile() && ovFile.getCanonicalPath().startsWith(dataOverlay.getCanonicalPath())) data = readBytes(ovFile);
+        else if (webFile.isFile() && webFile.getCanonicalPath().startsWith(webOverlay.getCanonicalPath())) data = readBytes(webFile);
         else try (InputStream in = assets.open(asset)) { data = readAll(in); }
         catch (IOException e) { throw new HttpErr(404, "Not found"); }
         String ext = asset.substring(asset.lastIndexOf('.') + 1).toLowerCase(Locale.ROOT);
