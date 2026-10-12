@@ -26,7 +26,6 @@ public class HostService extends Service {
     private GameServer server;
     private NsdManager nsd;
     private PowerManager.WakeLock wake;
-    DevHook dev;
     private final Map<String, NsdManager.RegistrationListener> advertised = new HashMap<>();
     private final Map<String, String> advertisedKey = new HashMap<>();
 
@@ -48,12 +47,6 @@ public class HostService extends Service {
         server = new GameServer(this, PORT, engine, this::gamesChanged);
         try { server.start(); } catch (Exception e) { android.util.Log.e("HostService", "server start", e); }
         engine.start(this, PORT);
-        dev = DevHook.create(this, engineChanged -> {
-            if (engineChanged) { engine.reload(); server.reloadEngine(); }
-            MainActivity a = MainActivity.instance;
-            if (a != null) a.reloadWeb();
-        });
-        if (dev != null) { server.dev = dev; dev.start(); }
     }
 
     @Override public int onStartCommand(Intent intent, int flags, int startId) {
@@ -124,7 +117,6 @@ public class HostService extends Service {
 
     @Override public void onDestroy() {
         for (String code : new ArrayList<>(advertised.keySet())) unadvertise(code);
-        if (dev != null) dev.stop();
         if (server != null) server.stop();
         if (engine != null) engine.destroy();
         if (wake != null && wake.isHeld()) wake.release();

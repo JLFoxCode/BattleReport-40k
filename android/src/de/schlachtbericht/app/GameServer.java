@@ -52,8 +52,6 @@ class GameServer {
     static final long CLOSE_AFTER_MS = 2 * 60 * 1000;
     private final SecureRandom rnd = new SecureRandom();
     private ServerSocket socket;
-    /** DEV build: overlay with web files synced from the PC dev server (served before the bundled assets). */
-    volatile DevHook dev;
     private volatile boolean running;
 
     GameServer(Context ctx, int port, EngineHost engine, Listener listener) {
@@ -419,9 +417,7 @@ class GameServer {
         String asset = "www" + rel;
         byte[] data;
         File ovFile = new File(dataOverlay, rel.substring(1));
-        File devFile = dev != null ? dev.file(rel.substring(1)) : null;
         if (ovFile.isFile() && ovFile.getCanonicalPath().startsWith(dataOverlay.getCanonicalPath())) data = readBytes(ovFile);
-        else if (devFile != null) data = readBytes(devFile);
         else try (InputStream in = assets.open(asset)) { data = readAll(in); }
         catch (IOException e) { throw new HttpErr(404, "Not found"); }
         String ext = asset.substring(asset.lastIndexOf('.') + 1).toLowerCase(Locale.ROOT);

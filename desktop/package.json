@@ -1,0 +1,59 @@
+{
+  "name": "battlereport40k",
+  "productName": "Battle Report 40k",
+  "version": "2.0.0",
+  "description": "Battle Report 40k – Warhammer 40,000 companion (hosts games on the local network)",
+  "author": "Battle Report 40k",
+  "private": true,
+  "type": "module",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "bash build.sh"
+  },
+  "devDependencies": {
+    "electron": "44.7.0",
+    "electron-builder": "26.15.3"
+  },
+  "build": {
+    "appId": "de.schlachtbericht.battlereport40k",
+    "productName": "Battle Report 40k",
+    "executableName": "BattleReport40k",
+    "asar": false,
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.cjs",
+      "package.json",
+      "www/**/*",
+      "server/**/*",
+      "release.json"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "www/icons/icon-512.png",
+      "signAndEditExecutable": true
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "createDesktopShortcut": "always",
+      "createStartMenuShortcut": true,
+      "shortcutName": "Battle Report 40k",
+      "runAfterFinish": true,
+      "deleteAppDataOnUninstall": false
+    }
+  },
+  "allowScripts": {
+    "electron@44.7.0": true
+  }
+}

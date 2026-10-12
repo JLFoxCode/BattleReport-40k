@@ -58,7 +58,7 @@ ${nearbySection()}
         ${btn({ label: 'Join', kind: 'primary', type: 'submit' })}
       </form>
       ${window.BR ? '' : `<p class="muted hint">Tablet in the middle of the table: <code>http://${esc(host)}/#/g/CODE/table</code> · Phone player 1: <code>http://${esc(host)}/#/g/CODE/p/0</code> · Phone player 2: <code>http://${esc(host)}/#/g/CODE/p/1</code></p>
-      <p class="muted hint">Android app: <a class="apk" href="https://github.com/JLFoxCode/BattleReport-40k/releases/latest" target="_blank" rel="noopener">latest release on GitHub</a> – the complete app with its own game server, works without internet: the device that creates a game hosts it, the others find it automatically in the same Wi-Fi. iPhone: open this page in Safari → Share → "Add to Home Screen".</p>
+      <p class="muted hint">Battle Report 40k is an app for <b>Android</b> and <b>Windows</b>: <a class="apk" href="https://github.com/JLFoxCode/BattleReport-40k/releases/latest" target="_blank" rel="noopener">download the latest release</a>. Devices without the app (e.g. iPhone) can still join a game by scanning its QR code.</p>
       ${devServerHtml()}`}
       ${devInfoHtml()}
       ${dataStatusHtml()}
@@ -147,8 +147,8 @@ function dataStatusHtml() {
 function devInfoHtml() {
   let i = null;
   try { i = window.BR && window.BR.devInfo ? JSON.parse(window.BR.devInfo()) : null; } catch { i = null; }
-  if (!i) return window.BR ? '<p class="muted hint">Release app – no auto-update.</p>' : '';
-  if (!i.dev) return '<p class="muted hint">Release app (version ' + esc(i.versionCode) + ') – no auto-update.</p>';
+  if (!i) return '';
+  if (!i.dev) return '<p class="muted hint">App version ' + esc(i.versionCode) + ' · new versions and unit data are offered when the app opens with internet.</p>';
   const ago = t => (t ? Math.round((Date.now() - t) / 1000) + ' s ago' : 'never');
   const ok = i.lastOk && Date.now() - i.lastOk < 30000;
   return `<p class="hint ${ok ? 'text-ok' : 'text-warn'}">DEV app ${esc(i.versionCode)} · auto-update from ${esc(i.server)} · last contact: ${esc(ago(i.lastOk))}${i.lastError && !ok ? ' · error: ' + esc(i.lastError) : ''}</p>`;

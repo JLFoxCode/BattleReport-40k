@@ -5,3 +5,8 @@ android/build/
 *.keystore
 node_modules/
 *.tmp
+# Desktop app (Electron): dependencies, build output and the staged copies of the web app / server (desktop/build.sh)
+desktop/node_modules/
+desktop/dist/
+desktop/www/
+desktop/server/

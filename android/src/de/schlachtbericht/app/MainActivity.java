@@ -44,15 +44,12 @@ public class MainActivity extends Activity {
             try (java.io.InputStream in = getAssets().open("app-release.json")) { return new String(Net.readAll(in), java.nio.charset.StandardCharsets.UTF_8); }
             catch (Exception e) { return "{}"; }
         }
-        /** { dev, versionCode, server, lastOk, lastError } – shown in the lobby. */
+        /** { versionCode, dev:false } – shown in the lobby, used by the update check. */
         @JavascriptInterface public String devInfo() {
             try {
                 org.json.JSONObject o = new org.json.JSONObject();
                 o.put("versionCode", getPackageManager().getPackageInfo(getPackageName(), 0).getLongVersionCode());
-                HostService h = HostService.instance;
-                DevHook d = h != null ? h.dev : null;
-                o.put("dev", d != null);
-                if (d != null) { o.put("server", d.server()); o.put("lastOk", d.lastOk()); o.put("lastError", d.lastError() == null ? org.json.JSONObject.NULL : d.lastError()); }
+                o.put("dev", false);
                 return o.toString();
             } catch (Exception e) { return "{}"; }
         }

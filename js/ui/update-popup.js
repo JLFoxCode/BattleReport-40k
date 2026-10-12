@@ -16,29 +16,32 @@ export function askDataUpdate(info) {
   });
 }
 
-/** Release app: newest GitHub release of the repo in assets/app-release.json (tag "v2.0.<versionCode>", asset *.apk).
- *  Newer than the installed version → popup → download + system installer (window.BR.installApk). DEV app: skipped,
+/** Release app: newest GitHub release of the repo in releaseInfo() (tag "v2.0.<versionCode>"; assets: *.apk for Android,
+ *  BattleReport40k-Setup-*.exe for Windows). Newer than the installed version → popup → download + installer
+ *  (Android: BR.installApk → system installer; Windows: BR.installUpdate → setup, the app restarts). DEV app: skipped,
  *  it updates itself from the PC. Returns true if the user started an app update. */
 async function checkAppUpdate() {
   let rel = {}, me = {};
   try { rel = JSON.parse(window.BR.releaseInfo ? window.BR.releaseInfo() : '{}'); me = JSON.parse(window.BR.devInfo ? window.BR.devInfo() : '{}'); } catch {}
-  if (!rel.repo || me.dev || !window.BR.installApk) return false;
+  const platform = window.BR.platform ? window.BR.platform() : 'android';
+  const install = window.BR.installUpdate || window.BR.installApk;
+  if (!rel.repo || me.dev || !install) return false;
   const r = await fetch(`https://api.github.com/repos/${rel.repo}/releases/latest`, { cache: 'no-store', headers: { Accept: 'application/vnd.github+json' } });
   if (!r.ok) return false;
   const latest = await r.json();
   const code = Number(String(latest.tag_name || '').split(/[.\-]/).pop()) || 0;
-  const apk = (latest.assets || []).find(a => /\.apk$/i.test(a.name));
+  const apk = (latest.assets || []).find(a => (platform === 'windows' ? /setup.*\.exe$/i : /\.apk$/i).test(a.name));
   if (!apk || !(code > Number(me.versionCode || 0))) return false;
   const ok = await confirmSheet({
     title: 'New app version available',
     text: `Battle Report 40k ${latest.tag_name}${latest.published_at ? ' from ' + fmt(latest.published_at) : ''} is available (installed: ${me.versionCode}).`
-      + (latest.body ? ' ' + String(latest.body).slice(0, 300) : '') + ' Android will ask you to confirm the installation; your games stay on the device.',
+      + (latest.body ? ' ' + String(latest.body).slice(0, 300) : '') + (platform === 'windows' ? ' The installer starts and the app restarts; your games stay on this computer.' : ' Android will ask you to confirm the installation; your games stay on the device.'),
     ok: 'Update now', cancel: 'Later'
   });
   if (!ok) return false;
   window.__appUpdateError = m => toast('App update failed: ' + m, 'bad', 6000);
   toast('Downloading the new app version …', 'ok', 4000);
-  window.BR.installApk(apk.browser_download_url);
+  if (window.BR.installUpdate) window.BR.installUpdate(apk.browser_download_url); else window.BR.installApk(apk.browser_download_url);
   return true;
 }
 

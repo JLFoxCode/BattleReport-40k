@@ -4,7 +4,6 @@
 #   android/build.sh   → app/BattleReport40k.apk
 set -e
 cd "$(dirname "$0")"
-MODE="${1:-release}"
 SDK="${ANDROID_HOME:-/c/Android/sdk}"; BT="$SDK/build-tools/35.0.0"; PLAT="$SDK/platforms/android-35/android.jar"
 export JAVA_HOME="${JAVA_HOME:-C:/Program Files/Microsoft/jdk-17.0.19.10-hotspot}"; export PATH="$JAVA_HOME/bin:$PATH"
 rm -rf build && mkdir -p build/res build/classes build/gen build/assets/www/bsdata
@@ -17,8 +16,6 @@ sed -i -e "s/android:versionCode=\"[0-9]*\"/android:versionCode=\"$CODE\"/" buil
 # App updates come from the GitHub Releases named in release.json
 [ -f release.json ] && cp release.json build/assets/app-release.json
 OUT=../app/BattleReport40k.apk
-SRC=$(ls src/de/schlachtbericht/app/*.java | grep -v "/DevUpdater.java$")   # the app; dev-build.sh may add its dev classes
-[ "$MODE" != "release" ] && [ -f dev-build.sh ] && . ./dev-build.sh   # local development variant (not part of the repo)
 mkdir -p ../app
 "$BT/aapt2.exe" compile --dir res -o build/res.zip
 "$BT/aapt2.exe" link -o build/app.unsigned.apk -I "$PLAT" --manifest build/AndroidManifest.xml --java build/gen build/res.zip -A build/assets --auto-add-overlay
@@ -28,5 +25,4 @@ python -c "import zipfile; z=zipfile.ZipFile('build/app.unsigned.apk','a'); z.wr
 "$BT/zipalign.exe" -f 4 build/app.unsigned.apk build/app.aligned.apk 2>/dev/null
 [ -f debug.keystore ] || keytool -genkeypair -v -keystore debug.keystore -storepass battlereport -keypass battlereport -alias app -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Battle Report 40k, O=Home, C=DE" >/dev/null 2>&1
 "$BT/apksigner.bat" sign --ks debug.keystore --ks-pass pass:battlereport --key-pass pass:battlereport --out "$OUT" build/app.aligned.apk
-type dev_after_sign >/dev/null 2>&1 && dev_after_sign
 ls -la "$OUT"
