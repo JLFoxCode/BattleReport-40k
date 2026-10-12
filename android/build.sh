@@ -12,7 +12,7 @@ rm -rf build && mkdir -p build/res build/classes build/gen build/assets/www/bsda
 ( cd .. && cp -r index.html engine-host.html manifest.webmanifest sw.js js css engine data vendor icons android/build/assets/www/ )
 cp ../vendor-data/bsdata/wh40k-11e-main/*.json build/assets/www/bsdata/
 cp AndroidManifest.xml build/AndroidManifest.xml
-CODE=$(( ($(date +%s) - 1767225600) / 60 ))   # minutes since 2026-01-01 → always increasing
+CODE=${VERSION_CODE:-$(( ($(date +%s) - 1767225600) / 60 ))}   # minutes since 2026-01-01 → always increasing
 sed -i -e "s/android:versionCode=\"[0-9]*\"/android:versionCode=\"$CODE\"/" build/AndroidManifest.xml
 # App updates come from the GitHub Releases named in release.json
 [ -f release.json ] && cp release.json build/assets/app-release.json
