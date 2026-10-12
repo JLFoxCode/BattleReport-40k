@@ -13,7 +13,7 @@ function bsOf(ctx, facId) {
   return BS.get(facId) || null;
 }
 const ruleTexts = rules => rules.map(r => `<div class="rule-text"><b>${esc(r.name)}</b>
-${esc(String(r.text || '').replace(/^^/g, '').replace(/**/g, ''))}</div>`).join('');
+${esc(String(r.text || '').replace(/\^\^/g, '').replace(/\*\*/g, ''))}</div>`).join('');
 
 export const DP_LIMIT = { strike: 3, incursion: 2 };
 export const SIZE_LABEL = { strike: 'Strike Force', incursion: 'Incursion' };
@@ -40,7 +40,7 @@ export function armyStep(ctx, ui, p) {
         ${fac.group ? badge(fac.group) : ''}
         ${btn({ label: 'Change', kind: 'ghost', small: true, action: 'fac-clear', data: { p } })}
       </div>
-      ${(() => { const o = bsOf(ctx, fac.id); const r = o ? origArmyRules(o) : []; return r.length ? `<details class="rule" open><summary>Army rule</summary>${ruleTexts(r)}</details>` : `<p class="muted small">${o === null ? 'Loading army rule …' : 'Army rule not in the BSData (New Recruit) data.'}</p>`; })()}
+      ${(() => { const o = bsOf(ctx, fac.id); const r = o ? origArmyRules(o) : []; return r.length ? `<details class="rule"><summary>Army rule</summary>${ruleTexts(r)}</details>` : `<p class="muted small">${o === null ? 'Loading army rule …' : 'Army rule not in the BSData (New Recruit) data.'}</p>`; })()}
       ${fac.resource && fac.resource.name ? `<p class="small muted">Resource counter: ${esc(fac.resource.name)}</p>` : ''}
     </div>
     <div class="row between dp-row">
