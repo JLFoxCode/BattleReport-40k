@@ -100,19 +100,31 @@ function renderAppbar() {
   const stage = state ? state.stage : '';
   const canUndo = state && state.seq > 1;
   appbar.classList.add('show');
+  // Wide screens: all views in the bar. Phones: code + current view, everything else in the ☰ menu (no crowding).
+  const curItem = items.find(([v, m]) => cur(v, m));
+  const links = items.map(([v, m, href, label]) => `<a class="ab-role${cur(v, m) ? ' on' : ''}${typeof m === 'number' ? ' p' + m : ''}" href="${href}">${esc(label)}</a>`).join('');
   appbar.innerHTML = `
     <a class="ab-home" href="#/" title="Lobby">⌂</a>
     <span class="ab-code">${esc(code)}${stage ? ` <span class="ab-stage">${esc({ setup: 'Setup', deploy: 'Deployment', battle: 'Round ' + (state.round || 0), over: 'Finished' }[stage] || stage)}</span>` : ''}</span>
-    <div class="ab-roles">${items.map(([v, m, href, label]) => `<a class="ab-role${cur(v, m) ? ' on' : ''}${typeof m === 'number' ? ' p' + m : ''}" href="${href}">${esc(label)}</a>`).join('')}</div>
-    <button class="ab-undo" type="button" data-ab="undo" title="Undo"${canUndo ? '' : ' disabled'}>↶</button>
-    <button class="ab-undo ab-reload" type="button" data-ab="reload" title="Reload">↻</button>`;
+    ${curItem ? `<span class="ab-cur${typeof curItem[1] === 'number' ? ' p' + curItem[1] : ''}">${esc(curItem[3])}</span>` : ''}
+    <div class="ab-roles">${links}</div>
+    <button class="ab-undo ab-wide" type="button" data-ab="undo" title="Undo"${canUndo ? '' : ' disabled'}>↶</button>
+    <button class="ab-undo ab-reload ab-wide" type="button" data-ab="reload" title="Reload">↻</button>
+    <button class="ab-undo ab-menu" type="button" data-ab="menu" title="Menu" aria-haspopup="true" aria-expanded="false">☰</button>
+    <div class="ab-drop" role="menu">${links}
+      <div class="ab-drop-row"><button type="button" data-ab="undo"${canUndo ? '' : ' disabled'}>↶ Undo</button><button type="button" data-ab="reload">↻ Reload</button></div>
+    </div>`;
 }
 appbar.addEventListener('click', async e => {
   const b = e.target.closest('[data-ab]');
   if (!b) return;
   if (b.dataset.ab === 'undo') { b.disabled = true; try { await undo(); } finally { renderAppbar(); } }
   if (b.dataset.ab === 'reload') location.reload();
+  if (b.dataset.ab === 'menu') { const open = appbar.classList.toggle('menu-open'); b.setAttribute('aria-expanded', String(open)); }
 });
+// close the ☰ menu on navigation or a tap outside
+appbar.addEventListener('click', e => { if (e.target.closest('.ab-drop a')) appbar.classList.remove('menu-open'); });
+document.addEventListener('click', e => { if (!e.target.closest('.appbar')) appbar.classList.remove('menu-open'); });
 
 function updateStatusbar() {
   const needsNet = !!store.code;

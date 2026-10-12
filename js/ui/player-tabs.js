@@ -34,7 +34,7 @@ export function renderHead(ctx, ui) {
   return `<div class="pl-status">
       <div class="pl-status-main">
         <div class="pl-round">${now.battle ? `Round ${state.round}<span class="muted">/5</span>` : esc(state.stage === 'deploy' ? 'Deployment' : 'Setup')}</div>
-        <div class="pl-turn p${now.battle ? state.turn : me}">${now.battle ? `${now.side === 'own' ? 'Your turn' : "Opponent's turn"} · ${who}` : who}</div>
+        <div class="pl-turn p${now.battle ? state.turn : me}">${now.battle ? (now.side === 'own' ? `Your turn<span class="pl-turn-who"> · ${who}</span>` : `Opponent's turn · ${who}`) : who}</div>
       </div>
       <div class="pl-kpis">
         <div class="kpi p${me}"><b>${cp}</b><small>CP</small></div>

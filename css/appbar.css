@@ -16,3 +16,22 @@ body.has-appbar { --appbar-h: 44px; }
 .ab-undo { width: 36px; height: 36px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel); color: var(--text); font-size: 1.1rem; }
 .ab-undo:disabled { opacity: .35; }
 @media (max-width: 420px) { .ab-code .ab-stage { display: none; } .ab-role { padding: 6px 8px; } }
+
+/* ───────── Phones: code + current view + ☰ menu instead of the crowded row ───────── */
+.ab-cur, .ab-menu, .ab-drop { display: none; }
+@media (max-width: 700px) {
+  .appbar { gap: 6px; padding: 0 10px; }
+  .ab-roles, .ab-wide { display: none; }
+  .ab-code .ab-stage { display: inline; }
+  .ab-cur { display: inline-flex; align-items: center; margin-left: auto; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--line);
+    font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 45vw; }
+  .ab-cur.p0 { border-color: var(--p0); } .ab-cur.p1 { border-color: var(--p1); }
+  .ab-menu { display: inline-flex; align-items: center; justify-content: center; flex: none; }
+  .appbar:not(:has(.ab-cur)) .ab-menu { margin-left: auto; }
+  .appbar.menu-open .ab-drop { display: flex; flex-direction: column; gap: 4px; position: absolute; top: 100%; right: 8px; min-width: 210px;
+    padding: 8px; background: var(--panel2); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,.45); z-index: 60; }
+  .ab-drop .ab-role { min-height: 42px; padding: 0 14px; font-size: 1rem; border-radius: 10px; }
+  .ab-drop-row { display: flex; gap: 6px; border-top: 1px solid var(--line); padding-top: 6px; margin-top: 2px; }
+  .ab-drop-row button { flex: 1; min-height: 40px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel); color: var(--text); font: inherit; }
+  .ab-drop-row button:disabled { opacity: .35; }
+}

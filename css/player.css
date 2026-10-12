@@ -269,3 +269,31 @@
 .strat-orig { margin: 0 0 4px; font-size: 14px; line-height: 1.35; white-space: pre-line; }
 .strat-orig b { font-size: 11px; letter-spacing: .06em; opacity: .65; margin-right: 4px; }
 .kw.not { color: var(--muted); }
+
+/* ───────── Phones: compact pinned head (round/turn + CP/resource/VP in one slim row, flat tabs) ───────── */
+@media (max-width: 600px) {
+  .pl-status, .pl-status:has(.pl-hres) { min-height: 0; padding: 4px 12px; gap: 8px; }
+  .pl-status-main { line-height: 1.1; }
+  .pl-round, .pl-status:has(.pl-hres) .pl-round { font-size: 11px; letter-spacing: .08em; }
+  .pl-turn, .pl-status:has(.pl-hres) .pl-turn { font-size: 15px; white-space: nowrap; display: block; -webkit-line-clamp: unset; }
+  .pl-kpis, .pl-status:has(.pl-hres) .pl-kpis { gap: 10px; align-items: center; }
+  .pl-kpis .kpi, .pl-status:has(.pl-hres) .pl-kpis .kpi { line-height: 1; }
+  .pl-kpis .kpi b, .pl-status:has(.pl-hres) .pl-kpis .kpi b { font-size: 18px; }
+  .pl-kpis .kpi.vp b, .pl-status:has(.pl-hres) .pl-kpis .kpi.vp b { font-size: 17px; }
+  .pl-kpis .kpi small { font-size: 9px; margin-top: 1px; letter-spacing: .08em; }
+  .pl-hres .stepper.hres button { min-width: 24px; min-height: 26px; font-size: 15px; }
+  .pl-hres .stepper.hres .stepper-value { min-width: 22px; font-size: 16px; }
+  .pl-more { width: 32px; min-width: 32px; height: 32px; min-height: 32px; font-size: 18px; }
+  .pl-tabs { padding: 2px 12px 6px; gap: 4px; }
+  .pl-tabs .chip { min-height: 32px; font-size: 14px; padding: 0 8px; }
+  .pl-filters { padding: 0 12px 6px; }
+  .pl-filters .chip { min-height: 30px; font-size: 13px; }
+}
+@media (max-width: 600px) {
+  /* round + turn in one line; on your own phone your name is already in the bar above */
+  .pl-status-main { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+  .pl-round { flex: none; }
+  .pl-turn { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+  .pl-turn-who { display: none; }
+  .pl-status .btn.pl-more { width: 32px; min-width: 32px; height: 32px; min-height: 32px; padding: 0; font-size: 18px; border-radius: 8px; }
+}
