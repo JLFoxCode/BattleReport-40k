@@ -280,3 +280,7 @@
 .sheet.tbl-score .score-count { gap: 10px; }
 .sheet.tbl-score .score-count .stepper button { min-width: 40px; min-height: 38px; }
 .sheet.tbl-score .score-eq b { font-size: 18px; }
+/* Scoring popup: single toggle – lit = achieved */
+.score-tog { min-height: 40px; min-width: 128px; padding: 0 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); color: var(--muted); font: 700 15px/1 var(--font-body); cursor: pointer; white-space: nowrap; flex: none; transition: background .12s, box-shadow .12s; }
+.score-tog.on { background: var(--ok); border-color: var(--ok); color: #05210F; box-shadow: 0 0 14px color-mix(in srgb, var(--ok) 55%, transparent); }
+.score-stage-vp { white-space: nowrap; }

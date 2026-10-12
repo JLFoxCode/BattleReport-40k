@@ -660,16 +660,15 @@ function openScoreSheet() {
   const maxOf = it => (it.max != null ? Number(it.max) : 15);
   const mod = { vp: 0 };   // manual modifier (corrections, rules the card list cannot express)
   let edited = false;
-  // Two kinds of input only (user decision): YES / NO – named stages (e.g. Cleanse "one objective" / "two or more")
-  // become one yes/no line each, a yes clears the others – and "X VP each" as a counter (− n +) that stops at the max.
-  const yesNo = (vp, on, unset) => `<div class="score-yn">
-      <button type="button" class="score-no${on ? '' : ' on'}" data-opt="0"${unset != null ? ` data-unset="${esc(unset)}"` : ''}>No</button>
-      <button type="button" class="score-yes${on ? ' on' : ''}" data-opt="${esc(vp)}">Yes · ${esc(vp)} VP</button></div>`;
+  // Two kinds of input only (user decision): a toggle button that lights up when the condition is met – named stages
+  // (e.g. Cleanse "one objective" / "two or more") get one toggle each, lighting one clears the others – and
+  // "X VP each" as a counter (− n +) that stops at the max.
+  const yesNo = (vp, on) => `<button type="button" class="score-tog${on ? ' on' : ''}" data-opt="${esc(vp)}" aria-pressed="${on}">${on ? '✓ Achieved' : 'Not achieved'}</button>`;
   const rowHtml = (it, i) => {
     let ctl, sub = '';
     if (it.opts) {
       ctl = `<div class="score-stages">${it.opts.map(o => { const v = Number(o.vp) || 0;
-        return `<div class="score-stage"><span class="score-stage-t">${esc(o.t)}</span>${yesNo(v, it.vp === v, v)}</div>`; }).join('')}</div>`;
+        return `<div class="score-stage"><span class="score-stage-t">${esc(o.t)} <b class="score-stage-vp">· ${esc(v)} VP</b></span>${yesNo(v, it.vp === v)}</div>`; }).join('')}</div>`;
     } else if (it.k === 'per') {
       const cap = maxOf(it);
       sub = `${esc(it.unit)} VP each${it.max != null ? ` · max. ${esc(it.max)} VP` : ''}`;
@@ -741,7 +740,7 @@ function openScoreSheet() {
         const it = items[Number(row.dataset.i)];
         if (!it) return;
         if (n) { it.n = Math.max(0, it.n + Number(n.dataset.n)); it.vp = Math.min(maxOf(it), it.n * it.unit); if (Number(n.dataset.n) > 0 && it.vp >= maxOf(it)) it.n = Math.ceil(it.vp / it.unit); }
-        else if (o) { if (o.dataset.unset == null || Number(o.dataset.unset) === it.vp) it.vp = Number(o.dataset.opt) || 0; }
+        else if (o) { const v = Number(o.dataset.opt) || 0; it.vp = it.vp === v ? 0 : v; }
         else it.vp = it.vp > 0 ? 0 : it.unit;
         edited = items.some(x => x.vp !== x.suggest);
         el.querySelector('.sheet-body').innerHTML = bodyHtml();
