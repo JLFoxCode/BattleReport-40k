@@ -163,6 +163,7 @@ H['buff.info'] = (el, ctx, ui) => S.openBuffSheet(ctx, ui, el.dataset.leader, Nu
 H['ability.toggle'] = async (el, ctx, ui) => {
   const e = T.abilityByKey(ctx, el.dataset.key);
   if (!e) { toast('Ability not found', 'bad'); return; }
+  if (e.limit === 'phase') { S.openPhaseUseSheet(ctx, e); return; }
   const use = T.abilityUseOf(ctx.state, ctx.me, e);
   if (use) {
     const r = await ctx.dispatch({ type: 'ability.undo', player: ctx.me, useId: use.id });

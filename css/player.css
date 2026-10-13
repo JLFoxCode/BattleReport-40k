@@ -320,3 +320,6 @@
   .pl-hres .stepper.hres button { min-width: 26px; min-height: 34px; font-size: 18px; }
   .pl-hres .stepper.hres .stepper-value { min-width: 24px; font-size: 21px; }
 }
+/* Once-per-phase: phase picker (lit = used in that phase this turn) */
+.phase-use .phase-pick { display: grid; grid-template-columns: 1fr; gap: 8px; margin-top: 10px; }
+.phase-use .phase-pick .score-tog { width: 100%; min-height: 46px; text-align: left; }

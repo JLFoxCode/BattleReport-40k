@@ -965,12 +965,15 @@ H['ability.use'] = (s, a) => {
   if (!a.key || typeof a.key !== 'string') fail('Ability key missing');
   const limit = LIMITS.includes(a.limit) ? a.limit : 'turn';
   if (!s.abilityUses) s.abilityUses = [];
+  // once per phase: the player names the phase it was used in (phone popup); without one the game's current phase counts
+  const phase = limit === 'phase' && PHASE_IDS.includes(a.phase) ? a.phase : s.phase;
   const same = s.abilityUses.filter(u => u.player === a.player && u.key === a.key);
-  const already = same.some(u => limit === 'battle' || (u.round === s.round && (limit === 'round' || u.turn === s.turn)));
-  if (already) fail('“' + (a.name || a.key) + '” has already been used this ' + (limit === 'battle' ? 'battle' : limit === 'round' ? 'battle round' : 'turn'));
-  const use = { id: nid(s, 'ab'), player: a.player, key: String(a.key), name: a.name ? String(a.name) : String(a.key), limit, source: a.source ? String(a.source) : null, round: s.round, turn: s.turn, phase: s.phase };
+  const already = same.some(u => limit === 'battle' || (u.round === s.round && (limit === 'round' || (u.turn === s.turn && (limit !== 'phase' || (u.phase || null) === (phase || null))))));
+  const phaseName = (WH.PHASES.find(p => p.id === phase) || {}).full;
+  if (already) fail('“' + (a.name || a.key) + '” has already been used ' + (limit === 'phase' && phaseName ? 'in the ' + phaseName + ' this turn' : 'this ' + (limit === 'battle' ? 'battle' : limit === 'round' ? 'battle round' : 'turn')));
+  const use = { id: nid(s, 'ab'), player: a.player, key: String(a.key), name: a.name ? String(a.name) : String(a.key), limit, source: a.source ? String(a.source) : null, round: s.round, turn: s.turn, phase };
   s.abilityUses.push(use);
-  log(s, a, pl.name + ': used “' + use.name + '”' + (use.source ? ' (' + use.source + ')' : '') + (a.note ? ' – ' + String(a.note) : '') + ' · once per ' + (limit === 'round' ? 'battle round' : limit), a.player, { use });
+  log(s, a, pl.name + ': used “' + use.name + '”' + (use.source ? ' (' + use.source + ')' : '') + (a.note ? ' – ' + String(a.note) : '') + (limit === 'phase' && phaseName ? ' in the ' + phaseName : '') + ' · once per ' + (limit === 'round' ? 'battle round' : limit), a.player, { use });
 };
 H['ability.undo'] = (s, a) => {
   const pl = pIdx(s, a.player);

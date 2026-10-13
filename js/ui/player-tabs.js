@@ -298,18 +298,25 @@ export function abilityUseOf(state, me, entry) {
   const uses = (state.abilityUses || []).filter(u => u.player === me && u.key === entry.key);
   return [...uses].reverse().find(u => entry.limit === 'battle' || (u.round === state.round && (entry.limit === 'round' || u.turn === state.turn))) || null;
 }
+/** Once-per-phase entry: its uses in the current turn (one per phase it was used in). */
+export const PHASE_CHOICES = WH.PHASES.filter(p => p.id !== 'end');
+export function phaseUsesOf(state, me, entry) {
+  return (state.abilityUses || []).filter(u => u.player === me && u.key === entry.key && u.round === state.round && u.turn === state.turn);
+}
+const phaseNames = uses => uses.map(u => (WH.PHASES.find(p => p.id === u.phase) || { name: 'this turn' }).name).join(' · ');
 export function abilityByKey(ctx, key) { return abilityTracker(ctx).find(e => e.key === key) || null; }
 
 function abilityRows(ctx, entries) {
   const { state, me } = ctx;
   const inBattle = state.stage === 'battle';
   return `<ul class="abil-list">${entries.map(e => {
+    const pUses = e.limit === 'phase' ? phaseUsesOf(state, me, e) : null;
     const use = abilityUseOf(state, me, e);
-    const when = use ? (e.limit === 'battle' ? `R${use.round}` : `R${use.round} · ${use.turn === me ? 'your turn' : 'opp. turn'}`) : '';
+    const when = pUses ? phaseNames(pUses) : use ? (e.limit === 'battle' ? `R${use.round}` : `R${use.round} · ${use.turn === me ? 'your turn' : 'opp. turn'}`) : '';
     return `<li class="abil${use ? ' used' : ''} kind-${esc(e.kind)}">
       <button type="button" class="abil-toggle" data-action="ability.toggle" data-key="${esc(e.key)}"${inBattle ? '' : ' disabled'} aria-pressed="${use ? 'true' : 'false'}" aria-label="${esc(e.name)}: ${use ? 'used – tap to undo' : 'available – tap to mark as used'}">
         <span class="abil-main"><b class="abil-name">${esc(e.name)}</b><span class="abil-src muted xs">${esc(e.source)}</span></span>
-        <span class="abil-right"><span class="badge lim">${esc(entryLabel(e))}</span><span class="abil-state ${use ? 'used' : 'avail'}">${use ? `used (${esc(when)})` : (inBattle ? 'available' : 'in battle')}</span></span>
+        <span class="abil-right"><span class="badge lim">${esc(entryLabel(e))}</span><span class="abil-state ${use ? 'used' : 'avail'}">${pUses && pUses.length ? `used: ${esc(when)}` : use ? `used (${esc(when)})` : (inBattle ? 'available' : 'in battle')}</span></span>
       </button>
       <button type="button" class="btn ghost icon ds-info abil-info" data-action="ability.info" data-key="${esc(e.key)}" aria-label="Show text of ${esc(e.name)}">i</button>
     </li>`;

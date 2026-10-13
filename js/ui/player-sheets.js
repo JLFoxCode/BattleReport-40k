@@ -6,7 +6,7 @@ import {
   stepper, cpBadge, affectedUnits, myUnits, pName, cleanOrig, stratPhaseId, phasePill, turnBadge, stratSrc, stratKwList, kwLine,
   stratOrigBlock, stratUseState, stratAddonsOf, resourceFor, resShort, fxItem, armyOf, origData, origMod, ensureOrig, enhancementOf
 } from './player-common.js';
-import { buffsOfId, abilityTracker, abilityByKey, abilityUseOf, entryLabel } from './player-tabs.js';
+import { buffsOfId, abilityTracker, abilityByKey, abilityUseOf, entryLabel, phaseUsesOf, PHASE_CHOICES } from './player-tabs.js';
 
 /** Tracker entries whose text reduces a Stratagem's CP cost; amount = CP reduction (Infinity = free / 0 CP).
  * CP gains ("you gain 1CP", "roll one D6: on a 5+") and CP increases ("twice/three times that Stratagem's … CP cost") are not reductions. */
@@ -333,4 +333,26 @@ export function openEnhancementSheet(ctx, ui, name) {
   const e = enhancementOf(c, name);
   if (!e) { toast('Not in the BSData (New Recruit) data', 'warn'); return; }
   return sheet({ title: e.name, cls: 'p' + c.me, body: `${e.cost ? `<p class="muted small">${esc(String(e.cost))} pts</p>` : ''}${origBlocks([{ name: 'Enhancement – original text', text: e.text }])}`, actions: [{ label: 'Close', kind: 'ghost' }] });
+}
+
+/** Once-per-phase ability: pick the phase it was used in (this turn); a lit phase = used there, tap again to undo. */
+export function openPhaseUseSheet(ctx, e) {
+  let st = ctx.state;   // dispatch resolves with the new state
+  const body = () => {
+    const uses = phaseUsesOf(st, ctx.me, e);
+    return `<p class="muted small">${esc(e.source || '')} · once per phase. In which phase of this turn did you use it?</p>
+      <div class="phase-pick">${PHASE_CHOICES.map(p => { const u = uses.find(x => x.phase === p.id);
+        return `<button type="button" class="score-tog${u ? ' on' : ''}" data-phase="${esc(p.id)}" aria-pressed="${!!u}">${u ? '✓ ' : ''}${esc(p.full)}</button>`; }).join('')}</div>`;
+  };
+  sheet({
+    title: e.name, body: body(), cls: 'phase-use',
+    actions: [{ label: 'Done', kind: 'primary' }],
+    onOpen: el => el.addEventListener('click', async ev => {
+      const b = ev.target.closest('[data-phase]'); if (!b) return;
+      const u = phaseUsesOf(st, ctx.me, e).find(x => x.phase === b.dataset.phase);
+      const r = u ? await ctx.dispatch({ type: 'ability.undo', player: ctx.me, useId: u.id })
+                  : await ctx.dispatch({ type: 'ability.use', player: ctx.me, key: e.key, name: e.name, limit: 'phase', source: e.source, phase: b.dataset.phase });
+      if (r) { st = r; el.querySelector('.sheet-body').innerHTML = body(); }
+    })
+  });
 }
