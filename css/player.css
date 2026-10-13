@@ -297,3 +297,26 @@
   .pl-turn-who { display: none; }
   .pl-status .btn.pl-more { width: 32px; min-width: 32px; height: 32px; min-height: 32px; padding: 0; font-size: 18px; border-radius: 8px; }
 }
+/* Phones: bigger numbers in the head (CP / resource / VP) – round and turn stacked to make room */
+@media (max-width: 600px) {
+  .pl-status, .pl-status:has(.pl-hres) { padding: 6px 12px; gap: 10px; }
+  .pl-status-main { display: block; line-height: 1.15; }
+  .pl-round, .pl-status:has(.pl-hres) .pl-round { display: block; font-size: 11px; }
+  .pl-turn, .pl-status:has(.pl-hres) .pl-turn { font-size: 16px; }
+  .pl-kpis, .pl-status:has(.pl-hres) .pl-kpis { gap: 14px; }
+  .pl-kpis .kpi b, .pl-status:has(.pl-hres) .pl-kpis .kpi b { font-size: 28px; }
+  .pl-kpis .kpi.vp b, .pl-status:has(.pl-hres) .pl-kpis .kpi.vp b { font-size: 26px; }
+  .pl-kpis .kpi small { font-size: 10px; margin-top: 2px; }
+  .pl-hres .stepper.hres button { min-width: 32px; min-height: 36px; font-size: 20px; }
+  .pl-hres .stepper.hres .stepper-value { min-width: 30px; font-size: 24px; }
+  .pl-status .btn.pl-more { width: 36px; min-width: 36px; height: 36px; min-height: 36px; }
+}
+@media (max-width: 600px) { .pl-status-main { flex: none; } .pl-round, .pl-turn { overflow: visible; text-overflow: clip; } }
+@media (max-width: 380px) {
+  .pl-status, .pl-status:has(.pl-hres) { gap: 8px; padding: 6px 10px; }
+  .pl-kpis, .pl-status:has(.pl-hres) .pl-kpis { gap: 9px; }
+  .pl-kpis .kpi b, .pl-status:has(.pl-hres) .pl-kpis .kpi b { font-size: 24px; }
+  .pl-kpis .kpi.vp b, .pl-status:has(.pl-hres) .pl-kpis .kpi.vp b { font-size: 22px; }
+  .pl-hres .stepper.hres button { min-width: 26px; min-height: 34px; font-size: 18px; }
+  .pl-hres .stepper.hres .stepper-value { min-width: 24px; font-size: 21px; }
+}
