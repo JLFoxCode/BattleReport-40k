@@ -528,13 +528,13 @@ function block(V, pw, nodes, prefix, depth, compact, caps = []) {
       ? `<button type="button" data-action="arm-op" data-op="count" data-d="1" data-id="${esc(last.s.id)}"${sel.r.swap ? ` data-from="${esc(sel.r.swap.s.id)}"` : ''}${can ? '' : ' disabled'} aria-label="One ${esc(short(sel.name))} more">+</button>`
       : `<button type="button" class="arm-madd" data-action="arm-op" data-op="add" data-key="${esc(pickKey)}" data-p="${esc(pid)}" data-t="${esc(sel.tok)}"${sel.r.swap ? ` data-from="${esc(sel.r.swap.s.id)}"` : ''}${can ? '' : ' disabled'} aria-label="Add ${esc(short(sel.name))}">+</button>`;
     return `<div class="arm-mbox">
+      <div class="arm-gh">Model types${pid ? `<button type="button" class="arm-cmp" data-action="arm-mcmp" data-id="${esc(pid)}" data-cat="${esc(prefix)}">Compare</button>` : ''}</div>
       <div class="arm-choices">${others.map(o => `<button type="button" class="arm-opt${o === sel ? ' on' : ''}${o.n ? ' has' : ''}" data-action="arm-mpick" data-key="${esc(pickKey)}" data-tok="${esc(o.tok)}" title="${esc(o.name)}">${mdot(o.k)}${esc(short(o.name))}${o.n ? ` <b class="arm-cnt">${o.n}×</b>` : ''}</button>`).join('')}</div>
       <div class="arm-mbox-foot">
         <span class="arm-mbox-sel">${mdot(sel.k)}<b>${esc(short(sel.name))}</b>${sel.cost ? ` <span class="arm-cost">${sel.cost} pts</span>` : ''}<span class="muted xs">${sel.r.swap && !sel.r.add ? ' · + swaps one ' + esc(short(unitName(V, sel.r.swap))) : sel.max > 0 ? ' · max ' + sel.max : ''}</span></span>
         <div class="stepper sm">${minus}<span class="stepper-value">${sel.n}</span>${plus}</div>
       </div>
       ${sel.gear.length && !sel.own ? `<div class="arm-fixed"><span class="arm-fixed-l">Each equipped with</span> ${esc(sel.gear.join(' · '))}</div>` : sel.own ? '<div class="muted xs">Its weapons are chosen in its card below.</div>' : ''}
-      ${pid ? `<div class="arm-mbox-cmp"><button type="button" class="arm-cmp" data-action="arm-mcmp" data-id="${esc(pid)}" data-cat="${esc(prefix)}">Compare</button></div>` : ''}
     </div>`;
   };
   html = boxHtml() + html + specialsOn.join('') + specials.join('');
