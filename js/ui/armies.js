@@ -10,6 +10,7 @@ import { loadDatasheets, matchUnit, normName } from '../data/datasheets.js';
 import { datasheetCard, datasheetGroupCard } from './datasheet.js';
 import { leaderBuffs } from './player-common.js';
 import { leaderTargets } from './player-tabs.js';
+import { loadOrig, origDetachment, origDetachmentRule, origEnhancements } from '../data/orig.js';
 import { kwList, kwify } from './keywords.js';
 
 const dsCache = new Map();   // faction id → datasheet package (or 'loading')
@@ -17,7 +18,8 @@ const dsCache = new Map();   // faction id → datasheet package (or 'loading')
 const DP = '82ae-1066-5107-6ae0';
 const DP_LIMIT = { 1000: 2, 2000: 3 };
 // Detachment Points to buy detachments with: by battle size (Incursion 2, Strike Force 3) unless set by hand (army.dp)
-const dpLimitOf = a => (a.dp != null ? Number(a.dp) : DP_LIMIT[a.limit] || 3);
+const dpLimitOf = a => (a.dp != null ? Number(a.dp) : DP_LIMIT[a.limit] || (Number(a.limit) <= 1000 ? 2 : 3));
+const sizeName = pts => (SIZES.find(x => x.pts === Number(pts)) || {}).name || 'Custom';
 const dpUsed = V => V.force.ch.reduce((x, w) => x + E.totalCost(V, w, DP), 0);
 const CAT_ORDER = ['Configuration', 'Epic Hero', 'Character', 'Battleline', 'Infantry', 'Mounted', 'Beast', 'Swarm', 'Monster', 'Vehicle', 'Dedicated Transport', 'Fortification'];
 const byRole = (a, b) => ((CAT_ORDER.indexOf(a) + 1 || 99) - (CAT_ORDER.indexOf(b) + 1 || 99)) || a.localeCompare(b);
@@ -134,7 +136,8 @@ async function newArmy() {
     <div class="field"><span class="label">Faction</span>
       <div class="seg fac-tabs" role="tablist">${ALLIANCES.map(a => `<button type="button" class="seg-btn${a === alliance ? ' on' : ''}" data-alliance="${esc(a)}" role="tab">${esc(a)}</button>`).join('')}</div>
       <div class="fac-list">${listHtml()}</div></div>
-    <div class="field"><span class="label">Battle size</span><div class="chips">${SIZES.map((s, i) => `<label class="chip${i === 1 ? ' on' : ''}"><input type="radio" name="size" value="${s.pts}"${i === 1 ? ' checked' : ''} hidden>${esc(s.name)} · ${s.pts} pts</label>`).join('')}</div></div>`;
+    <div class="field"><span class="label">Battle size</span><div class="chips">${SIZES.map((s, i) => `<label class="chip${i === 1 ? ' on' : ''}"><input type="radio" name="size" value="${s.pts}"${i === 1 ? ' checked' : ''} hidden>${esc(s.name)} · ${s.pts} pts</label>`).join('')}<label class="chip"><input type="radio" name="size" value="custom" hidden>Custom</label></div>
+      <input type="number" name="custom" class="arm-custom-in" min="100" step="50" inputmode="numeric" placeholder="Points, e.g. 1500" hidden></div>`;
   sheet({
     title: 'New army', body, cls: 'arm-new-sheet',
     onOpen: el => {
@@ -144,7 +147,11 @@ async function newArmy() {
         const ok = el.querySelector('[data-sheet-action="1"]');
         if (ok) { ok.disabled = !pick; ok.textContent = pick ? `Create ${pick.label} army` : 'Choose a faction'; }
       };
-      el.addEventListener('change', e => { if (e.target.name === 'size') el.querySelectorAll('.chips .chip').forEach(c => c.classList.toggle('on', c.querySelector('input').checked)); });
+      el.addEventListener('change', e => {
+        if (e.target.name !== 'size') return;
+        el.querySelectorAll('.chips .chip').forEach(c => { const i = c.querySelector('input'); if (i) c.classList.toggle('on', i.checked); });
+        const cu = el.querySelector('input[name=custom]'); cu.hidden = e.target.value !== 'custom'; if (!cu.hidden) cu.focus();
+      });
       el.addEventListener('click', e => {
         const t = e.target.closest('[data-alliance]');
         if (t) { alliance = t.dataset.alliance; sync(); return; }
@@ -155,7 +162,9 @@ async function newArmy() {
     },
     actions: [{ label: 'Cancel', kind: 'ghost' }, { label: 'Choose a faction', kind: 'primary', disabled: true, onClick: (close, el) => {
       if (!pick) return false;
-      const limit = Number((el.querySelector('input[name=size]:checked') || {}).value) || 2000;
+      const sv = (el.querySelector('input[name=size]:checked') || {}).value;
+      const limit = sv === 'custom' ? Math.floor(Number(el.querySelector('input[name=custom]').value)) : Number(sv) || 2000;
+      if (!(limit >= 100)) { toast('Enter a points limit for the custom game', 'warn'); return false; }
       const name = el.querySelector('input[name=name]').value.trim() || `${pick.label} ${limit}`;
       createArmy(pick, name, limit);
     } }]
@@ -181,7 +190,9 @@ function setBattleSize(sys, r, limit) {
   const bs = V.force.ch.find(w => w.node && w.node.name === 'Battle Size');
   if (!bs) return Object.assign({}, r, { limit });
   const g = sys.children(bs.node).find(k => k.group && k.name === 'Battle Size');
-  const opt = g && sys.children(g).find(o => new RegExp('\\(' + limit + ' Point').test(o.name));
+  // a custom size uses the rules of the nearest standard size (up to 1000 pts Incursion, above Strike Force)
+  const std = limit <= 1000 ? 1000 : 2000;
+  const opt = g && sys.children(g).find(o => new RegExp('\\(' + std + ' Point').test(o.name));
   if (!opt) return Object.assign({}, r, { limit });
   return Object.assign(E.chooseInGroup(sys, r, bs.s.id, g.token, g.token + '>' + opt.token), { limit });
 }
@@ -261,6 +272,7 @@ function editorHtml() {
       <div class="arm-total${over ? ' bad' : ''}"><b>${pts}</b><small>/ ${esc(army.limit || '–')} pts</small></div>
       <button type="button" class="arm-prob ${probs.length ? 'warn' : 'ok'}" data-action="arm-problems" aria-label="Problems">${probs.length ? '⚠ ' + probs.length : '✓'}</button>
     </header>
+    ${armyRulesHtml()}
     ${(() => { const loose = looseLeaders(V, dsPack()); return loose.length ? `<div class="arm-lead-info">ⓘ ${loose.length === 1 ? '1 leader is' : loose.length + ' leaders are'} not attached to a unit yet: ${loose.map(w => `<button type="button" class="arm-link" data-action="arm-unit" data-id="${esc(w.s.id)}">${esc(unitName(V, w))}</button>`).join(', ')}</div>` : ''; })()}
     ${order.map(c => c === 'Configuration' ? configHtml(V, groups.get(c), byUnit) : `
       <section class="arm-sec">
@@ -304,7 +316,7 @@ function configHtml(V, list, byUnit) {
     ${items.map(w => {
       const probs = byUnit.get(w.s.id) || [];
       return `<div class="arm-cfg${probs.length ? ' has-prob' : ''}"><div class="arm-cfg-h">${esc(E.effective(V, w.node, w, w.parent).name)}${probs.length ? `<button type="button" class="arm-tri" data-action="arm-probs" data-ids="${esc(w.s.id)}" aria-label="Show problems" title="Show problems">⚠</button>` : ''}</div>
-        ${w.node.name === 'Detachment' ? dpRow(V) : ''}
+        ${w.node.name === 'Detachment' ? dpRow(V) + `<div class="arm-det-cmp"><button type="button" class="arm-cmp" data-action="arm-detcmp" data-id="${esc(w.s.id)}">Compare detachments</button></div>` : ''}
         ${optionsHtml(V, w, true)}
         </div>`;
     }).join('')}
@@ -314,10 +326,72 @@ function configHtml(V, list, byUnit) {
 function dpRow(V) {
   const used = dpUsed(V), lim = dpLimitOf(ed.army), auto = ed.army.dp == null;
   return `<div class="arm-dp${used > lim ? ' bad' : ''}">
-    <div class="arm-dp-main"><span class="arm-dp-val"><b>${used}</b> / ${lim} DP</span><span class="muted xs">${auto ? (ed.army.limit === 1000 ? 'Incursion' : 'Strike Force') + ': ' + lim + ' Detachment Points' : 'Set by hand'}</span></div>
+    <div class="arm-dp-main"><span class="arm-dp-val"><b>${used}</b> / ${lim} DP</span><span class="muted xs">${auto ? sizeName(ed.army.limit) + (sizeName(ed.army.limit) === 'Custom' ? ' ' + ed.army.limit + ' pts' : '') + ': ' + lim + ' Detachment Points' : 'Set by hand'}</span></div>
     <div class="stepper sm"><button type="button" data-action="arm-dp" data-d="-1"${lim <= 0 ? ' disabled' : ''} aria-label="Fewer Detachment Points">−</button><span class="stepper-value">${lim}</span><button type="button" data-action="arm-dp" data-d="1"${lim >= 9 ? ' disabled' : ''} aria-label="More Detachment Points">+</button></div>
     ${auto ? '' : `<button type="button" class="chip sm" data-action="arm-dp-auto">By battle size</button>`}
   </div>`;
+}
+
+/** The faction's army rule(s) on top, collapsed – to read again at any time. */
+function armyRulesHtml() {
+  const pack = dsPack();
+  const rules = (pack && pack.armyRules) || [];
+  if (!rules.length) return '';
+  const rich = t => kwify(esc(String(t || '').replace(/\^\^/g, '').replace(/\*\*/g, ''))).replace(/\n/g, '<br>');
+  return `<details class="arm-rules"${ed.rulesOpen ? ' open' : ''}><summary><span class="arm-sec-h">Army rules</span><span class="arm-rules-names">${esc(rules.map(r => r.name).join(' · '))}</span></summary>
+    <div class="arm-rules-body">${rules.map(r => `<div class="det-rule"><b>${esc(r.name)}:</b> ${rich(r.text)}</div>`).join('')}</div></details>`;
+}
+
+/* ───────── Detachments side by side: rule, enhancements and stratagems of each one (tap = take / drop) ───────── */
+async function openDetCompare(detSelId) {
+  const fid = ed.army.faction;
+  let orig = null;
+  try { orig = fid ? await loadOrig(fid) : null; } catch {}
+  const pack = dsPack();
+  const sys = ed.sys;
+  const build = () => {
+    const V = E.view(sys, ed.army);
+    const w = V.byId.get(detSelId);
+    if (!w) return '<p class="muted">No detachment choice in this army.</p>';
+    const g = sys.children(w.node).find(k => k.group);
+    if (!g) return '';
+    const kids = sys.children(g).filter(x => !E.limits(V, x, null, w).hidden);
+    const rich = t => kwify(esc(String(t || '').replace(/\^\^/g, '').replace(/\*\*/g, ''))).replace(/\n/g, '<br>');
+    return `<p class="muted xs">${dpUsed(V)} / ${dpLimitOf(ed.army)} Detachment Points used. Tap a detachment to take it or drop it; open the sections to read everything.</p>` + kids.map(x => {
+      const t = g.token + '>' + x.token;
+      const on = w.ch.find(c => c.s.t === t);
+      const name = E.limits(V, x, on || null, w).name;
+      const dp = E.nodeCost(V, x, on || null, w, DP);
+      const od = orig ? origDetachment(orig, name) : null;
+      const bsd = pack && pack.detachments ? pack.detachments.find(d => normName(d.name) === normName(name)) : null;
+      const rules = (orig ? origDetachmentRule(orig, name) : []).length ? origDetachmentRule(orig, name) : ((od && od.rule) || (bsd && bsd.rules) || []);
+      const enh = (orig ? origEnhancements(orig, name) : []).length ? origEnhancements(orig, name) : ((bsd && bsd.enhancements) || []);
+      const strats = od && od.stratagems ? Object.values(od.stratagems) : [];
+      return `<div class="cmp-opt det-opt${on ? ' on' : ''}" style="--oc:${optColor('det', t)}">
+        <div class="cmp-opt-h" role="button" tabindex="0" data-dtok="${esc(t)}"><span class="arm-dot" aria-hidden="true"></span><b>${esc(name)}</b> <span class="arm-cost arm-dpc">${dp} DP</span>${on ? ' <span class="badge ok">chosen</span>' : '<span class="cmp-pick">Tap to take</span>'}</div>
+        <div class="det-body">
+          ${rules.map(r => `<div class="det-rule"><b>${esc(r.name)}:</b> ${rich(r.text)}</div>`).join('') || '<p class="muted xs">Rule not in the data.</p>'}
+          ${enh.length ? `<details class="det-sec"><summary>Enhancements (${enh.length})</summary>${enh.map(e => `<div class="det-item"><b>${esc(e.name)}${e.cost ? ` (${esc(e.cost)} pts)` : ''}:</b> ${rich(e.text)}</div>`).join('')}</details>` : ''}
+          ${strats.length ? `<details class="det-sec"><summary>Stratagems (${strats.length})</summary>${strats.map(st => `<div class="det-item det-strat"><div><b>${esc(st.name)}</b> <span class="badge num cp">${esc(st.costText || (st.cost + 'CP'))}</span>${st.category ? ` <span class="muted xs">${esc(st.category)}</span>` : ''}</div>
+            ${st.when ? `<div><b class="xs">WHEN</b> ${rich(st.when)}</div>` : ''}${st.target ? `<div><b class="xs">TARGET</b> ${rich(st.target)}</div>` : ''}${st.effect ? `<div><b class="xs">EFFECT</b> ${rich(st.effect)}</div>` : ''}${st.restrictions ? `<div><b class="xs">RESTRICTIONS</b> ${rich(st.restrictions)}</div>` : ''}</div>`).join('')}</details>` : '<p class="muted xs">Stratagems: not in the data for this detachment.</p>'}
+        </div></div>`;
+    }).join('');
+  };
+  sheet({
+    title: 'Detachments', body: build(), cls: 'arm-cmp-sheet wide',
+    onOpen: el => el.addEventListener('click', e => {
+      const h = e.target.closest('[data-dtok]');
+      if (!h) return;
+      const V = E.view(sys, ed.army), w = V.byId.get(detSelId);
+      if (!w) return;
+      const on = w.ch.find(c => c.s.t === h.dataset.dtok);
+      apply(r => (on ? E.removeSel(r, on.s.id) : E.addSel(sys, r, detSelId, h.dataset.dtok)));
+      const body = el.querySelector('.sheet-body'), top = body.scrollTop;
+      body.innerHTML = build();
+      body.scrollTop = top;
+    }),
+    actions: [{ label: 'Close', kind: 'ghost' }]
+  });
 }
 
 /* ───────── Options of a selection (generic, like New Recruit): groups, choices, counters, nested ───────── */
@@ -958,6 +1032,7 @@ async function onClick(e) {
     sheet({ title: owner ? unitName(V, owner) : 'Problems', body: list.length ? `<ul class="arm-problist">${list.map(p => `<li>${esc(p.msg)}</li>`).join('')}</ul>` : '<p>No problems.</p>', cls: 'arm-probs-sheet', actions: [{ label: 'OK', kind: 'primary' }] });
     return;
   }
+  if (a === 'arm-detcmp') { e.stopPropagation(); return openDetCompare(b.dataset.id); }
   if (a === 'arm-unit') return openUnit(b.dataset.id);
   if (a === 'arm-cfg') { ed.cfgOpen = !ed.cfgOpen; return rerender(); }
   if (a === 'arm-dp' || a === 'arm-dp-auto') {
@@ -985,10 +1060,13 @@ async function onClick(e) {
   }
   if (a === 'arm-size') {
     sheet({
-      title: 'Battle size', body: `<div class="chips">${SIZES.map(s => `<button type="button" class="chip${ed.army.limit === s.pts ? ' on' : ''}" data-size="${s.pts}">${esc(s.name)} · ${s.pts} pts</button>`).join('')}</div>`,
+      title: 'Battle size', body: `<div class="chips">${SIZES.map(s => `<button type="button" class="chip${ed.army.limit === s.pts ? ' on' : ''}" data-size="${s.pts}">${esc(s.name)} · ${s.pts} pts</button>`).join('')}</div>
+        <label class="field mt"><span>Custom points limit</span><span class="row arm-custom"><input type="number" name="pts" min="100" step="50" inputmode="numeric" value="${SIZES.some(x => x.pts === ed.army.limit) ? '' : esc(ed.army.limit)}" placeholder="e.g. 1500"><button type="button" class="btn primary" data-size-custom>Set</button></span></label>
+        <p class="muted xs">A custom game uses the rules of the nearest standard size (up to 1000 pts Incursion, above that Strike Force); the Detachment Points can be set by hand.</p>`,
       onOpen: (el, close) => el.addEventListener('click', ev => {
-        const c = ev.target.closest('[data-size]'); if (!c) return;
-        const limit = Number(c.dataset.size);
+        const c = ev.target.closest('[data-size], [data-size-custom]'); if (!c) return;
+        const limit = c.dataset.size ? Number(c.dataset.size) : Math.floor(Number(el.querySelector('input[name=pts]').value));
+        if (!(limit >= 100)) { toast('Enter a points limit (100 or more)', 'warn'); return; }
         saveWithSummary(ed.sys, setBattleSize(ed.sys, Object.assign({}, ed.army, { limit }), limit));
         close(); rerender();
       }),

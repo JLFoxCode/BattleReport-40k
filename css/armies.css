@@ -219,3 +219,25 @@
 .arm-have.added { color: var(--ok); font-weight: 700; }
 @keyframes arm-flash { from { background: color-mix(in srgb, var(--ok) 30%, transparent); } to { background: transparent; } }
 .arm-addrow.flash { animation: arm-flash .6s ease-out; }
+/* custom battle size */
+.arm-custom { display: flex; gap: 8px; }
+.arm-custom input { flex: 1; min-width: 0; }
+.arm-custom-in { margin-top: 8px; width: 100%; }
+/* detachment comparison */
+.arm-det-cmp { display: flex; justify-content: flex-end; margin: -2px 0 6px; }
+.det-opt .cmp-opt-h { cursor: pointer; }
+.det-body { padding: 0 10px 10px; font-size: 13px; line-height: 1.45; }
+.det-rule { margin: 2px 0 8px; }
+.det-sec { margin: 6px 0; border-top: 1px solid var(--line); padding-top: 6px; }
+.det-sec > summary { cursor: pointer; font: 700 12px/1.4 var(--font-body); letter-spacing: .05em; text-transform: uppercase; color: var(--muted); padding: 4px 0; }
+.det-item { margin: 6px 0; padding: 6px 8px; border-radius: 8px; background: var(--sunk); }
+.det-strat > div { margin: 2px 0; }
+/* army rules (collapsible, top of the editor) */
+.arm-rules { margin: 0 0 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); }
+.arm-rules > summary { position: relative; display: flex; flex-direction: column; gap: 2px; padding: 10px 70px 10px 12px; cursor: pointer; list-style: none; }
+.arm-rules > summary::-webkit-details-marker { display: none; }
+.arm-rules > summary .arm-sec-h { margin: 0; }
+.arm-rules > summary::after { content: '▾ read'; position: absolute; right: 12px; top: 50%; transform: translateY(-50%); font-size: 12px; font-weight: 600; color: var(--muted); }
+.arm-rules[open] > summary::after { content: '▴ close'; }
+.arm-rules-names { font-weight: 700; font-size: 15px; }
+.arm-rules-body { padding: 0 12px 10px; font-size: 13.5px; line-height: 1.5; }
