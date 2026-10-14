@@ -213,3 +213,4 @@
 .sheet-head .title:has(.arm-tri) { display: flex; align-items: center; }
 .arm-title-t { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .arm-cfg-h { display: flex; align-items: center; }
+.arm-unit { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }

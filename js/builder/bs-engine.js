@@ -530,7 +530,8 @@ export function chooseInGroup(sys, roster, parentId, groupTok, t) {
 export function duplicateSel(roster, id) {
   const r = clone(roster);
   const dup = s => ({ ...s, id: newId(), ch: arr(s.ch).map(dup) });
-  const go = list => { const i = list.findIndex(s => s.id === id); if (i >= 0) { list.splice(i + 1, 0, dup(list[i])); return true; } return list.some(s => go(arr(s.ch))); };
+  // the copy leads nobody yet (a leader can only lead one unit)
+  const go = list => { const i = list.findIndex(s => s.id === id); if (i >= 0) { const c = dup(list[i]); delete c.lead; list.splice(i + 1, 0, c); return true; } return list.some(s => go(arr(s.ch))); };
   go(r.sel);
   return r;
 }

@@ -29,7 +29,7 @@ const ed = { id: null, army: null, sys: null, loading: false, error: null, openU
 
 export function render(root, ctx) {
   lastRoot = root; lastCtx = ctx;
-  if (!root.__armiesBound) { root.__armiesBound = true; root.addEventListener('click', onClick); }
+  if (!root.__armiesBound) { root.__armiesBound = true; root.addEventListener('click', onClick); bindLongPress(root); }
   const id = typeof ctx.me === 'string' && ctx.me ? ctx.me : null;
   if (!id) { ed.id = null; root.innerHTML = listHtml(); return; }
   if (ed.id !== id) { ed.id = id; ed.army = loadArmy(id); ed.sys = null; ed.error = null; }
@@ -47,6 +47,39 @@ export function render(root, ctx) {
   if (ed.openUnit) refreshUnitSheet();
 }
 const rerender = () => { if (lastRoot && lastCtx) render(lastRoot, lastCtx); };
+
+/* Long press on a unit of the list (≈ ½ s without moving): duplicate / delete. Moving the finger (scrolling) cancels it. */
+let lpTimer = null, lpStart = null, lpFired = false;
+function bindLongPress(root) {
+  const cancel = () => { clearTimeout(lpTimer); lpTimer = null; };
+  root.addEventListener('pointerdown', e => {
+    const row = e.target.closest('.arm-unit');
+    lpFired = false;
+    if (!row || (e.pointerType === 'mouse' && e.button !== 0)) return;
+    lpStart = { x: e.clientX, y: e.clientY };
+    cancel();
+    lpTimer = setTimeout(() => { lpTimer = null; lpFired = true; if (navigator.vibrate) try { navigator.vibrate(15); } catch {} unitMenu(row.dataset.id); }, 500);
+  });
+  root.addEventListener('pointermove', e => { if (lpTimer && lpStart && Math.hypot(e.clientX - lpStart.x, e.clientY - lpStart.y) > 10) cancel(); });
+  ['pointerup', 'pointercancel', 'pointerleave'].forEach(t => root.addEventListener(t, cancel));
+  root.addEventListener('contextmenu', e => { if (e.target.closest('.arm-unit')) e.preventDefault(); });   // no system menu on long press
+  // the click that ends a long press does not also open the unit
+  root.addEventListener('click', e => { if (lpFired && e.target.closest('.arm-unit')) { e.stopPropagation(); e.preventDefault(); lpFired = false; } }, true);
+}
+function unitMenu(id) {
+  const V = E.view(ed.sys, ed.army);
+  const w = V.byId.get(id);
+  if (!w) return;
+  const name = unitName(V, w);
+  sheet({
+    title: name, cls: 'arm-unit-menu',
+    body: `<p class="muted small">${E.totalCost(V, w)} pts</p>`,
+    actions: [
+      { label: 'Delete', kind: 'ghost', onClick: () => { apply(r => E.removeSel(r, id)); toast(`${name} deleted`, 'ok', 1500); } },
+      { label: 'Duplicate', kind: 'primary', onClick: () => { apply(r => E.duplicateSel(r, id)); toast(`${name} duplicated`, 'ok', 1500); } }
+    ]
+  });
+}
 
 /* ═══════════════ List of saved armies ═══════════════ */
 function listHtml() {
