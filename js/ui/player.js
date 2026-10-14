@@ -8,6 +8,7 @@
  * Layout: pinned head + tabs; ≥ 900 px a two-column grid with general-info tiles on the right (data-sec="side").
  */
 import { esc, toast, colorOf, autoNote } from './components.js';
+import { guideHtml, bindGuide } from './tutorial.js';
 import { uiState, uiSave, fxItem, choicePicked, toggleOn, resourceFor, optionCost, switchCostOf } from './player-common.js';
 import * as T from './player-tabs.js';
 import * as S from './player-sheets.js';
@@ -47,6 +48,8 @@ export function render(root, ctx) {
       put('tabs', T.renderTabs(ctx, ui));
       put('deploy', stage === 'deploy' ? T.renderDeploy(ctx, ui) : '');
       put('side', T.renderSide(ctx, ui));
+      put('guide', guideHtml(state, me));
+      bindGuide(root, ctx.rerender);
       switch (ui.tab) {
         case 'strats':
           put('filters', T.renderStratFilters(ctx, ui));
@@ -108,6 +111,7 @@ function skeleton(stage, ui, me) {
     </div>
     <div class="pl-grid">
       <div class="pl-body pl-main">
+        <div data-sec="guide"></div>
         <div data-sec="deploy"></div>
         <div data-sec="body" class="pl-flow"></div>
       </div>

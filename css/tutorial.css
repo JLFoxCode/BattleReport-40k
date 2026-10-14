@@ -1,0 +1,66 @@
+/* Learn to play (js/ui/tutorial.js) + rule diagrams (js/ui/diagram.js) */
+
+/* ───────── diagrams ───────── */
+.dg-wrap { margin: 10px 0 4px; }
+.dg { display: block; width: 100%; height: auto; max-height: 60vh; }
+.dg-wrap figcaption { font-size: .82rem; color: var(--muted); margin-top: 4px; line-height: 1.35; }
+.dg-board { fill: var(--sunk); stroke: var(--line); stroke-width: 1; }
+.dg-grid { stroke: var(--line); stroke-width: .6; opacity: .55; fill: none; }
+.dg text { font-family: var(--font-body); }
+.dg-note { font-size: 13px; fill: var(--text); }
+.dg-tag { font-size: 13px; font-weight: 700; paint-order: stroke; stroke: var(--sunk); stroke-width: 3px; }
+.dg-model-l { font-size: 11px; font-weight: 700; fill: var(--on-p); }
+.dg-terrain-l { font-size: 12px; font-weight: 600; fill: var(--muted); }
+.dg-zone-l { font-size: 11px; font-weight: 700; }
+.dg-mark { font-size: 11px; font-weight: 700; }
+.dg-obj { fill: #E8B23C; fill-opacity: .25; stroke: #E8B23C; stroke-width: 2; }
+.dg-obj-x { stroke: #E8B23C; stroke-width: 2; }
+
+/* ───────── tutorial ───────── */
+.tut { max-width: 760px; margin: 0 auto; padding: 12px 12px calc(24px + var(--sa-bottom)); }
+.tut-head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.tut-head .title { flex: 1; margin: 0; font-size: 1.35rem; }
+.tut-part { margin: 18px 0 8px; font-family: var(--font-title); font-size: 1.05rem; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+.tut-chapters { display: grid; gap: 8px; }
+.tut-ch { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: var(--radius); background: var(--panel); border: 1px solid var(--line); color: var(--text); text-decoration: none; }
+.tut-ch:hover { border-color: var(--muted); }
+.tut-ch .n { font-family: var(--font-title); font-size: 1.3rem; color: var(--muted); min-width: 1.6em; text-align: center; }
+.tut-ch .t { flex: 1; min-width: 0; }
+.tut-ch .t b { display: block; font-size: 1rem; }
+.tut-ch .t small { color: var(--muted); font-size: .85rem; }
+.tut-ch .done { color: var(--ok); font-weight: 700; }
+.tut-orig-card { margin-top: 16px; padding: 12px 14px; border-radius: var(--radius); background: var(--panel); border: 1px dashed var(--line); font-size: .9rem; }
+.tut-orig-card p { margin: 0 0 8px; }
+
+.tut-step { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; }
+.tut-step h2 { font-family: var(--font-title); font-size: 1.35rem; margin: 0 0 6px; }
+.tut-step .kicker { font-size: .8rem; color: var(--muted); letter-spacing: .03em; text-transform: uppercase; }
+.tut-step .tut-text p { margin: 0 0 10px; line-height: 1.5; }
+.tut-step .tut-text ul { margin: 0 0 10px; padding-left: 1.2em; line-height: 1.5; }
+.tut-tips { margin: 10px 0 0; padding: 10px 12px; border-radius: var(--radius-sm); background: var(--warn-soft); border-left: 3px solid var(--warn); }
+.tut-tips .h { font-weight: 700; font-size: .85rem; color: var(--warn); margin-bottom: 4px; }
+.tut-tips ul { margin: 0; padding-left: 1.1em; line-height: 1.45; font-size: .93rem; }
+.tut-refs { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.tut-ref { all: unset; cursor: pointer; font-size: .8rem; padding: 4px 9px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); }
+.tut-ref:hover, .tut-ref:focus-visible { color: var(--text); border-color: var(--muted); }
+.tut-ref b { color: var(--text); font-weight: 600; }
+.tut-nav { display: flex; gap: 8px; align-items: center; justify-content: space-between; margin-top: 12px; position: sticky; bottom: 0; padding: 8px 0 calc(8px + var(--sa-bottom)); background: linear-gradient(to top, var(--bg) 70%, transparent); }
+.tut-dots { display: flex; gap: 5px; flex-wrap: wrap; justify-content: center; flex: 1; }
+.tut-dots i { width: 7px; height: 7px; border-radius: 50%; background: var(--line); }
+.tut-dots i.on { background: var(--text); }
+.tut-dots i.seen { background: var(--muted); }
+
+/* original text in a sheet */
+.orig-sec h4 { margin: 12px 0 6px; font-size: .95rem; }
+.orig-sec p { margin: 0 0 8px; line-height: 1.5; }
+.orig-sec ul { margin: 0 0 8px; padding-left: 1.2em; line-height: 1.5; }
+.orig-num { color: var(--muted); font-weight: 400; font-size: .8em; margin-left: 4px; }
+.orig-src { font-size: .78rem; color: var(--muted); margin-top: 10px; }
+
+/* in-game guide */
+.guide-card { border-left: 3px solid var(--warn); }
+.guide-card .tile-title { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.guide-list { margin: 4px 0 0; padding-left: 1.2em; line-height: 1.45; font-size: .93rem; }
+.guide-list li { margin-bottom: 5px; }
+.guide-list li .tut-ref { margin-left: 4px; padding: 1px 7px; font-size: .72rem; }
+.guide-sub { font-size: .8rem; color: var(--muted); margin: 8px 0 2px; text-transform: uppercase; letter-spacing: .03em; }

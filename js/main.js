@@ -37,9 +37,10 @@ import * as markers from './ui/markers.js';
 import * as photo from './ui/photo.js';
 import * as rulebook from './ui/rulebook.js';
 import * as armies from './ui/armies.js';
+import * as tutorial from './ui/tutorial.js';
 
 const LS_KEY = 'sb40k.last';
-const MODULES = { lobby, setup, player, desktop, map, table, camera, markers, photo, rules: rulebook, archive: archiveView, armies };
+const MODULES = { lobby, setup, player, desktop, map, table, camera, markers, photo, rules: rulebook, archive: archiveView, armies, learn: tutorial };
 const data = Object.freeze({ WH, FACTIONS, TERRAIN_LAYOUTS });
 
 // ---------------------------------------------------------------- Store
@@ -157,6 +158,8 @@ export function parseHash(hash = location.hash) {
   if (parts[0] === 'rules') return { view: 'rules', code: null, me: null };
   // army builder: list of saved armies / one army in the editor
   // main menu pages: join a game, finished games, app & data
+  // Learn to play: chapter list / one step (#/learn/<chapter>/<step>)
+  if (parts[0] === 'learn') return { view: 'learn', code: null, me: parts[1] ? parts.slice(1, 3).join('/') : null };
   if (parts[0] === 'play') return { view: 'lobby', code: null, me: parts[1] || null };
   if (parts[0] === 'armies') return { view: 'armies', code: null, me: parts[1] ? decodeURIComponent(parts[1]) : null };
   // finished game stored on this device (no server needed)
@@ -401,6 +404,7 @@ window.addEventListener('keydown', e => {
 });
 
 installKeywordInfo();   // [KEYWORD] tags everywhere open their rule
+tutorial.installTutorialLinks();   // [data-tut-ref] chips open the original core rule section
 startI18n();           // German interface (js/i18n.js)
 window.addEventListener('hashchange', () => { route(); });
 route();

@@ -6,6 +6,7 @@ import { checkDataUpdate, getDataStatus, onDataStatus, loadDataInfo } from '../d
 import { askDataUpdate, checkForUpdates } from './update-popup.js';
 import { armyChoices } from './armies.js';
 import { getLang, setLang, keepTerms, setKeepTerms } from '../i18n.js';
+import { guideOn, setGuideOn } from './tutorial.js';
 
 let games = null;      // zuletzt geladene Liste
 let loading = false;
@@ -30,6 +31,7 @@ const ICON = {
   play: '<path d="M14.5 17.5 3 6V3h3l11.5 11.5"/><path d="m13 19 6-6"/><path d="m16 16 4 4"/><path d="m19 21 2-2"/><path d="M14.5 6.5 18 3h3v3l-3.5 3.5"/><path d="m5 14 4 4"/><path d="m7 17-3 3"/><path d="m3 19 2 2"/>',
   join: '<path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><circle cx="12" cy="20" r="1"/>',
   army: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M12 8v6"/><path d="M9 11h6"/>',
+  learn: '<path d="M22 10 12 5 2 10l10 5 10-5z"/><path d="M6 12v5c3 2 9 2 12 0v-5"/><path d="M22 10v6"/>',
   rules: '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><path d="M9 7h7"/><path d="M9 11h5"/>',
   history: '<path d="M8 21h8"/><path d="M12 17v4"/><path d="M7 4h10v5a5 5 0 0 1-10 0V4z"/><path d="M17 5h3v2a3 3 0 0 1-3 3"/><path d="M7 5H4v2a3 3 0 0 0 3 3"/>',
   app: '<circle cx="12" cy="12" r="3"/><path d="M12 2v3"/><path d="M12 19v3"/><path d="m4.93 4.93 2.12 2.12"/><path d="m16.95 16.95 2.12 2.12"/><path d="M2 12h3"/><path d="M19 12h3"/><path d="m4.93 19.07 2.12-2.12"/><path d="m16.95 7.05 2.12-2.12"/>'
@@ -92,6 +94,7 @@ function homeHtml(last, lastExists) {
       ${tile({ action: 'new', icon: 'play', label: 'New game', sub: 'Host a battle on this device', main: true })}
       ${tile({ href: '#/play/join', icon: 'join', label: 'Join game', sub: nearby ? `${nearby} game${nearby === 1 ? '' : 's'} nearby` : 'Nearby or by code' })}
       ${tile({ href: '#/armies', icon: 'army', label: 'My armies', sub: armies ? `${armies} list${armies === 1 ? '' : 's'}` : 'Build your army lists' })}
+      ${tile({ href: '#/learn', icon: 'learn', label: 'Learn to play', sub: 'Step by step, phase by phase' })}
       ${tile({ href: '#/rules', icon: 'rules', label: 'Rulebook', sub: 'Core rules & missions' })}
       ${tile({ href: '#/play/history', icon: 'history', label: 'Finished games', sub: finished ? `${finished} saved` : 'Results & battle logs' })}
       ${tile({ href: '#/play/app', icon: 'app', label: 'App & data', sub: 'Updates & unit data' })}
@@ -131,6 +134,7 @@ function pageHtml(page) {
       <div class="title">Language</div>
       <div class="chips">${[['en', 'English'], ['de', 'Deutsch']].map(([l, n]) => `<button type="button" class="chip${getLang() === l ? ' on' : ''}" data-action="lang" data-lang="${l}" data-no-i18n>${n}</button>`).join('')}</div>
       <label class="lang-terms"><input type="checkbox" data-action="keep-terms"${keepTerms() ? ' checked' : ''}> <span>Game terms in English</span></label>
+      <label class="lang-terms"><input type="checkbox" data-action="guide"${guideOn() ? ' checked' : ''}> <span>Show the guide during games</span></label>
       <p class="muted xs">German: the interface is in German; rules texts stay in their English original as long as no official German version is available in the data. “Game terms in English” keeps terms like Stratagem, CP, Command phase or Leader in English.</p>
     </section>
     <section class="card app-info">${devInfoHtml() || '<p class="muted">Running in the browser – updates come with the app.</p>'}${dataStatusHtml()}</section>
@@ -295,6 +299,7 @@ function onClick(e) {
   if (action === 'new') return newGame();
   if (action === 'lang') { if (b.dataset.lang !== getLang()) setLang(b.dataset.lang); return; }
   if (action === 'keep-terms') { setKeepTerms(b.checked); return; }
+  if (action === 'guide') { setGuideOn(b.checked); return; }
   if (action === 'data-check') { checkDataUpdate({ ask: askDataUpdate }); return; }
   if (action === 'app-update-check') { checkForUpdates(); return; }
   if (action === 'remote') {

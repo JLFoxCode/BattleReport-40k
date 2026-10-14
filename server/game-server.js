@@ -302,6 +302,20 @@ export async function startGameServer(opts = {}) {
     // Host-specific routes (e.g. the dev manifest); return true when handled
     if (extraApi && (await extraApi(req, res, url)) === true) return;
 
+    // /api/rules-page?p=core-rules – the free 11th-edition rules page from Wahapedia, fetched for the device (tutorial
+    // originals, js/rules-orig.js); the page sends no CORS headers. Only these fixed pages, nothing else is proxied.
+    if (parts.length === 2 && parts[1] === 'rules-page' && m === 'GET') {
+      const p = url.searchParams.get('p');
+      if (!RULE_PAGES.includes(p)) return sendJson(res, 400, { error: 'Unknown rules page' });
+      try {
+        const r = await fetch('https://wahapedia.ru/wh40k11ed/the-rules/' + p + '/', { headers: { 'User-Agent': 'BattleReport40k' } });
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return sendJson(res, 200, { html: await r.text() });
+      } catch (e) {
+        return sendJson(res, 502, { error: 'Download failed: ' + (e && e.message ? e.message : e) });
+      }
+    }
+
     // /api/info – LAN addresses, so devices can build join links / QR codes
     if (parts.length === 2 && parts[1] === 'info' && m === 'GET') {
       return sendJson(res, 200, Object.assign({ port: PORT, lan: lanIps() }, opts.info || {}));
@@ -651,6 +665,8 @@ function firstMultipartFile(buf, contentType) {
 }
 const clampInt = (v, d = null) => { if (v == null || v === '') return d; const n = Number(v); return Number.isFinite(n) ? Math.trunc(n) : d; };
 const isH = H => Array.isArray(H) && H.length === 9 && H.every(Number.isFinite);
+
+const RULE_PAGES = ['core-rules', 'rules-appendix'];
 
 export function sendJson(res, status, obj) {
   const body = JSON.stringify(obj);

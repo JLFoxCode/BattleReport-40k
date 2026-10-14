@@ -295,6 +295,19 @@ class GameServer {
         String[] parts = pl.toArray(new String[0]);
         String m = r.method;
 
+        // /api/rules-page?p=core-rules – the free 11th-edition rules page from Wahapedia for the tutorial originals
+        // (js/rules-orig.js; the page sends no CORS headers). Only these fixed pages are fetched.
+        if (parts.length == 2 && parts[1].equals("rules-page") && m.equals("GET")) {
+            String p = "";
+            if (r.query != null) for (String kv : r.query.split("&")) if (kv.startsWith("p=")) p = java.net.URLDecoder.decode(kv.substring(2), "UTF-8");
+            if (!p.equals("core-rules") && !p.equals("rules-appendix")) throw new HttpErr(400, "Unknown rules page");
+            try {
+                byte[] page = AppInstaller.download("https://wahapedia.ru/wh40k11ed/the-rules/" + p + "/");
+                json(out, 200, new JSONObject().put("html", new String(page, StandardCharsets.UTF_8)));
+            } catch (IOException e) { throw new HttpErr(502, "Download failed: " + e.getMessage()); }
+            return false;
+        }
+
         if (parts.length == 2 && parts[1].equals("info") && m.equals("GET")) {
             JSONArray lan = new JSONArray();
             for (String ip : Net.lanIps()) lan.put(ip);
