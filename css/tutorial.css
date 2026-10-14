@@ -93,12 +93,12 @@
 .dg-table { border-collapse: collapse; width: 100%; font-size: .88rem; background: var(--sunk); }
 .dg-table th, .dg-table td { border: 1px solid var(--line); padding: 5px 6px; text-align: center; }
 .dg-table thead th { color: var(--muted); font-weight: 600; }
-.dg-table tbody th { text-align: left; font-weight: 600; white-space: nowrap; }
+.dg-table tbody th { text-align: left; font-weight: 600; }
 .dg-table td.hl { background: var(--warn-soft); outline: 2px solid var(--warn); outline-offset: -2px; font-weight: 700; }
 .dg-sheet { background: var(--sunk); border: 1px solid var(--line); border-radius: var(--radius-sm); overflow: hidden; font-size: .85rem; }
 .dg-sheet-name { font-family: var(--font-title); font-size: 1.1rem; text-transform: uppercase; padding: 6px 10px; background: var(--panel2); }
-.dg-sheet-stats { display: flex; flex-wrap: wrap; gap: 4px; padding: 8px 10px; }
-.dg-sheet-stats > div { display: grid; text-align: center; min-width: 38px; border: 1px solid var(--line); border-radius: 6px; padding: 2px 4px; }
+.dg-sheet-stats { display: flex; flex-wrap: wrap; gap: 3px; padding: 8px 8px; }
+.dg-sheet-stats > div { display: grid; text-align: center; flex: 1 0 30px; max-width: 48px; border: 1px solid var(--line); border-radius: 6px; padding: 2px 2px; }
 .dg-sheet-stats small { color: var(--muted); font-size: .7rem; font-weight: 700; }
 .dg-sheet-stats b { font-size: 1rem; }
 .dg-sheet-w { width: 100%; border-collapse: collapse; }
@@ -117,3 +117,12 @@
 .dg-cmp-item.ok .dg-cmp-h { color: var(--ok); }
 .dg-cmp-item.bad .dg-cmp-h { color: var(--bad); }
 .tut-step .dg-wrap + .dg-wrap { margin-top: 12px; }
+
+/* phones: a long left-to-right sequence would wrap with an arrow dangling at the line end – stack it instead */
+@media (max-width: 560px) {
+  .dg-flow.right.many { flex-direction: column; align-items: stretch; }
+  .dg-flow.right.many .dg-flow-box { text-align: left; border-top-width: 1px; border-left-width: 4px; border-left-color: var(--k); border-top-color: var(--line); min-width: 0; }
+  .dg-flow.right.many .dg-flow-box b, .dg-flow.right.many .dg-flow-box span { display: inline; }
+  .dg-flow.right.many .dg-flow-box b + span::before { content: ' – '; }
+  .dg-flow.right.many .dg-flow-arrow { margin: 2px 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 7px solid var(--muted); border-bottom: 0; }
+}

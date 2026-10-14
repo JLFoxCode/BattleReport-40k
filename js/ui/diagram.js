@@ -160,7 +160,7 @@ function htmlDiagram(d, tr, lang) {
   const cap = tr(d, 'caption');
   let body = '';
   if (d.type === 'flow') {
-    body = `<div class="dg-flow ${d.dir === 'right' ? 'right' : 'down'}">${(d.items || []).map((it, i) => `${i ? '<span class="dg-flow-arrow" aria-hidden="true"></span>' : ''}<div class="dg-flow-box" style="--k:${KIND[it.kind] || KIND.info}">${tr(it, 'title') ? `<b>${esc(tr(it, 'title'))}</b>` : ''}${tr(it, 'text') ? `<span>${esc(tr(it, 'text'))}</span>` : ''}</div>`).join('')}</div>`;
+    body = `<div class="dg-flow ${d.dir === 'right' ? 'right' : 'down'}${(d.items || []).length > 3 ? ' many' : ''}">${(d.items || []).map((it, i) => `${i ? '<span class="dg-flow-arrow" aria-hidden="true"></span>' : ''}<div class="dg-flow-box" style="--k:${KIND[it.kind] || KIND.info}">${tr(it, 'title') ? `<b>${esc(tr(it, 'title'))}</b>` : ''}${tr(it, 'text') ? `<span>${esc(tr(it, 'text'))}</span>` : ''}</div>`).join('')}</div>`;
   } else if (d.type === 'dice') {
     body = `<div class="dg-dice">${(d.rows || []).map(r => {
       const dice = (r.dice || []).map((v, i) => {
