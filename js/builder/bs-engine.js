@@ -354,7 +354,8 @@ export function effective(V, node, self, parent) {
     else if (m.field === 'name') { if (m.type === 'set') name = String(m.value); else if (m.type === 'append') name = name + ' ' + m.value; }
     else if (byId.has(m.field)) { const c = byId.get(m.field); c.value = modNum(c.value, m, times); }
   }, parent);
-  return { hidden, name, constraints: cons, errors };
+  // messages written for New Recruit use {this} for the entry's own name ("Max 1 {this} per 5 models")
+  return { hidden, name, constraints: cons, errors: errors.map(e => e.replace(/\{this\}/g, name)) };
 }
 /** Points of a node for one instance (selection or would-be selection). */
 export function nodeCost(V, node, self, parent, type = PTS) {
@@ -388,7 +389,10 @@ function countNode(V, node, c, self, parent) {
     if (c.childId) return countIn(V, c, scope);
     const deep = c.scope !== 'parent' && c.scope !== 'self';
     if (c.scope === 'self' && self) return descendants(self, !!c.includeChildSelections).reduce((x, [, m]) => x + m, 0);
-    return descendants(scope, deep).filter(([w]) => w.node === node || w.groups.includes(node) || (w.ids.has(node.id) && !node.group)).reduce((x, [, m]) => x + m, 0);
+    // shared: false – only the selections made through THIS entry (link) count, not the same item taken elsewhere
+    // (a Sister Superior's fixed bolt pistol and a second one chosen as her ranged weapon)
+    const own = c.shared === false && !node.group;
+    return descendants(scope, deep).filter(([w]) => w.node === node || w.groups.includes(node) || (!own && w.ids.has(node.id) && !node.group) || (own && w.s.t.split('>').pop() === node.token)).reduce((x, [, m]) => x + m, 0);
   }
   if (isCostType(V, c.field)) return sumCost(V, scope, c.childId, true, c.field);
   return null;
@@ -416,8 +420,8 @@ export function validate(V) {
       const v = countNode(V, node, c, self, parent);
       if (v == null) continue;
       const what = c.field === PTS ? ' pts' : '';
-      if (c.type === 'min' && v < c.value) out.push({ sel: owner ? owner.s.id : null, msg: c.message || `${label(owner)}: ${eff.name} needs at least ${c.value}${what} (has ${v})` });
-      if (c.type === 'max' && v > c.value) out.push({ sel: (sels[0] && sels[0].s.id) || (owner ? owner.s.id : null), msg: c.message || `${eff.name}: at most ${c.value}${what} ${c.scope === 'parent' ? (owner ? 'in ' + label(owner) : '') : 'per ' + (c.scope === 'force' || c.scope === 'roster' ? 'army' : c.scope)} (has ${v})` });
+      if (c.type === 'min' && v < c.value) out.push({ sel: owner ? owner.s.id : null, msg: c.message ? c.message.replace(/{this}/g, eff.name) : `${label(owner)}: ${eff.name} needs at least ${c.value}${what} (has ${v})` });
+      if (c.type === 'max' && v > c.value) out.push({ sel: (sels[0] && sels[0].s.id) || (owner ? owner.s.id : null), msg: c.message ? c.message.replace(/{this}/g, eff.name) : `${eff.name}: at most ${c.value}${what} ${c.scope === 'parent' ? (owner ? 'in ' + label(owner) : '') : 'per ' + (c.scope === 'force' || c.scope === 'roster' ? 'army' : c.scope)} (has ${v})` });
     }
     if (node.group) for (const k of V.sys.children(node)) checkNode(k, parent, owner, under);
   };
@@ -473,6 +477,45 @@ function isDefault(g, x) {
 function fillDefaults(sys, V, node, s, parentW) {
   // wrapper for condition evaluation of the new selection (not yet in the roster)
   const w = { kind: 'sel', s, node, groups: [], parent: parentW, n: s.n, ch: [], ids: node.ids };
+  /* Fill group k (token tok) with `need` selections: entries with their own minimum first (e.g. the Sergeant), the
+     share of mandatory groups inside (the 1 "Special Weapon" slot of 9 Farstalkers), then the default entry (or the
+     first one) up to its maximum, then the next ones; whatever is still missing goes into the groups inside
+     ("Squad Members" 10 = only sub-groups of Heavy Intercessors …). */
+  const fillGroup = (k, tok, need) => {
+    const opts = sys.children(k).filter(x => !x.group).map(x => ({ x, l: limits(V, x, null, w) })).filter(o => !o.l.hidden);
+    const groups = sys.children(k).filter(x => x.group).map(g => ({ g, l: limits(V, g, null, w) })).filter(o => !o.l.hidden);
+    const share = new Map(groups.map(o => [o.g, Math.max(0, o.l.min)]));
+    const counts = new Map();
+    let left = Math.max(0, need - [...share.values()].reduce((a, b) => a + b, 0));
+    for (const o of opts) if (o.l.min > 0 && left > 0) { const c = Math.min(o.l.min, left); counts.set(o.x, c); left -= c; }
+    const order = opts.slice().sort((p, q) => (isDefault(k, q.x) ? 1 : 0) - (isDefault(k, p.x) ? 1 : 0));
+    for (const o of order) {
+      if (left <= 0) break;
+      const have = counts.get(o.x) || 0;
+      const room = o.l.max < 0 ? left : Math.max(0, Math.min(left, o.l.max - have));
+      if (room > 0) { counts.set(o.x, have + room); left -= room; }
+    }
+    // still missing in a group made only of groups: into those – mandatory ones first, each up to its maximum
+    // (a group with entries of its own keeps its gap: there the limits often depend on the choice, e.g. "twin tools OR
+    // one melee + one ranged weapon")
+    if (!opts.length) for (const o of groups.slice().sort((p, q) => (q.l.min > 0) - (p.l.min > 0))) {
+      if (left <= 0) break;
+      const have = share.get(o.g);
+      const room = o.l.max < 0 ? left : Math.max(0, Math.min(left, o.l.max - have));
+      if (room > 0) { share.set(o.g, have + room); left -= room; }
+    }
+    for (const o of opts) {
+      const n = counts.get(o.x); if (!n) continue;
+      const c = { id: newId(), t: tok + '>' + o.x.token, n, ch: [] };
+      fillDefaults(sys, V, o.x, c, w);
+      s.ch.push(c);
+    }
+    for (const o of groups) {
+      const n = share.get(o.g);
+      if (n > 0) fillGroup(o.g, tok + '>' + o.g.token, n);
+      else visit(sys.children(o.g), tok + '>' + o.g.token);   // optional group: only what is mandatory inside
+    }
+  };
   const visit = (list, prefix) => {
     for (const k of list) {
       const lim = limits(V, k, null, w);
@@ -481,31 +524,8 @@ function fillDefaults(sys, V, node, s, parentW) {
       if (k.group) {
         // configuration entries (Detachment, Battle Size …): a choice without a default is left to the player
         const ask = !k.defaultId && node.type === 'upgrade' && parentW && parentW.kind === 'force';
-        if (lim.min > 0 && !ask) {
-          // fill the group's minimum: entries with their own minimum first (e.g. the Sergeant), then the default
-          // entry (or the first one) up to its maximum, then the next ones
-          const opts = sys.children(k).filter(x => !x.group).map(x => ({ x, l: limits(V, x, null, w) })).filter(o => !o.l.hidden);
-          const counts = new Map();
-          let left = lim.min;
-          for (const o of opts) if (o.l.min > 0 && left > 0) { const c = Math.min(o.l.min, left); counts.set(o.x, c); left -= c; }
-          const order = opts.slice().sort((p, q) => (isDefault(k, q.x) ? 1 : 0) - (isDefault(k, p.x) ? 1 : 0));
-          for (const o of order) {
-            if (left <= 0) break;
-            const have = counts.get(o.x) || 0;
-            const room = o.l.max < 0 ? left : Math.max(0, Math.min(left, o.l.max - have));
-            if (room > 0) { counts.set(o.x, have + room); left -= room; }
-          }
-          if (counts.size) {
-            for (const o of opts) {
-              const n = counts.get(o.x); if (!n) continue;
-              const c = { id: newId(), t: tok + '>' + o.x.token, n, ch: [] };
-              fillDefaults(sys, V, o.x, c, w);
-              s.ch.push(c);
-            }
-            continue;
-          }
-        }
-        visit(sys.children(k), tok);   // nested groups / entries with their own min
+        if (lim.min > 0 && !ask) fillGroup(k, tok, lim.min);
+        else visit(sys.children(k), tok);   // nested groups / entries with their own min
       } else if (lim.min > 0) {
         const c = { id: newId(), t: tok, n: lim.min, ch: [] };
         fillDefaults(sys, V, k, c, w);
@@ -605,6 +625,21 @@ export function autoSync(sys, roster) {
             const pick = opts.find(o => o.l.min > 0) || opts.find(o => isDefault(k, o.x)) || (opts.length === 1 ? opts[0] : null);
             const def = pick ? pick.x : null;
             if (def) { change = { add: { p: w.s.id, t: tok + '>' + def.token, n: def.type === 'model' ? lim.min : 1 } }; return; }
+          }
+          // a choice raised the group's minimum (20 Jakhals → 2 Dishonoured instead of 1): top up the biggest stack there
+          const total = inG.reduce((x, c) => x + c.n, 0);
+          const baseMin = k.constraints.filter(c => c.type === 'min' && c.field === 'selections' && (!c.scope || c.scope === 'parent')).reduce((m, c) => Math.max(m, num(c.value)), 0);
+          if (inG.length && lim.min > baseMin && total < lim.min && gRoom > 0) {
+            const big = inG.filter(c => c.node && c.node.type === 'model').sort((p, q) => q.n - p.n)
+              .find(c => { const l = limits(V, c.node, c, w); return l.max < 0 || l.max >= c.n + Math.min(gRoom, lim.min - total); });
+            if (big) { change = { set: { id: big.s.id, n: big.n + Math.min(gRoom, lim.min - total) } }; return; }
+          }
+          // … or lowered its maximum (a Weapons Team takes two of the 9 places): the biggest stack gives way
+          const baseMax = k.constraints.filter(c => c.type === 'max' && c.field === 'selections' && (!c.scope || c.scope === 'parent') && num(c.value) >= 0).reduce((m, c) => Math.min(m, num(c.value)), Infinity);
+          if (inG.length && lim.max >= 0 && lim.max < baseMax && total > lim.max) {
+            const big = inG.filter(c => c.node && c.node.type === 'model').sort((p, q) => q.n - p.n)
+              .find(c => c.n - (total - lim.max) >= Math.max(0, limits(V, c.node, c, w).min));
+            if (big) { change = { set: { id: big.s.id, n: big.n - (total - lim.max) } }; return; }
           }
           visit(w, sys.children(k), tok, gRoom);
           continue;
