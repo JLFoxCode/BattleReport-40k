@@ -14,14 +14,21 @@ const CP_RED_RE = /\bCP\b|\dCP\b|regardless of any other uses/i;
 const CP_HOW_RE = /\bless\b|\breduc(?:e|ed|es|ing)\b|\binstead of\b|\bfor 0 ?CP\b|\b0 ?CP\b|\bcosts? 0\b|\bfree\b|[-−–]\s?1 ?CP\b|regardless of any other uses/i;
 const CP_GAIN_RE = /\bgain(?:s|ed)? (?:\d|one|D\d)\s?CP\b|\byou gain\b|\broll one D6[:,]? on a\b|\bregain\b/i;
 const CP_MORE_RE = /\b(?:twice|two times|three times|double)\b[^.]*?\bStratagem['’]?s?\b[^.]*?\bCP\b|\bincreas(?:e|ed|es)\b[^.]*?\bCP\b|\b(?:\d|one) ?CP more\b/i;
-export function cpReductions(ctx) {
-  return abilityTracker(ctx).filter(e => CP_RED_RE.test(e.text) && CP_HOW_RE.test(e.text) && !CP_GAIN_RE.test(e.text) && !CP_MORE_RE.test(e.text)).map(e => {
+export function cpReductions(ctx, strat = null) {
+  const norm = x => String(x || '').toLowerCase().replace(/[^a-z0-9]+/g, '');
+  return abilityTracker(ctx).filter(e => CP_RED_RE.test(e.text) && CP_HOW_RE.test(e.text) && !CP_GAIN_RE.test(e.text) && !CP_MORE_RE.test(e.text)).filter(e => {
+    // "… with the Command Re-roll Stratagem …": only for that Stratagem
+    const only = /\bthe ([A-Z][A-Za-z’'\- ]*?) Stratagem\b/.exec(e.text);
+    return !strat || !only || norm(only[1]) === norm(strat.name);
+  }).map(e => {
     const t = e.text;
     let amount = 1;
     if (/\bfor 0 ?CP\b|\b0 ?CP\b|\bcosts? 0\b|\bfree\b|\binstead of\b/i.test(t) && !/\breduc|\bless\b|[-−–]\s?1 ?CP\b/i.test(t)) amount = Infinity;
     const m = /(\d)\s*CP\s+less\b|\bby\s+(\d)\s*CP\b|\breduced?\b[^.]*?\bby\s+(\d)\b|[-−–]\s?(\d) ?CP\b/i.exec(t);
     if (m) amount = Number(m[1] || m[2] || m[3] || m[4]) || 1;
-    return Object.assign({ amount }, e);
+    // a price for the reduction ("spend 1YP") is paid with it
+    const pay = /\bspend (\d+) ?([A-Z]{2,4})\b/.exec(t);
+    return Object.assign({ amount, pay: pay ? { n: Number(pay[1]), res: pay[2] } : null }, e);
   });
 }
 
@@ -44,7 +51,7 @@ export function openStratSheet(ctx, ui, stratId) {
   const hits = new Set(affectedUnits(units, kws, c0).map(u => u.id));
   const sorted = units.slice().sort((a, b) => (hits.has(b.id) ? 1 : 0) - (hits.has(a.id) ? 1 : 0));
   const unitOpts = sorted.map(u => `<option value="${esc(u.id)}"${u.status === 'shocked' ? ' disabled' : ''}>${esc(u.name)} (${u.models})${hits.has(u.id) ? ' ✓' : ''}${u.status === 'shocked' ? ' – Battle-shocked' : ''}</option>`).join('');
-  const reds = fits && !used ? cpReductions(c0) : [];
+  const reds = fits && !used ? cpReductions(c0, s) : [];
   // Stratagem add-ons bought with an army resource (data/effects stratAddons, e.g. +1 YP: [SUSTAINED HITS 1])
   const addons = stratAddonsOf(c0, s).map(a => Object.assign({}, a, { res: resourceFor(state, me, a.resource) }));
   const picks = new Map();   // add-on id → amount spent
@@ -79,7 +86,7 @@ export function openStratSheet(ctx, ui, stratId) {
       ${chip({ label: 'None', on: !red, action: 'red.pick', data: { key: '' }, cls: 'sm' })}
       ${reds.map(e => {
         const u = abilityUseOf(state, me, e);
-        return chip({ html: `${esc(e.name)} <span class="muted xs">· ${esc(e.source)} · ${esc(entryLabel(e))}${u ? ' · used' : ''}</span>`, on: !!red && red.key === e.key, action: 'red.pick', data: { key: e.key }, cls: 'sm' + (u ? ' disabled' : '') });
+        return chip({ html: `${esc(e.name)} <span class="muted xs">· ${esc(e.source)} · ${esc(entryLabel(e))}${e.pay ? ` · costs ${e.pay.n} ${esc(e.pay.res)}` : ''}${u ? ' · used' : ''}</span>`, on: !!red && red.key === e.key, action: 'red.pick', data: { key: e.key }, cls: 'sm' + (u ? ' disabled' : '') });
       }).join('')}</div>
       <p class="muted xs">Choosing a reduction marks that ability as used (before the Stratagem is booked).</p>` : '';
   const costRow = () => `<div class="row between"><span class="label" style="margin:0">CP cost${red || cost !== printed ? ` <span class="muted xs">(printed ${printed})</span>` : ''}</span>${stepper({ value: cost, min: 0, max: maxCost, action: 'noop', data: { f: 'cost' }, player: me })}</div>
@@ -129,6 +136,10 @@ export function openStratSheet(ctx, ui, stratId) {
         if (red) {
           const r = await c.dispatch({ type: 'ability.use', player: me, key: red.key, name: red.name, limit: red.limit, source: red.source, note: `CP reduction for ${s.name}` });
           if (!r) { toast(`${red.name} could not be used – Stratagem not booked`, 'bad'); return; }
+          if (red.pay) {   // e.g. Ancestral Crest: spend 1YP
+            const res = (((r.players || [])[me] || {}).resources || []).map((x, index) => ({ x, index })).find(o => resShort(o.x.name) === red.pay.res || new RegExp('\\(' + red.pay.res + '\\)').test(o.x.name));
+            if (res) await c.dispatch({ type: 'resource.set', player: me, index: res.index, value: Math.max(0, (Number(res.x.value) || 0) - red.pay.n) });
+          }
         }
         const r = await c.dispatch({ type: 'strat.use', player: me, stratId: s.id, cost, unitId: unitId || undefined });
         if (!r) return;
