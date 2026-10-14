@@ -36,3 +36,43 @@
   .lobby .game .code { font-size: 2.2rem; }
   .lobby .roles .btn { flex-basis: 45%; }
 }
+
+/* ───────── Title screen: main menu (js/ui/lobby.js homeHtml) ───────── */
+.lobby.home { max-width: 760px; gap: 16px; padding-top: calc(16px + var(--sa-top)); }
+.lobby.home .hero { padding: 20px 0 4px; }
+.menu-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.menu-tile { all: unset; box-sizing: border-box; display: flex; flex-direction: column; gap: 4px; min-height: 124px; padding: 16px;
+  border: 1px solid var(--line); border-radius: 14px; background: var(--panel); cursor: pointer; -webkit-tap-highlight-color: transparent;
+  transition: transform .08s ease, background .12s ease; }
+.menu-tile:hover { background: var(--panel2); }
+.menu-tile:active { transform: scale(.98); }
+.menu-tile:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+.menu-ico { width: 30px; height: 30px; margin-bottom: auto; color: var(--muted); }
+.menu-label { font: 700 19px/1.15 var(--font-title); letter-spacing: .03em; text-transform: uppercase; color: var(--text); }
+.menu-sub { font-size: 13px; line-height: 1.3; color: var(--muted); }
+.menu-tile.main { grid-column: 1 / -1; min-height: 116px; background: var(--text); border-color: var(--text); }
+.menu-tile.main .menu-ico, .menu-tile.main .menu-label { color: var(--bg); }
+.menu-tile.main .menu-sub { color: color-mix(in srgb, var(--bg) 70%, transparent); }
+.menu-tile.main:hover { filter: brightness(.95); background: var(--text); }
+.continue-card { all: unset; box-sizing: border-box; display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-radius: 14px; cursor: pointer;
+  border: 1px solid color-mix(in srgb, var(--ok) 55%, var(--line)); background: var(--ok-soft); }
+.cont-text { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.cont-kicker { font: 700 12px/1 var(--font-body); letter-spacing: .1em; text-transform: uppercase; color: var(--ok); }
+.cont-code { font: 800 30px/1.05 var(--font-title); letter-spacing: .2em; }
+.cont-role { color: var(--muted); font-size: 14px; }
+.cont-go { font-size: 28px; color: var(--ok); }
+@media (min-width: 700px) {
+  .menu-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .menu-tile.main { grid-column: span 3; }
+}
+
+/* sub pages (join / finished games / app & data) */
+.lobby.page { max-width: 900px; padding-top: calc(12px + var(--sa-top)); gap: 14px; }
+.page-head { display: flex; align-items: center; gap: 10px; }
+.page-head .title { flex: 1; margin: 0; font-size: 26px; }
+.lobby .join-form { display: flex; flex-direction: column; gap: 10px; }
+.lobby .join-form .code-input { width: 100%; }
+.lobby .role-pick { display: flex; flex-wrap: wrap; gap: 6px; }
+.lobby .role-pick .chip { cursor: pointer; }
+.lobby .app-info .hint { margin-top: 0; }
+.lobby .join-form .btn { flex: none; }

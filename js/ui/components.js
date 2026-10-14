@@ -114,6 +114,7 @@ export function sheet(o = {}) {
     closed = true;
     document.removeEventListener('keydown', onKey);
     wrap.remove();
+    if (!document.querySelector('.sheet-backdrop')) document.documentElement.classList.remove('sheet-open');
     if (typeof o.onClose === 'function') { try { o.onClose(result); } catch (e) { console.error(e); } }
   }
   wrap.addEventListener('click', e => {
@@ -135,6 +136,8 @@ export function sheet(o = {}) {
   });
   document.addEventListener('keydown', onKey);
   document.body.appendChild(wrap);
+  // the page behind stays put: scrolling a list in the popup must not scroll the page (phones)
+  document.documentElement.classList.add('sheet-open');
   if (typeof o.onOpen === 'function') { try { o.onOpen(wrap.querySelector('.sheet'), close); } catch (e) { console.error(e); } }
   const first = wrap.querySelector('.sheet-body input, .sheet-body select, .sheet-body textarea');
   if (first) { try { first.focus(); } catch {} }

@@ -3,7 +3,7 @@
  * enhancements, points and every restriction of the data. Lists are stored on this device (js/builder/store.js). */
 import { esc, btn, toast, sheet, confirmSheet, promptSheet } from './components.js';
 import { listArmies, loadArmy, saveArmy, deleteArmy, armyId } from '../builder/store.js';
-import { playableCatalogues, systemFor } from '../builder/load.js';
+import { playableCatalogues, systemFor, ALLIANCES } from '../builder/load.js';
 import * as E from '../builder/bs-engine.js';
 import { summarize, armyText } from '../builder/export.js';
 import { loadDatasheets, matchUnit, normName } from '../data/datasheets.js';
@@ -13,7 +13,8 @@ const dsCache = new Map();   // faction id → datasheet package (or 'loading')
 
 const DP = '82ae-1066-5107-6ae0';
 const DP_LIMIT = { 1000: 2, 2000: 3 };
-const CAT_ORDER = ['Configuration', 'Epic Hero', 'Character', 'Battleline', 'Dedicated Transport'];
+const CAT_ORDER = ['Configuration', 'Epic Hero', 'Character', 'Battleline', 'Infantry', 'Mounted', 'Beast', 'Swarm', 'Monster', 'Vehicle', 'Dedicated Transport', 'Fortification'];
+const byRole = (a, b) => ((CAT_ORDER.indexOf(a) + 1 || 99) - (CAT_ORDER.indexOf(b) + 1 || 99)) || a.localeCompare(b);
 const HIDE_ROOT = /^(Show\/Hide|Show Legends|Show Unaligned|Show Crucible|Order of Battle|Experience Points|Legendary Veterans|Weapon Modifications)/i;
 const SIZES = [{ pts: 1000, name: 'Incursion' }, { pts: 2000, name: 'Strike Force' }];
 
@@ -46,7 +47,7 @@ function listHtml() {
   const list = listArmies();
   return `<div class="armies">
     <header class="arm-head">
-      <a class="btn ghost sm" href="#/">‹ Lobby</a>
+      <a class="btn ghost sm" href="#/">‹ Menu</a>
       <h1 class="title">My armies</h1>
       ${btn({ label: 'New army', kind: 'primary', action: 'arm-new' })}
     </header>
@@ -74,17 +75,50 @@ function listHtml() {
 async function newArmy() {
   let cats;
   try { cats = await playableCatalogues(); } catch (e) { toast(e.message || String(e), 'bad'); return; }
+  let pick = null, alliance = ALLIANCES[0];
+  // Faction picker: grand alliance tabs, then the armies – families (Adeptus Astartes, Heretic Astartes, Aeldari …) as groups
+  const listHtml = () => {
+    const mine = cats.filter(c => c.alliance === alliance);
+    let html = '', grp = null;
+    for (const c of mine) {
+      if (c.group !== grp) {
+        if (grp) html += '</div>';
+        grp = c.group;
+        if (grp) html += `<div class="fac-group"><div class="fac-group-h">${esc(grp)}</div>`;
+      }
+      html += `<button type="button" class="fac-item${pick && pick.id === c.id ? ' on' : ''}${c.group ? ' in-group' : ''}" data-cat="${esc(c.id)}">${esc(c.label)}</button>`;
+    }
+    if (grp) html += '</div>';
+    return html;
+  };
   const body = `<label class="field"><span>Name</span><input type="text" name="name" placeholder="e.g. Votann 2000" autocomplete="off"></label>
-    <label class="field"><span>Faction</span><select name="cat">${cats.map(c => `<option value="${esc(c.id)}">${esc(c.label)}</option>`).join('')}</select></label>
-    <div class="field"><span>Battle size</span><div class="chips">${SIZES.map((s, i) => `<label class="chip${i === 1 ? ' on' : ''}"><input type="radio" name="size" value="${s.pts}"${i === 1 ? ' checked' : ''} hidden>${esc(s.name)} · ${s.pts} pts</label>`).join('')}</div></div>`;
+    <div class="field"><span class="label">Faction</span>
+      <div class="seg fac-tabs" role="tablist">${ALLIANCES.map(a => `<button type="button" class="seg-btn${a === alliance ? ' on' : ''}" data-alliance="${esc(a)}" role="tab">${esc(a)}</button>`).join('')}</div>
+      <div class="fac-list">${listHtml()}</div></div>
+    <div class="field"><span class="label">Battle size</span><div class="chips">${SIZES.map((s, i) => `<label class="chip${i === 1 ? ' on' : ''}"><input type="radio" name="size" value="${s.pts}"${i === 1 ? ' checked' : ''} hidden>${esc(s.name)} · ${s.pts} pts</label>`).join('')}</div></div>`;
   sheet({
     title: 'New army', body, cls: 'arm-new-sheet',
-    onOpen: el => el.addEventListener('change', e => { if (e.target.name === 'size') el.querySelectorAll('.chips .chip').forEach(c => c.classList.toggle('on', c.querySelector('input').checked)); }),
-    actions: [{ label: 'Cancel', kind: 'ghost' }, { label: 'Create', kind: 'primary', onClick: (close, el) => {
-      const cat = cats.find(c => c.id === el.querySelector('select[name=cat]').value);
+    onOpen: el => {
+      const sync = () => {
+        el.querySelector('.fac-list').innerHTML = listHtml();
+        el.querySelectorAll('[data-alliance]').forEach(b => b.classList.toggle('on', b.dataset.alliance === alliance));
+        const ok = el.querySelector('[data-sheet-action="1"]');
+        if (ok) { ok.disabled = !pick; ok.textContent = pick ? `Create ${pick.label} army` : 'Choose a faction'; }
+      };
+      el.addEventListener('change', e => { if (e.target.name === 'size') el.querySelectorAll('.chips .chip').forEach(c => c.classList.toggle('on', c.querySelector('input').checked)); });
+      el.addEventListener('click', e => {
+        const t = e.target.closest('[data-alliance]');
+        if (t) { alliance = t.dataset.alliance; sync(); return; }
+        const c = e.target.closest('[data-cat]');
+        if (c) { pick = cats.find(x => x.id === c.dataset.cat) || null; sync(); }
+      });
+      sync();
+    },
+    actions: [{ label: 'Cancel', kind: 'ghost' }, { label: 'Choose a faction', kind: 'primary', disabled: true, onClick: (close, el) => {
+      if (!pick) return false;
       const limit = Number((el.querySelector('input[name=size]:checked') || {}).value) || 2000;
-      const name = el.querySelector('input[name=name]').value.trim() || `${cat.label} ${limit}`;
-      createArmy(cat, name, limit);
+      const name = el.querySelector('input[name=name]').value.trim() || `${pick.label} ${limit}`;
+      createArmy(pick, name, limit);
     } }]
   });
 }
@@ -147,7 +181,7 @@ function editorHtml() {
     if (!groups.has(c)) groups.set(c, []);
     groups.get(c).push(w);
   }
-  const order = [...groups.keys()].sort((a, b) => ((CAT_ORDER.indexOf(a) + 1 || 99) - (CAT_ORDER.indexOf(b) + 1 || 99)) || a.localeCompare(b));
+  const order = [...groups.keys()].sort(byRole);
   const general = byUnit.get('') || [];
   return `<div class="armies arm-editor">
     <header class="arm-bar">
@@ -343,9 +377,11 @@ function openAdd() {
     const pts = defaultCost(n);
     return { n, l, have, pts, cat: sys.categoryNames.get(n.primaryCategory) || 'Other' };
   }).filter(Boolean);
-  const cats = [...new Set(rows.map(r => r.cat))].sort((a, b) => ((CAT_ORDER.indexOf(a) + 1 || 99) - (CAT_ORDER.indexOf(b) + 1 || 99)) || a.localeCompare(b));
-  const body = `<input type="search" class="arm-search" placeholder="Search units" autocomplete="off">
-    <div class="arm-addlist">${cats.map(c => `<div class="arm-sec-h">${esc(c)}</div>${rows.filter(r => r.cat === c).map(r => `
+  const cats = [...new Set(rows.map(r => r.cat))].sort(byRole);
+  rows.sort((a, b) => a.l.name.localeCompare(b.l.name));
+  const body = `<div class="arm-add-top"><input type="search" class="arm-search" placeholder="Search units" autocomplete="off">
+    <div class="arm-roles">${cats.map(c => `<button type="button" class="chip sm" data-jump="${esc(c)}">${esc(c)}</button>`).join('')}</div></div>
+    <div class="arm-addlist">${cats.map(c => `<div class="arm-sec-h" data-role="${esc(c)}">${esc(c)}</div>${rows.filter(r => r.cat === c).map(r => `
       <button type="button" class="arm-addrow" data-tok="${esc(r.n.token)}" data-name="${esc(r.l.name.toLowerCase())}"${r.l.max >= 0 && r.have >= r.l.max ? ' disabled' : ''}>
         <span>${esc(r.l.name)}</span><span class="muted xs">${r.l.max >= 0 ? `${r.have}/${r.l.max}` : r.have ? r.have + '×' : ''}</span><span class="arm-u-pts">${r.pts}</span></button>`).join('')}`).join('')}</div>`;
   const close = sheet({
@@ -355,8 +391,16 @@ function openAdd() {
       q.addEventListener('input', () => {
         const s = q.value.trim().toLowerCase();
         el.querySelectorAll('.arm-addrow').forEach(b => { b.hidden = !!s && !b.dataset.name.includes(s); });
+        el.querySelectorAll('.arm-addlist [data-role]').forEach(h => { let n = h.nextElementSibling, any = false; while (n && !n.dataset.role) { if (!n.hidden) any = true; n = n.nextElementSibling; } h.hidden = !any; });
       });
       el.addEventListener('click', e => {
+        const j = e.target.closest('[data-jump]');
+        if (j) {
+          const h = el.querySelector(`.arm-addlist [data-role="${CSS.escape(j.dataset.jump)}"]`);
+          const body = el.querySelector('.sheet-body');
+          if (h && body) body.scrollTo({ top: h.offsetTop - el.querySelector('.arm-add-top').offsetHeight - 4, behavior: 'smooth' });
+          return;
+        }
         const b = e.target.closest('.arm-addrow');
         if (!b || b.disabled) return;
         const before = new Set(E.view(ed.sys, ed.army).force.ch.map(w => w.s.id));

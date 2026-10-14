@@ -397,3 +397,11 @@ body[data-spectator] [data-action="strat.undo"], body[data-spectator] [data-acti
 body[data-spectator] .strat-foot, body[data-spectator] .ds-attach-pick { display: none !important; }
 .ab-spec { flex: none; padding: 3px 8px; border-radius: 999px; font-size: .7rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
   color: var(--bg, #0f1216); background: var(--warn); }
+
+/* While a popup is open the page behind it does not scroll (phones: lists inside a popup scroll on their own) */
+html.sheet-open, html.sheet-open body { overflow: hidden; overscroll-behavior: none; }
+.sheet-backdrop { overscroll-behavior: contain; }
+.sheet-body, .sheet-body * { overscroll-behavior: contain; }
+/* a chip used as radio label (<label class="chip"><input hidden>) looks like any chip, not like a field label */
+label.chip { display: inline-flex; margin: 0; text-transform: none; letter-spacing: normal; font-size: 15px; font-weight: 500; color: var(--text); }
+label.chip.on { color: var(--bg); }

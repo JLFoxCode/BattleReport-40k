@@ -4,6 +4,7 @@ import { esc, btn, sheet, confirmSheet, toast, badge } from './components.js';
 import { listFinished } from '../archive.js';
 import { checkDataUpdate, getDataStatus, onDataStatus, loadDataInfo } from '../data-update.js';
 import { askDataUpdate, checkForUpdates } from './update-popup.js';
+import { armyChoices } from './armies.js';
 
 let games = null;      // zuletzt geladene Liste
 let loading = false;
@@ -23,77 +24,125 @@ const ROLES = [
   { view: 'setup', label: 'Setup', kind: 'ghost' }
 ];
 
+// Simple line icons of the main menu (stroke = currentColor)
+const ICON = {
+  play: '<path d="M14.5 17.5 3 6V3h3l11.5 11.5"/><path d="m13 19 6-6"/><path d="m16 16 4 4"/><path d="m19 21 2-2"/><path d="M14.5 6.5 18 3h3v3l-3.5 3.5"/><path d="m5 14 4 4"/><path d="m7 17-3 3"/><path d="m3 19 2 2"/>',
+  join: '<path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><circle cx="12" cy="20" r="1"/>',
+  army: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M12 8v6"/><path d="M9 11h6"/>',
+  rules: '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><path d="M9 7h7"/><path d="M9 11h5"/>',
+  history: '<path d="M8 21h8"/><path d="M12 17v4"/><path d="M7 4h10v5a5 5 0 0 1-10 0V4z"/><path d="M17 5h3v2a3 3 0 0 1-3 3"/><path d="M7 5H4v2a3 3 0 0 0 3 3"/>',
+  app: '<circle cx="12" cy="12" r="3"/><path d="M12 2v3"/><path d="M12 19v3"/><path d="m4.93 4.93 2.12 2.12"/><path d="m16.95 16.95 2.12 2.12"/><path d="M2 12h3"/><path d="M19 12h3"/><path d="m4.93 19.07 2.12-2.12"/><path d="m16.95 7.05 2.12-2.12"/>'
+};
+const icon = k => `<svg class="menu-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON[k]}</svg>`;
+const PAGES = { join: 'Join game', history: 'Finished games', app: 'App & data' };
+
 export function render(root, ctx) {
   lastRoot = root;
   lastCtx = ctx;
-  if (games === null && !loading) load();
-  const host = location.host;
+  const page = PAGES[ctx.me] ? ctx.me : null;
+  if (games === null && !loading) load(!page);
   const last = ctx.lastGame ? ctx.lastGame() : null;
   const lastExists = last && games && games.some(g => g.code === last.code);
-
-  root.innerHTML = `
-  <div class="lobby">
-    <header class="hero">
-      <div class="hero-kicker">Warhammer 40,000 · 11th Edition</div>
-      <h1 class="title hero-title">Battle Report 40k</h1>
-      <p class="muted">Create a game, pick a role: Score on the tablet in the middle of the table, rulebook on each player's phone – every device sees the same state.</p>
-      <div class="row hero-actions">
-        ${btn({ label: 'New game', kind: 'primary', cta: true, action: 'new' })}
-        ${lastExists ? btn({ label: `Continue: ${last.code} · ${roleLabel(last)}`, kind: 'ghost', cta: true, action: 'continue' }) : ''}
-        <a class="btn ghost sm lobby-rules" href="#/armies">My armies</a>
-        <a class="btn ghost sm lobby-rules" href="#/rules">Rulebook</a>
-      </div>
-    </header>
-
-${nearbySection()}
-
-    <section class="card join">
-      <div class="title">Join game</div>
-      <form class="row join-form" data-form="join" autocomplete="off">
-        <input class="code-input" name="code" maxlength="4" placeholder="CODE" inputmode="latin" autocapitalize="characters" spellcheck="false" aria-label="Enter code">
-        <select name="role" aria-label="Role">
-          <option value="table">Score (tablet)</option>
-          <option value="p/0">Player 1 (phone)</option>
-          <option value="p/1">Player 2 (phone)</option>
-          <option value="setup">Setup</option>
-        </select>
-        ${btn({ label: 'Join', kind: 'primary', type: 'submit' })}
-      </form>
-      ${window.BR ? '' : `<p class="muted hint">Tablet in the middle of the table: <code>http://${esc(host)}/#/g/CODE/table</code> · Phone player 1: <code>http://${esc(host)}/#/g/CODE/p/0</code> · Phone player 2: <code>http://${esc(host)}/#/g/CODE/p/1</code></p>
-      <p class="muted hint">Battle Report 40k is an app for <b>Android</b> and <b>Windows</b>: <a class="apk" href="https://github.com/JLFoxCode/BattleReport-40k/releases/latest" target="_blank" rel="noopener">download the latest release</a>. Devices without the app (e.g. iPhone) can still join a game by scanning its QR code.</p>
-      ${devServerHtml()}`}
-      ${devInfoHtml()}
-      ${dataStatusHtml()}
-    </section>
-
-    <section class="games">
-      <div class="row between">
-        <div class="title">Existing games</div>
-        ${btn({ label: 'Refresh', kind: 'ghost', small: true, action: 'reload', disabled: loading })}
-      </div>
-      ${renderList(host)}
-    </section>
-    ${finishedSection()}
-  </div>`;
-
+  // keep what is being typed when the page refreshes itself (nearby games, game list)
+  const form = root.querySelector('[data-form=join]');
+  const keep = form ? { code: form.code.value, role: (form.querySelector('input[name=role]:checked') || {}).value, focus: document.activeElement === form.code } : null;
+  root.innerHTML = page ? pageHtml(page) : homeHtml(last, lastExists);
+  const nf = root.querySelector('[data-form=join]');
+  if (nf && keep) {
+    nf.code.value = keep.code;
+    nf.querySelectorAll('input[name=role]').forEach(i => { i.checked = i.value === keep.role; i.closest('.chip').classList.toggle('on', i.checked); });
+    if (keep.focus) nf.code.focus();
+  }
   if (!root.__lobbyBound) {
     root.__lobbyBound = true;
     root.addEventListener('click', onClick);
     root.addEventListener('submit', onSubmit);
+    root.addEventListener('change', e => {
+      if (e.target.name !== 'role') return;
+      e.target.closest('.role-pick').querySelectorAll('.chip').forEach(c => c.classList.toggle('on', c.querySelector('input').checked));
+    });
   }
   if (!refreshTimer) refreshTimer = setInterval(() => { if (document.body.dataset.view === 'lobby' && document.visibilityState === 'visible') load(true); else { clearInterval(refreshTimer); refreshTimer = null; } }, 10000);
+}
+
+/* Title screen: a clear menu – the game first, then everything around it */
+function homeHtml(last, lastExists) {
+  const nearbyL = window.BR ? nearbyList() : [];
+  const nearby = nearbyL.length;
+  if (window.BR) { watchNearby(); nearbyKey = JSON.stringify(nearbyL); }
+  const finished = listFinished().length;
+  let armies = 0;
+  try { armies = armyChoices().length; } catch {}
+  const tile = o => {
+    const inner = `${icon(o.icon)}<span class="menu-label">${esc(o.label)}</span><span class="menu-sub">${esc(o.sub)}</span>`;
+    return o.href ? `<a href="${o.href}" class="menu-tile${o.main ? ' main' : ''}">${inner}</a>`
+      : `<button type="button" data-action="${o.action}" class="menu-tile${o.main ? ' main' : ''}">${inner}</button>`;
+  };
+  return `
+  <div class="lobby home">
+    <header class="hero">
+      <div class="hero-kicker">Warhammer 40,000 · 11th Edition</div>
+      <h1 class="title hero-title">Battle Report 40k</h1>
+    </header>
+    ${lastExists ? `<button type="button" class="continue-card" data-action="continue">
+        <span class="cont-text"><span class="cont-kicker">Continue game</span><span class="cont-code">${esc(last.code)}</span></span>
+        <span class="cont-role">${esc(roleLabel(last))}</span><span class="cont-go" aria-hidden="true">›</span></button>` : ''}
+    <nav class="menu-grid" aria-label="Main menu">
+      ${tile({ action: 'new', icon: 'play', label: 'New game', sub: 'Host a battle on this device', main: true })}
+      ${tile({ href: '#/play/join', icon: 'join', label: 'Join game', sub: nearby ? `${nearby} game${nearby === 1 ? '' : 's'} nearby` : 'Nearby or by code' })}
+      ${tile({ href: '#/armies', icon: 'army', label: 'My armies', sub: armies ? `${armies} list${armies === 1 ? '' : 's'}` : 'Build your army lists' })}
+      ${tile({ href: '#/rules', icon: 'rules', label: 'Rulebook', sub: 'Core rules & missions' })}
+      ${tile({ href: '#/play/history', icon: 'history', label: 'Finished games', sub: finished ? `${finished} saved` : 'Results & battle logs' })}
+      ${tile({ href: '#/play/app', icon: 'app', label: 'App & data', sub: 'Updates & unit data' })}
+    </nav>
+  </div>`;
+}
+
+function pageHtml(page) {
+  const host = location.host;
+  const head = `<header class="page-head"><a class="btn ghost sm" href="#/">‹ Menu</a><h1 class="title">${esc(PAGES[page])}</h1>${page === 'join' ? btn({ label: 'Refresh', kind: 'ghost', small: true, action: 'reload', disabled: loading }) : '<span></span>'}</header>`;
+  if (page === 'join') {
+    return `<div class="lobby page">${head}
+    ${nearbySection()}
+    <section class="card join">
+      <div class="title">Join by code</div>
+      <form class="join-form" data-form="join" autocomplete="off">
+        <input class="code-input" name="code" maxlength="4" placeholder="CODE" inputmode="latin" autocapitalize="characters" spellcheck="false" aria-label="Enter code">
+        <div class="chips role-pick" role="radiogroup" aria-label="Role">
+          ${[['p/0', 'Player 1'], ['p/1', 'Player 2'], ['table', 'Scoreboard'], ['watch', 'Spectator'], ['setup', 'Setup']].map(([v, l], i) => `<label class="chip${i === 0 ? ' on' : ''}"><input type="radio" name="role" value="${v}"${i === 0 ? ' checked' : ''} hidden>${l}</label>`).join('')}
+        </div>
+        ${btn({ label: 'Join', kind: 'primary', cta: true, type: 'submit' })}
+      </form>
+      ${window.BR ? '' : `<p class="muted hint">Battle Report 40k is an app for <b>Android</b> and <b>Windows</b>: <a class="apk" href="https://github.com/JLFoxCode/BattleReport-40k/releases/latest" target="_blank" rel="noopener">download the latest release</a>. Devices without the app (e.g. iPhone) can still join a game by scanning its QR code.</p>${devServerHtml()}`}
+    </section>
+    <section class="games">
+      <div class="title">Games on this device</div>
+      ${renderList(host)}
+    </section>
+  </div>`;
+  }
+  if (page === 'history') {
+    const f = finishedSection();
+    return `<div class="lobby page">${head}${f || '<div class="card muted empty">No finished games on this device yet.</div>'}</div>`;
+  }
+  return `<div class="lobby page">${head}
+    <section class="card app-info">${devInfoHtml() || '<p class="muted">Running in the browser – updates come with the app.</p>'}${dataStatusHtml()}</section>
+  </div>`;
 }
 
 /* ───────── App only: games hosted by other devices on the same Wi-Fi (window.BR = Android bridge, DNS-SD) ───────── */
 let nearbyTimer = null, nearbyKey = '';
 function nearbyList() { try { return JSON.parse(window.BR.nearby()) || []; } catch { return []; } }
-function nearbySection() {
-  if (!window.BR) return '';
+function watchNearby() {
   if (!nearbyTimer) nearbyTimer = setInterval(() => {
     if (document.body.dataset.view !== 'lobby') { clearInterval(nearbyTimer); nearbyTimer = null; return; }
     const key = JSON.stringify(nearbyList());
     if (key !== nearbyKey && lastRoot && lastCtx) render(lastRoot, lastCtx);
   }, 2000);
+}
+function nearbySection() {
+  if (!window.BR) return '';
+  watchNearby();
   const list = nearbyList();
   nearbyKey = JSON.stringify(list);
   return `
@@ -111,7 +160,7 @@ function nearbySection() {
           </div>
         </article>`).join('')}</div>`
       : '<p class="muted small">Searching the Wi-Fi … A game appears here as soon as a device in the same network creates one with this app.</p>'}
-      <p class="muted hint">A game you create here is hosted by this device – the other devices find it automatically, or scan the QR codes shown at "Roll off for the first turn".</p>
+      <p class="muted hint">A game you create on this device is hosted by it – the other devices find it automatically, or scan the QR codes shown at "Roll off for the first turn".</p>
     </section>`;
 }
 
@@ -181,7 +230,7 @@ function roleLabel(last) {
 function renderList(host) {
   if (loadErr) return `<div class="card bad"><p>Could not load the list: ${esc(loadErr)}</p></div>`;
   if (games === null) return `<div class="card muted">Loading …</div>`;
-  if (!games.length) return `<div class="card muted empty">No games yet. Create a new one above.</div>`;
+  if (!games.length) return `<div class="card muted empty">No games on this device yet.</div>`;
   return `<div class="grid game-grid">${games.map(g => `
     <article class="card game" data-code="${esc(g.code)}">
       <div class="row between game-head">

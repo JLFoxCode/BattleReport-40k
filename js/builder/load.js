@@ -14,6 +14,13 @@ export function catalogueIndex() {
   return indexP;
 }
 
+// Grand alliances and the families inside them (the BSData names carry "Imperium - Adeptus Astartes - …" themselves)
+export const ALLIANCES = ['Imperium', 'Chaos', 'Xenos'];
+const SUBGROUP = { 'Chaos Space Marines': 'Heretic Astartes', 'Death Guard': 'Heretic Astartes', "Emperor's Children": 'Heretic Astartes', 'Thousand Sons': 'Heretic Astartes',
+  'World Eaters': 'Heretic Astartes', Aeldari: 'Aeldari', Drukhari: 'Aeldari', 'Imperial Knights': 'Imperial Knights & Agents', 'Agents of the Imperium': 'Imperial Knights & Agents',
+  'Chaos Daemons': 'Daemons & Knights', 'Chaos Knights': 'Daemons & Knights', Tyranids: 'Tyranids', 'Genestealer Cults': 'Tyranids' };
+const FIRST = ['Space Marines', 'Chaos Space Marines', 'Aeldari', 'Tyranids'];   // the codex army before its variants
+
 /** Catalogues a player can build an army from (no libraries, no game system), with the app faction id they belong to. */
 export async function playableCatalogues() {
   const idx = await catalogueIndex();
@@ -25,8 +32,16 @@ export async function playableCatalogues() {
     return walk(c);
   };
   return idx.filter(c => !c.gameSystem && !c.library && !/Unaligned|Titanicus|Library/i.test(c.name))
-    .map(c => ({ id: c.id, file: c.file, name: c.name, label: c.name.replace(/^(Imperium|Chaos|Xenos|Aeldari) - (Adeptus Astartes - )?/, ''), faction: factionOf(c) }))
-    .sort((a, b) => a.label.localeCompare(b.label));
+    .map(c => {
+      const parts = c.name.split(' - ');
+      const label = parts[parts.length - 1];
+      const alliance = ALLIANCES.includes(parts[0]) ? parts[0] : 'Xenos';
+      const group = parts.length > 2 ? parts[1] : (SUBGROUP[label] || null);
+      return { id: c.id, file: c.file, name: c.name, label, alliance, group, faction: factionOf(c) };
+    })
+    .sort((a, b) => ALLIANCES.indexOf(a.alliance) - ALLIANCES.indexOf(b.alliance)
+      || String(a.group || a.label).localeCompare(String(b.group || b.label))   // families sit among the single armies (alphabetical)
+      || (FIRST.includes(a.label) ? 0 : 1) - (FIRST.includes(b.label) ? 0 : 1) || a.label.localeCompare(b.label));
 }
 
 /** BSystem for a catalogue (+ every catalogue it links, + the game system). */
