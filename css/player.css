@@ -323,3 +323,7 @@
 /* Once-per-phase: phase picker (lit = used in that phase this turn) */
 .phase-use .phase-pick { display: grid; grid-template-columns: 1fr; gap: 8px; margin-top: 10px; }
 .phase-use .phase-pick .score-tog { width: 100%; min-height: 46px; text-align: left; }
+/* leaders not attached yet (army tab) */
+.lead-info { border-color: color-mix(in srgb, var(--warn) 50%, var(--line)); }
+.lead-info-h { font-weight: 700; color: var(--warn); }
+.lead-info .ds-attach-pick { margin-top: 8px; }

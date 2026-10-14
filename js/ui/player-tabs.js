@@ -445,11 +445,19 @@ export function resolveLeaders(unitsIn) {
 function myDetNames(ctx) { return armyOf(ctx, ctx.me).detachments.map(d => normName(d.name)); }
 
 /** Units a leader may be attached to: from the datasheet's Leader text ("… attached to the following units: A, B"). */
-function leaderTargets(ds) {
+export function leaderTargets(ds) {
   const l = ds && ds.leader;
   if (!l) return null;
   const names = (l.canLead || []).length ? l.canLead : String(l.text || '').replace(/^[^:]*:/, '').split(/,|\band\b|\n|•/).map(x => x.replace(/[*^.]/g, '').trim()).filter(Boolean);
   return names.map(normName);
+}
+/** Leaders of the list that could lead one of its units but lead none yet. */
+function unattachedLeaders(units, sheets, links) {
+  return units.filter(u => {
+    const allowed = leaderTargets(sheets.get(u.id));
+    if (!allowed || (links.get(u.id) || {}).leading || u.status === 'destroyed') return false;
+    return units.some(x => x !== u && !leaderTargets(sheets.get(x.id)) && (!allowed.length || allowed.includes(normName(x.name)) || allowed.includes(normName((sheets.get(x.id) || {}).name))));
+  });
 }
 /** "Attached to" picker for a leader (select, data-change="unit.attach"). */
 function attachPicker(u, ds, units, sheets, links) {
@@ -538,7 +546,11 @@ export function renderUnitList(ctx, ui) {
   }).join('');
   const found = units.filter(u => sheets.get(u.id)).length;
   const pts = units.reduce((x, u) => x + (u.points || 0), 0);
+  const loose = q ? [] : unattachedLeaders(units, sheets, links);
   return `<div class="ds-wrap p${me}">
+    ${loose.length ? `<div class="card lead-info"><div class="lead-info-h">ⓘ ${loose.length} leader${loose.length === 1 ? '' : 's'} not attached yet</div>
+      <p class="muted xs">${loose.length === 1 ? 'This character can' : 'These characters can'} lead a unit of your army – attach to give the unit the leader's abilities.</p>
+      ${loose.map(L => attachPicker(L, sheets.get(L.id), units, sheets, links)).join('')}</div>` : ''}
     <p class="muted xs ds-summary">${units.length} unit${units.length === 1 ? '' : 's'}${pts ? ` · ${pts} pts` : ''} · ${found}/${units.length} with a datasheet${data.version ? ` · data ${esc(String(data.version))}` : ''}${!data.units.length ? ' · no datasheets available for this faction' : ''}${q ? ` · ${shown.length} match${shown.length === 1 ? '' : 'es'}` : ''}</p>
     ${cards || '<p class="muted small center">No unit matches.</p>'}</div>`;
 }

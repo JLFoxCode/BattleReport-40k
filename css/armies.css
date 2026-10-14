@@ -125,3 +125,8 @@
 .arm-dp-val b { font: 700 22px/1 var(--font-title); }
 .arm-dp.bad .arm-dp-val b { color: var(--bad); }
 .arm-dpc { color: var(--warn); }
+/* leaders not attached yet */
+.arm-lead-info { padding: 10px 12px; margin-bottom: 10px; border-radius: 10px; background: color-mix(in srgb, var(--p1, #3DB5E6) 14%, var(--panel)); border: 1px solid color-mix(in srgb, var(--p1, #3DB5E6) 45%, var(--line)); font-size: 14px; line-height: 1.4; }
+.arm-link { all: unset; cursor: pointer; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
+.arm-loose { color: var(--warn); font-weight: 600; }
+.arm-lead { padding: 8px 0 4px; border-bottom: 1px solid var(--line); }

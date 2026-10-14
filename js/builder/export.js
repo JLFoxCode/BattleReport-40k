@@ -40,7 +40,7 @@ export function summarize(sys, roster) {
     const stacks = modelStacks(w);
     const n = w.node.type === 'model' ? w.n : Math.max(1, stacks.reduce((x, [, k]) => x + k, 0));
     units.push({
-      id: w.s.id, name: nameOf(V, w), pts: totalCost(V, w), models: n, character: [...(w.node.categoryLinks || [])].some(c => /Character/i.test(c.name || '')),
+      id: w.s.id, name: nameOf(V, w), pts: totalCost(V, w), leads: w.s.lead && V.byId.get(w.s.lead) ? nameOf(V, V.byId.get(w.s.lead)) : null, models: n, character: [...(w.node.categoryLinks || [])].some(c => /Character/i.test(c.name || '')),
       warlord: w.ch.some(c => c.node && /^Warlord$/i.test(c.node.name)),
       enhancements: w.ch.filter(isEnh).map(c => ({ name: nameOf(V, c), pts: totalCost(V, c) })),
       gear: gearOf(V, w), stacks: stacks.map(([m, k]) => ({ name: nameOf(V, m), n: k, gear: gearOf(V, m) }))
@@ -75,6 +75,7 @@ export function armyText(sys, roster, meta = {}) {
       }
     }
     for (const e of u.enhancements) L.push(`Enhancement: ${e.name} (+${e.pts} pts)`);
+    if (u.leads) L.push(`Leading ${u.leads}`);
   }
   L.push('Created with Battle Report 40k');
   return L.join('\n') + '\n';

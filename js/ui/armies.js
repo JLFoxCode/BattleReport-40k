@@ -8,6 +8,7 @@ import * as E from '../builder/bs-engine.js';
 import { summarize, armyText } from '../builder/export.js';
 import { loadDatasheets, matchUnit, normName } from '../data/datasheets.js';
 import { datasheetCard } from './datasheet.js';
+import { leaderTargets } from './player-tabs.js';
 
 const dsCache = new Map();   // faction id → datasheet package (or 'loading')
 
@@ -151,6 +152,38 @@ function setBattleSize(sys, r, limit) {
 }
 
 /* ═══════════════ Editor ═══════════════ */
+/** Datasheets of the army's faction (leader rules); loads once, then re-renders. */
+function dsPack() {
+  const fid = ed.army && ed.army.faction;
+  if (!fid) return null;
+  const p = dsCache.get(fid);
+  if (!p) {
+    dsCache.set(fid, 'loading');
+    loadDatasheets(fid).then(d => dsCache.set(fid, d || { units: [] })).catch(() => dsCache.set(fid, { units: [] })).then(() => { rerender(); refreshUnitSheet(); });
+    return null;
+  }
+  return p === 'loading' ? null : p;
+}
+const unitName = (V, w) => E.effective(V, w.node, w, w.parent).name;
+const isUnitSel = w => w.node && (w.node.type === 'unit' || w.node.type === 'model');
+/** Units of the list the leader `w` may lead (datasheet "Leader": attached to the following units …). */
+function leaderCands(V, w, pack) {
+  if (!pack) return null;
+  const sheet = n => matchUnit(pack.units || [], n);
+  const allowed = leaderTargets(sheet(unitName(V, w)));
+  if (!allowed) return null;
+  return V.force.ch.filter(x => x !== w && isUnitSel(x) && !leaderTargets(sheet(unitName(V, x)))
+    && (!allowed.length || allowed.includes(normName(unitName(V, x))) || allowed.includes(normName((sheet(unitName(V, x)) || {}).name))));
+}
+/** Leaders that could lead a unit of the list but lead none. */
+function looseLeaders(V, pack) {
+  return V.force.ch.filter(w => {
+    if (!isUnitSel(w)) return false;
+    const c = leaderCands(V, w, pack);
+    return c && c.length && !(w.s.lead && V.byId.get(w.s.lead));
+  });
+}
+
 function problems(V) {
   const out = E.validate(V);
   const dp = dpUsed(V), lim = dpLimitOf(V.roster);
@@ -193,6 +226,7 @@ function editorHtml() {
       <button type="button" class="arm-prob ${probs.length ? 'warn' : 'ok'}" data-action="arm-problems" aria-label="Problems">${probs.length ? '⚠ ' + probs.length : '✓'}</button>
     </header>
     ${general.length ? `<div class="arm-alerts">${general.map(p => `<div class="arm-alert">${esc(p.msg)}</div>`).join('')}</div>` : ''}
+    ${(() => { const loose = looseLeaders(V, dsPack()); return loose.length ? `<div class="arm-lead-info">ⓘ ${loose.length === 1 ? '1 leader is' : loose.length + ' leaders are'} not attached to a unit yet: ${loose.map(w => `<button type="button" class="arm-link" data-action="arm-unit" data-id="${esc(w.s.id)}">${esc(unitName(V, w))}</button>`).join(', ')}</div>` : ''; })()}
     ${order.map(c => c === 'Configuration' ? configHtml(V, groups.get(c), byUnit) : `
       <section class="arm-sec">
         <div class="arm-sec-h">${esc(c)}</div>
@@ -211,9 +245,12 @@ function unitRow(V, w, probs) {
   const models = countModels(w);
   const enh = w.ch.filter(c => c.groups.some(g => /Enhancement/i.test(g.name))).map(c => E.effective(V, c.node, c, c.parent).name);
   const warlord = w.ch.some(c => c.node && /^Warlord$/i.test(c.node.name));
+  const pack = dsPack(), cands = leaderCands(V, w, pack), led = w.s.lead && V.byId.get(w.s.lead);
+  const leadTxt = led ? `→ ${esc(unitName(V, led))}` : cands && cands.length ? '<span class="arm-loose">not attached</span>' : '';
+  const ledBy = V.force.ch.filter(x => x.s.lead === w.s.id).map(x => unitName(V, x));
   return `<button type="button" class="arm-unit${probs.length ? ' has-prob' : ''}" data-action="arm-unit" data-id="${esc(w.s.id)}">
     <span class="arm-u-main"><b>${esc(name)}</b>
-      <span class="muted xs">${models > 1 ? models + ' models' : ''}${warlord ? (models > 1 ? ' · ' : '') + 'Warlord' : ''}${enh.length ? ' · ' + esc(enh.join(', ')) : ''}</span></span>
+      <span class="muted xs">${[models > 1 ? models + ' models' : '', warlord ? 'Warlord' : '', enh.length ? esc(enh.join(', ')) : '', leadTxt, ledBy.length ? 'led by ' + esc(ledBy.join(', ')) : ''].filter(Boolean).join(' · ')}</span></span>
     ${probs.length ? '<span class="arm-u-warn" aria-label="Has problems">⚠</span>' : ''}
     <span class="arm-u-pts">${E.totalCost(V, w)}</span>
   </button>`;
@@ -354,8 +391,20 @@ function refreshUnitSheet(el) {
   sh.querySelector('.arm-usheet').innerHTML = `
     <div class="arm-u-head"><span class="muted">${esc(catName(ed.sys, w))}</span><span class="arm-u-total"><b>${E.totalCost(V, w)}</b> pts</span></div>
     ${probs.map(p => `<div class="arm-alert">${esc(p.msg)}</div>`).join('')}
+    ${leadHtml(V, w)}
     ${optionsHtml(V, w, false)}
     ${dsHtml(V, w)}`;
+}
+
+/** Leader: which unit of the list it leads (taken into the game as "Leading …"). */
+function leadHtml(V, w) {
+  const cands = leaderCands(V, w, dsPack());
+  if (!cands || !cands.length) return '';
+  const cur = w.s.lead && V.byId.get(w.s.lead) ? w.s.lead : '';
+  const nth = x => { const same = cands.filter(y => unitName(V, y) === unitName(V, x)); return same.length > 1 ? ` (${same.indexOf(x) + 1})` : ''; };
+  return `<div class="arm-grp arm-lead"><div class="arm-gh">Leads${cur ? '' : ' <span class="arm-loose">not attached</span>'}</div><div class="arm-choices">
+    <button type="button" class="arm-opt${cur ? '' : ' on'}" data-action="arm-op" data-op="lead" data-id="${esc(w.s.id)}" data-to="">None</button>
+    ${cands.map(x => `<button type="button" class="arm-opt${cur === x.s.id ? ' on' : ''}" data-action="arm-op" data-op="lead" data-id="${esc(w.s.id)}" data-to="${esc(x.s.id)}">${esc(unitName(V, x) + nth(x))}</button>`).join('')}</div></div>`;
 }
 
 /** Datasheet of the unit (profiles, weapons, abilities) below its options – with the chosen wargear. */
@@ -483,6 +532,7 @@ function op(b) {
     case 'rm': return apply(r => E.removeSel(r, d.id));
     case 'choose': return apply(r => E.chooseInGroup(sys, r, d.p || null, d.g, d.t));
     case 'split': return apply(r => E.splitSel(r, d.id));
+    case 'lead': return apply(r => { const c = JSON.parse(JSON.stringify(r)); const x = E.findSel(c.sel, d.id); if (x) { if (d.to) x.lead = d.to; else delete x.lead; } return c; });
     case 'count': return apply(r => {
       const s = E.findSel(r.sel, d.id);
       if (!s) return r;
