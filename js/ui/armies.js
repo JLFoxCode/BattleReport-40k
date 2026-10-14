@@ -331,12 +331,31 @@ function openCompare(pid, gtok) {
     const ws = weaponsOf(x);
     const cost = E.nodeCost(V, x, null, pw);
     const on = chosen.has(gtok + '>' + x.token);
-    return `<div class="cmp-opt${on ? ' on' : ''}" style="--oc:${color}">
-      <div class="cmp-opt-h"><span class="arm-dot" aria-hidden="true"></span><b>${esc(E.limits(V, x, null, pw).name)}</b>${cost ? ` <span class="arm-cost">+${cost} pts</span>` : ''}${on ? ' <span class="badge ok">chosen</span>' : ''}${ws.length > 1 ? ` <span class="muted xs">${ws.length} profiles</span>` : ''}</div>
+    return `<div class="cmp-opt${on ? ' on' : ''}" style="--oc:${color}" role="button" tabindex="0" data-tok="${esc(x.token)}" aria-pressed="${on}" aria-label="Equip ${esc(E.limits(V, x, null, pw).name)}">
+      <div class="cmp-opt-h"><span class="arm-dot" aria-hidden="true"></span><b>${esc(E.limits(V, x, null, pw).name)}</b>${cost ? ` <span class="arm-cost">+${cost} pts</span>` : ''}${on ? ' <span class="badge ok">equipped</span>' : '<span class="cmp-pick">Tap to equip</span>'}${ws.length > 1 ? ` <span class="muted xs">${ws.length} profiles</span>` : ''}</div>
       ${ws.length ? `<div class="cmp-scroll"><table class="cmp-table"><thead><tr><th>Weapon</th><th>Range</th><th>A</th><th>BS/WS</th><th>S</th><th>AP</th><th>D</th></tr></thead><tbody>${ws.map(w => row(w, color)).join('')}</tbody></table></div>` : '<p class="muted xs">No weapon profile (equipment).</p>'}
     </div>`;
   }).join('');
-  sheet({ title: E.limits(V, g, null, pw).name, body: `<p class="muted xs">Every option with its weapons – an option can bring several weapons (same colour).</p>${body}`, cls: 'arm-cmp-sheet wide', actions: [{ label: 'Close', kind: 'ghost' }] });
+  const glim = E.limits(V, g, null, pw);
+  const multi = glim.max !== 1;   // several options at once (each max 1): tap toggles
+  sheet({
+    title: glim.name, body: `<p class="muted xs">Every option with its weapons – an option can bring several weapons (same colour). Tap an option to equip it.</p>${body}`, cls: 'arm-cmp-sheet wide',
+    onOpen: (el, close) => {
+      const pick = box => {
+        const t = gtok + '>' + box.dataset.tok;
+        const on = (E.view(ed.sys, ed.army).byId.get(pid) || { ch: [] }).ch.find(c => c.s.t === t);
+        if (on && (!multi && glim.min)) { close(); return; }   // already equipped
+        if (multi) apply(r => (on ? E.removeSel(r, on.s.id) : E.addSel(ed.sys, r, pid || null, t)));
+        else if (on) apply(r => E.removeSel(r, on.s.id));
+        else apply(r => E.chooseInGroup(ed.sys, r, pid || null, gtok, t));
+        toast(`${box.querySelector('.cmp-opt-h b').textContent} ${on ? 'removed' : 'equipped'}`, 'ok', 1500);
+        close();
+      };
+      el.addEventListener('click', e => { const b = e.target.closest('.cmp-opt[data-tok]'); if (b) pick(b); });
+      el.addEventListener('keydown', e => { const b = e.target.closest('.cmp-opt[data-tok]'); if (b && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); pick(b); } });
+    },
+    actions: [{ label: 'Close', kind: 'ghost' }]
+  });
 }
 
 function block(V, pw, nodes, prefix, depth, compact, caps = []) {
