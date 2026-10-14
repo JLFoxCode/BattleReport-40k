@@ -23,7 +23,7 @@ const HIDE_ROOT = /^(Show\/Hide|Show Legends|Show Unaligned|Show Crucible|Order 
 const SIZES = [{ pts: 1000, name: 'Incursion' }, { pts: 2000, name: 'Strike Force' }];
 
 let lastRoot = null, lastCtx = null;
-const ed = { id: null, army: null, sys: null, loading: false, error: null, openUnit: null, cfgOpen: false };
+const ed = { id: null, army: null, sys: null, loading: false, error: null, openUnit: null, cfgOpen: false, modelPick: {} };
 
 export function render(root, ctx) {
   lastRoot = root; lastCtx = ctx;
@@ -323,10 +323,13 @@ function openCompare(pid, gtok) {
   const g = sys.resolve(pw.node || null, gtok, ed.army.catalogueId);
   if (!g) return;
   const kids = sys.children(g).filter(x => !E.limits(V, x, null, pw).hidden);
-  const chosen = new Set((pw.ch || []).filter(c => c.s.t.startsWith(gtok + '>')).map(c => c.s.t));
   const row = (w, color) => `<tr style="--oc:${color}"><td class="cmp-w"><b>${w.n > 1 ? w.n + '× ' : ''}${esc(w.name.replace(/^➤\s*/, ''))}</b>${w.ch.Keywords && w.ch.Keywords !== '-' ? `<span class="cmp-kw">${esc(w.ch.Keywords)}</span>` : ''}</td>
     <td>${esc(w.ch.Range || '')}</td><td>${esc(w.ch.A || '')}</td><td>${esc(w.ch.BS || w.ch.WS || '')}</td><td>${esc(w.ch.S || '')}</td><td>${esc(w.ch.AP || '')}</td><td>${esc(w.ch.D || '')}</td></tr>`;
-  const body = kids.map((x, i) => {
+  const build = () => {
+  const V1 = E.view(sys, ed.army);
+  const pw1 = pid ? V1.byId.get(pid) || pw : V1.force;
+  const chosen = new Set((pw1.ch || []).filter(c => c.s.t.startsWith(gtok + '>')).map(c => c.s.t));
+  return kids.map((x, i) => {
     const color = OPT_COLORS[i % OPT_COLORS.length];
     const ws = weaponsOf(x);
     const cost = E.nodeCost(V, x, null, pw);
@@ -336,20 +339,24 @@ function openCompare(pid, gtok) {
       ${ws.length ? `<div class="cmp-scroll"><table class="cmp-table"><thead><tr><th>Weapon</th><th>Range</th><th>A</th><th>BS/WS</th><th>S</th><th>AP</th><th>D</th></tr></thead><tbody>${ws.map(w => row(w, color)).join('')}</tbody></table></div>` : '<p class="muted xs">No weapon profile (equipment).</p>'}
     </div>`;
   }).join('');
+  };
+  const intro = '<p class="muted xs">Every option with its weapons – an option can bring several weapons (same colour). Tap an option to equip it.</p>';
   const glim = E.limits(V, g, null, pw);
   const multi = glim.max !== 1;   // several options at once (each max 1): tap toggles
   sheet({
-    title: glim.name, body: `<p class="muted xs">Every option with its weapons – an option can bring several weapons (same colour). Tap an option to equip it.</p>${body}`, cls: 'arm-cmp-sheet wide',
+    title: glim.name, body: intro + build(), cls: 'arm-cmp-sheet wide',
     onOpen: (el, close) => {
       const pick = box => {
         const t = gtok + '>' + box.dataset.tok;
         const on = (E.view(ed.sys, ed.army).byId.get(pid) || { ch: [] }).ch.find(c => c.s.t === t);
-        if (on && (!multi && glim.min)) { close(); return; }   // already equipped
+        if (on && (!multi && glim.min)) return;   // already equipped
         if (multi) apply(r => (on ? E.removeSel(r, on.s.id) : E.addSel(ed.sys, r, pid || null, t)));
         else if (on) apply(r => E.removeSel(r, on.s.id));
         else apply(r => E.chooseInGroup(ed.sys, r, pid || null, gtok, t));
         toast(`${box.querySelector('.cmp-opt-h b').textContent} ${on ? 'removed' : 'equipped'}`, 'ok', 1500);
-        close();
+        const body = el.querySelector('.sheet-body'), top = body.scrollTop;
+        body.innerHTML = intro + build();   // popup stays open – it only shows what is equipped now
+        body.scrollTop = top;
       };
       el.addEventListener('click', e => { const b = e.target.closest('.cmp-opt[data-tok]'); if (b) pick(b); });
       el.addEventListener('keydown', e => { const b = e.target.closest('.cmp-opt[data-tok]'); if (b && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); pick(b); } });
@@ -410,7 +417,7 @@ function block(V, pw, nodes, prefix, depth, compact, caps = []) {
         const sub = lim.max >= 0 ? [...caps, { tok, max: lim.max, total, name: lim.name }] : caps;
         const left = hasModels ? Math.min(...sub.map(c => c.max - c.total)) : Infinity;
         const head = !hasModels && lim.name === (pw.node && pw.node.name) && depth === 0 ? ''
-          : `<div class="arm-gh${hasModels ? ' arm-gh-models' : ''}">${esc(lim.name)} ${lim.max >= 0 || lim.min > 0 ? range : ''}${hasModels ? '' : eachTag}${hasModels && Number.isFinite(left) ? ` <span class="arm-room${left > 0 ? '' : ' full'}">${left > 0 ? `${left} more possible` : lim.max >= 0 && total >= lim.max ? 'full' : 'unit full – swap models'}</span>` : ''}${hasModels && !caps.length && ed.cmpUnit ? `<button type="button" class="arm-cmp" data-action="arm-mcmp" data-id="${esc(ed.cmpUnit)}">Compare</button>` : ''}</div>`;
+          : `<div class="arm-gh${hasModels ? ' arm-gh-models' : ''}">${esc(lim.name)} ${lim.max >= 0 || lim.min > 0 ? range : ''}${hasModels ? '' : eachTag}${hasModels && Number.isFinite(left) ? ` <span class="arm-room${left > 0 ? '' : ' full'}">${left > 0 ? `${left} more possible` : lim.max >= 0 && total >= lim.max ? 'full' : 'unit full – swap models'}</span>` : ''}</div>`;
         const g = `<div class="arm-grp${hasModels && !inGroup.length ? ' arm-special' : ''}">${head}${block(V, pw, kids, tok, depth + 1, compact, sub)}</div>`;
         // a model group nobody of the unit is in yet (e.g. heavy weapons) comes after the models that are there
         if (hasModels && !inGroup.length) specials.push(g); else if (hasModels && caps.length) specialsOn.push(g); else html += g;
@@ -430,8 +437,7 @@ function block(V, pw, nodes, prefix, depth, compact, caps = []) {
       const r = roomFor(tok, lim, sels);
       if (!sels.length) {
         if (!r.add && !r.swap) continue;   // not possible right now – only what can be taken is offered
-        others.push(`<div class="arm-avail"><span class="arm-row-name">${mdot(k)}${esc(name)}${cost ? ` <span class="arm-cost">${cost} pts</span>` : ''}${lim.max > 0 ? ` <span class="muted xs">max ${lim.max}</span>` : ''}</span>
-          <button type="button" class="btn ghost sm" data-action="arm-op" data-op="add" data-p="${esc(pid)}" data-t="${esc(tok)}"${r.swap ? ` data-from="${esc(r.swap.s.id)}"` : ''} title="${r.swap ? 'Takes the place of one ' + esc(unitName(V, r.swap)) : 'Adds one model'}">${r.swap ? '⇄ Swap in' : '+ Add'}</button></div>`);
+        others.push({ k, tok, name, cost, r, max: lim.max });
         continue;
       }
       sels.forEach((c, i) => {
@@ -475,14 +481,29 @@ function block(V, pw, nodes, prefix, depth, compact, caps = []) {
   html += specialsOn.join('');
   const hasCards = html.includes('arm-model');
   const inSpecial = caps.length > 1;   // inside a special group (e.g. heavy weapons) of the unit's models
+  // model types that can be taken: choice buttons (mosaic, like a weapon choice) + one "Add"/"Swap in" button;
+  // "Compare" shows only this category (standard models with standard models, heavy weapons with heavy weapons)
+  const pickKey = (pid || 'force') + '|' + prefix;
+  const takeHtml = () => {
+    if (!others.length) return '';
+    const sel = others.find(o => o.tok === ed.modelPick[pickKey]) || others[0];
+    const short = n => String(n).replace(/^.*?\bw\/\s*/i, '');
+    return `<div class="arm-take">
+      <div class="arm-choices">${others.map(o => `<button type="button" class="arm-opt${o === sel ? ' on' : ''}" data-action="arm-mpick" data-key="${esc(pickKey)}" data-tok="${esc(o.tok)}" title="${esc(o.name)}">${mdot(o.k)}${esc(short(o.name))}${o.cost ? ` <span class="arm-cost">${o.cost}</span>` : ''}</button>`).join('')}</div>
+      <div class="arm-take-foot">
+        <button type="button" class="btn primary sm arm-madd" data-action="arm-op" data-op="add" data-key="${esc(pickKey)}" data-p="${esc(pid)}" data-t="${esc(sel.tok)}"${sel.r.swap ? ` data-from="${esc(sel.r.swap.s.id)}"` : ''}>${sel.r.swap ? '⇄ Swap in' : '+ Add'} ${esc(short(sel.name))}</button>
+        <span class="muted xs">${sel.r.swap ? 'takes the place of one ' + esc(unitName(V, sel.r.swap)) : sel.max > 0 ? 'max ' + sel.max : ''}</span>
+        ${pid ? `<button type="button" class="arm-cmp" data-action="arm-mcmp" data-id="${esc(pid)}" data-cat="${esc(prefix)}">Compare</button>` : ''}
+      </div></div>`;
+  };
   const rest = others.length || specials.length
     ? (hasCards && !inSpecial
-      ? `<div class="arm-others"><div class="arm-gh arm-gh-models">Other models you can take${ed.cmpUnit ? `<button type="button" class="arm-cmp" data-action="arm-mcmp" data-id="${esc(ed.cmpUnit)}">Compare</button>` : ''}</div>
-          ${others.length ? `<div class="arm-sub"><div class="arm-sub-h">Standard models</div>${others.join('')}</div>` : ''}
+      ? `<div class="arm-others"><div class="arm-gh arm-gh-models">Other models you can take</div>
+          ${others.length ? `<div class="arm-sub"><div class="arm-sub-h">Standard models</div>${takeHtml()}</div>` : ''}
           ${specials.join('')}</div>`
       : hasCards && inSpecial
-        ? `<div class="arm-others"><div class="arm-sub-h">More ${esc(caps[caps.length - 1].name.toLowerCase())}</div>${others.join('')}${specials.join('')}</div>`
-        : others.join('') + specials.join(''))
+        ? `<div class="arm-others"><div class="arm-sub-h">More ${esc(caps[caps.length - 1].name.toLowerCase())}</div>${takeHtml()}${specials.join('')}</div>`
+        : takeHtml() + specials.join(''))
     : '';
   return (fixed.length ? `<div class="arm-fixed"><span class="arm-fixed-l">${each ? 'Each equipped with' : 'Equipped with'}</span> ${esc(fixed.join(' · '))}</div>` : '') + html + rest;
 }
@@ -526,13 +547,15 @@ let modelColor = new Map();
 const mdot = k => (modelColor.has(k) ? `<span class="arm-dot" style="--oc:${modelColor.get(k)}" aria-hidden="true"></span>` : '');
 
 /** All model types of a unit with their weapons (one colour each); tap = the same as "+ Add" / "⇄ Swap in" in the unit sheet. */
-function openModelCompare(unitId) {
+function openModelCompare(unitId, cat = '') {
   const V = E.view(ed.sys, ed.army);
   const w = V.byId.get(unitId);
   if (!w) return;
-  const types = modelTypes(w.node).filter(m => !E.limits(V, m.node, null, w).hidden || (w.ch || []).some(c => c.node === m.node));
+  const parentOf = t => t.split('>').slice(0, -1).join('>');
+  const types = modelTypes(w.node).filter(m => parentOf(m.tok) === cat && (!E.limits(V, m.node, null, w).hidden || (w.ch || []).some(c => c.node === m.node)));
+  const key = unitId + '|' + cat;
   const sheetEl = document.querySelector('.sheet.arm-unit-sheet');
-  const rowBtn = tok => sheetEl && sheetEl.querySelector(`[data-op="add"][data-t="${CSS.escape(tok)}"]`);
+  const rowBtn = tok => sheetEl && sheetEl.querySelector(`.arm-opt[data-action="arm-mpick"][data-tok="${CSS.escape(tok)}"]`);
   const wkey = x => x.name + '|' + x.ch.Range + '|' + x.ch.A + '|' + x.ch.S + '|' + x.ch.AP + '|' + x.ch.D;
   const all = types.map(m => weaponsOf(m.node)).filter(ws => ws.length);
   const common = all.length > 1 ? all[0].filter(x => all.every(ws => ws.some(y => wkey(y) === wkey(x)))) : [];
@@ -544,20 +567,26 @@ function openModelCompare(unitId) {
     const b = rowBtn(m.tok);
     const ws = weaponsOf(m.node).filter(x => !commonKeys.has(wkey(x)));
     const cost = E.nodeCost(V, m.node, null, w);
-    const tag = have ? `<span class="badge ok">${have} in the unit</span>` : b && !b.disabled ? `<span class="cmp-pick">${/Swap/.test(b.textContent) ? 'Tap to swap in' : 'Tap to add'}</span>` : '<span class="muted xs">not possible right now</span>';
-    return `<div class="cmp-opt${have ? ' on' : ''}" style="--oc:${color}"${!have && b && !b.disabled ? ` role="button" tabindex="0" data-mt="${esc(m.tok)}"` : ''}>
+    const picked = !have && b && ed.modelPick[key] === m.tok;
+    const tag = have ? `<span class="badge ok">${have} in the unit</span>` : picked ? '<span class="badge">selected</span>' : b ? '<span class="cmp-pick">Tap to select</span>' : '<span class="muted xs">not possible right now</span>';
+    return `<div class="cmp-opt${have || picked ? ' on' : ''}" style="--oc:${color}"${!have && b ? ` role="button" tabindex="0" data-mt="${esc(m.tok)}"` : ''}>
       <div class="cmp-opt-h"><span class="arm-dot" aria-hidden="true"></span><b>${esc(E.limits(V, m.node, null, w).name)}</b>${cost ? ` <span class="arm-cost">${cost} pts</span>` : ''}${tag}</div>
       ${ws.length ? `<div class="cmp-scroll"><table class="cmp-table"><thead><tr><th>Weapon</th><th>Range</th><th>A</th><th>BS/WS</th><th>S</th><th>AP</th><th>D</th></tr></thead><tbody>${ws.map(x => `<tr><td class="cmp-w"><b>${x.n > 1 ? x.n + '× ' : ''}${esc(x.name.replace(/^➤\s*/, ''))}</b>${x.ch.Keywords && x.ch.Keywords !== '-' ? `<span class="cmp-kw">${esc(x.ch.Keywords)}</span>` : ''}</td><td>${esc(x.ch.Range || '')}</td><td>${esc(x.ch.A || '')}</td><td>${esc(x.ch.BS || x.ch.WS || '')}</td><td>${esc(x.ch.S || '')}</td><td>${esc(x.ch.AP || '')}</td><td>${esc(x.ch.D || '')}</td></tr>`).join('')}</tbody></table></div>` : (common.length ? '<p class="muted xs">Only the weapons every model has.</p>' : '<p class="muted xs">Weapons are chosen on the model.</p>')}
     </div>`;
   }).join('');
   sheet({
-    title: 'Models – ' + unitName(V, w), body: `<p class="muted xs">Every model type of the unit with its weapons. Tap one to add it (or swap it in when the unit is full).</p>${body}`, cls: 'arm-cmp-sheet wide',
+    title: 'Models – ' + unitName(V, w), body: `<p class="muted xs">The model types of this group with their weapons. Tap one to select it – then take it with “Add” / “Swap in” in the unit.</p>${body}`, cls: 'arm-cmp-sheet wide',
     onOpen: (el, close) => el.addEventListener('click', e => {
       const box = e.target.closest('.cmp-opt[data-mt]');
       if (!box) return;
-      const b = rowBtn(box.dataset.mt);
-      close();
-      if (b && !b.disabled) b.click(); else toast('Not possible right now', 'warn');
+      ed.modelPick[key] = box.dataset.mt;
+      refreshUnitSheet();
+      el.querySelectorAll('.cmp-opt[data-mt]').forEach(o => {
+        const on = o.dataset.mt === box.dataset.mt;
+        o.classList.toggle('on', on);
+        const tag = o.querySelector('.badge, .cmp-pick');
+        if (tag) tag.outerHTML = on ? '<span class="badge">selected</span>' : '<span class="cmp-pick">Tap to select</span>';
+      });
     }),
     actions: [{ label: 'Close', kind: 'ghost' }]
   });
@@ -743,7 +772,8 @@ async function onClick(e) {
   const a = b.dataset.action;
   if (a === 'arm-op') { e.stopPropagation(); return op(b); }
   if (a === 'arm-cmp') { e.stopPropagation(); return openCompare(b.dataset.p, b.dataset.g); }
-  if (a === 'arm-mcmp') { e.stopPropagation(); return openModelCompare(b.dataset.id); }
+  if (a === 'arm-mcmp') { e.stopPropagation(); return openModelCompare(b.dataset.id, b.dataset.cat || ''); }
+  if (a === 'arm-mpick') { e.stopPropagation(); ed.modelPick[b.dataset.key] = b.dataset.tok; return refreshUnitSheet(); }
   if (a === 'arm-new') return newArmy();
   if (a === 'arm-open') return lastCtx.nav('#/armies/' + b.dataset.id);
   if (a === 'arm-del') {

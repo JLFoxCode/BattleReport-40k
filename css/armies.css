@@ -181,3 +181,9 @@
 .arm-avail .arm-dot { vertical-align: 1px; }
 .cmp-common { border-left-color: var(--line); background: var(--panel2); }
 .cmp-opt > p { margin: 0; padding: 0 10px 8px; }
+/* model types to take: choice mosaic + one add/swap button */
+.arm-take { margin: 6px 0 4px; }
+.arm-take .arm-opt { min-height: 36px; font-size: 13px; }
+.arm-take-foot { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+.arm-take-foot .arm-cmp { margin-left: auto; }
+.arm-madd { min-height: 38px; }

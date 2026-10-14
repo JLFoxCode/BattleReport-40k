@@ -401,7 +401,7 @@ body[data-spectator] .strat-foot, body[data-spectator] .ds-attach-pick { display
 /* While a popup is open the page behind it does not scroll (phones: lists inside a popup scroll on their own) */
 html.sheet-open, html.sheet-open body { overflow: hidden; overscroll-behavior: none; }
 .sheet-backdrop { overscroll-behavior: contain; }
-.sheet-body, .sheet-body * { overscroll-behavior: contain; }
+.sheet-body { overscroll-behavior: contain; }
 /* a chip used as radio label (<label class="chip"><input hidden>) looks like any chip, not like a field label */
 label.chip { display: inline-flex; margin: 0; text-transform: none; letter-spacing: normal; font-size: 15px; font-weight: 500; color: var(--text); }
 label.chip.on { color: var(--bg); }
