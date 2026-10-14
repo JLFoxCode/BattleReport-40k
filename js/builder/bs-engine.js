@@ -557,7 +557,7 @@ export function splitSel(roster, id) {
 export { PTS, findSel };
 
 /* Keeps a roster consistent with the data after a change (as New Recruit does):
- *  - a selection that is no longer available (hidden by its modifiers, e.g. the Hesyr's gauntlet once he takes a hammer,
+ *  - a selection that is no longer available (hidden or max 0 by its modifiers, e.g. the Hesyr's gauntlet once he takes a hammer,
  *    or an option tied to the squad's weapon choice) is removed;
  *  - a mandatory piece of wargear that is available now but missing (min > 0, e.g. the Hesyr's weapon that follows the
  *    squad's choice) is added; a mandatory choice without selection gets its default (only when it is unambiguous).
@@ -567,7 +567,7 @@ export function autoSync(sys, roster) {
   for (let pass = 0; pass < 12; pass++) {
     const V = view(sys, r);
     let change = null;
-    const visit = (w, nodes, prefix) => {
+    const visit = (w, nodes, prefix, room = Infinity) => {
       for (const k of nodes) {
         if (change) return;
         if (/^(Crusade|Weapon Modifications|Battle Scars|Battle Honours)/i.test(k.name)) continue;
@@ -575,21 +575,25 @@ export function autoSync(sys, roster) {
         const lim = limits(V, k, null, w);
         if (k.group) {
           const inG = w.ch.filter(c => c.s.t.startsWith(tok + '>'));
-          if (lim.hidden) { if (inG.length) change = { rm: inG[0].s.id }; continue; }
-          if (lim.min > 0 && !inG.length) {
-            const opts = sys.children(k).filter(x => !x.group && !limits(V, x, null, w).hidden);
-            const def = opts.find(x => k.defaultId && (x.id === k.defaultId || x.linkId === k.defaultId)) || (opts.length === 1 ? opts[0] : null);
+          if (lim.hidden || lim.max === 0) { if (inG.length) change = { rm: inG[0].s.id }; continue; }
+          const gRoom = Math.min(room, lim.max < 0 ? Infinity : lim.max - inG.reduce((x, c) => x + c.n, 0));
+          if (lim.min > 0 && !inG.length && gRoom > 0) {
+            // options that are allowed right now; one that is mandatory now (min > 0) wins over the default
+            const opts = sys.children(k).filter(x => !x.group).map(x => ({ x, l: limits(V, x, null, w) })).filter(o => !o.l.hidden && o.l.max !== 0);
+            const pick = opts.find(o => o.l.min > 0) || opts.find(o => k.defaultId && (o.x.id === k.defaultId || o.x.linkId === k.defaultId)) || (opts.length === 1 ? opts[0] : null);
+            const def = pick ? pick.x : null;
             if (def) { change = { add: { p: w.s.id, t: tok + '>' + def.token, n: def.type === 'model' ? lim.min : 1 } }; return; }
           }
-          visit(w, sys.children(k), tok);
+          visit(w, sys.children(k), tok, gRoom);
           continue;
         }
         const sels = w.ch.filter(c => c.s.t === tok);
         const eff = effective(V, k, sels[0] || null, w);
-        if (eff.hidden) { if (sels.length) change = { rm: sels[0].s.id }; continue; }
+        const maxNow = eff.constraints.filter(c => c.type === 'max' && c.field === 'selections' && !c.childId && c.scope === 'parent').reduce((m, c) => Math.min(m, c.value), Infinity);
+        if (eff.hidden || (maxNow === 0 && k.type !== 'model')) { if (sels.length) change = { rm: sels[0].s.id }; continue; }   // not available (any more)
         if (k.type === 'model') continue;
         const have = sels.reduce((x, c) => x + c.n, 0);
-        if (lim.min > 0 && have < lim.min) change = sels.length ? { set: { id: sels[0].s.id, n: sels[0].s.n + lim.min - have } } : { add: { p: w.s.id, t: tok, n: lim.min - have } };
+        if (lim.min > 0 && have < lim.min && room >= lim.min - have) change = sels.length ? { set: { id: sels[0].s.id, n: sels[0].s.n + lim.min - have } } : { add: { p: w.s.id, t: tok, n: lim.min - have } };
       }
     };
     const walk = w => { if (change || !w.node) return; visit(w, sys.children(w.node), ''); w.ch.forEach(walk); };
