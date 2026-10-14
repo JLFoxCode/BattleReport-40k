@@ -1123,7 +1123,8 @@ export async function armyForGame(id) {
   if (!a) throw new Error('Army not found');
   const sys = await systemFor(a.catalogueId);
   const s = summarize(sys, a);
-  return { text: armyText(sys, a, { faction: a.catalogueLabel }), faction: a.faction, detachments: s.detachments, name: a.name, limit: a.limit };
+  return { text: armyText(sys, a, { faction: a.catalogueLabel }), faction: a.faction, detachments: s.detachments, name: a.name, limit: a.limit,
+    keywords: s.units.map(u => ({ name: u.name, keywords: u.keywords, factionKeywords: u.factionKeywords })) };
 }
 
 /** What autoSync / autoPick changed: ['Hesyr: Concussion gauntlet removed', …] */

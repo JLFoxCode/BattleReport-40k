@@ -155,6 +155,8 @@ export function view(sys, roster) {
 }
 
 /** Categories of a selection (category links of its node, after category modifiers). */
+/** Categories (= keywords, "Faction: …") of a selection as the data has them right now – exported for the game hand-over. */
+export function categoriesOfSel(V, w) { return categoriesOf(V, w); }
 function categoriesOf(V, w) {
   if (w.kind !== 'sel' || !w.node) return new Set();
   if (w._cats) return w._cats;

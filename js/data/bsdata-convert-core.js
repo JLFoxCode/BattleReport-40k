@@ -11,6 +11,7 @@
 // detachments [{name,dp,rules:[{name,text}],enhancements:[{name,cost,text}]}], units.
 
 import { FACTIONS as DEFAULT_FACTIONS } from '../../data/factions/index.js';
+import { BSystem, view as bsView, categoriesOfSel } from '../builder/bs-engine.js';
 
 
 // ───────── Mapping: unsere Fraktions-IDs → BSData-Katalogdatei + akzeptierte "Faction: X"-Keywords ─────────
@@ -232,7 +233,7 @@ export function convertAll(catalogues, opts = {}) {
 
   // ───────── Einheit konvertieren ─────────
   const unresolved = [];
-  function convertUnit(root, factionId, acceptedKw) {
+  function convertUnit(root, factionId, acceptedKw, catNames = null) {
     const u = {
       id: slug(root.name), name: cleanName(root.name), points: [], composition: '', models: [], profiles: [], keywords: [], factionKeywords: [],
       ranged: [], melee: [], abilities: { core: [], faction: [], unit: [], wargear: [], invul: null, damaged: null }, leader: null, transport: null, options: [], modelsRange: [1, 1]
@@ -350,10 +351,11 @@ export function convertAll(catalogues, opts = {}) {
     walk(root, 'unit', 0, null, new Set());
     u.models = u.models.map(m => ({ name: m.name, min: m.min != null ? m.min : (m.max != null ? 0 : 1), max: m.max != null ? m.max : (m.min != null ? m.min : 1), weapons: [...m.weapons] }));
 
-    // Keywords
-    for (const c of root.categoryLinks || []) {
+    // Keywords – as the army builder's engine evaluates them for this catalogue (category modifiers included, e.g. an
+    // INFANTRY correction or RAVENWING inside Dark Angels); without the engine the raw category links
+    for (const c of catNames ? catNames.map(name => ({ name })) : root.categoryLinks || []) {
       const n = cleanName(c.name);
-      if (!n || /^(Configuration|Unit|Warlord|Legends)$/i.test(n)) continue;
+      if (!n || /^(Configuration|Unit|Warlord|Legends)$/i.test(n) || /^Allies:/i.test(n)) continue;   // "Allies: …" marks what may be allied in, no keyword
       const m = /^Faction:\s*(.+)$/i.exec(n);
       if (m) { const f = up(m[1]); if (!u.factionKeywords.includes(f)) u.factionKeywords.push(f); }
       else { const kw = up(n); if (!u.keywords.includes(kw)) u.keywords.push(kw); }
@@ -641,6 +643,23 @@ export function convertAll(catalogues, opts = {}) {
     return { armyRules, detachments, unlinkedEnhancements: [...unlinked], danglingDetachments: dangling };
   }
 
+  // ───────── Keywords via the builder engine ─────────
+  // The unit alone (no choices made): only what holds for every list of this faction – keywords a choice adds
+  // (Character Upgrade, an allegiance …) come with the army from the builder.
+  let SYS = null;
+  try { SYS = new BSystem(files.map(f => { const j = byName.get(f); return typeof j === 'string' ? JSON.parse(j) : j; }).filter(Boolean)); }
+  catch (e) { warn('Keywords: engine not available (' + e.message + ') – raw category links used'); }
+  const engineKeywords = (catId, e) => {
+    if (!SYS) return null;
+    try {
+      const n = SYS.rootNodes(catId).find(x => x.id === e.id);
+      if (!n) return null;
+      const V = bsView(SYS, { id: 'kw', catalogueId: catId, limit: 0, sel: [{ id: 'kw1', t: n.token, n: 1, ch: [] }] });
+      const w = V.force.ch[0];
+      return w ? [...categoriesOfSel(V, w)].map(id => SYS.categoryNames.get(id)).filter(Boolean) : null;
+    } catch { return null; }
+  };
+
   // ───────── Fraktionen ─────────
   const files_ = {};
   const index = { source: 'BSData/wh40k-11e', version, factions: [] };
@@ -657,7 +676,7 @@ export function convertAll(catalogues, opts = {}) {
       const fk = (e.categoryLinks || []).filter(c => /^Faction:/i.test(c.name || '')).map(c => up(c.name.replace(/^Faction:\s*/i, '')));
       if (!fk.some(k => accept.has(k))) continue;
       if (seenIds.has(e.id)) continue; seenIds.add(e.id);
-      const { unit, factionRules: fr } = convertUnit(e, fid, accept);
+      const { unit, factionRules: fr } = convertUnit(e, fid, accept, engineKeywords(cat.id, e));
       if (unit.legends && !KEEP_LEGENDS) continue;
       Object.assign(factionRules, fr);
       for (const k of unit.abilities.faction) ruleUse.set(k, (ruleUse.get(k) || 0) + 1);

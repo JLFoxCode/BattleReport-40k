@@ -509,6 +509,19 @@ H['army.import'] = (s, a) => {
   // Also allowed after the setup (player phone "Add army list") – the list only feeds datasheets and "Affects"
   if (s.stage === 'over') fail('The battle is over');
   const parsed = parseArmyText(a.text);
+  // from the army builder: the units' keywords as the data has them for this list (in list order, matched by name)
+  if (Array.isArray(a.keywords)) {
+    const nm = x => String(x || '').normalize('NFD').replace(/\p{M}/gu, '').toLowerCase().replace(/[^a-z0-9]+/g, '');
+    let at = 0;
+    for (const u of parsed) {
+      const i = a.keywords.findIndex((k, j) => j >= at && k && nm(k.name) === nm(u.name));
+      if (i < 0) continue;
+      at = i + 1;
+      const kw = (Array.isArray(a.keywords[i].keywords) ? a.keywords[i].keywords : []).filter(k => typeof k === 'string' && k.length < 60).slice(0, 40);
+      u.keywords = [...new Set([...(u.keywords || []), ...kw.map(k => k.toUpperCase())])];
+      if (u.keywords.includes('CHARACTER')) u.character = true;
+    }
+  }
   const added = parsed.map(u => { const n = normalizeUnit(s, u, a.player); pl.units.push(n); return n; });
   // ATTACHED UNITS: leaders of a group lead that group's bodyguard – linked by unit id (unique even with equal names)
   const groups = new Set(parsed.map(u => u.attachGroup).filter(Boolean));

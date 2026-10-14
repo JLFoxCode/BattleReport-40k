@@ -256,7 +256,7 @@ async function importSavedArmy(ctx, p, id) {
   } else if (pl.units.length && st0.stage !== 'battle' && st0.stage !== 'over') {
     for (const u of pl.units.slice()) await ctx.dispatch({ type: 'unit.remove', player: p, unitId: u.id });
   }
-  const st = await ctx.dispatch({ type: 'army.import', player: p, text: a.text });
+  const st = await ctx.dispatch({ type: 'army.import', player: p, text: a.text, keywords: a.keywords });
   if (st && st.players) toast(`“${a.name}” taken into the game`, 'ok');
 }
 

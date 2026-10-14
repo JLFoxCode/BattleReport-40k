@@ -1,6 +1,6 @@
 /* Army list → New Recruit text (WTC layout, the format engine/reduce.js parseArmyText reads) + the game's faction /
  * detachment choice. Used to take a saved list into a game and to copy it as text. */
-import { view, totalCost, effective } from './bs-engine.js';
+import { view, totalCost, effective, categoriesOfSel } from './bs-engine.js';
 
 const CONFIG = /^(Battle Size|Detachment|Force Disposition|Show\/Hide Options|Show Legends|Order of Battle|Show Unaligned|Show Crucible)/i;
 const ENH_GROUP = /Enhancement/i;
@@ -38,9 +38,14 @@ export function summarize(sys, roster) {
   for (const w of V.force.ch) {
     if (!w.node || isConfig(w) || !['unit', 'model'].includes(w.node.type)) continue;
     const stacks = modelStacks(w);
+    // keywords exactly as the data has them for this unit in this army (choices included: Character Upgrade → CHARACTER,
+    // an allegiance → KHORNE …); "Faction: X" → faction keywords; "Allies: …", Configuration … are no keywords
+    const cats = [...categoriesOfSel(V, w)].map(id => sys.categoryNames.get(id)).filter(Boolean);
+    const kw = cats.filter(c => !/^(Faction:|Allies:)/i.test(c) && !/^(Configuration|Unit|Warlord|Legends)$/i.test(c)).map(c => c.toUpperCase());
+    const fkw = cats.filter(c => /^Faction:/i.test(c)).map(c => c.replace(/^Faction:\s*/i, '').toUpperCase());
     const n = w.node.type === 'model' ? w.n : Math.max(1, stacks.reduce((x, [, k]) => x + k, 0));
     units.push({
-      id: w.s.id, name: nameOf(V, w), pts: totalCost(V, w), leads: w.s.lead && V.byId.get(w.s.lead) ? nameOf(V, V.byId.get(w.s.lead)) : null, models: n, character: [...(w.node.categoryLinks || [])].some(c => /Character/i.test(c.name || '')),
+      id: w.s.id, name: nameOf(V, w), pts: totalCost(V, w), leads: w.s.lead && V.byId.get(w.s.lead) ? nameOf(V, V.byId.get(w.s.lead)) : null, models: n, character: kw.includes('CHARACTER'), keywords: [...new Set(kw)], factionKeywords: [...new Set(fkw)],
       warlord: w.ch.some(c => c.node && /^Warlord$/i.test(c.node.name)),
       enhancements: w.ch.filter(isEnh).map(c => ({ name: nameOf(V, c), pts: totalCost(V, c) })),
       gear: gearOf(V, w), stacks: stacks.map(([m, k]) => ({ name: nameOf(V, m), n: k, gear: gearOf(V, m) }))
