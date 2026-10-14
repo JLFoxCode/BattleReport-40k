@@ -289,15 +289,78 @@ function dpRow(V) {
 function optionsHtml(V, w, compact) {
   return block(V, w, ed.sys.children(w.node), '', 0, compact);
 }
-function block(V, pw, nodes, prefix, depth, compact, full = null) {
+/* ───────── Weapon comparison of a choice (popup with the profiles of every option, one colour per option) ───────── */
+const OPT_COLORS = ['#4F9DF0', '#E8A13C', '#4FC57F', '#D86ADB', '#EE6E60', '#46C8C0', '#C9B458', '#9A8CF0'];
+/** Weapon profiles an option brings: its own profiles (and linked ones) plus those of mandatory sub-entries
+ *  (e.g. "2 Heavy Bolters" → 2× Heavy bolter). [{ name, type: 'ranged'|'melee', n, ch: { Range, A, BS|WS, S, AP, D, Keywords } }] */
+function weaponsOf(node, n = 1, depth = 0) {
+  const sys = ed.sys, out = [];
+  const add = p => {
+    if (!p || !/^(Ranged|Melee) Weapons$/.test(p.typeName || '')) return;
+    const ch = {};
+    for (const c of p.characteristics || []) ch[c.name] = c.$text == null ? '' : String(c.$text);
+    out.push({ name: p.name, type: /^Ranged/.test(p.typeName) ? 'ranged' : 'melee', n, ch });
+  };
+  node.profiles.forEach(add);
+  for (const l of node.infoLinks) {
+    const t = sys.idx.get(l.targetId);
+    if (!t) continue;
+    if (l.type === 'profile') add(t);
+    else if (l.type === 'infoGroup') (t.profiles || []).forEach(add);
+  }
+  for (const g of node.el.infoGroups || []) (g.profiles || []).forEach(add);
+  if (depth < 3) for (const k of sys.children(node)) {
+    if (k.group) continue;
+    const min = k.constraints.filter(c => c.type === 'min' && c.field === 'selections' && c.scope === 'parent').reduce((x, c) => Math.max(x, Number(c.value) || 0), 0);
+    if (min > 0) out.push(...weaponsOf(k, n * min, depth + 1));
+  }
+  return out;
+}
+function openCompare(pid, gtok) {
+  const sys = ed.sys, V = E.view(sys, ed.army);
+  const pw = pid ? V.byId.get(pid) : V.force;
+  if (!pw) return;
+  const g = sys.resolve(pw.node || null, gtok, ed.army.catalogueId);
+  if (!g) return;
+  const kids = sys.children(g).filter(x => !E.limits(V, x, null, pw).hidden);
+  const chosen = new Set((pw.ch || []).filter(c => c.s.t.startsWith(gtok + '>')).map(c => c.s.t));
+  const row = (w, color) => `<tr style="--oc:${color}"><td class="cmp-w"><b>${w.n > 1 ? w.n + '× ' : ''}${esc(w.name.replace(/^➤\s*/, ''))}</b>${w.ch.Keywords && w.ch.Keywords !== '-' ? `<span class="cmp-kw">${esc(w.ch.Keywords)}</span>` : ''}</td>
+    <td>${esc(w.ch.Range || '')}</td><td>${esc(w.ch.A || '')}</td><td>${esc(w.ch.BS || w.ch.WS || '')}</td><td>${esc(w.ch.S || '')}</td><td>${esc(w.ch.AP || '')}</td><td>${esc(w.ch.D || '')}</td></tr>`;
+  const body = kids.map((x, i) => {
+    const color = OPT_COLORS[i % OPT_COLORS.length];
+    const ws = weaponsOf(x);
+    const cost = E.nodeCost(V, x, null, pw);
+    const on = chosen.has(gtok + '>' + x.token);
+    return `<div class="cmp-opt${on ? ' on' : ''}" style="--oc:${color}">
+      <div class="cmp-opt-h"><span class="arm-dot" aria-hidden="true"></span><b>${esc(E.limits(V, x, null, pw).name)}</b>${cost ? ` <span class="arm-cost">+${cost} pts</span>` : ''}${on ? ' <span class="badge ok">chosen</span>' : ''}${ws.length > 1 ? ` <span class="muted xs">${ws.length} profiles</span>` : ''}</div>
+      ${ws.length ? `<div class="cmp-scroll"><table class="cmp-table"><thead><tr><th>Weapon</th><th>Range</th><th>A</th><th>BS/WS</th><th>S</th><th>AP</th><th>D</th></tr></thead><tbody>${ws.map(w => row(w, color)).join('')}</tbody></table></div>` : '<p class="muted xs">No weapon profile (equipment).</p>'}
+    </div>`;
+  }).join('');
+  sheet({ title: E.limits(V, g, null, pw).name, body: `<p class="muted xs">Every option with its weapons – an option can bring several weapons (same colour).</p>${body}`, cls: 'arm-cmp-sheet wide', actions: [{ label: 'Close', kind: 'ghost' }] });
+}
+
+function block(V, pw, nodes, prefix, depth, compact, caps = []) {
   const sys = ed.sys;
   const pid = pw.kind === 'sel' ? pw.s.id : '';
   const pfx = t => (prefix ? prefix + '>' + t : t);
   const fixed = [];
-  const models = [];   // model types not in the unit yet
+  const others = [];     // model types not in the unit yet (standard models)
+  const specials = [];   // model groups not in the unit yet (e.g. heavy weapons)
+  const specialsOn = []; // model groups inside the unit's models that have models – after the standard models
   let html = '';
   const each = pw.kind === 'sel' && pw.node && pw.node.type === 'model' && pw.n > 1 ? pw.n : 0;
   const eachTag = each ? ` <span class="arm-each">each of the ${each}</span>` : '';
+  /* Head count: a model can be added while the entry and every enclosing group (e.g. the unit's 10 models AND the
+     heavy weapons' 2) have room; if only a group both models share is full, it can be swapped in for another model. */
+  const roomFor = (tok, lim, sels) => {
+    const own = lim.max < 0 ? Infinity : lim.max - sels.reduce((x, c) => x + c.n, 0);
+    const room = Math.min(own, ...caps.map(c => c.max - c.total));
+    if (room > 0) return { add: true };
+    if (own <= 0) return { add: false };
+    const srcs = (pw.ch || []).filter(x => x.node && x.node.type === 'model' && !sels.includes(x) && x.n > E.limits(V, x.node, x, pw).min).sort((p, q) => q.n - p.n);
+    const src = srcs.find(x => caps.every(c => c.max - c.total > 0 || (x.s.t.startsWith(c.tok + '>') && tok.startsWith(c.tok + '>'))));
+    return src ? { add: false, swap: src } : { add: false };
+  };
   for (const k of nodes) {
     if (/^(Crusade|Weapon Modifications|Battle Scars|Battle Honours|Override points limit)/i.test(k.name)) continue;
     const lim = E.limits(V, k, null, pw);
@@ -313,21 +376,25 @@ function block(V, pw, nodes, prefix, depth, compact, full = null) {
       const multi = leafs && lim.max !== 1 && kids.every(x => E.limits(V, x, null, pw).max === 1);
       if (leafs && (lim.max === 1 || multi)) {
         const same = depth === 0 && pw.node && lim.name === pw.node.name;   // "Detachment" inside "Detachment": one heading is enough
-        html += `<div class="arm-grp">${same && lim.min ? '' : `<div class="arm-gh">${same ? '' : esc(lim.name)}${lim.min ? '' : ' <span class="muted xs">optional</span>'}${eachTag}</div>`}<div class="arm-choices">${kids.map(x => {
+        const weaponish = kids.length > 1 && kids.some(x => weaponsOf(x).length);
+        const cmp = weaponish ? `<button type="button" class="arm-cmp" data-action="arm-cmp" data-p="${esc(pid)}" data-g="${esc(tok)}">Compare</button>` : '';
+        const headTxt = `${same ? '' : esc(lim.name)}${lim.min ? '' : ' <span class="muted xs">optional</span>'}${eachTag}`;
+        html += `<div class="arm-grp">${same && lim.min && !cmp ? '' : `<div class="arm-gh">${headTxt}${cmp}</div>`}<div class="arm-choices">${kids.map((x, xi) => {
           const t = tok + '>' + x.token;
           const on = inGroup.find(c => c.s.t === t);
           const cost = on ? E.totalCost(V, on) / Math.max(1, on.n) : E.nodeCost(V, x, null, pw);
-          return `<button type="button" class="arm-opt${on ? ' on' : ''}" data-action="arm-op" data-op="${on ? (lim.min && !multi ? 'noop' : 'rm') : multi ? 'add' : 'choose'}" data-p="${esc(pid)}" data-g="${esc(tok)}" data-t="${esc(t)}"${on ? ` data-id="${esc(on.s.id)}"` : ''}>${multi ? `<span class="arm-box" aria-hidden="true">${on ? '✓' : ''}</span>` : ''}${esc(E.limits(V, x, on || null, pw).name)}${cost ? ` <span class="arm-cost">+${cost}</span>` : ''}${(() => { const d = E.nodeCost(V, x, on || null, pw, DP); return d ? ` <span class="arm-cost arm-dpc">${d} DP</span>` : ''; })()}</button>`;
+          const dot = weaponish ? `<span class="arm-dot" style="--oc:${OPT_COLORS[xi % OPT_COLORS.length]}" aria-hidden="true"></span>` : '';
+          return `<button type="button" class="arm-opt${on ? ' on' : ''}" data-action="arm-op" data-op="${on ? (lim.min && !multi ? 'noop' : 'rm') : multi ? 'add' : 'choose'}" data-p="${esc(pid)}" data-g="${esc(tok)}" data-t="${esc(t)}"${on ? ` data-id="${esc(on.s.id)}"` : ''}>${multi ? `<span class="arm-box" aria-hidden="true">${on ? '✓' : ''}</span>` : ''}${dot}${esc(E.limits(V, x, on || null, pw).name)}${cost ? ` <span class="arm-cost">+${cost}</span>` : ''}${(() => { const d = E.nodeCost(V, x, on || null, pw, DP); return d ? ` <span class="arm-cost arm-dpc">${d} DP</span>` : ''; })()}</button>`;
         }).join('')}</div>${inGroup.map(c => nested(V, c, depth, compact)).join('')}</div>`;
       } else {
-        // a full model group (e.g. 9/9 warriors): "+" on another model swaps one in for one of the biggest other stack
-        const isFull = lim.max >= 0 && total >= lim.max && kids.some(x => x.type === 'model' || x.group);
         const hasModels = kids.some(x => x.type === 'model' || (x.group && sys.children(x).some(y => y.type === 'model')));
-        const title = lim.name;
-        const head = !hasModels && lim.name === (pw.node && pw.node.name) && depth === 0 ? '' : `<div class="arm-gh${hasModels ? ' arm-gh-models' : ''}">${esc(title)} ${lim.max >= 0 || lim.min > 0 ? range : ''}${hasModels ? '' : eachTag}</div>`;
-        const g = `<div class="arm-grp">${head}${block(V, pw, kids, tok, depth + 1, compact, isFull ? { tok, stacks: inGroup } : full)}</div>`;
+        const sub = lim.max >= 0 ? [...caps, { tok, max: lim.max, total, name: lim.name }] : caps;
+        const left = hasModels ? Math.min(...sub.map(c => c.max - c.total)) : Infinity;
+        const head = !hasModels && lim.name === (pw.node && pw.node.name) && depth === 0 ? ''
+          : `<div class="arm-gh${hasModels ? ' arm-gh-models' : ''}">${esc(lim.name)} ${lim.max >= 0 || lim.min > 0 ? range : ''}${hasModels ? '' : eachTag}${hasModels && Number.isFinite(left) ? ` <span class="arm-room${left > 0 ? '' : ' full'}">${left > 0 ? `${left} more possible` : lim.max >= 0 && total >= lim.max ? 'full' : 'unit full – swap models'}</span>` : ''}</div>`;
+        const g = `<div class="arm-grp${hasModels && !inGroup.length ? ' arm-special' : ''}">${head}${block(V, pw, kids, tok, depth + 1, compact, sub)}</div>`;
         // a model group nobody of the unit is in yet (e.g. heavy weapons) comes after the models that are there
-        if (hasModels && !inGroup.length) models.push(g); else html += g;
+        if (hasModels && !inGroup.length) specials.push(g); else if (hasModels && caps.length) specialsOn.push(g); else html += g;
       }
       continue;
     }
@@ -341,18 +408,14 @@ function block(V, pw, nodes, prefix, depth, compact, full = null) {
     }
     const cost = sels.length ? E.totalCost(V, sels[0]) / Math.max(1, sels[0].n) : E.nodeCost(V, k, null, pw);
     if (k.type === 'model') {
-      const total = sels.reduce((x, c) => x + c.n, 0);
-      const swapOf = c => (full ? full.stacks.filter(x => x !== c && x.node && x.node.type === 'model' && !sels.includes(x) && x.n > E.limits(V, x.node, x, pw).min).sort((p, q) => q.n - p.n)[0] : null);
+      const r = roomFor(tok, lim, sels);
       if (!sels.length) {
-        const from = swapOf(null);
-        const can = (lim.max < 0 || total < lim.max) && (!full || !!from);
-        models.push(`<div class="arm-avail"><span class="arm-row-name">${esc(name)}${cost ? ` <span class="arm-cost">${cost} pts</span>` : ''}${lim.max > 0 ? ` <span class="muted xs">max ${lim.max}</span>` : ''}</span>
-          <button type="button" class="btn ghost sm" data-action="arm-op" data-op="add" data-p="${esc(pid)}" data-t="${esc(tok)}"${from ? ` data-from="${esc(from.s.id)}"` : ''}${can ? '' : ' disabled'} title="${from ? 'Takes the place of one ' + esc(unitName(V, from)) : ''}">${from ? '⇄ Swap in' : '+ Add'}</button></div>`);
+        if (!r.add && !r.swap) continue;   // not possible right now – only what can be taken is offered
+        others.push(`<div class="arm-avail"><span class="arm-row-name">${esc(name)}${cost ? ` <span class="arm-cost">${cost} pts</span>` : ''}${lim.max > 0 ? ` <span class="muted xs">max ${lim.max}</span>` : ''}</span>
+          <button type="button" class="btn ghost sm" data-action="arm-op" data-op="add" data-p="${esc(pid)}" data-t="${esc(tok)}"${r.swap ? ` data-from="${esc(r.swap.s.id)}"` : ''} title="${r.swap ? 'Takes the place of one ' + esc(unitName(V, r.swap)) : 'Adds one model'}">${r.swap ? '⇄ Swap in' : '+ Add'}</button></div>`);
         continue;
       }
       sels.forEach((c, i) => {
-        const from = swapOf(c);
-        const canAdd = (lim.max < 0 || total < lim.max) && (!full || !!from);
         const canSplit = c.n > 1 && ed.sys.children(k).some(x => x.group || E.limits(V, x, null, c).max !== E.limits(V, x, null, c).min);
         html += `<div class="arm-model">
           <div class="arm-model-h">
@@ -360,7 +423,7 @@ function block(V, pw, nodes, prefix, depth, compact, full = null) {
             <span class="arm-model-name">${esc(name)}${sels.length > 1 ? ` <span class="muted xs">(group ${i + 1})</span>` : ''}${cost ? ` <span class="arm-cost">${cost} pts each</span>` : ''}</span>
             <div class="stepper sm">
               <button type="button" data-action="arm-op" data-op="count" data-d="-1" data-id="${esc(c.s.id)}" aria-label="One model less">−</button>
-              <button type="button" data-action="arm-op" data-op="count" data-d="1" data-id="${esc(c.s.id)}"${from ? ` data-from="${esc(from.s.id)}"` : ''}${canAdd ? '' : ' disabled'} aria-label="One model more">+</button>
+              <button type="button" data-action="arm-op" data-op="count" data-d="1" data-id="${esc(c.s.id)}"${r.swap ? ` data-from="${esc(r.swap.s.id)}"` : ''}${r.add || r.swap ? '' : ' disabled'} aria-label="One model more">+</button>
             </div>
           </div>
           ${nested(V, c, depth, compact)}
@@ -374,16 +437,13 @@ function block(V, pw, nodes, prefix, depth, compact, full = null) {
       stacks.forEach((c, i) => {
         const n = c ? c.n : 0;
         const total = sels.reduce((x, s) => x + s.n, 0);
-        const swapFrom = full && k.type === 'model' ? full.stacks.filter(x => x !== c && x.node && x.node.type === 'model' && !sels.includes(x) && x.n > E.limits(V, x.node, x, pw).min).sort((p, q) => q.n - p.n)[0] : null;
-        const canAdd = (lim.max < 0 || total < lim.max) && (!full || k.type !== 'model' || !!swapFrom);
-        const canSplit = c && c.n > 1 && ed.sys.children(k).some(x => x.group || E.limits(V, x, null, c).max !== E.limits(V, x, null, c).min);
+        const canAdd = lim.max < 0 || total < lim.max;
         html += `<div class="arm-row${c ? ' on' : ''}">
           <span class="arm-row-name">${esc(name)}${cost ? ` <span class="arm-cost">${cost} pts</span>` : ''}${sels.length > 1 ? ` <span class="muted xs">(${i + 1})</span>` : ''}</span>
-          ${canSplit ? `<button type="button" class="btn ghost sm arm-split" data-action="arm-op" data-op="split" data-id="${esc(c.s.id)}" title="Give one model different wargear">Split</button>` : ''}
           <div class="stepper sm">
             <button type="button" data-action="arm-op" data-op="${c ? 'count' : 'noop'}" data-d="-1" data-id="${c ? esc(c.s.id) : ''}"${n <= 0 ? ' disabled' : ''} aria-label="Fewer">−</button>
             <span class="stepper-value">${n}</span>
-            <button type="button" data-action="arm-op" data-op="${c ? 'count' : 'add'}" data-d="1" data-id="${c ? esc(c.s.id) : ''}" data-p="${esc(pid)}" data-t="${esc(tok)}"${swapFrom ? ` data-from="${esc(swapFrom.s.id)}"` : ''}${canAdd ? '' : ' disabled'} aria-label="More">+</button>
+            <button type="button" data-action="arm-op" data-op="${c ? 'count' : 'add'}" data-d="1" data-id="${c ? esc(c.s.id) : ''}" data-p="${esc(pid)}" data-t="${esc(tok)}"${canAdd ? '' : ' disabled'} aria-label="More">+</button>
           </div>
         </div>${c ? nested(V, c, depth, compact) : ''}`;
       });
@@ -393,8 +453,19 @@ function block(V, pw, nodes, prefix, depth, compact, full = null) {
         <span class="arm-box" aria-hidden="true">${c ? '✓' : ''}</span><span>${esc(name)}</span>${cost ? `<span class="arm-cost">+${cost} pts</span>` : ''}</button>${c ? nested(V, c, depth, compact) : ''}`;
     }
   }
-  return (fixed.length ? `<div class="arm-fixed"><span class="arm-fixed-l">${each ? 'Each equipped with' : 'Equipped with'}</span> ${esc(fixed.join(' · '))}</div>` : '') + html
-    + (models.length ? `<div class="arm-others">${html.includes('arm-model') ? '<div class="arm-gh arm-gh-models">Other models you can take</div>' : ''}${models.join('')}</div>` : '');
+  html += specialsOn.join('');
+  const hasCards = html.includes('arm-model');
+  const inSpecial = caps.length > 1;   // inside a special group (e.g. heavy weapons) of the unit's models
+  const rest = others.length || specials.length
+    ? (hasCards && !inSpecial
+      ? `<div class="arm-others"><div class="arm-gh arm-gh-models">Other models you can take</div>
+          ${others.length ? `<div class="arm-sub"><div class="arm-sub-h">Standard models</div>${others.join('')}</div>` : ''}
+          ${specials.join('')}</div>`
+      : hasCards && inSpecial
+        ? `<div class="arm-others"><div class="arm-sub-h">More ${esc(caps[caps.length - 1].name.toLowerCase())}</div>${others.join('')}${specials.join('')}</div>`
+        : others.join('') + specials.join(''))
+    : '';
+  return (fixed.length ? `<div class="arm-fixed"><span class="arm-fixed-l">${each ? 'Each equipped with' : 'Equipped with'}</span> ${esc(fixed.join(' · '))}</div>` : '') + html + rest;
 }
 function nested(V, c, depth, compact) {
   if (!c.node || depth > 6) return '';
@@ -593,6 +664,7 @@ async function onClick(e) {
   if (!b || b.disabled) return;
   const a = b.dataset.action;
   if (a === 'arm-op') { e.stopPropagation(); return op(b); }
+  if (a === 'arm-cmp') { e.stopPropagation(); return openCompare(b.dataset.p, b.dataset.g); }
   if (a === 'arm-new') return newArmy();
   if (a === 'arm-open') return lastCtx.nav('#/armies/' + b.dataset.id);
   if (a === 'arm-del') {

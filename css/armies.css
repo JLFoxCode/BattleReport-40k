@@ -149,3 +149,26 @@
 .arm-others { padding: 4px 10px 6px; border: 1px dashed var(--line); border-radius: 12px; }
 .arm-others .arm-others { padding: 0; border: 0; }
 .arm-others .arm-grp { margin: 6px 0; }
+/* head count / special models */
+.arm-room { font-weight: 600; letter-spacing: 0; text-transform: none; font-size: 11px; color: var(--ok); }
+.arm-room.full { color: var(--muted); }
+.arm-sub { margin: 6px 0 2px; }
+.arm-sub-h, .arm-special > .arm-gh { font: 700 11px/1.2 var(--font-body); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin: 8px 0 2px; }
+.arm-special { margin: 10px 0 2px; padding-top: 6px; border-top: 1px dashed var(--line); }
+/* weapon comparison */
+.arm-gh .arm-cmp { margin-left: auto; }
+.arm-gh { flex-wrap: wrap; }
+.arm-cmp { min-height: 30px; padding: 0 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel); color: var(--text); font: 600 12px/1 var(--font-body); letter-spacing: 0; text-transform: none; cursor: pointer; }
+.arm-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: var(--oc); margin-right: 6px; flex: none; vertical-align: 0; }
+.arm-opt .arm-dot { box-shadow: 0 0 0 2px color-mix(in srgb, var(--oc) 30%, transparent); }
+.cmp-opt { margin: 10px 0; border-radius: 12px; border: 1px solid color-mix(in srgb, var(--oc) 45%, var(--line)); border-left: 5px solid var(--oc); background: color-mix(in srgb, var(--oc) 7%, var(--panel)); overflow: hidden; }
+.cmp-opt.on { box-shadow: 0 0 0 1px var(--oc); }
+.cmp-opt-h { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; padding: 8px 10px; font-size: 15px; }
+.cmp-scroll { overflow-x: auto; overscroll-behavior-x: contain; }
+.cmp-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.cmp-table th { text-align: center; font: 700 10px/1.2 var(--font-body); letter-spacing: .05em; text-transform: uppercase; color: var(--muted); padding: 4px 4px; border-bottom: 1px solid var(--line); }
+.cmp-table th:first-child { text-align: left; padding-left: 10px; }
+.cmp-table td { text-align: center; padding: 6px 4px; border-bottom: 1px solid color-mix(in srgb, var(--line) 60%, transparent); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.cmp-table td.cmp-w { text-align: left; white-space: normal; padding-left: 10px; min-width: 120px; }
+.cmp-table tr:last-child td { border-bottom: 0; }
+.cmp-kw { display: block; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .03em; margin-top: 2px; }
