@@ -227,7 +227,6 @@ function editorHtml() {
       <div class="arm-total${over ? ' bad' : ''}"><b>${pts}</b><small>/ ${esc(army.limit || '–')} pts</small></div>
       <button type="button" class="arm-prob ${probs.length ? 'warn' : 'ok'}" data-action="arm-problems" aria-label="Problems">${probs.length ? '⚠ ' + probs.length : '✓'}</button>
     </header>
-    ${general.length ? `<div class="arm-alerts">${general.map(p => `<div class="arm-alert">${esc(p.msg)}</div>`).join('')}</div>` : ''}
     ${(() => { const loose = looseLeaders(V, dsPack()); return loose.length ? `<div class="arm-lead-info">ⓘ ${loose.length === 1 ? '1 leader is' : loose.length + ' leaders are'} not attached to a unit yet: ${loose.map(w => `<button type="button" class="arm-link" data-action="arm-unit" data-id="${esc(w.s.id)}">${esc(unitName(V, w))}</button>`).join(', ')}</div>` : ''; })()}
     ${order.map(c => c === 'Configuration' ? configHtml(V, groups.get(c), byUnit) : `
       <section class="arm-sec">
@@ -270,10 +269,10 @@ function configHtml(V, list, byUnit) {
     <div class="row between"><div class="arm-sec-h">Army configuration</div>${bad ? '' : btn({ label: 'Done', kind: 'ghost', small: true, action: 'arm-cfg' })}</div>
     ${items.map(w => {
       const probs = byUnit.get(w.s.id) || [];
-      return `<div class="arm-cfg${probs.length ? ' has-prob' : ''}"><div class="arm-cfg-h">${esc(E.effective(V, w.node, w, w.parent).name)}</div>
+      return `<div class="arm-cfg${probs.length ? ' has-prob' : ''}"><div class="arm-cfg-h">${esc(E.effective(V, w.node, w, w.parent).name)}${probs.length ? `<button type="button" class="arm-tri" data-action="arm-probs" data-ids="${esc(w.s.id)}" aria-label="Show problems" title="Show problems">⚠</button>` : ''}</div>
         ${w.node.name === 'Detachment' ? dpRow(V) : ''}
         ${optionsHtml(V, w, true)}
-        ${probs.map(p => `<div class="arm-alert xs">${esc(p.msg)}</div>`).join('')}</div>`;
+        </div>`;
     }).join('')}
   </section>`;
 }
@@ -666,13 +665,12 @@ function refreshUnitSheet(el) {
   const w = V.byId.get(ed.openUnit);
   if (!w) { if (unitClose) unitClose(); return; }
   const probs = problems(V).filter(p => p.sel && rootOf(V, p.sel) === w);
-  sh.querySelector('.sheet-head .title').textContent = E.effective(V, w.node, w, w.parent).name;
+  sh.querySelector('.sheet-head .title').innerHTML = `<span class="arm-title-t">${esc(E.effective(V, w.node, w, w.parent).name)}</span>${probs.length ? `<button type="button" class="arm-tri" data-action="arm-probs" data-ids="${esc(w.s.id)}" aria-label="Show problems" title="Show problems">⚠</button>` : ''}`;
   const types = modelTypes(w.node);
   modelColor = new Map(types.length > 1 ? types.map((m, i) => [m.node, OPT_COLORS[i % OPT_COLORS.length]]) : []);
   ed.cmpUnit = types.length > 1 ? w.s.id : null;
   sh.querySelector('.arm-usheet').innerHTML = `
     <div class="arm-u-head"><span class="muted">${esc(catName(ed.sys, w))}</span><span class="arm-u-total"><b>${E.totalCost(V, w)}</b> pts</span></div>
-    ${probs.map(p => `<div class="arm-alert">${esc(p.msg)}</div>`).join('')}
     ${leadHtml(V, w)}
     ${optionsHtml(V, w, false)}
     ${dsHtml(V, w)}`;
@@ -875,6 +873,14 @@ async function onClick(e) {
   if (a === 'arm-dup') {
     const ar = loadArmy(b.dataset.id);
     if (ar) { saveArmy(Object.assign({}, ar, { id: armyId(), name: ar.name + ' (copy)' })); rerender(); }
+    return;
+  }
+  if (a === 'arm-probs') {
+    e.stopPropagation();
+    const V = E.view(ed.sys, ed.army);
+    const owner = V.byId.get(b.dataset.ids);
+    const list = problems(V).filter(p => p.sel && owner && rootOf(V, p.sel) === owner);
+    sheet({ title: owner ? unitName(V, owner) : 'Problems', body: list.length ? `<ul class="arm-problist">${list.map(p => `<li>${esc(p.msg)}</li>`).join('')}</ul>` : '<p>No problems.</p>', cls: 'arm-probs-sheet', actions: [{ label: 'OK', kind: 'primary' }] });
     return;
   }
   if (a === 'arm-unit') return openUnit(b.dataset.id);

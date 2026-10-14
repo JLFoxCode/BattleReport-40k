@@ -206,3 +206,10 @@
 .arm-effect b { font-weight: 700; }
 .arm-fixed .arm-effect { margin-top: 6px; }
 .cmp-fx { padding: 0 10px 8px; }
+/* problems: a warning triangle next to the name – tap shows what is wrong (no text that shifts the layout) */
+.arm-tri { all: unset; display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 28px; margin-left: 8px; border-radius: 8px; cursor: pointer;
+  color: var(--warn); background: var(--warn-soft); border: 1px solid color-mix(in srgb, var(--warn) 50%, transparent); font-size: 15px; line-height: 1; vertical-align: middle; flex: none; }
+.arm-tri:active { filter: brightness(1.2); }
+.sheet-head .title:has(.arm-tri) { display: flex; align-items: center; }
+.arm-title-t { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.arm-cfg-h { display: flex; align-items: center; }
