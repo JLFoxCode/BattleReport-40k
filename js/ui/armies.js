@@ -494,7 +494,14 @@ function block(V, pw, nodes, prefix, depth, compact, caps = []) {
     if (k.group) {
       const inGroup = (pw.ch || []).filter(c => c.s.t.startsWith(tok + '>'));
       if (lim.hidden && !inGroup.length) continue;
-      const kids = sys.children(k).filter(x => !E.limits(V, x, null, pw).hidden || inGroup.some(c => c.s.t === tok + '>' + x.token));
+      const altOf = new Map();   // option → selection to take back so it comes again
+      const kids = sys.children(k).filter(x => {
+        if (!E.limits(V, x, null, pw).hidden || inGroup.some(c => c.s.t === tok + '>' + x.token)) return true;
+        if (!inGroup.length || !pid) return false;
+        const back = altVisible(pid, tok, x, inGroup);
+        if (back) altOf.set(x, back);
+        return !!back;
+      });
       if (!kids.length) continue;
       const leafs = kids.every(x => !x.group && x.type !== 'model');
       const total = inGroup.reduce((x, c) => x + c.n, 0);
@@ -510,7 +517,8 @@ function block(V, pw, nodes, prefix, depth, compact, caps = []) {
           const on = inGroup.find(c => c.s.t === t);
           const cost = on ? E.totalCost(V, on) / Math.max(1, on.n) : E.nodeCost(V, x, null, pw);
           const dot = weaponish ? `<span class="arm-dot" style="--oc:${optColor(pid, t)}" aria-hidden="true"></span>` : '';
-          return `<button type="button" class="arm-opt${on ? ' on' : ''}" data-action="arm-op" data-op="${on ? (lim.min && !multi ? 'noop' : 'rm') : multi ? 'add' : 'choose'}" data-p="${esc(pid)}" data-g="${esc(tok)}" data-t="${esc(t)}"${on ? ` data-id="${esc(on.s.id)}"` : ''}>${multi ? `<span class="arm-box" aria-hidden="true">${on ? '✓' : ''}</span>` : ''}${dot}${esc(E.limits(V, x, on || null, pw).name)}${cost ? ` <span class="arm-cost">+${cost}</span>` : ''}${(() => { const d = E.nodeCost(V, x, on || null, pw, DP); return d ? ` <span class="arm-cost arm-dpc">${d} DP</span>` : ''; })()}</button>`;
+          const back = altOf.get(x);
+          return `<button type="button" class="arm-opt${on ? ' on' : ''}" data-action="arm-op" data-op="${back ? 'rm' : on ? (lim.min && !multi ? 'noop' : 'rm') : multi ? 'add' : 'choose'}" data-p="${esc(pid)}" data-g="${esc(tok)}" data-t="${esc(t)}"${back ? ` data-id="${esc(back.s.id)}"` : on ? ` data-id="${esc(on.s.id)}"` : ''}>${multi ? `<span class="arm-box" aria-hidden="true">${on ? '✓' : ''}</span>` : ''}${dot}${esc(E.limits(V, x, on || null, pw).name)}${cost ? ` <span class="arm-cost">+${cost}</span>` : ''}${(() => { const d = E.nodeCost(V, x, on || null, pw, DP); return d ? ` <span class="arm-cost arm-dpc">${d} DP</span>` : ''; })()}</button>`;
         }).join('')}</div>${inGroup.map(c => effectHtml(c.node ? effectsOf(c.node) : [])).join('')}${inGroup.map(c => nested(V, c, depth, compact)).join('')}</div>`;
       } else {
         const hasModels = kids.some(x => x.type === 'model' || (x.group && sys.children(x).some(y => y.type === 'model')));
@@ -615,6 +623,17 @@ function hasChoices(V, k, c, pw) {
 /** Fixed equipment of a model type (entries it always has). */
 function fixedGear(V, k, c, pw) {
   return ed.sys.children(k).filter(x => !x.group && !/^(Crusade|Weapon Modifications)/i.test(x.name)).filter(x => { const l = E.limits(V, x, null, c || pw); return !l.hidden && l.min > 0 && l.min === l.max; }).map(x => E.limits(V, x, null, c || pw).name);
+}
+/** Would option x of group gtok (below selection pid) be available without the group's current choice?
+ *  Returns the selection to take back for it (it then comes again by itself – see autoSync), or null. */
+function altVisible(pid, gtok, x, inGroup) {
+  try {
+    let r = ed.army;
+    for (const c of inGroup) r = E.removeSel(r, c.s.id);
+    const V2 = E.view(ed.sys, r);
+    const p2 = V2.byId.get(pid);
+    return p2 && !E.limits(V2, x, null, p2).hidden ? inGroup[0] : null;
+  } catch { return null; }
 }
 function nested(V, c, depth, compact) {
   if (!c.node || depth > 6) return '';
