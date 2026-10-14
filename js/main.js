@@ -24,6 +24,7 @@ import * as archiveView from './ui/archive-view.js';
 import { checkOnOpen } from './ui/update-popup.js';
 import { openJoinSheet } from './ui/qr.js';
 import { installKeywordInfo } from './ui/keywords.js';
+import { startI18n } from './i18n.js';
 import { toast, esc } from './ui/components.js';
 import * as lobby from './ui/lobby.js';
 import * as setup from './ui/setup.js';
@@ -400,6 +401,7 @@ window.addEventListener('keydown', e => {
 });
 
 installKeywordInfo();   // [KEYWORD] tags everywhere open their rule
+startI18n();           // German interface (js/i18n.js)
 window.addEventListener('hashchange', () => { route(); });
 route();
 // App start (Android app only, with internet): offer new unit data / a new app version in a popup

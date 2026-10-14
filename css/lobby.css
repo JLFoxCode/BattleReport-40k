@@ -76,3 +76,5 @@
 .lobby .role-pick .chip { cursor: pointer; }
 .lobby .app-info .hint { margin-top: 0; }
 .lobby .join-form .btn { flex: none; }
+.lang-card .lang-terms { display: flex; align-items: center; gap: 8px; margin: 12px 0 4px; text-transform: none; letter-spacing: 0; font-size: 15px; color: var(--text); }
+.lang-card .lang-terms input { width: 22px; height: 22px; }

@@ -5,6 +5,7 @@ import { listFinished } from '../archive.js';
 import { checkDataUpdate, getDataStatus, onDataStatus, loadDataInfo } from '../data-update.js';
 import { askDataUpdate, checkForUpdates } from './update-popup.js';
 import { armyChoices } from './armies.js';
+import { getLang, setLang, keepTerms, setKeepTerms } from '../i18n.js';
 
 let games = null;      // zuletzt geladene Liste
 let loading = false;
@@ -126,6 +127,12 @@ function pageHtml(page) {
     return `<div class="lobby page">${head}${f || '<div class="card muted empty">No finished games on this device yet.</div>'}</div>`;
   }
   return `<div class="lobby page">${head}
+    <section class="card lang-card">
+      <div class="title">Language</div>
+      <div class="chips">${[['en', 'English'], ['de', 'Deutsch']].map(([l, n]) => `<button type="button" class="chip${getLang() === l ? ' on' : ''}" data-action="lang" data-lang="${l}" data-no-i18n>${n}</button>`).join('')}</div>
+      <label class="lang-terms"><input type="checkbox" data-action="keep-terms"${keepTerms() ? ' checked' : ''}> <span>Game terms in English</span></label>
+      <p class="muted xs">German: the interface is in German; rules texts stay in their English original as long as no official German version is available in the data. “Game terms in English” keeps terms like Stratagem, CP, Command phase or Leader in English.</p>
+    </section>
     <section class="card app-info">${devInfoHtml() || '<p class="muted">Running in the browser – updates come with the app.</p>'}${dataStatusHtml()}</section>
   </div>`;
 }
@@ -286,6 +293,8 @@ function onClick(e) {
   const card = b.closest('[data-code]');
   const code = card ? card.dataset.code : null;
   if (action === 'new') return newGame();
+  if (action === 'lang') { if (b.dataset.lang !== getLang()) setLang(b.dataset.lang); return; }
+  if (action === 'keep-terms') { setKeepTerms(b.checked); return; }
   if (action === 'data-check') { checkDataUpdate({ ask: askDataUpdate }); return; }
   if (action === 'app-update-check') { checkForUpdates(); return; }
   if (action === 'remote') {

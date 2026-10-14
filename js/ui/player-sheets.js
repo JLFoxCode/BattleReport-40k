@@ -250,7 +250,7 @@ export function openMoreSheet(ctx, ui) {
     const lock = (st.opts && st.opts.stratLock) || 'phase';
     return `<div class="label">Stratagem lock</div>
       <div class="chips">${chip({ label: 'Per phase (rule)', on: lock === 'phase', action: 'opt.set', data: { key: 'stratLock', value: 'phase' }, cls: 'sm' })}${chip({ label: 'Per round (house rule)', on: lock === 'round', action: 'opt.set', data: { key: 'stratLock', value: 'round' }, cls: 'sm' })}</div>
-      <p class="muted xs">${esc((WH.STRAT_LOCK || {})[lock] || '')}</p>`;
+      <p class="muted xs lock-text">${esc((WH.STRAT_LOCK || {})[lock] || '')}</p>`;
   };
   return sheet({
     title: 'More',
