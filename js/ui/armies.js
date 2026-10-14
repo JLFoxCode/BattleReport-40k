@@ -417,7 +417,10 @@ function block(V, pw, nodes, prefix, depth, compact, caps = []) {
     const room = Math.min(own, ...caps.map(c => c.max - c.total));
     if (room > 0) return { add: true };
     if (own <= 0) return { add: false };
-    const srcs = (pw.ch || []).filter(x => x.node && x.node.type === 'model' && !sels.includes(x) && x.n > E.limits(V, x.node, x, pw).min).sort((p, q) => q.n - p.n);
+    // the model that gives way: one of the same category first (standard for standard, heavy for heavy), the biggest group
+    const par = t => t.split('>').slice(0, -1).join('>');
+    const srcs = (pw.ch || []).filter(x => x.node && x.node.type === 'model' && !sels.includes(x) && x.n > E.limits(V, x.node, x, pw).min)
+      .sort((p, q) => ((par(q.s.t) === par(tok)) - (par(p.s.t) === par(tok))) || q.n - p.n);
     const src = srcs.find(x => caps.every(c => c.max - c.total > 0 || (x.s.t.startsWith(c.tok + '>') && tok.startsWith(c.tok + '>'))));
     return src ? { add: false, swap: src } : { add: false };
   };
@@ -454,7 +457,7 @@ function block(V, pw, nodes, prefix, depth, compact, caps = []) {
           : `<div class="arm-gh${hasModels ? ' arm-gh-models' : ''}">${esc(lim.name)} ${lim.max >= 0 || lim.min > 0 ? range : ''}${hasModels ? '' : eachTag}${!hasModels && kids.length > 1 && kids.every(x => !x.group && x.type !== 'model') && kids.some(x => weaponsOf(x).length) ? `<button type="button" class="arm-cmp" data-action="arm-cmp" data-p="${esc(pid)}" data-g="${esc(tok)}">Compare</button>` : ''}${hasModels && Number.isFinite(left) ? ` <span class="arm-room${left > 0 ? '' : ' full'}">${left > 0 ? `${left} more possible` : lim.max >= 0 && total >= lim.max ? 'full' : 'unit full – swap models'}</span>` : ''}</div>`;
         const g = `<div class="arm-grp${hasModels && !inGroup.length ? ' arm-special' : ''}">${head}${block(V, pw, kids, tok, depth + 1, compact, sub)}</div>`;
         // a model group nobody of the unit is in yet (e.g. heavy weapons) comes after the models that are there
-        if (hasModels && !inGroup.length) specials.push(g); else if (hasModels && caps.length) specialsOn.push(g); else html += g;
+        if (hasModels && caps.length) specialsOn.push(g); else html += g;
       }
       continue;
     }
@@ -469,11 +472,9 @@ function block(V, pw, nodes, prefix, depth, compact, caps = []) {
     const cost = sels.length ? E.totalCost(V, sels[0]) / Math.max(1, sels[0].n) : E.nodeCost(V, k, null, pw);
     if (k.type === 'model') {
       const r = roomFor(tok, lim, sels);
-      if (!sels.length) {
-        if (!r.add && !r.swap) continue;   // not possible right now – only what can be taken is offered
-        others.push({ k, tok, name, cost, r, max: lim.max });
-        continue;
-      }
+      const own = hasChoices(V, k, sels[0] || null, pw);
+      others.push({ k, tok, name, cost, r, max: lim.max, sels, n: sels.reduce((x, c) => x + c.n, 0), own, gear: fixedGear(V, k, sels[0] || null, pw) });
+      if (!own) continue;   // no choices of its own: the category box is all it needs
       sels.forEach((c, i) => {
         const canSplit = c.n > 1 && ed.sys.children(k).some(x => x.group || E.limits(V, x, null, c).max !== E.limits(V, x, null, c).min);
         html += `<div class="arm-model">
@@ -512,34 +513,44 @@ function block(V, pw, nodes, prefix, depth, compact, caps = []) {
         <span class="arm-box" aria-hidden="true">${c ? '✓' : ''}</span><span>${esc(name)}</span>${cost ? `<span class="arm-cost">+${cost} pts</span>` : ''}</button>${c ? nested(V, c, depth, compact) : ''}`;
     }
   }
-  html += specialsOn.join('');
-  const hasCards = html.includes('arm-model');
-  const inSpecial = caps.length > 1;   // inside a special group (e.g. heavy weapons) of the unit's models
-  // model types that can be taken: choice buttons (mosaic, like a weapon choice) + one "Add"/"Swap in" button;
-  // "Compare" shows only this category (standard models with standard models, heavy weapons with heavy weapons)
+  // ONE box per model category (standard models / heavy weapons …): every model type with how many the unit has,
+  // − / + for the chosen one ("+" swaps when the unit is full), its equipment, and Compare. Nothing jumps around.
   const pickKey = (pid || 'force') + '|' + prefix;
-  const takeHtml = () => {
-    if (!others.length) return '';
-    const sel = others.find(o => o.tok === ed.modelPick[pickKey]) || others[0];
-    const short = n => String(n).replace(/^.*?\bw\/\s*/i, '');
-    return `<div class="arm-take">
-      <div class="arm-choices">${others.map(o => `<button type="button" class="arm-opt${o === sel ? ' on' : ''}" data-action="arm-mpick" data-key="${esc(pickKey)}" data-tok="${esc(o.tok)}" title="${esc(o.name)}">${mdot(o.k)}${esc(short(o.name))}${o.cost ? ` <span class="arm-cost">${o.cost}</span>` : ''}</button>`).join('')}</div>
-      <div class="arm-take-foot">
-        <button type="button" class="btn primary sm arm-madd" data-action="arm-op" data-op="add" data-key="${esc(pickKey)}" data-p="${esc(pid)}" data-t="${esc(sel.tok)}"${sel.r.swap ? ` data-from="${esc(sel.r.swap.s.id)}"` : ''}>${sel.r.swap ? '⇄ Swap in' : '+ Add'} ${esc(short(sel.name))}</button>
-        <span class="muted xs">${sel.r.swap ? 'takes the place of one ' + esc(unitName(V, sel.r.swap)) : sel.max > 0 ? 'max ' + sel.max : ''}</span>
-        ${pid ? `<button type="button" class="arm-cmp" data-action="arm-mcmp" data-id="${esc(pid)}" data-cat="${esc(prefix)}">Compare</button>` : ''}
-      </div></div>`;
+  const short = n => String(n).replace(/^.*?\bw\/\s*/i, '');
+  const boxHtml = () => {
+    if (others.length < 2 && !(others.length === 1 && !others[0].own)) return '';
+    const sel = others.find(o => o.tok === ed.modelPick[pickKey]) || others.find(o => o.n > 0 && !o.own) || others.find(o => !o.own) || others[0];
+    const last = sel.sels[sel.sels.length - 1];
+    const can = sel.r.add || sel.r.swap;
+    const minus = last ? `<button type="button" data-action="arm-op" data-op="count" data-d="-1" data-id="${esc(last.s.id)}" aria-label="One ${esc(short(sel.name))} less">−</button>`
+      : '<button type="button" disabled aria-label="None to remove">−</button>';
+    const plus = last
+      ? `<button type="button" data-action="arm-op" data-op="count" data-d="1" data-id="${esc(last.s.id)}"${sel.r.swap ? ` data-from="${esc(sel.r.swap.s.id)}"` : ''}${can ? '' : ' disabled'} aria-label="One ${esc(short(sel.name))} more">+</button>`
+      : `<button type="button" class="arm-madd" data-action="arm-op" data-op="add" data-key="${esc(pickKey)}" data-p="${esc(pid)}" data-t="${esc(sel.tok)}"${sel.r.swap ? ` data-from="${esc(sel.r.swap.s.id)}"` : ''}${can ? '' : ' disabled'} aria-label="Add ${esc(short(sel.name))}">+</button>`;
+    return `<div class="arm-mbox">
+      <div class="arm-choices">${others.map(o => `<button type="button" class="arm-opt${o === sel ? ' on' : ''}${o.n ? ' has' : ''}" data-action="arm-mpick" data-key="${esc(pickKey)}" data-tok="${esc(o.tok)}" title="${esc(o.name)}">${mdot(o.k)}${esc(short(o.name))}${o.n ? ` <b class="arm-cnt">${o.n}×</b>` : ''}</button>`).join('')}</div>
+      <div class="arm-mbox-foot">
+        <span class="arm-mbox-sel">${mdot(sel.k)}<b>${esc(short(sel.name))}</b>${sel.cost ? ` <span class="arm-cost">${sel.cost} pts</span>` : ''}<span class="muted xs">${sel.r.swap && !sel.r.add ? ' · + swaps one ' + esc(short(unitName(V, sel.r.swap))) : sel.max > 0 ? ' · max ' + sel.max : ''}</span></span>
+        <div class="stepper sm">${minus}<span class="stepper-value">${sel.n}</span>${plus}</div>
+      </div>
+      ${sel.gear.length && !sel.own ? `<div class="arm-fixed"><span class="arm-fixed-l">Each equipped with</span> ${esc(sel.gear.join(' · '))}</div>` : sel.own ? '<div class="muted xs">Its weapons are chosen in its card below.</div>' : ''}
+      ${pid ? `<div class="arm-mbox-cmp"><button type="button" class="arm-cmp" data-action="arm-mcmp" data-id="${esc(pid)}" data-cat="${esc(prefix)}">Compare</button></div>` : ''}
+    </div>`;
   };
-  const rest = others.length || specials.length
-    ? (hasCards && !inSpecial
-      ? `<div class="arm-others"><div class="arm-gh arm-gh-models">Other models you can take</div>
-          ${others.length ? `<div class="arm-sub"><div class="arm-sub-h">Standard models</div>${takeHtml()}</div>` : ''}
-          ${specials.join('')}</div>`
-      : hasCards && inSpecial
-        ? `<div class="arm-others"><div class="arm-sub-h">More ${esc(caps[caps.length - 1].name.toLowerCase())}</div>${takeHtml()}${specials.join('')}</div>`
-        : takeHtml() + specials.join(''))
-    : '';
-  return (fixed.length ? `<div class="arm-fixed"><span class="arm-fixed-l">${each ? 'Each equipped with' : 'Equipped with'}</span> ${esc(fixed.join(' · '))}</div>` : '') + html + rest;
+  html = boxHtml() + html + specialsOn.join('') + specials.join('');
+  return (fixed.length ? `<div class="arm-fixed"><span class="arm-fixed-l">${each ? 'Each equipped with' : 'Equipped with'}</span> ${esc(fixed.join(' · '))}</div>` : '') + html;
+}
+/** Does a model type have choices of its own (weapon groups, optional wargear)? */
+function hasChoices(V, k, c, pw) {
+  return ed.sys.children(k).some(x => {
+    if (/^(Crusade|Weapon Modifications)/i.test(x.name)) return false;
+    const l = E.limits(V, x, null, c || pw);
+    return !l.hidden && (x.group || l.max !== l.min);
+  });
+}
+/** Fixed equipment of a model type (entries it always has). */
+function fixedGear(V, k, c, pw) {
+  return ed.sys.children(k).filter(x => !x.group && !/^(Crusade|Weapon Modifications)/i.test(x.name)).filter(x => { const l = E.limits(V, x, null, c || pw); return !l.hidden && l.min > 0 && l.min === l.max; }).map(x => E.limits(V, x, null, c || pw).name);
 }
 function nested(V, c, depth, compact) {
   if (!c.node || depth > 6) return '';
