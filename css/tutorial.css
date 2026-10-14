@@ -64,3 +64,56 @@
 .guide-list li { margin-bottom: 5px; }
 .guide-list li .tut-ref { margin-left: 4px; padding: 1px 7px; font-size: .72rem; }
 .guide-sub { font-size: .8rem; color: var(--muted); margin: 8px 0 2px; text-transform: uppercase; letter-spacing: .03em; }
+
+/* ───────── HTML picture types (flow, dice, table, sheet, compare) ───────── */
+.dg-flow { display: flex; gap: 0; align-items: stretch; }
+.dg-flow.down { flex-direction: column; }
+.dg-flow.right { flex-direction: row; flex-wrap: wrap; align-items: center; row-gap: 6px; }
+.dg-flow-box { border: 1px solid var(--line); border-left: 4px solid var(--k); background: var(--sunk); border-radius: var(--radius-sm); padding: 7px 10px; font-size: .9rem; line-height: 1.35; }
+.dg-flow.right .dg-flow-box { flex: 1 1 0; min-width: 84px; text-align: center; border-left-width: 1px; border-top: 4px solid var(--k); }
+.dg-flow-box b { display: block; font-size: .92rem; }
+.dg-flow-box span { color: var(--muted); font-size: .85rem; }
+.dg-flow-arrow { align-self: center; width: 0; height: 0; margin: 3px 0; border-left: 7px solid transparent; border-right: 7px solid transparent; border-top: 9px solid var(--muted); }
+.dg-flow.right .dg-flow-arrow { margin: 0 4px; border-top: 7px solid transparent; border-bottom: 7px solid transparent; border-left: 9px solid var(--muted); border-right: 0; }
+.dg-dice { display: grid; gap: 10px; background: var(--sunk); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 10px; }
+.dg-dice-row { display: grid; gap: 4px; }
+.dg-dice-l { font-size: .85rem; font-weight: 700; }
+.dg-dice-n { font-size: .82rem; color: var(--muted); }
+.dg-dice-set { display: flex; flex-wrap: wrap; gap: 5px; }
+.dg-die-wrap { position: relative; display: inline-flex; flex-direction: column; align-items: center; }
+.dg-die-wrap small { font-size: .65rem; color: var(--warn); line-height: 1; margin-top: 1px; }
+.dg-die { width: 30px; height: 30px; }
+.dg-die rect { fill: var(--panel2); stroke: var(--muted); stroke-width: 4; }
+.dg-die circle { fill: var(--text); }
+.dg-die.ok rect { fill: rgba(79, 197, 127, .25); stroke: var(--ok); }
+.dg-die.fail { opacity: .45; }
+.dg-die.crit rect { fill: rgba(236, 170, 72, .3); stroke: var(--warn); }
+.dg-die.mark rect { stroke-width: 9; stroke-dasharray: 14 6; }
+.dg-table-wrap { overflow-x: auto; }
+.dg-table { border-collapse: collapse; width: 100%; font-size: .88rem; background: var(--sunk); }
+.dg-table th, .dg-table td { border: 1px solid var(--line); padding: 5px 6px; text-align: center; }
+.dg-table thead th { color: var(--muted); font-weight: 600; }
+.dg-table tbody th { text-align: left; font-weight: 600; white-space: nowrap; }
+.dg-table td.hl { background: var(--warn-soft); outline: 2px solid var(--warn); outline-offset: -2px; font-weight: 700; }
+.dg-sheet { background: var(--sunk); border: 1px solid var(--line); border-radius: var(--radius-sm); overflow: hidden; font-size: .85rem; }
+.dg-sheet-name { font-family: var(--font-title); font-size: 1.1rem; text-transform: uppercase; padding: 6px 10px; background: var(--panel2); }
+.dg-sheet-stats { display: flex; flex-wrap: wrap; gap: 4px; padding: 8px 10px; }
+.dg-sheet-stats > div { display: grid; text-align: center; min-width: 38px; border: 1px solid var(--line); border-radius: 6px; padding: 2px 4px; }
+.dg-sheet-stats small { color: var(--muted); font-size: .7rem; font-weight: 700; }
+.dg-sheet-stats b { font-size: 1rem; }
+.dg-sheet-w { width: 100%; border-collapse: collapse; }
+.dg-sheet-w th, .dg-sheet-w td { padding: 4px 5px; border-top: 1px solid var(--line); text-align: center; white-space: nowrap; }
+.dg-sheet-w th:first-child, .dg-sheet-w td:first-child { text-align: left; white-space: normal; }
+.dg-sheet-w th { color: var(--muted); font-size: .72rem; }
+.dg-sheet-ab { font-size: .72rem; color: var(--warn); font-weight: 700; }
+.dg-sheet-kw { padding: 6px 10px; border-top: 1px solid var(--line); font-size: .72rem; color: var(--muted); }
+.dg-co { display: inline-grid; place-items: center; width: 17px; height: 17px; border-radius: 50%; background: var(--warn); color: var(--on-p); font-size: .68rem; font-style: normal; font-weight: 800; margin-left: 3px; vertical-align: middle; }
+.dg-callouts { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 4px; font-size: .88rem; line-height: 1.35; }
+.dg-callouts li { display: flex; gap: 6px; align-items: baseline; }
+.dg-callouts .dg-co { margin: 0; flex: none; }
+.dg-compare { display: grid; gap: 8px; grid-template-columns: repeat(auto-fit, minmax(135px, 1fr)); }
+.dg-cmp-item > .dg-wrap { margin: 0; }
+.dg-cmp-h { font-weight: 700; font-size: .88rem; margin-bottom: 3px; }
+.dg-cmp-item.ok .dg-cmp-h { color: var(--ok); }
+.dg-cmp-item.bad .dg-cmp-h { color: var(--bad); }
+.tut-step .dg-wrap + .dg-wrap { margin-top: 12px; }

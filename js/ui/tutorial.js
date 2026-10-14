@@ -89,8 +89,9 @@ function stepHtml(ch, i) {
     <article class="tut-step" data-prev="${prev}" data-next="${next}">
       <div class="kicker">${T('Step', 'Schritt')} ${i + 1} / ${ch.steps.length}</div>
       <h2>${esc(pick(s, 'title'))}</h2>
-      ${s.diagram ? diagramSvg(s.diagram, de() ? 'de' : 'en') : ''}
+      ${pics(s, 'top')}
       <div class="tut-text">${pick(s, 'text')}</div>
+      ${pics(s, 'bottom')}
       ${tips.length ? `<div class="tut-tips"><div class="h">${T('Watch out', 'Darauf achten')}</div><ul>${tips.map(t => `<li>${t}</li>`).join('')}</ul></div>` : ''}
       ${refsHtml(s.refs)}
     </article>
@@ -101,6 +102,11 @@ function stepHtml(ch, i) {
     </nav>
   </div>`;
 }
+
+/** The pictures of a step: diagram (one) or diagrams (several); each above the text unless at: 'bottom'
+ *  (in a list, every picture after the first defaults to below the text). */
+export function stepPictures(s) { return s.diagrams ? s.diagrams.map((d, i) => [d, d.at || (i ? 'bottom' : 'top')]) : s.diagram ? [[s.diagram, s.diagram.at || 'top']] : []; }
+const pics = (s, where) => stepPictures(s).filter(([, at]) => at === where).map(([d]) => diagramSvg(d, de() ? 'de' : 'en')).join('');
 
 function refsHtml(refs) {
   if (!refs || !refs.length) return '';
