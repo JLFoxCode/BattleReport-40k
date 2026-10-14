@@ -399,16 +399,18 @@ function countNode(V, node, c, self, parent) {
 export function validate(V) {
   const out = [];
   const label = w => (w && w.kind === 'sel' ? effective(V, w.node, w, w.parent).name : 'Army');
-  const checkNode = (node, parent, owner) => {
+  // under: inside a hidden group (Crusade options …) – its minimums do not apply
+  const checkNode = (node, parent, owner, under = false) => {
     const sels = selsOf(V, parent, node);
     const self = node.group ? null : sels[0] || null;
     const eff = effective(V, node, self, parent);
     if (sels.length) for (const m of eff.errors) out.push({ sel: (owner ? owner.s.id : sels[0].s.id) || null, msg: `${owner ? label(owner) + ': ' : ''}${m}` });
-    if (eff.hidden && !sels.length) { if (node.group) for (const k of V.sys.children(node)) checkNode(k, parent, owner); return; }   // not available here → its rules do not apply
+    if (eff.hidden && !sels.length) { if (node.group) for (const k of V.sys.children(node)) checkNode(k, parent, owner, true); return; }   // not available here → its rules do not apply
     if (eff.hidden && sels.length) out.push({ sel: (sels[0].s || {}).id || null, msg: `${eff.name} is not available${owner ? ' for ' + label(owner) : ''}` });
     for (const c of eff.constraints) {
       if (c.field === 'associations' || (c.type === 'max' && c.value < 0)) continue;
       if (c.type === 'min' && !sels.length && c.scope === 'parent' && eff.hidden) continue;
+      if (c.type === 'min' && under) continue;
       if (c.scope === 'self' && !self) continue;
       if (c.scope !== 'parent' && c.scope !== 'self' && !sels.length && c.type === 'max') continue;
       const v = countNode(V, node, c, self, parent);
@@ -417,7 +419,7 @@ export function validate(V) {
       if (c.type === 'min' && v < c.value) out.push({ sel: owner ? owner.s.id : null, msg: c.message || `${label(owner)}: ${eff.name} needs at least ${c.value}${what} (has ${v})` });
       if (c.type === 'max' && v > c.value) out.push({ sel: (sels[0] && sels[0].s.id) || (owner ? owner.s.id : null), msg: c.message || `${eff.name}: at most ${c.value}${what} ${c.scope === 'parent' ? (owner ? 'in ' + label(owner) : '') : 'per ' + (c.scope === 'force' || c.scope === 'roster' ? 'army' : c.scope)} (has ${v})` });
     }
-    if (node.group) for (const k of V.sys.children(node)) checkNode(k, parent, owner);
+    if (node.group) for (const k of V.sys.children(node)) checkNode(k, parent, owner, under);
   };
   // force: root entries (only those used or with a min) + category constraints of the force entry
   for (const n of V.sys.rootNodes(V.catalogueId)) {
@@ -462,6 +464,12 @@ export function instantiate(sys, V, node, t, parentW, n = 1) {
   fillDefaults(sys, V, node, s, parentW);
   return s;
 }
+/** The default option of a group: its defaultId – or, when the data sets none, the option the group is named after
+ *  (group "Laspistol" → Laspistol; BSData names weapon groups after the standard weapon). */
+function isDefault(g, x) {
+  if (g.defaultId) return x.id === g.defaultId || x.linkId === g.defaultId;
+  return !!g.name && String(x.name).toLowerCase() === String(g.name).toLowerCase();
+}
 function fillDefaults(sys, V, node, s, parentW) {
   // wrapper for condition evaluation of the new selection (not yet in the roster)
   const w = { kind: 'sel', s, node, groups: [], parent: parentW, n: s.n, ch: [], ids: node.ids };
@@ -480,7 +488,7 @@ function fillDefaults(sys, V, node, s, parentW) {
           const counts = new Map();
           let left = lim.min;
           for (const o of opts) if (o.l.min > 0 && left > 0) { const c = Math.min(o.l.min, left); counts.set(o.x, c); left -= c; }
-          const order = opts.slice().sort((p, q) => (q.x.id === k.defaultId || q.x.linkId === k.defaultId ? 1 : 0) - (p.x.id === k.defaultId || p.x.linkId === k.defaultId ? 1 : 0));
+          const order = opts.slice().sort((p, q) => (isDefault(k, q.x) ? 1 : 0) - (isDefault(k, p.x) ? 1 : 0));
           for (const o of order) {
             if (left <= 0) break;
             const have = counts.get(o.x) || 0;
@@ -594,7 +602,7 @@ export function autoSync(sys, roster) {
           if (lim.min > 0 && !inG.length && gRoom > 0) {
             // options that are allowed right now; one that is mandatory now (min > 0) wins over the default
             const opts = sys.children(k).filter(x => !x.group).map(x => ({ x, l: limits(V, x, null, w) })).filter(o => !o.l.hidden && o.l.max !== 0);
-            const pick = opts.find(o => o.l.min > 0) || opts.find(o => k.defaultId && (o.x.id === k.defaultId || o.x.linkId === k.defaultId)) || (opts.length === 1 ? opts[0] : null);
+            const pick = opts.find(o => o.l.min > 0) || opts.find(o => isDefault(k, o.x)) || (opts.length === 1 ? opts[0] : null);
             const def = pick ? pick.x : null;
             if (def) { change = { add: { p: w.s.id, t: tok + '>' + def.token, n: def.type === 'model' ? lim.min : 1 } }; return; }
           }

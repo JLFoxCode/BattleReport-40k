@@ -588,10 +588,12 @@ function block(V, pw, nodes, prefix, depth, compact, caps = []) {
     const room = Math.min(own, ...caps.map(c => c.max - c.total));
     if (room > 0) return { add: true };
     if (own <= 0) return { add: false };
-    // the model that gives way: one of the same category first (standard for standard, heavy for heavy), the biggest group
+    // the model that gives way: never one from a group that still has room (a second special weapon swaps a plain trooper,
+    // not the first special weapon); then one of the same category (standard for standard, heavy for heavy), the biggest group
     const par = t => t.split('>').slice(0, -1).join('>');
+    const inRoomy = x => caps.filter(c => c.max - c.total > 0 && tok.startsWith(c.tok + '>') && x.s.t.startsWith(c.tok + '>')).length;
     const srcs = (pw.ch || []).filter(x => x.node && x.node.type === 'model' && !sels.includes(x) && x.n > E.limits(V, x.node, x, pw).min)
-      .sort((p, q) => ((par(q.s.t) === par(tok)) - (par(p.s.t) === par(tok))) || q.n - p.n);
+      .sort((p, q) => (inRoomy(p) - inRoomy(q)) || ((par(q.s.t) === par(tok)) - (par(p.s.t) === par(tok))) || q.n - p.n);
     const src = srcs.find(x => caps.every(c => c.max - c.total > 0 || (x.s.t.startsWith(c.tok + '>') && tok.startsWith(c.tok + '>'))));
     return src ? { add: false, swap: src } : { add: false };
   };
@@ -711,9 +713,10 @@ function block(V, pw, nodes, prefix, depth, compact, caps = []) {
       <div class="arm-gh">Model types${pid ? `<button type="button" class="arm-cmp" data-action="arm-mcmp" data-id="${esc(pid)}" data-cat="${esc(prefix)}">Compare</button>` : ''}</div>
       <div class="arm-choices">${others.map(o => `<button type="button" class="arm-opt${o === sel ? ' on' : ''}${o.n ? ' has' : ''}" data-action="arm-mpick" data-key="${esc(pickKey)}" data-tok="${esc(o.tok)}" title="${esc(o.name)}">${mdot(o.k)}${esc(short(o.name))}${o.n ? ` <b class="arm-cnt">${o.n}×</b>` : ''}</button>`).join('')}</div>
       <div class="arm-mbox-foot">
-        <span class="arm-mbox-sel">${mdot(sel.k)}<b>${esc(short(sel.name))}</b>${sel.cost ? ` <span class="arm-cost">${sel.cost} pts</span>` : ''}<span class="muted xs">${sel.r.swap && !sel.r.add ? ' · + swaps one ' + esc(short(unitName(V, sel.r.swap))) : sel.max > 0 ? ' · max ' + sel.max : ''}</span></span>
-        <div class="stepper sm">${minus}<span class="stepper-value">${sel.n}</span>${plus}</div>
+        <span class="arm-mbox-sel">${mdot(sel.k)}<b>${esc(short(sel.name))}</b>${sel.cost ? ` <span class="arm-cost">${sel.cost} pts</span>` : ''}<span class="muted xs">${last && sel.r.swap && !sel.r.add ? ' · + swaps one ' + esc(short(unitName(V, sel.r.swap))) : sel.max > 0 ? ' · max ' + sel.max : ''}</span></span>
+        ${last ? `<div class="stepper sm">${minus}<span class="stepper-value">${sel.n}</span>${plus}</div>` : ''}
       </div>
+      ${last ? '' : `<button type="button" class="btn sm${can ? ' primary' : ''} arm-madd-big" data-action="arm-op" data-op="add" data-key="${esc(pickKey)}" data-p="${esc(pid)}" data-t="${esc(sel.tok)}"${sel.r.swap ? ` data-from="${esc(sel.r.swap.s.id)}"` : ''}${can ? '' : ' disabled'}>+ Add ${esc(short(sel.name))}${sel.r.swap && !sel.r.add ? ` <span class="arm-madd-sub">replaces one ${esc(short(unitName(V, sel.r.swap)))}</span>` : ''}</button>`}
       ${sel.gear.length && !sel.own ? `<div class="arm-fixed"><span class="arm-fixed-l">Each equipped with</span> ${esc(sel.gear.join(' · '))}</div>` : sel.own ? '<div class="muted xs">Its weapons are chosen in its card below.</div>' : ''}
     </div>`;
   };
