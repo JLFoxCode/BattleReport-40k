@@ -1,7 +1,7 @@
 /* Player phone – sheets: the stratagem popup (rule text + use controls: cost stepper, CP reduction, optional target unit),
  * the "⋯" sheet (settings, note, links) and the leader-buff info sheet. Sheets live outside the view root, so their clicks are handled here. */
 import { WH } from '../../data/rules.js';
-import { esc, sheet, toast, chip, btn } from './components.js';
+import { esc, sheet, toast, chip, btn, autoNote } from './components.js';
 import {
   stepper, cpBadge, affectedUnits, myUnits, pName, cleanOrig, stratPhaseId, phasePill, turnBadge, stratSrc, stratKwList, kwLine,
   stratOrigBlock, stratUseState, stratAddonsOf, resourceFor, resShort, fxItem, armyOf, origData, origMod, ensureOrig, enhancementOf
@@ -133,12 +133,15 @@ export function openStratSheet(ctx, ui, stratId) {
       const sel = el.querySelector('select[name=unit]');
       const unitId = sel ? sel.value || '' : '';
       (async () => {
+        const auto = [];
         if (red) {
           const r = await c.dispatch({ type: 'ability.use', player: me, key: red.key, name: red.name, limit: red.limit, source: red.source, note: `CP reduction for ${s.name}` });
           if (!r) { toast(`${red.name} could not be used – Stratagem not booked`, 'bad'); return; }
+          auto.push(`${red.name} marked as used (${entryLabel(red)}) – ${red.amount === Infinity ? 'Stratagem for 0 CP' : '−' + red.amount + ' CP on the Stratagem'}`);
           if (red.pay) {   // e.g. Ancestral Crest: spend 1YP
             const res = (((r.players || [])[me] || {}).resources || []).map((x, index) => ({ x, index })).find(o => resShort(o.x.name) === red.pay.res || new RegExp('\\(' + red.pay.res + '\\)').test(o.x.name));
-            if (res) await c.dispatch({ type: 'resource.set', player: me, index: res.index, value: Math.max(0, (Number(res.x.value) || 0) - red.pay.n) });
+            if (res && await c.dispatch({ type: 'resource.set', player: me, index: res.index, value: Math.max(0, (Number(res.x.value) || 0) - red.pay.n) })) auto.push(`−${red.pay.n} ${red.pay.res} · ${red.name} (${res.x.name}: ${Number(res.x.value) || 0} → ${Math.max(0, (Number(res.x.value) || 0) - red.pay.n)})`);
+            else auto.push(`${red.pay.n} ${red.pay.res} for ${red.name} NOT booked – no such resource, correct it by hand`);
           }
         }
         const r = await c.dispatch({ type: 'strat.use', player: me, stratId: s.id, cost, unitId: unitId || undefined });
@@ -152,7 +155,10 @@ export function openStratSheet(ctx, ui, stratId) {
           const rr = await c.dispatch({ type: 'resource.set', player: me, index, value: Math.max(0, before - total) });
           if (rr) spent.push(`−${total} ${resShort((cur[index] || {}).name || '')}`);
         }
-        toast(`${s.name} used (${cost} CP${red ? ', ' + red.name : ''}${chosen.length ? ' · ' + chosen.map(a => String(a.name || '').replace(/^\+\s*/, '')).join(', ') : ''}${spent.length ? ' · ' + spent.join(', ') : ''})`, 'ok');
+        auto.unshift(`−${cost} CP · ${s.name}${cost !== printed ? ` (printed ${printed} CP)` : ''}`);
+        if (chosen.length) auto.push(...chosen.map(a => `Add-on: ${String(a.name || '').replace(/^\+\s*/, '')}`));
+        auto.push(...spent);
+        autoNote(`${s.name} used`, auto);
         closeFn();
       })().catch(err => toast(err && err.message ? err.message : String(err), 'bad'));
       return false;   // the sheet closes itself after a successful booking

@@ -205,6 +205,14 @@ export function toast(msg, kind = '', ms) {
   return kill;
 }
 
+/** What a button booked automatically (CP, resources, once-per uses …): a list that stays a while, so a wrong
+ *  booking can be corrected by hand. lines = ['−1 CP · Command Re-roll', '−1 YP · Ancestral Crest', …] */
+export function autoNote(title, lines, head = 'Booked automatically:') {
+  const l = (lines || []).filter(Boolean);
+  if (!l.length) return toast(title, 'ok');
+  return toast(title + '\n' + head + '\n' + l.map(x => '• ' + x).join('\n'), 'auto', 7000);
+}
+
 /** Kleiner Helfer: Spielerlabel "Player 1" bzw. Name */
 export function playerLabel(state, idx) {
   const p = state && state.players && state.players[idx];

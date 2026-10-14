@@ -7,7 +7,7 @@
  * Events: one delegation on root.
  * Layout: pinned head + tabs; ≥ 900 px a two-column grid with general-info tiles on the right (data-sec="side").
  */
-import { esc, toast, colorOf } from './components.js';
+import { esc, toast, colorOf, autoNote } from './components.js';
 import { uiState, uiSave, fxItem, choicePicked, toggleOn, resourceFor, optionCost, switchCostOf } from './player-common.js';
 import * as T from './player-tabs.js';
 import * as S from './player-sheets.js';
@@ -206,6 +206,7 @@ H['fx.pick'] = async (el, ctx, ui) => {
   const res = cost ? resourceFor(state, me, oc.resource) : null;
   const stored = ((state.players[me].effects) || {})[it.key];
   let next;
+  const auto = [];
   if (picked.includes(o.id) && !multi && (e.default || it.defaultOpt || switchCostOf(it))) return;   // always one active – switch instead
   if (picked.includes(o.id)) {
     next = picked.filter(x => x !== o.id);
@@ -214,11 +215,11 @@ H['fx.pick'] = async (el, ctx, ui) => {
     if (o.limit === 'battle') {
       const u = T.fxUse(state, me, useKey, 'battle');
       refund = sameTurn(u, state);
-      if (refund) await ctx.dispatch({ type: 'ability.undo', player: me, useId: u.id });
+      if (refund && await ctx.dispatch({ type: 'ability.undo', player: me, useId: u.id })) auto.push(`${o.name}: once-per-battle use given back`);
     }
     if (refund && res) {
       const cur = (ctx.state.players[me].resources || [])[res.index] || res.r;
-      await ctx.dispatch({ type: 'resource.set', player: me, index: res.index, value: (Number(cur.value) || 0) + cost });
+      if (await ctx.dispatch({ type: 'resource.set', player: me, index: res.index, value: (Number(cur.value) || 0) + cost })) auto.push(`+${cost} ${res.r.name} given back (${Number(cur.value) || 0} → ${(Number(cur.value) || 0) + cost})`);
     }
   } else {
     next = multi ? picked.concat(o.id) : [o.id];
@@ -227,16 +228,18 @@ H['fx.pick'] = async (el, ctx, ui) => {
     if (o.limit === 'battle') {
       const r = await ctx.dispatch({ type: 'ability.use', player: me, key: useKey, name: `${e.name}: ${o.name}`, limit: 'battle', source: it.src });
       if (!r) return;
+      auto.push(`${o.name} marked as used (once per battle)`);
     }
     if (cost && res) {
       const r = await ctx.dispatch({ type: 'resource.set', player: me, index: res.index, value: Math.max(0, (Number(res.r.value) || 0) - cost) });
       if (!r) return;
+      auto.push(`−${cost} ${res.r.name} · ${o.name} (${Number(res.r.value) || 0} → ${Math.max(0, (Number(res.r.value) || 0) - cost)})`);
     }
   }
   const names = (e.options || []).filter(x => next.includes(x.id)).map(x => x.name);
   const value = next.length ? (multi ? next : next[0]) : null;
   const r = await ctx.dispatch({ type: 'effect.set', player: me, key: it.key, value, label: e.name, display: names.length ? names.join(', ') : null });
-  if (r) toast(`${e.name}: ${names.length ? names.join(', ') : 'none'}`, 'ok', 1500);
+  if (r) autoNote(`${e.name}: ${names.length ? names.join(', ') : 'none'}`, auto);
 };
 H['fx.toggle'] = async (el, ctx, ui) => {
   const { state, me } = ctx;
@@ -254,7 +257,7 @@ H['fx.toggle'] = async (el, ctx, ui) => {
     if (!r) return;
   }
   const r = await ctx.dispatch({ type: 'effect.set', player: me, key: it.key, value: true, label: e.name, display: 'on' });
-  if (r) toast(`${e.name} on`, 'ok', 1500);
+  if (r) autoNote(`${e.name} on`, e.limit ? [`${e.name} marked as used (${T.limitLabel(e.limit)})`] : []);
 };
 H['fx.info'] = (el, ctx, ui) => S.openEffectSheet(ctx, ui, Number(el.dataset.p), el.dataset.key);
 H['enh.info'] = (el, ctx, ui) => S.openEnhancementSheet(ctx, ui, el.dataset.name);

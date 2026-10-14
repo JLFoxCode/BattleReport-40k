@@ -1,7 +1,7 @@
 /* Army builder ("My armies"), modelled on New Recruit: #/armies = saved lists, #/armies/<id> = editor.
  * Everything comes from the BSData catalogues (js/builder/bs-engine.js): units, model counts, wargear options,
  * enhancements, points and every restriction of the data. Lists are stored on this device (js/builder/store.js). */
-import { esc, btn, toast, sheet, confirmSheet, promptSheet } from './components.js';
+import { esc, btn, toast, sheet, confirmSheet, promptSheet, autoNote } from './components.js';
 import { listArmies, loadArmy, saveArmy, deleteArmy, armyId } from '../builder/store.js';
 import { playableCatalogues, systemFor, ALLIANCES } from '../builder/load.js';
 import * as E from '../builder/bs-engine.js';
@@ -895,7 +895,10 @@ function autoPick(sys, r) {
 function apply(fn) {
   let r = fn(ed.army);
   if (!r) return;
-  r = autoPick(ed.sys, E.autoSync(ed.sys, r));   // wargear tied to other choices follows, unavailable choices go
+  const synced = autoPick(ed.sys, E.autoSync(ed.sys, r));   // wargear tied to other choices follows, unavailable choices go
+  const auto = syncDiff(r, synced);
+  r = synced;
+  if (auto.length) autoNote('Adjusted to the rules', auto, 'Changed automatically:');
   r.limit = ed.army.limit;
   saveWithSummary(ed.sys, Object.assign({}, ed.army, r));
   rerender();
@@ -1008,6 +1011,16 @@ export async function armyForGame(id) {
   return { text: armyText(sys, a, { faction: a.catalogueLabel }), faction: a.faction, detachments: s.detachments, name: a.name, limit: a.limit };
 }
 
+/** What autoSync / autoPick changed: ['Hesyr: Concussion gauntlet removed', …] */
+function syncDiff(a, b) {
+  const list = r => { const V = E.view(ed.sys, r); const out = new Map(); const walk = (w, path) => { for (const c of w.ch || []) { if (!c.node) continue; const n = E.effective(V, c.node, c, c.parent).name; out.set(c.s.id, { label: (path ? path + ': ' : '') + n, n: c.n }); walk(c, c.node.type === 'model' || c.node.type === 'unit' ? n : path); } }; walk(V.force, ''); return out; };
+  try {
+    const A = list(a), B = list(b), out = [];
+    for (const [id, x] of A) if (!B.has(id)) out.push(`${x.label} removed`);
+    for (const [id, x] of B) if (!A.has(id)) out.push(`${x.label} added`);
+    return out;
+  } catch { return []; }
+}
 /** Lists saved before a fix (or after a data update) are brought in line with the data once when opened. */
 function syncOnOpen(sys) {
   try {
