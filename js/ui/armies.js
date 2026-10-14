@@ -237,6 +237,7 @@ const rootOf = (V, id) => { let w = V.byId.get(id); while (w && w.parent && w.pa
 const catName = (sys, w) => sys.categoryNames.get(w.node && w.node.primaryCategory) || 'Other';
 
 function editorHtml() {
+  resetOptColors();
   const { sys, army } = ed;
   const V = E.view(sys, army);
   const probs = problems(V);
@@ -324,6 +325,15 @@ function optionsHtml(V, w, compact) {
   return block(V, w, ed.sys.children(w.node), '', 0, compact);
 }
 /* ───────── Weapon comparison of a choice (popup with the profiles of every option, one colour per option) ───────── */
+/* Option colours: all choices of ONE model / unit share the palette (melee and ranged choices never get the same colours,
+   so nobody thinks one goes with the other); an option that brings a melee AND a ranged weapon keeps one colour. */
+const optColors = new Map(), optNext = new Map();
+function optColor(pid, t) {
+  const k = pid + '|' + t;
+  if (!optColors.has(k)) { const n = optNext.get(pid) || 0; optNext.set(pid, n + 1); optColors.set(k, OPT_COLORS[n % OPT_COLORS.length]); }
+  return optColors.get(k);
+}
+const resetOptColors = () => { optColors.clear(); optNext.clear(); };
 const OPT_COLORS = ['#4F9DF0', '#E8A13C', '#4FC57F', '#D86ADB', '#EE6E60', '#46C8C0', '#C9B458', '#9A8CF0', '#F07FA8', '#8FD14F', '#F2C94C', '#7EA6C9'];
 /** Weapon profiles an option brings: its own profiles (and linked ones) plus those of mandatory sub-entries
  *  (e.g. "2 Heavy Bolters" → 2× Heavy bolter). [{ name, type: 'ranged'|'melee', n, ch: { Range, A, BS|WS, S, AP, D, Keywords } }] */
@@ -387,7 +397,7 @@ function openCompare(pid, gtok) {
   const total = inG.reduce((a, c) => a + c.n, 0);
   const groupFull = glim.max >= 0 && total >= glim.max;
   return (multi ? `<p class="cmp-count">${total}${glim.max >= 0 ? ' / ' + glim.max : ''} chosen${glim.min ? ` · at least ${glim.min}` : ''}</p>` : '') + kids.map((x, i) => {
-    const color = OPT_COLORS[i % OPT_COLORS.length];
+    const color = optColor(pid, gtok + '>' + x.token);
     const ws = weaponsOf(x);
     const cost = E.nodeCost(V, x, null, pw);
     const n = inG.filter(c => c.s.t === gtok + '>' + x.token).reduce((a, c) => a + c.n, 0);
@@ -499,7 +509,7 @@ function block(V, pw, nodes, prefix, depth, compact, caps = []) {
           const t = tok + '>' + x.token;
           const on = inGroup.find(c => c.s.t === t);
           const cost = on ? E.totalCost(V, on) / Math.max(1, on.n) : E.nodeCost(V, x, null, pw);
-          const dot = weaponish ? `<span class="arm-dot" style="--oc:${OPT_COLORS[xi % OPT_COLORS.length]}" aria-hidden="true"></span>` : '';
+          const dot = weaponish ? `<span class="arm-dot" style="--oc:${optColor(pid, t)}" aria-hidden="true"></span>` : '';
           return `<button type="button" class="arm-opt${on ? ' on' : ''}" data-action="arm-op" data-op="${on ? (lim.min && !multi ? 'noop' : 'rm') : multi ? 'add' : 'choose'}" data-p="${esc(pid)}" data-g="${esc(tok)}" data-t="${esc(t)}"${on ? ` data-id="${esc(on.s.id)}"` : ''}>${multi ? `<span class="arm-box" aria-hidden="true">${on ? '✓' : ''}</span>` : ''}${dot}${esc(E.limits(V, x, on || null, pw).name)}${cost ? ` <span class="arm-cost">+${cost}</span>` : ''}${(() => { const d = E.nodeCost(V, x, on || null, pw, DP); return d ? ` <span class="arm-cost arm-dpc">${d} DP</span>` : ''; })()}</button>`;
         }).join('')}</div>${inGroup.map(c => effectHtml(c.node ? effectsOf(c.node) : [])).join('')}${inGroup.map(c => nested(V, c, depth, compact)).join('')}</div>`;
       } else {
@@ -700,6 +710,7 @@ function refreshUnitSheet(el) {
   const probs = problems(V).filter(p => p.sel && rootOf(V, p.sel) === w);
   sh.querySelector('.sheet-head .title').innerHTML = `<span class="arm-title-t">${esc(E.effective(V, w.node, w, w.parent).name)}</span>${probs.length ? `<button type="button" class="arm-tri" data-action="arm-probs" data-ids="${esc(w.s.id)}" aria-label="Show problems" title="Show problems">⚠</button>` : ''}`;
   const types = modelTypes(w.node);
+  resetOptColors();
   modelColor = new Map(types.length > 1 ? types.map((m, i) => [m.node, OPT_COLORS[i % OPT_COLORS.length]]) : []);
   ed.cmpUnit = types.length > 1 ? w.s.id : null;
   sh.querySelector('.arm-usheet').innerHTML = `
