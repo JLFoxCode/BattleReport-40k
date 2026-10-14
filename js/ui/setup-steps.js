@@ -20,7 +20,7 @@ export const DP_LIMIT = { strike: 3, incursion: 2 };
 export const SIZE_LABEL = { strike: 'Strike Force', incursion: 'Incursion' };
 const RESERVE_LABEL = { none: 'Deploy on the battlefield', strategic: 'Strategic Reserves', deepstrike: 'Deep Strike', transport: 'Embarked in a transport' };
 
-export const dpLimit = state => DP_LIMIT[state.opts.size] || 3;
+export const dpLimit = state => (state.opts.dp != null ? Number(state.opts.dp) : DP_LIMIT[state.opts.size] || 3);
 export const dpOf = (fac, ids) => (ids || []).reduce((s, id) => { const d = fac && fac.detachments.find(x => x.id === id); return s + (d ? Number(d.dp) || 0 : 0); }, 0);
 const facOf = (ctx, p) => { const id = ctx.state.players[p].faction; return id ? ctx.data.FACTIONS.find(f => f.id === id) || null : null; };
 const norm = s => String(s || '').toLowerCase().replace(/[^a-z0-9äöüß]+/g, '');

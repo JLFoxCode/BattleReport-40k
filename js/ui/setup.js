@@ -161,6 +161,7 @@ function playerCard(ctx, p) {
 function optionsCard(ctx) {
   const o = ctx.state.opts, WH = ctx.data.WH;
   const sizeNote = { strike: 'Strike Force · 2000 points · 3 Detachment Points', incursion: 'Incursion · 1000 points · 2 Detachment Points' };
+  const dp = dpLimit(ctx.state), dpAuto = o.dp == null;
   return `
     <div class="card opts-card">
       <div class="card-head"><div class="title">Game options</div></div>
@@ -171,6 +172,12 @@ function optionsCard(ctx) {
         </label>
         <label class="field"><span>Points limit</span><input type="number" data-field="points" value="${esc(o.points)}" min="100" step="50" inputmode="numeric"></label>
       </div>
+      <div class="label mt">Detachment Points</div>
+      <div class="row dp-row">
+        <div class="stepper"><button type="button" data-action="dp-step" data-delta="-1"${dp <= 0 ? ' disabled' : ''} aria-label="Fewer">−</button><span class="stepper-value">${dp}</span><button type="button" data-action="dp-step" data-delta="1"${dp >= 9 ? ' disabled' : ''} aria-label="More">+</button></div>
+        ${chip({ label: 'By game size', on: dpAuto, action: 'dp-auto', cls: 'sm' })}
+      </div>
+      <p class="xs muted">${dpAuto ? 'Incursion 2 DP, Strike Force 3 DP – set by hand for other agreements.' : 'Set by hand – “By game size” goes back to Incursion 2 / Strike Force 3.'} Detachments are bought with these points.</p>
       <div class="label mt">Stratagem lock</div>
       <div class="chips">${['phase', 'round'].map(k => chip({ label: k === 'phase' ? 'Per phase (rule)' : 'Per round (house rule)', on: o.stratLock === k, action: 'opt', data: { key: 'stratLock', value: k } })).join('')}</div>
       <p class="xs muted lock-text">${esc(WH.STRAT_LOCK[o.stratLock] || '')}</p>
@@ -306,6 +313,8 @@ async function onClick(e) {
     case 'go': return ctx.nav(d.hash);
     case 'color': return ctx.dispatch({ type: 'player.set', player: p, color: Number(d.c) });
     case 'opt': return ctx.dispatch({ type: 'opts.set', key: d.key, value: d.value });
+    case 'dp-step': return ctx.dispatch({ type: 'opts.set', key: 'dp', value: Math.max(0, Math.min(9, dpLimit(s) + Number(d.delta))) });
+    case 'dp-auto': return ctx.dispatch({ type: 'opts.set', key: 'dp', value: null });
 
     case 'fac-pick': ui.search[p] = ''; return ctx.dispatch({ type: 'player.army', player: p, faction: d.id, detachments: [] });
     case 'fac-clear': return ctx.dispatch({ type: 'player.army', player: p, faction: null, detachments: [] });

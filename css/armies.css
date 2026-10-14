@@ -117,3 +117,11 @@
 .arm-roles { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; overscroll-behavior-x: contain; }
 .arm-roles::-webkit-scrollbar { display: none; }
 .arm-roles .chip { flex: none; white-space: nowrap; }
+/* detachment points */
+.arm-dp { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 8px 10px; margin-bottom: 8px; border-radius: 10px; background: var(--sunk); border: 1px solid var(--line); }
+.arm-dp.bad { border-color: var(--bad); background: var(--bad-soft); }
+.arm-dp-main { flex: 1; min-width: 120px; display: flex; flex-direction: column; gap: 2px; }
+.arm-dp-val { font-size: 15px; }
+.arm-dp-val b { font: 700 22px/1 var(--font-title); }
+.arm-dp.bad .arm-dp-val b { color: var(--bad); }
+.arm-dpc { color: var(--warn); }

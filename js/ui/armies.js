@@ -13,6 +13,9 @@ const dsCache = new Map();   // faction id → datasheet package (or 'loading')
 
 const DP = '82ae-1066-5107-6ae0';
 const DP_LIMIT = { 1000: 2, 2000: 3 };
+// Detachment Points to buy detachments with: by battle size (Incursion 2, Strike Force 3) unless set by hand (army.dp)
+const dpLimitOf = a => (a.dp != null ? Number(a.dp) : DP_LIMIT[a.limit] || 3);
+const dpUsed = V => V.force.ch.reduce((x, w) => x + E.totalCost(V, w, DP), 0);
 const CAT_ORDER = ['Configuration', 'Epic Hero', 'Character', 'Battleline', 'Infantry', 'Mounted', 'Beast', 'Swarm', 'Monster', 'Vehicle', 'Dedicated Transport', 'Fortification'];
 const byRole = (a, b) => ((CAT_ORDER.indexOf(a) + 1 || 99) - (CAT_ORDER.indexOf(b) + 1 || 99)) || a.localeCompare(b);
 const HIDE_ROOT = /^(Show\/Hide|Show Legends|Show Unaligned|Show Crucible|Order of Battle|Experience Points|Legendary Veterans|Weapon Modifications)/i;
@@ -150,9 +153,8 @@ function setBattleSize(sys, r, limit) {
 /* ═══════════════ Editor ═══════════════ */
 function problems(V) {
   const out = E.validate(V);
-  const dp = V.force.ch.reduce((x, w) => x + E.totalCost(V, w, DP), 0);
-  const lim = DP_LIMIT[V.roster.limit];
-  if (lim && dp > lim) out.push({ sel: null, msg: `Detachments: ${dp} Detachment Points – at most ${lim} at ${V.roster.limit} pts` });
+  const dp = dpUsed(V), lim = dpLimitOf(V.roster);
+  if (dp > lim) out.push({ sel: null, msg: `Detachments: ${dp} Detachment Points used – only ${lim} available` });
   return out;
 }
 function saveWithSummary(sys, r) {
@@ -224,16 +226,26 @@ function configHtml(V, list, byUnit) {
   const open = ed.cfgOpen || bad;
   const chosen = items.flatMap(w => w.ch.map(c => E.effective(V, c.node, c, c.parent).name.replace(/^\d+\.\s*/, '').replace(/\s*\(\d+ Point limit\)/, ''))).filter(Boolean);
   if (!open) return `<section class="arm-sec arm-config"><button type="button" class="arm-cfg-sum" data-action="arm-cfg">
-      <span><span class="arm-sec-h">Army configuration</span><span class="arm-cfg-line">${esc(chosen.join(' · '))}</span></span><span class="btn ghost sm">Change</span></button></section>`;
+      <span><span class="arm-sec-h">Army configuration</span><span class="arm-cfg-line">${esc(chosen.join(' · '))} · ${dpUsed(V)}/${dpLimitOf(ed.army)} DP</span></span><span class="btn ghost sm">Change</span></button></section>`;
   return `<section class="arm-sec arm-config">
     <div class="row between"><div class="arm-sec-h">Army configuration</div>${bad ? '' : btn({ label: 'Done', kind: 'ghost', small: true, action: 'arm-cfg' })}</div>
     ${items.map(w => {
       const probs = byUnit.get(w.s.id) || [];
       return `<div class="arm-cfg${probs.length ? ' has-prob' : ''}"><div class="arm-cfg-h">${esc(E.effective(V, w.node, w, w.parent).name)}</div>
+        ${w.node.name === 'Detachment' ? dpRow(V) : ''}
         ${optionsHtml(V, w, true)}
         ${probs.map(p => `<div class="arm-alert xs">${esc(p.msg)}</div>`).join('')}</div>`;
     }).join('')}
   </section>`;
+}
+
+function dpRow(V) {
+  const used = dpUsed(V), lim = dpLimitOf(ed.army), auto = ed.army.dp == null;
+  return `<div class="arm-dp${used > lim ? ' bad' : ''}">
+    <div class="arm-dp-main"><span class="arm-dp-val"><b>${used}</b> / ${lim} DP</span><span class="muted xs">${auto ? (ed.army.limit === 1000 ? 'Incursion' : 'Strike Force') + ': ' + lim + ' Detachment Points' : 'Set by hand'}</span></div>
+    <div class="stepper sm"><button type="button" data-action="arm-dp" data-d="-1"${lim <= 0 ? ' disabled' : ''} aria-label="Fewer Detachment Points">−</button><span class="stepper-value">${lim}</span><button type="button" data-action="arm-dp" data-d="1"${lim >= 9 ? ' disabled' : ''} aria-label="More Detachment Points">+</button></div>
+    ${auto ? '' : `<button type="button" class="chip sm" data-action="arm-dp-auto">By battle size</button>`}
+  </div>`;
 }
 
 /* ───────── Options of a selection (generic, like New Recruit): groups, choices, counters, nested ───────── */
@@ -260,11 +272,12 @@ function block(V, pw, nodes, prefix, depth, compact, full = null) {
       const range = lim.max === 1 ? '' : `<span class="arm-range${lim.max >= 0 && total > lim.max || total < lim.min ? ' bad' : ''}">${total}${lim.max >= 0 ? ' / ' + lim.max : ''}</span>`;
       const multi = leafs && lim.max !== 1 && kids.every(x => E.limits(V, x, null, pw).max === 1);
       if (leafs && (lim.max === 1 || multi)) {
-        html += `<div class="arm-grp"><div class="arm-gh">${esc(lim.name)}${lim.min ? '' : ' <span class="muted xs">optional</span>'}</div><div class="arm-choices">${kids.map(x => {
+        const same = depth === 0 && pw.node && lim.name === pw.node.name;   // "Detachment" inside "Detachment": one heading is enough
+        html += `<div class="arm-grp">${same && lim.min ? '' : `<div class="arm-gh">${same ? '' : esc(lim.name)}${lim.min ? '' : ' <span class="muted xs">optional</span>'}</div>`}<div class="arm-choices">${kids.map(x => {
           const t = tok + '>' + x.token;
           const on = inGroup.find(c => c.s.t === t);
           const cost = on ? E.totalCost(V, on) / Math.max(1, on.n) : E.nodeCost(V, x, null, pw);
-          return `<button type="button" class="arm-opt${on ? ' on' : ''}" data-action="arm-op" data-op="${on ? (lim.min && !multi ? 'noop' : 'rm') : multi ? 'add' : 'choose'}" data-p="${esc(pid)}" data-g="${esc(tok)}" data-t="${esc(t)}"${on ? ` data-id="${esc(on.s.id)}"` : ''}>${multi ? `<span class="arm-box" aria-hidden="true">${on ? '✓' : ''}</span>` : ''}${esc(E.limits(V, x, on || null, pw).name)}${cost ? ` <span class="arm-cost">+${cost}</span>` : ''}</button>`;
+          return `<button type="button" class="arm-opt${on ? ' on' : ''}" data-action="arm-op" data-op="${on ? (lim.min && !multi ? 'noop' : 'rm') : multi ? 'add' : 'choose'}" data-p="${esc(pid)}" data-g="${esc(tok)}" data-t="${esc(t)}"${on ? ` data-id="${esc(on.s.id)}"` : ''}>${multi ? `<span class="arm-box" aria-hidden="true">${on ? '✓' : ''}</span>` : ''}${esc(E.limits(V, x, on || null, pw).name)}${cost ? ` <span class="arm-cost">+${cost}</span>` : ''}${(() => { const d = E.nodeCost(V, x, on || null, pw, DP); return d ? ` <span class="arm-cost arm-dpc">${d} DP</span>` : ''; })()}</button>`;
         }).join('')}</div>${inGroup.map(c => nested(V, c, depth, compact)).join('')}</div>`;
       } else {
         // a full model group (e.g. 9/9 warriors): "+" on another model swaps one in for one of the biggest other stack
@@ -499,6 +512,11 @@ async function onClick(e) {
   }
   if (a === 'arm-unit') return openUnit(b.dataset.id);
   if (a === 'arm-cfg') { ed.cfgOpen = !ed.cfgOpen; return rerender(); }
+  if (a === 'arm-dp' || a === 'arm-dp-auto') {
+    const dp = a === 'arm-dp-auto' ? null : Math.max(0, Math.min(9, dpLimitOf(ed.army) + Number(b.dataset.d)));
+    saveWithSummary(ed.sys, Object.assign({}, ed.army, { dp }));
+    return rerender();
+  }
   if (a === 'arm-add') return openAdd();
   if (a === 'arm-rename') {
     const n = await promptSheet({ title: 'Rename army', label: 'Name', value: ed.army.name, ok: 'Save' });

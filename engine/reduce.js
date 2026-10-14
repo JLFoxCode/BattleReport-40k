@@ -25,6 +25,8 @@ export const ACTION_TYPES = Object.values(ACTIONS);
 
 const PHASE_IDS = WH.PHASES.map(p => p.id);
 const DP_LIMIT = { strike: 3, incursion: 2 };
+// Detachment Points: by game size (Incursion 2, Strike Force 3) unless set by hand in the game options (opts.dp)
+const dpLimitOf = s => (s.opts.dp != null ? num(s.opts.dp, 3) : DP_LIMIT[s.opts.size] || 3);
 const STATUSES = ['ok', 'shocked', 'destroyed'];
 const RESERVES = ['none', 'strategic', 'deepstrike', 'transport'];
 const SIZES = ['strike', 'incursion'];
@@ -60,7 +62,7 @@ export function initialState(code, seed) {
   return {
     v: 1, code: String(code || 'XXXX'), createdAt: null, seq: 0,
     stage: 'setup',
-    opts: { stratLock: 'phase', autoScore: true, points: 2000, size: 'strike', phases: 'off' },
+    opts: { stratLock: 'phase', autoScore: true, points: 2000, size: 'strike', phases: 'off', dp: null },
     rngState: (num(seed, 123456) >>> 0),
     mission: { deployment: null, dispositions: [null, null], primary: [null, null], twist: null, mirrored: null, attacker: null, first: null, terrainLayout: null },
     players: [emptyPlayer(0), emptyPlayer(1)],
@@ -423,12 +425,13 @@ H['game.init'] = (s0, a) => {
 
 H['opts.set'] = (s, a) => {
   const k = a.key;
-  if (!(k in s.opts)) fail('Unknown option: ' + k);
+  if (!(k in s.opts) && k !== 'dp') fail('Unknown option: ' + k);
   let v = a.value;
   if (k === 'stratLock' && !LOCKS.includes(v)) fail('Invalid Stratagem lock');
   if (k === 'size' && !SIZES.includes(v)) fail('Invalid game size');
   if (k === 'autoScore') v = !!v;
   if (k === 'phases' && !['off', 'manual'].includes(v)) fail('Invalid phases option');
+  if (k === 'dp' && v != null) { v = Math.floor(num(v, NaN)); if (!(v >= 0 && v <= 9)) fail('Invalid Detachment Points'); }
   if (k === 'points') { v = Math.floor(num(v, NaN)); if (!Number.isFinite(v) || v <= 0) fail('Invalid points value'); }
   s.opts[k] = v;
   log(s, a, 'Option ' + k + ' = ' + String(v));
@@ -454,7 +457,7 @@ H['player.army'] = (s, a) => {
   const dets = Array.isArray(a.detachments) ? a.detachments.filter(Boolean) : [];
   const defs = dets.map(id => { const d = fac ? detachmentById(fac.id, id) : null; if (!d) fail('Unknown Detachment: ' + id); return d; });
   const dp = defs.reduce((x, d) => x + num(d.dp, 0), 0);
-  const limit = DP_LIMIT[s.opts.size] || 3;
+  const limit = dpLimitOf(s);
   if (dp > limit) fail('Too many Detachment Points: ' + dp + ' > ' + limit);
   pl.faction = fac ? fac.id : null;
   pl.detachments = defs.map(d => d.id);
