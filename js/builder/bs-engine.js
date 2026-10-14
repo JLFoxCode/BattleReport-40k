@@ -555,3 +555,49 @@ export function splitSel(roster, id) {
 }
 
 export { PTS, findSel };
+
+/* Keeps a roster consistent with the data after a change (as New Recruit does):
+ *  - a selection that is no longer available (hidden by its modifiers, e.g. the Hesyr's gauntlet once he takes a hammer,
+ *    or an option tied to the squad's weapon choice) is removed;
+ *  - a mandatory piece of wargear that is available now but missing (min > 0, e.g. the Hesyr's weapon that follows the
+ *    squad's choice) is added; a mandatory choice without selection gets its default (only when it is unambiguous).
+ *  Model counts are left to the player. */
+export function autoSync(sys, roster) {
+  let r = roster;
+  for (let pass = 0; pass < 12; pass++) {
+    const V = view(sys, r);
+    let change = null;
+    const visit = (w, nodes, prefix) => {
+      for (const k of nodes) {
+        if (change) return;
+        if (/^(Crusade|Weapon Modifications|Battle Scars|Battle Honours)/i.test(k.name)) continue;
+        const tok = prefix ? prefix + '>' + k.token : k.token;
+        const lim = limits(V, k, null, w);
+        if (k.group) {
+          const inG = w.ch.filter(c => c.s.t.startsWith(tok + '>'));
+          if (lim.hidden) { if (inG.length) change = { rm: inG[0].s.id }; continue; }
+          if (lim.min > 0 && !inG.length) {
+            const opts = sys.children(k).filter(x => !x.group && !limits(V, x, null, w).hidden);
+            const def = opts.find(x => k.defaultId && (x.id === k.defaultId || x.linkId === k.defaultId)) || (opts.length === 1 ? opts[0] : null);
+            if (def) { change = { add: { p: w.s.id, t: tok + '>' + def.token, n: def.type === 'model' ? lim.min : 1 } }; return; }
+          }
+          visit(w, sys.children(k), tok);
+          continue;
+        }
+        const sels = w.ch.filter(c => c.s.t === tok);
+        const eff = effective(V, k, sels[0] || null, w);
+        if (eff.hidden) { if (sels.length) change = { rm: sels[0].s.id }; continue; }
+        if (k.type === 'model') continue;
+        const have = sels.reduce((x, c) => x + c.n, 0);
+        if (lim.min > 0 && have < lim.min) change = sels.length ? { set: { id: sels[0].s.id, n: sels[0].s.n + lim.min - have } } : { add: { p: w.s.id, t: tok, n: lim.min - have } };
+      }
+    };
+    const walk = w => { if (change || !w.node) return; visit(w, sys.children(w.node), ''); w.ch.forEach(walk); };
+    V.force.ch.forEach(walk);
+    if (!change) break;
+    if (change.rm) r = removeSel(r, change.rm);
+    else if (change.set) r = setCount(r, change.set.id, change.set.n);
+    else r = addSel(sys, r, change.add.p, change.add.t, change.add.n);
+  }
+  return r;
+}

@@ -38,7 +38,7 @@ export function render(root, ctx) {
     root.innerHTML = `<div class="card center muted">${ed.error ? `<div class="title">Could not load the data</div><p>${esc(ed.error)}</p>` : `<div class="title">Loading ${esc(ed.army.catalogueName || '')} …</div>`}</div>`;
     if (!ed.loading && !ed.error) {
       ed.loading = true;
-      systemFor(ed.army.catalogueId).then(sys => { ed.sys = sys; }).catch(e => { ed.error = e.message || String(e); })
+      systemFor(ed.army.catalogueId).then(sys => { ed.sys = sys; syncOnOpen(sys); }).catch(e => { ed.error = e.message || String(e); })
         .finally(() => { ed.loading = false; if (lastRoot && ed.id === id) render(lastRoot, lastCtx); });
     }
     return;
@@ -876,7 +876,7 @@ function autoPick(sys, r) {
 function apply(fn) {
   let r = fn(ed.army);
   if (!r) return;
-  r = autoPick(ed.sys, r);
+  r = autoPick(ed.sys, E.autoSync(ed.sys, r));   // wargear tied to other choices follows, unavailable choices go
   r.limit = ed.army.limit;
   saveWithSummary(ed.sys, Object.assign({}, ed.army, r));
   rerender();
@@ -987,4 +987,13 @@ export async function armyForGame(id) {
   const sys = await systemFor(a.catalogueId);
   const s = summarize(sys, a);
   return { text: armyText(sys, a, { faction: a.catalogueLabel }), faction: a.faction, detachments: s.detachments, name: a.name, limit: a.limit };
+}
+
+/** Lists saved before a fix (or after a data update) are brought in line with the data once when opened. */
+function syncOnOpen(sys) {
+  try {
+    const before = JSON.stringify(ed.army.sel);
+    const r = autoPick(sys, E.autoSync(sys, ed.army));
+    if (JSON.stringify(r.sel) !== before) saveWithSummary(sys, Object.assign({}, ed.army, { sel: r.sel }));
+  } catch (e) { console.warn('sync', e); }
 }
