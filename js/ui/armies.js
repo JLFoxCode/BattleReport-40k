@@ -326,40 +326,72 @@ function openCompare(pid, gtok) {
   const kids = sys.children(g).filter(x => !E.limits(V, x, null, pw).hidden);
   const row = (w, color) => `<tr style="--oc:${color}"><td class="cmp-w"><b>${w.n > 1 ? w.n + '× ' : ''}${esc(w.name.replace(/^➤\s*/, ''))}</b>${w.ch.Keywords && w.ch.Keywords !== '-' ? `<span class="cmp-kw">${kwList(w.ch.Keywords)}</span>` : ''}</td>
     <td>${esc(w.ch.Range || '')}</td><td>${esc(w.ch.A || '')}</td><td>${esc(w.ch.BS || w.ch.WS || '')}</td><td>${esc(w.ch.S || '')}</td><td>${esc(w.ch.AP || '')}</td><td>${esc(w.ch.D || '')}</td></tr>`;
+  const glim = E.limits(V, g, null, pw);
+  const multi = glim.max !== 1;   // several options (or the same one several times) may be taken
   const build = () => {
   const V1 = E.view(sys, ed.army);
   const pw1 = pid ? V1.byId.get(pid) || pw : V1.force;
-  const chosen = new Set((pw1.ch || []).filter(c => c.s.t.startsWith(gtok + '>')).map(c => c.s.t));
-  return kids.map((x, i) => {
+  const inG = (pw1.ch || []).filter(c => c.s.t.startsWith(gtok + '>'));
+  const total = inG.reduce((a, c) => a + c.n, 0);
+  const groupFull = glim.max >= 0 && total >= glim.max;
+  return (multi ? `<p class="cmp-count">${total}${glim.max >= 0 ? ' / ' + glim.max : ''} chosen${glim.min ? ` · at least ${glim.min}` : ''}</p>` : '') + kids.map((x, i) => {
     const color = OPT_COLORS[i % OPT_COLORS.length];
     const ws = weaponsOf(x);
     const cost = E.nodeCost(V, x, null, pw);
-    const on = chosen.has(gtok + '>' + x.token);
-    return `<div class="cmp-opt${on ? ' on' : ''}" style="--oc:${color}" role="button" tabindex="0" data-tok="${esc(x.token)}" aria-pressed="${on}" aria-label="Equip ${esc(E.limits(V, x, null, pw).name)}">
-      <div class="cmp-opt-h"><span class="arm-dot" aria-hidden="true"></span><b>${esc(E.limits(V, x, null, pw).name)}</b>${cost ? ` <span class="arm-cost">+${cost} pts</span>` : ''}${on ? ' <span class="badge ok">equipped</span>' : '<span class="cmp-pick">Tap to equip</span>'}${ws.length > 1 ? ` <span class="muted xs">${ws.length} profiles</span>` : ''}</div>
+    const n = inG.filter(c => c.s.t === gtok + '>' + x.token).reduce((a, c) => a + c.n, 0);
+    const on = n > 0;
+    const kmax = E.limits(V1, x, null, pw1).max;
+    const more = multi && !groupFull && (kmax < 0 || n < kmax);
+    // choice full: another option swaps in for one of the most-taken other option
+    const src = multi && groupFull && (kmax < 0 || n < kmax) ? inG.filter(c => c.s.t !== gtok + '>' + x.token).sort((p, q) => q.n - p.n)[0] : null;
+    const label = esc(E.limits(V, x, null, pw).name);
+    const tag = multi
+      ? `${on ? '<span class="badge ok">equipped</span>' : ''}${more ? `<span class="cmp-pick">Tap to add${on ? ' one more' : ''}</span>` : src ? `<span class="cmp-pick" data-src="${esc(src.s.id)}">Tap to swap in</span>` : on ? '' : '<span class="muted xs">limit reached</span>'}${on ? `<button type="button" class="cmp-minus" data-dec="${esc(x.token)}" aria-label="One ${label} less">−</button>` : ''}`
+      : on ? ' <span class="badge ok">equipped</span>' : '<span class="cmp-pick">Tap to equip</span>';
+    return `<div class="cmp-opt${on ? ' on' : ''}" style="--oc:${color}" role="button" tabindex="0" data-tok="${esc(x.token)}" aria-pressed="${on}" aria-label="Equip ${label}">
+      <div class="cmp-opt-h"><span class="arm-dot" aria-hidden="true"></span><b>${n > 1 ? `(${n}×) ` : ''}${label}</b>${cost ? ` <span class="arm-cost">+${cost} pts</span>` : ''}${tag}${ws.length > 1 ? ` <span class="muted xs">${ws.length} profiles</span>` : ''}</div>
       ${ws.length ? `<div class="cmp-scroll"><table class="cmp-table"><thead><tr><th>Weapon</th><th>Range</th><th>A</th><th>BS/WS</th><th>S</th><th>AP</th><th>D</th></tr></thead><tbody>${ws.map(w => row(w, color)).join('')}</tbody></table></div>` : '<p class="muted xs">No weapon profile (equipment).</p>'}
     </div>`;
   }).join('');
   };
-  const intro = '<p class="muted xs">Every option with its weapons – an option can bring several weapons (same colour). Tap an option to equip it.</p>';
-  const glim = E.limits(V, g, null, pw);
-  const multi = glim.max !== 1;   // several options at once (each max 1): tap toggles
+  const intro = `<p class="muted xs">Every option with its weapons – an option can bring several weapons (same colour). ${multi ? 'Tap to add an option (again), − takes one away.' : 'Tap an option to equip it.'}</p>`;
   sheet({
     title: glim.name, body: intro + build(), cls: 'arm-cmp-sheet wide',
     onOpen: (el, close) => {
-      const pick = box => {
-        const t = gtok + '>' + box.dataset.tok;
-        const on = (E.view(ed.sys, ed.army).byId.get(pid) || { ch: [] }).ch.find(c => c.s.t === t);
-        if (on && (!multi && glim.min)) return;   // already equipped
-        if (multi) apply(r => (on ? E.removeSel(r, on.s.id) : E.addSel(ed.sys, r, pid || null, t)));
-        else if (on) apply(r => E.removeSel(r, on.s.id));
-        else apply(r => E.chooseInGroup(ed.sys, r, pid || null, gtok, t));
-        toast(`${box.querySelector('.cmp-opt-h b').textContent} ${on ? 'removed' : 'equipped'}`, 'ok', 1500);
+      const redraw = () => {
         const body = el.querySelector('.sheet-body'), top = body.scrollTop;
         body.innerHTML = intro + build();   // popup stays open – it only shows what is equipped now
         body.scrollTop = top;
       };
-      el.addEventListener('click', e => { const b = e.target.closest('.cmp-opt[data-tok]'); if (b) pick(b); });
+      const selOf = t => { const p = pid ? E.view(ed.sys, ed.army).byId.get(pid) : E.view(ed.sys, ed.army).force; return ((p && p.ch) || []).find(c => c.s.t === t); };
+      const pick = box => {
+        const t = gtok + '>' + box.dataset.tok;
+        const on = selOf(t);
+        const name = E.limits(V, sys.resolve(pw.node || null, t, ed.army.catalogueId) || g, null, pw).name;
+        if (multi) {
+          const pk = box.querySelector('.cmp-pick');
+          if (!pk) { toast('Limit reached for this choice', 'warn', 1500); return; }
+          apply(r => takeOne(on ? E.setCount(r, on.s.id, on.s.n + 1) : E.addSel(ed.sys, r, pid || null, t), pk.dataset.src));
+          toast(`${name} ${pk.dataset.src ? 'swapped in' : 'added'}`, 'ok', 1200);
+        } else {
+          if (on && glim.min) return;   // already equipped
+          if (on) apply(r => E.removeSel(r, on.s.id));
+          else apply(r => E.chooseInGroup(ed.sys, r, pid || null, gtok, t));
+          toast(`${name} ${on ? 'removed' : 'equipped'}`, 'ok', 1500);
+        }
+        redraw();
+      };
+      const dec = tokOpt => {
+        const on = selOf(gtok + '>' + tokOpt);
+        if (!on) return;
+        apply(r => (on.s.n > 1 ? E.setCount(r, on.s.id, on.s.n - 1) : E.removeSel(r, on.s.id)));
+        redraw();
+      };
+      el.addEventListener('click', e => {
+        const m = e.target.closest('[data-dec]');
+        if (m) { e.stopPropagation(); dec(m.dataset.dec); return; }
+        const b = e.target.closest('.cmp-opt[data-tok]'); if (b) pick(b);
+      });
       el.addEventListener('keydown', e => { const b = e.target.closest('.cmp-opt[data-tok]'); if (b && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); pick(b); } });
     },
     actions: [{ label: 'Close', kind: 'ghost' }]
@@ -418,7 +450,7 @@ function block(V, pw, nodes, prefix, depth, compact, caps = []) {
         const sub = lim.max >= 0 ? [...caps, { tok, max: lim.max, total, name: lim.name }] : caps;
         const left = hasModels ? Math.min(...sub.map(c => c.max - c.total)) : Infinity;
         const head = !hasModels && lim.name === (pw.node && pw.node.name) && depth === 0 ? ''
-          : `<div class="arm-gh${hasModels ? ' arm-gh-models' : ''}">${esc(lim.name)} ${lim.max >= 0 || lim.min > 0 ? range : ''}${hasModels ? '' : eachTag}${hasModels && Number.isFinite(left) ? ` <span class="arm-room${left > 0 ? '' : ' full'}">${left > 0 ? `${left} more possible` : lim.max >= 0 && total >= lim.max ? 'full' : 'unit full – swap models'}</span>` : ''}</div>`;
+          : `<div class="arm-gh${hasModels ? ' arm-gh-models' : ''}">${esc(lim.name)} ${lim.max >= 0 || lim.min > 0 ? range : ''}${hasModels ? '' : eachTag}${!hasModels && kids.length > 1 && kids.every(x => !x.group && x.type !== 'model') && kids.some(x => weaponsOf(x).length) ? `<button type="button" class="arm-cmp" data-action="arm-cmp" data-p="${esc(pid)}" data-g="${esc(tok)}">Compare</button>` : ''}${hasModels && Number.isFinite(left) ? ` <span class="arm-room${left > 0 ? '' : ' full'}">${left > 0 ? `${left} more possible` : lim.max >= 0 && total >= lim.max ? 'full' : 'unit full – swap models'}</span>` : ''}</div>`;
         const g = `<div class="arm-grp${hasModels && !inGroup.length ? ' arm-special' : ''}">${head}${block(V, pw, kids, tok, depth + 1, compact, sub)}</div>`;
         // a model group nobody of the unit is in yet (e.g. heavy weapons) comes after the models that are there
         if (hasModels && !inGroup.length) specials.push(g); else if (hasModels && caps.length) specialsOn.push(g); else html += g;

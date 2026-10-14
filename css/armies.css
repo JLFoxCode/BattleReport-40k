@@ -187,3 +187,5 @@
 .arm-take-foot { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
 .arm-take-foot .arm-cmp { margin-left: auto; }
 .arm-madd { min-height: 38px; }
+.cmp-count { margin: 4px 0 0; font-weight: 700; font-size: 13px; }
+.cmp-minus { margin-left: 6px; min-width: 34px; min-height: 30px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel2); color: var(--text); font: 700 18px/1 var(--font-body); cursor: pointer; }
