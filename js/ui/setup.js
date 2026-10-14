@@ -193,7 +193,7 @@ function checkStep(ctx, ui) {
     const pl = s.players[p], fac = pl.faction ? ctx.data.FACTIONS.find(f => f.id === pl.faction) : null;
     const name = playerLabel(s, p);
     items.push([!!pl.name, `${name}: Name`, pl.name]);
-    items.push([!!fac && pl.detachments.length > 0, `${name}: Army`, fac ? `${fac.name} – ${pl.detachments.map(id => (fac.detachments.find(d => d.id === id) || { name: id }).name).join(', ')} (${dpOf(fac, pl.detachments)}/${dpLimit(s)} DP)` : 'no faction chosen']);
+    items.push([!!fac && pl.detachments.length > 0, `${name}: Army`, fac ? `${fac.name} – ${pl.detachments.map(id => (fac.detachments.find(d => d.id === id) || { name: id }).name).join(', ')} (${dpOf(fac, pl.detachments)}/${dpLimit(s, fac, pl.detachments)} DP)` : 'no faction chosen']);
     const pts = pl.units.reduce((a, u) => a + (Number(u.points) || 0), 0);
     items.push([true, `${name}: Army list (optional)`, pl.units.length ? `${pl.units.length} units · ${pts}/${s.opts.points} points` : 'no list – Stratagems without “Affects” matching']);
     const sec = pl.secondaries;
@@ -321,7 +321,7 @@ async function onClick(e) {
     case 'det': {
       const pl = s.players[p], fac = ctx.data.FACTIONS.find(f => f.id === pl.faction);
       const list = pl.detachments.includes(d.id) ? pl.detachments.filter(x => x !== d.id) : pl.detachments.concat(d.id);
-      const dp = dpOf(fac, list), limit = dpLimit(s);
+      const dp = dpOf(fac, list), limit = dpLimit(s, fac, list);
       if (dp > limit) return toast(`Too many Detachment Points: ${dp} > ${limit}`, 'warn');
       return ctx.dispatch({ type: 'player.army', player: p, faction: pl.faction, detachments: list });
     }

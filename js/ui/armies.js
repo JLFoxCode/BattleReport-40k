@@ -6,7 +6,7 @@ import { listArmies, loadArmy, saveArmy, deleteArmy, armyId } from '../builder/s
 import { playableCatalogues, systemFor, ALLIANCES } from '../builder/load.js';
 import * as E from '../builder/bs-engine.js';
 import { summarize, armyText } from '../builder/export.js';
-import { importArmyFile, importText } from '../builder/import.js';
+import { importArmyFile, importText, switchOn } from '../builder/import.js';
 import { loadDatasheets, matchUnit, normName } from '../data/datasheets.js';
 import { datasheetCard, datasheetGroupCard } from './datasheet.js';
 import { leaderBuffs } from './player-common.js';
@@ -18,8 +18,15 @@ const dsCache = new Map();   // faction id → datasheet package (or 'loading')
 
 const DP = '82ae-1066-5107-6ae0';
 const DP_LIMIT = { 1000: 2, 2000: 3 };
-// Detachment Points to buy detachments with: by battle size (Incursion 2, Strike Force 3) unless set by hand (army.dp)
-const dpLimitOf = a => (a.dp != null ? Number(a.dp) : DP_LIMIT[a.limit] || (Number(a.limit) <= 1000 ? 2 : 3));
+// Detachment Points to buy detachments with: from the data (Incursion 2, or 3 with a 3-DP detachment; Strike Force 3;
+// Onslaught 4) unless set by hand (army.dp); without the data loaded: by battle size
+const dpLimitOf = a => {
+  if (a.dp != null) return Number(a.dp);
+  if (ed.sys && a.catalogueId === (ed.army && ed.army.catalogueId)) {
+    try { const v = E.rosterMax(E.view(ed.sys, a), DP); if (v != null) return v; } catch {}
+  }
+  return DP_LIMIT[a.limit] || (Number(a.limit) <= 1000 ? 2 : 3);
+};
 const sizeName = pts => (SIZES.find(x => x.pts === Number(pts)) || {}).name || 'Custom';
 const dpUsed = V => V.force.ch.reduce((x, w) => x + E.totalCost(V, w, DP), 0);
 const CAT_ORDER = ['Configuration', 'Epic Hero', 'Character', 'Battleline', 'Infantry', 'Mounted', 'Beast', 'Swarm', 'Monster', 'Vehicle', 'Dedicated Transport', 'Fortification'];
@@ -216,6 +223,8 @@ async function createArmy(cat, name, limit) {
     if (!l.hidden && l.min > 0 && n.type === 'upgrade') r = E.addSel(sys, r, null, n.token);
   }
   r = setBattleSize(sys, r, limit);
+  // Chaos Daemons: the units of the four gods are behind Show/Hide switches in the data – on for a Daemons army
+  if (/Chaos Daemons/i.test(cat.label || cat.name || '')) r = switchOn(sys, r, /^Show (Khorne|Nurgle|Slaanesh|Tzeentch) Daemons$/i);
   saveWithSummary(sys, r);
   lastCtx.nav('#/armies/' + r.id);
 }
@@ -351,10 +360,45 @@ function configHtml(V, list, byUnit) {
       const probs = byUnit.get(w.s.id) || [];
       return `<div class="arm-cfg${probs.length ? ' has-prob' : ''}"><div class="arm-cfg-h">${esc(E.effective(V, w.node, w, w.parent).name)}${probs.length ? `<button type="button" class="arm-tri" data-action="arm-probs" data-ids="${esc(w.s.id)}" aria-label="Show problems" title="Show problems">⚠</button>` : ''}</div>
         ${/^Detachments?$/.test(w.node.name) ? dpRow(V) + `<div class="arm-det-cmp"><button type="button" class="arm-cmp" data-action="arm-detcmp" data-id="${esc(w.s.id)}">Compare detachments</button></div>` : ''}
+        ${/^Code Chivalric$/i.test(w.node.name) ? '<div class="muted xs arm-cfg-note">The Oath (one Deed and one Quality) is chosen or rolled at the start of the battle – in the game under “Active effects”.</div>' : ''}
         ${optionsHtml(V, w, true)}
         </div>`;
     }).join('')}
+    ${showHideHtml(V)}
   </section>`;
+}
+
+/* "Show/Hide Options" of the data: switches that make more units selectable (Chaos Daemons' four gods, Legends,
+   allies such as Imperial Knights or Agents of the Imperium …) – the same switches New Recruit offers. */
+function showHideRoot(V) {
+  return ed.sys.rootNodes(ed.army.catalogueId).find(n => /^Show\/Hide Options$/i.test(n.name) && !E.limits(V, n, null, V.force).hidden && ed.sys.children(n).some(k => !k.group));
+}
+function showHideHtml(V) {
+  const root = showHideRoot(V);
+  if (!root) return '';
+  const w = V.force.ch.find(x => x.node === root || (x.node && x.node.token === root.token));
+  const kids = ed.sys.children(root).filter(k => !k.group && !E.limits(V, k, null, w || V.force).hidden);
+  if (!kids.length) return '';
+  return `<div class="arm-cfg arm-showhide"><div class="arm-cfg-h">Show units</div>
+    <div class="muted xs">Switches from the data: which further units can be selected (e.g. Legends, allies).</div>
+    <div class="arm-choices">${kids.map(k => {
+      const on = w && w.ch.some(c => c.s.t === k.token);
+      return `<button type="button" class="arm-check${on ? ' on' : ''}" data-action="arm-show" data-t="${esc(k.token)}"><span class="arm-box" aria-hidden="true">${on ? '✓' : ''}</span><span>${esc(k.name.replace(/^Show\s+/i, ''))}</span></button>`;
+    }).join('')}</div></div>`;
+}
+/** Switch one Show/Hide option on/off (adds the Show/Hide entry when needed, removes it when empty). */
+function toggleShow(t) {
+  apply(r => {
+    const V = E.view(ed.sys, r);
+    const root = showHideRoot(V);
+    if (!root) return null;
+    let w = V.force.ch.find(x => x.node && x.node.token === root.token);
+    if (!w) { r = E.addSel(ed.sys, r, null, root.token); w = E.view(ed.sys, r).force.ch.find(x => x.node && x.node.token === root.token); }
+    const on = w.ch.find(c => c.s.t === t);
+    if (on) { r = E.removeSel(r, on.s.id); if (w.ch.length === 1) r = E.removeSel(r, w.s.id); }
+    else r = E.addSel(ed.sys, r, w.s.id, t);
+    return r;
+  });
 }
 
 function dpRow(V) {
@@ -471,10 +515,15 @@ function weaponsOf(node, n = 1, depth = 0) {
 /** Effects a piece of wargear brings (BSData "Abilities" profiles, also linked ones): [{ name, text }]. */
 function effectsOf(node, depth = 0) {
   const sys = ed.sys, out = [];
+  // abilities, and other described profiles of the data (Imperial Knights Oath: Deed / Quality with their D6 result,
+  // Aeldari Battle Focus …) – not weapons or unit profiles
   const add = p => {
-    if (!p || !/Abilities/i.test(p.typeName || '')) return;
+    if (!p || /Weapons|^Unit$|^Transport$/i.test(p.typeName || '')) return;
     const d = (p.characteristics || []).find(c => /Description/i.test(c.name));
-    if (d && d.$text) out.push({ name: p.name, text: String(d.$text).replace(/\^\^/g, '').replace(/\*\*/g, '') });
+    if (!d || !d.$text) return;
+    const own = /Abilities/i.test(p.typeName || '');
+    const extra = (p.characteristics || []).filter(c => c !== d && c.$text).map(c => `${c.name}: ${c.$text}`).join(' · ');
+    out.push({ name: (own ? '' : p.typeName + ' – ') + p.name, text: String(d.$text).replace(/\^\^/g, '').replace(/\*\*/g, '') + (extra ? ` (${extra})` : '') });
   };
   node.profiles.forEach(add);
   for (const l of node.infoLinks) { const t = sys.idx.get(l.targetId); if (t && l.type === 'profile') add(t); }
@@ -1072,6 +1121,7 @@ async function onClick(e) {
   if (a === 'arm-detcmp') { e.stopPropagation(); return openDetCompare(b.dataset.id); }
   if (a === 'arm-unit') return openUnit(b.dataset.id);
   if (a === 'arm-cfg') { ed.cfgOpen = !ed.cfgOpen; return rerender(); }
+  if (a === 'arm-show') return toggleShow(b.dataset.t);
   if (a === 'arm-dp' || a === 'arm-dp-auto') {
     const dp = a === 'arm-dp-auto' ? null : Math.max(0, Math.min(9, dpLimitOf(ed.army) + Number(b.dataset.d)));
     saveWithSummary(ed.sys, Object.assign({}, ed.army, { dp }));

@@ -248,3 +248,6 @@
 /* model type with 0 models: one clear "+ Add …" button instead of − 0 + */
 .arm-madd-big { width: 100%; margin-top: 8px; justify-content: center; flex-wrap: wrap; gap: 2px 6px; }
 .arm-madd-sub { font-weight: 400; font-size: .8em; opacity: .8; }
+/* Show/Hide switches: two columns */
+.arm-showhide .arm-choices { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 8px; margin-top: 6px; }
+.arm-showhide .arm-check { margin: 0; }

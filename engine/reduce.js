@@ -458,7 +458,8 @@ H['player.army'] = (s, a) => {
   const dets = Array.isArray(a.detachments) ? a.detachments.filter(Boolean) : [];
   const defs = dets.map(id => { const d = fac ? detachmentById(fac.id, id) : null; if (!d) fail('Unknown Detachment: ' + id); return d; });
   const dp = defs.reduce((x, d) => x + num(d.dp, 0), 0);
-  const limit = dpLimitOf(s);
+  // Incursion: a 3-DP detachment may be taken (the limit becomes 3) – as in the data's army roster
+  const limit = s.opts.dp == null && s.opts.size === 'incursion' && defs.some(d => num(d.dp, 0) >= 3) ? Math.max(3, dpLimitOf(s)) : dpLimitOf(s);
   if (dp > limit) fail('Too many Detachment Points: ' + dp + ' > ' + limit);
   pl.faction = fac ? fac.id : null;
   pl.detachments = defs.map(d => d.id);

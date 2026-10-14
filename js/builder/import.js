@@ -66,6 +66,36 @@ function entriesBelow(sys, node, depth = 0, pre = '', group = null, out = []) {
 }
 const last = (r, sys) => { const V = E.view(sys, r); return V.force.ch[V.force.ch.length - 1]; };
 
+/* ───────── Show/Hide switches ───────── */
+const showRoot = (sys, r) => { const V = E.view(sys, r); return sys.rootNodes(r.catalogueId).find(n => /^Show\/Hide Options$/i.test(n.name) && !E.limits(V, n, null, V.force).hidden && sys.children(n).some(k => !k.group)); };
+/** Switch on the Show/Hide options whose name matches `re` (a RegExp or a test function) – new Chaos Daemons army: the four gods. */
+export function switchOn(sys, r, re) {
+  const ok = typeof re === 'function' ? re : n => re.test(n);
+  const root = showRoot(sys, r);
+  if (!root) return r;
+  for (const k of sys.children(root).filter(k => !k.group && ok(k.name))) {
+    let w = E.view(sys, r).force.ch.find(x => x.node && x.node.token === root.token);
+    if (!w) { r = E.addSel(sys, r, null, root.token); w = E.view(sys, r).force.ch.find(x => x.node && x.node.token === root.token); }
+    if (!w.ch.some(c => c.s.t === k.token)) r = E.addSel(sys, r, w.s.id, k.token);
+  }
+  return r;
+}
+/** Units of the list that are hidden (Legends, a Daemon god, allies …): switch on the Show/Hide options that make them
+ *  available – one at a time, kept only when it helps. Before autoSync, which would remove hidden units. */
+export function revealUnits(sys, r) {
+  const root = showRoot(sys, r);
+  if (!root) return r;
+  const hidden = rr => { const V = E.view(sys, rr); return V.force.ch.filter(w => w.node && ['unit', 'model'].includes(w.node.type) && E.effective(V, w.node, w, V.force).hidden).length; };
+  let left = hidden(r);
+  for (const k of sys.children(root).filter(k => !k.group)) {
+    if (!left) break;
+    const r2 = switchOn(sys, r, n => n === k.name);
+    const n = hidden(r2);
+    if (n < left) { r = r2; left = n; }
+  }
+  return r;
+}
+
 /* ───────── text export ───────── */
 export async function importText(text) {
   const report = [];
@@ -125,6 +155,7 @@ export async function importText(text) {
     const t = V.force.ch.find(w => w.node && norm(w.node.name) === norm(l.target) && !V.force.ch.some(x => x.s.lead === w.s.id));
     if (t) { const x = r.sel.find(s => s.id === l.id); if (x) x.lead = t.s.id; }
   }
+  r = revealUnits(sys, r);
   r = E.autoSync(sys, r);
   const pts = E.totalPoints(E.view(sys, r));
   r.name = `${cat.label} ${pts}`;
@@ -291,6 +322,7 @@ export async function importRoster(xml) {
   const top = [...force.children].find(c => c.tagName === 'selections');
   let r = { id: armyId(), name: doc.querySelector('roster')?.getAttribute('name') || cat.label, catalogueId: cat.id, catalogueName: cat.name, catalogueLabel: cat.label, file: cat.file, faction: cat.faction, limit, sel: [] };
   r.sel = top ? [...top.children].filter(c => c.tagName === 'selection').map(c => conv(c, null)).filter(Boolean) : [];
+  r = revealUnits(sys, r);
   r = E.autoSync(sys, r);
   return { army: r, sys, report, units: r.sel.length };
 }

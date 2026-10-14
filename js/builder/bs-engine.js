@@ -9,6 +9,7 @@
 // n is the number per parent instance (a model stack of 9 has n = 9; its weapon has n = 1 = one per model).
 
 const PTS = '51b2-306e-1021-d207';
+const DP = '82ae-1066-5107-6ae0';   // Detachment Points
 const ARMY_ROSTER = 'bb9d-299a-ed60-2d8a';   // force entry of the game system ("Army Roster")
 let uid = 0;
 export const newId = () => 's' + Date.now().toString(36) + (uid++).toString(36) + Math.random().toString(36).slice(2, 6);
@@ -39,6 +40,8 @@ export class BSystem {
     this.nodeCache = new Map();
     this.categoryNames = new Map();
     for (const c of this.cats.values()) for (const ce of arr(c.categoryEntries)) this.categoryNames.set(ce.id, ce.name);
+    this.costNames = new Map();
+    for (const c of this.cats.values()) for (const ct of arr(c.costTypes)) this.costNames.set(ct.id, ct.name);
   }
 
   // ───────── Entry nodes (entry / group, merged with the link that points to it) ─────────
@@ -81,6 +84,14 @@ export class BSystem {
     for (const e of arr(el.selectionEntries)) out.push(this.node(e, null));
     for (const g of arr(el.selectionEntryGroups)) out.push(this.node(g, null));
     for (const l of arr(el.entryLinks)) { const t = this.idx.get(l.targetId); if (t) out.push(this.node(t, l)); }
+    // a link can bring entries of its own on top of its target's (Chaos Daemons: "Show Khorne Daemons" … on the
+    // catalogue's Show/Hide Options link; extra Warlord / Enhancement options on a shared character)
+    const L = n.link;
+    if (L) {
+      for (const e of arr(L.selectionEntries)) out.push(this.node(e, null));
+      for (const g of arr(L.selectionEntryGroups)) out.push(this.node(g, null));
+      for (const l of arr(L.entryLinks)) { const t = this.idx.get(l.targetId); if (t) out.push(this.node(t, l)); }
+    }
     out.sort((a, b) => (num(a.sortIndex) - num(b.sortIndex)) || String(a.name).localeCompare(String(b.name), 'en', { numeric: true }));
     return (n._children = out);
   }
@@ -157,23 +168,37 @@ export function view(sys, roster) {
 /** Categories of a selection (category links of its node, after category modifiers). */
 /** Categories (= keywords, "Faction: …") of a selection as the data has them right now – exported for the game hand-over. */
 export function categoriesOfSel(V, w) { return categoriesOf(V, w); }
+/** The selection a category modifier of `d` changes, by its scope: none/self = d, parent, root-entry (the unit), the
+ *  nearest model / unit / upgrade above, or the nearest selection of an entry id. (Modifiers with `affects` change
+ *  weapon entries – not handled here.) */
+function catTarget(d, scope) {
+  if (!scope || scope === 'self') return d;
+  if (scope === 'parent') return d.parent && d.parent.kind === 'sel' ? d.parent : null;
+  if (scope === 'root-entry') { let x = d; while (x.parent && x.parent.kind === 'sel') x = x.parent; return x; }
+  if (scope === 'force' || scope === 'roster' || scope === 'primary-catalogue') return null;
+  for (let x = d.parent; x && x.kind === 'sel'; x = x.parent) {
+    if (scope === 'model' || scope === 'unit' || scope === 'upgrade') { if (x.node && x.node.type === scope) return x; }
+    else if (x.ids && x.ids.has(scope)) return x;
+  }
+  return null;
+}
 function categoriesOf(V, w) {
   if (w.kind !== 'sel' || !w.node) return new Set();
   if (w._cats) return w._cats;
   const cats = new Set(w.node.categoryLinks.map(c => c.targetId));
   w._cats = cats;   // set first: category modifiers may themselves test categories
   const use = m => { if (m.type === 'add' || m.type === 'set-primary') cats.add(m.value); else if (m.type === 'remove') cats.delete(m.value); };
-  applyMods(V, w.node, w, m => { if (m.field === 'category' && (!m.scope || m.scope === 'self' || m.scope === 'root-entry')) use(m); });
-  // a selection below can change the categories of its unit ("Character Upgrade" makes a Banesword a CHARACTER)
-  if (!w.parent || w.parent.kind !== 'sel') {
-    (function f(x) {
-      for (const c of x.ch || []) {
-        if (c.kind !== 'sel' || !c.node) continue;
-        applyMods(V, c.node, c, m => { if (m.field === 'category' && m.scope === 'root-entry') use(m); });
-        f(c);
-      }
-    })(w);
-  }
+  const mine = (d, m) => m.field === 'category' && !m.affects && catTarget(d, m.scope) === w;
+  applyMods(V, w.node, w, m => { if (mine(w, m)) use(m); });
+  // selections below can change this one's categories ("Character Upgrade" makes a Banesword a CHARACTER, "Daemon of
+  // Blood" adds KHORNE to its Daemon Prince, a mount removes INFANTRY …)
+  (function f(x) {
+    for (const c of x.ch || []) {
+      if (c.kind !== 'sel' || !c.node) continue;
+      applyMods(V, c.node, c, m => { if (m.scope && m.scope !== 'self' && mine(c, m)) use(m); });
+      f(c);
+    }
+  })(w);
   return cats;
 }
 function matches(V, w, childId) {
@@ -442,6 +467,36 @@ export function validate(V) {
       if (c.type === 'max' && c.value >= 0 && v > c.value) out.push({ sel: null, msg: c.message || `At most ${c.value} ${cl.name} allowed (has ${v})` });
     }
   }
+  // limits of the army roster itself (game system): Enhancements per army (2 at Incursion, otherwise 4) … – the points
+  // limit and the Detachment Points are checked by the builder (custom limits, DP set by hand)
+  for (const c of rosterLimits(V)) {
+    if (c.field === PTS || c.field === DP || !isCostType(V, c.field)) continue;
+    if ((c.type === 'max' && c.value < 0) || (c.type === 'min' && c.value <= 0)) continue;
+    const v = V.force.ch.reduce((x, w) => x + totalCost(V, w, c.field), 0);
+    const name = V.sys.costNames ? V.sys.costNames.get(c.field) : c.field;
+    const msg = c.message ? c.message.replace(/\{value\}/g, c.value).replace(/\{this\}/g, name) : null;
+    if (c.type === 'max' && v > c.value) out.push({ sel: null, msg: msg || `${name}: at most ${c.value} per army (has ${v})` });
+    if (c.type === 'min' && v < c.value) out.push({ sel: null, msg: msg || `${name}: at least ${c.value} (has ${v})` });
+  }
+  // limits stored on the catalogues' categories: one EPIC HERO per army, max 3 Soul Grinders, a Warlord, allied points caps …
+  const catEntries = []; const seenCat = new Set();
+  const addCat = c => { if (!c || seenCat.has(c.id)) return; seenCat.add(c.id); for (const ce of arr(c.categoryEntries)) if (arr(ce.constraints).length) catEntries.push(ce); for (const l of arr(c.catalogueLinks)) addCat(V.sys.cats.get(l.targetId)); };
+  addCat(V.sys.cats.get(V.catalogueId)); addCat(V.sys.gst);
+  for (const ce of catEntries) {
+    const node = { modifiers: arr(ce.modifiers), modifierGroups: arr(ce.modifierGroups), constraints: arr(ce.constraints), name: ce.name, hidden: false };
+    const eff = effective(V, node, null, V.force);
+    for (const c of eff.constraints) {
+      if ((c.type === 'max' && c.value < 0) || (c.type === 'min' && c.value <= 0) || (c.scope !== 'force' && c.scope !== 'roster')) continue;
+      let v;
+      if (c.field === 'selections') v = descendants(V.force, !!c.includeChildSelections).filter(([w]) => categoriesOf(V, w).has(ce.id)).reduce((x, [, m]) => x + m, 0);
+      else if (isCostType(V, c.field)) v = V.force.ch.filter(w => w.node && categoriesOf(V, w).has(ce.id)).reduce((x, w) => x + totalCost(V, w, c.field), 0);
+      else continue;
+      const what = c.field === PTS ? ' pts' : '';
+      const msg = c.message ? c.message.replace(/\{this\}/g, ce.name) : null;
+      if (c.type === 'min' && v < c.value) out.push({ sel: null, msg: msg || `${ce.name}: at least ${c.value}${what} required (has ${v})` });
+      if (c.type === 'max' && v > c.value) out.push({ sel: null, msg: msg || `${ce.name}: at most ${c.value}${what} per army (has ${v})` });
+    }
+  }
   // selections: their children
   const walk = w => {
     if (!w.node) { out.push({ sel: w.s.id, msg: 'Unknown entry (data changed?)' }); return; }
@@ -453,6 +508,18 @@ export function validate(V) {
   if (num(V.roster.limit) > 0 && pts > num(V.roster.limit)) out.push({ sel: null, msg: `${pts} / ${V.roster.limit} pts – over the points limit` });
   const seen = new Set();
   return out.filter(e => { const k = e.sel + '|' + e.msg; if (seen.has(k)) return false; seen.add(k); return true; });
+}
+/** The army roster's own limits (game system force entry) with their modifiers applied: [{ field, type, value, message }]. */
+export function rosterLimits(V) {
+  const fe = V.sys.forceEntry;
+  if (!fe) return [];
+  const node = { modifiers: arr(fe.modifiers), modifierGroups: arr(fe.modifierGroups), constraints: arr(fe.constraints), name: fe.name, hidden: false };
+  return effective(V, node, null, V.force).constraints;
+}
+/** Effective maximum of a cost type for the whole army from the data (Detachment Points: 2 / 3 / 4 by battle size …), or null. */
+export function rosterMax(V, typeId) {
+  const c = rosterLimits(V).find(x => x.field === typeId && x.type === 'max' && x.value >= 0);
+  return c ? c.value : null;
 }
 export function totalPoints(V) { return V.force.ch.reduce((x, w) => x + totalCost(V, w), 0); }
 
@@ -598,7 +665,7 @@ export function splitSel(roster, id) {
   return r;
 }
 
-export { PTS, findSel };
+export { PTS, DP, findSel };
 
 /* Keeps a roster consistent with the data after a change (as New Recruit does):
  *  - a selection that is no longer available (hidden or max 0 by its modifiers, e.g. the Hesyr's gauntlet once he takes a hammer,
