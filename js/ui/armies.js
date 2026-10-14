@@ -525,6 +525,14 @@ function defaultCost(n) {
 /* ───────── Changes ───────── */
 /** Configuration choices with exactly one possible option (e.g. the Force Disposition of a detachment) are taken. */
 function autoPick(sys, r) {
+  // a configuration choice that is no longer available (e.g. the Force Disposition after a detachment change) is removed
+  for (let i = 0; i < 8; i++) {
+    const V = E.view(sys, r);
+    const gone = V.force.ch.filter(w => w.node && w.node.type === 'upgrade').flatMap(w => w.ch)
+      .find(c => c.node && (E.effective(V, c.node, c, c.parent).hidden || c.groups.some(g => E.limits(V, g, null, c.parent).hidden)));
+    if (!gone) break;
+    r = E.removeSel(r, gone.s.id);
+  }
   for (let i = 0; i < 4; i++) {
     const V = E.view(sys, r);
     let changed = false;
