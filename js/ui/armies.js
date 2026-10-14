@@ -6,6 +6,7 @@ import { listArmies, loadArmy, saveArmy, deleteArmy, armyId } from '../builder/s
 import { playableCatalogues, systemFor, ALLIANCES } from '../builder/load.js';
 import * as E from '../builder/bs-engine.js';
 import { summarize, armyText } from '../builder/export.js';
+import { importArmyFile, importText } from '../builder/import.js';
 import { loadDatasheets, matchUnit, normName } from '../data/datasheets.js';
 import { datasheetCard, datasheetGroupCard } from './datasheet.js';
 import { leaderBuffs } from './player-common.js';
@@ -113,6 +114,7 @@ function listHtml() {
   </div>`;
 }
 
+let closeNew = () => {};
 async function newArmy() {
   let cats;
   try { cats = await playableCatalogues(); } catch (e) { toast(e.message || String(e), 'bad'); return; }
@@ -132,15 +134,17 @@ async function newArmy() {
     if (grp) html += '</div>';
     return html;
   };
-  const body = `<label class="field"><span>Name</span><input type="text" name="name" placeholder="e.g. Votann 2000" autocomplete="off"></label>
+  const body = `<button type="button" class="arm-import-btn" data-import>⇩ Import from New Recruit <span class="muted xs">text export or roster file (.ros / .rosz)</span></button>
+    <label class="field"><span>Name</span><input type="text" name="name" placeholder="e.g. Votann 2000" autocomplete="off"></label>
     <div class="field"><span class="label">Faction</span>
       <div class="seg fac-tabs" role="tablist">${ALLIANCES.map(a => `<button type="button" class="seg-btn${a === alliance ? ' on' : ''}" data-alliance="${esc(a)}" role="tab">${esc(a)}</button>`).join('')}</div>
       <div class="fac-list">${listHtml()}</div></div>
     <div class="field"><span class="label">Battle size</span><div class="chips">${SIZES.map((s, i) => `<label class="chip${i === 1 ? ' on' : ''}"><input type="radio" name="size" value="${s.pts}"${i === 1 ? ' checked' : ''} hidden>${esc(s.name)} · ${s.pts} pts</label>`).join('')}<label class="chip"><input type="radio" name="size" value="custom" hidden>Custom</label></div>
       <input type="number" name="custom" class="arm-custom-in" min="100" step="50" inputmode="numeric" placeholder="Points, e.g. 1500" hidden></div>`;
   sheet({
-    title: 'New army', body, cls: 'arm-new-sheet',
-    onOpen: el => {
+    title: 'New army', body, cls: 'arm-new-sheet', focus: false,
+    onOpen: (el, close) => {
+      closeNew = close;
       const sync = () => {
         el.querySelector('.fac-list').innerHTML = listHtml();
         el.querySelectorAll('[data-alliance]').forEach(b => b.classList.toggle('on', b.dataset.alliance === alliance));
@@ -153,6 +157,7 @@ async function newArmy() {
         const cu = el.querySelector('input[name=custom]'); cu.hidden = e.target.value !== 'custom'; if (!cu.hidden) cu.focus();
       });
       el.addEventListener('click', e => {
+        if (e.target.closest('[data-import]')) { closeNew(); openImport(); return; }
         const t = e.target.closest('[data-alliance]');
         if (t) { alliance = t.dataset.alliance; sync(); return; }
         const c = e.target.closest('[data-cat]');
@@ -170,6 +175,35 @@ async function newArmy() {
     } }]
   });
 }
+/** Import from New Recruit: a file (.txt text export, .ros/.rosz roster) or pasted text → a new army, opened in the editor. */
+function openImport() {
+  const body = `<p class="small muted">In New Recruit: <b>Export → Text</b> (paste it or choose the .txt) or <b>Download roster</b> (.rosz). The roster file is matched exactly; a text export is matched by names.</p>
+    <label class="field"><span>File</span><input type="file" name="file" accept=".txt,.ros,.rosz,text/plain"></label>
+    <label class="field"><span>or paste the text export</span><textarea name="text" rows="8" placeholder="Paste the New Recruit text export here" spellcheck="false"></textarea></label>`;
+  sheet({
+    title: 'Import army', body, cls: 'arm-import-sheet wide', focus: false,
+    actions: [{ label: 'Cancel', kind: 'ghost' }, { label: 'Import', kind: 'primary', onClick: (close, el) => {
+      const file = el.querySelector('input[type=file]').files[0];
+      const text = el.querySelector('textarea').value;
+      if (!file && !text.trim()) { toast('Choose a file or paste the export', 'warn'); return false; }
+      toast('Importing …', 'ok', 1500);
+      (file ? importArmyFile(file) : importText(text)).then(res => {
+        close();
+        const saved = saveWithSummary(res.sys, res.army);
+        lastCtx.nav('#/armies/' + saved.id);
+        const n = E.view(res.sys, res.army).force.ch.filter(w => w.node && ['unit', 'model'].includes(w.node.type)).length;
+        sheet({
+          title: 'Import done', cls: 'arm-import-report',
+          body: `<p><b>${esc(saved.name)}</b> · ${esc(saved.catalogueLabel)} · ${n} unit${n === 1 ? '' : 's'} · ${(saved.summary || {}).points || 0} pts</p>
+            ${res.report.length ? `<p class="muted small">Please check these by hand:</p><ul class="arm-problist">${res.report.map(x => `<li>${esc(x)}</li>`).join('')}</ul>` : '<p class="text-ok">Everything was matched.</p>'}`,
+          actions: [{ label: 'OK', kind: 'primary' }]
+        });
+      }).catch(err => toast('Import failed: ' + (err && err.message ? err.message : err), 'bad', 6000));
+      return false;
+    } }]
+  });
+}
+
 async function createArmy(cat, name, limit) {
   const army = { id: armyId(), name, catalogueId: cat.id, catalogueName: cat.name, catalogueLabel: cat.label, file: cat.file, faction: cat.faction, limit, sel: [] };
   let sys;
@@ -316,7 +350,7 @@ function configHtml(V, list, byUnit) {
     ${items.map(w => {
       const probs = byUnit.get(w.s.id) || [];
       return `<div class="arm-cfg${probs.length ? ' has-prob' : ''}"><div class="arm-cfg-h">${esc(E.effective(V, w.node, w, w.parent).name)}${probs.length ? `<button type="button" class="arm-tri" data-action="arm-probs" data-ids="${esc(w.s.id)}" aria-label="Show problems" title="Show problems">⚠</button>` : ''}</div>
-        ${w.node.name === 'Detachment' ? dpRow(V) + `<div class="arm-det-cmp"><button type="button" class="arm-cmp" data-action="arm-detcmp" data-id="${esc(w.s.id)}">Compare detachments</button></div>` : ''}
+        ${/^Detachments?$/.test(w.node.name) ? dpRow(V) + `<div class="arm-det-cmp"><button type="button" class="arm-cmp" data-action="arm-detcmp" data-id="${esc(w.s.id)}">Compare detachments</button></div>` : ''}
         ${optionsHtml(V, w, true)}
         </div>`;
     }).join('')}
@@ -889,7 +923,7 @@ function openAdd() {
         <span>${esc(r.l.name)}</span><span class="arm-have muted xs" data-max="${r.l.max}">${r.l.max >= 0 ? `${r.have}/${r.l.max}` : r.have ? r.have + '×' : ''}</span><span class="arm-u-pts">${r.pts}</span><span class="arm-plus" aria-hidden="true">+</span></button>`).join('')}`).join('')}</div>`;
   let added = 0;
   sheet({
-    title: 'Add units', body, cls: 'arm-add-sheet wide',
+    title: 'Add units', body, cls: 'arm-add-sheet wide', focus: false,
     onOpen: el => {
       const q = el.querySelector('.arm-search');
       q.addEventListener('input', () => {

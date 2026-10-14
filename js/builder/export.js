@@ -33,7 +33,7 @@ function modelStacks(w, mult = 1) {
 /** { faction, detachments: [names], size, points, units: [{ name, pts, models, warlord, enhancements, text }] } */
 export function summarize(sys, roster) {
   const V = view(sys, roster);
-  const cfg = name => V.force.ch.filter(w => w.node && w.node.name === name).flatMap(w => w.ch.map(c => nameOf(V, c)));
+  const cfg = name => V.force.ch.filter(w => w.node && (name === 'Detachment' ? /^Detachments?$/.test(w.node.name) : w.node.name === name)).flatMap(w => w.ch.map(c => nameOf(V, c)));
   const units = [];
   for (const w of V.force.ch) {
     if (!w.node || isConfig(w) || !['unit', 'model'].includes(w.node.type)) continue;

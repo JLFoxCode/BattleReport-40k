@@ -84,6 +84,16 @@ export function colorName(idx) {
 
 // ---------------------------------------------------------------- Sheet (Bottom-Sheet/Modal)
 let sheetCount = 0;
+/* Phone back button / back gesture closes the top popup instead of leaving the page: every open popup puts one entry on
+ * the history (same URL, no hashchange); "back" pops it and closes the popup. Closing it any other way takes the entry
+ * back out again. */
+const sheetStack = [];
+let skipPop = 0;
+window.addEventListener('popstate', () => {
+  if (skipPop > 0) { skipPop--; return; }
+  const top = sheetStack[sheetStack.length - 1];
+  if (top) top(true);
+});
 /**
  * sheet({ title, body (HTML), actions: [ { label, kind, cta, onClick(close, sheetEl), keep } ], onOpen(el, close), onClose, dismiss: true, cls })
  * → close() Funktion. Buttons in actions schließen das Sheet nach onClick, außer keep: true.
@@ -109,9 +119,13 @@ export function sheet(o = {}) {
     </div>`;
   let closed = false;
   const onKey = e => { if (e.key === 'Escape' && o.dismiss !== false) close(); };
-  function close(result) {
+  const viaBack = fromPop => { if (o.dismiss === false && fromPop) { try { history.pushState({ brSheet: id }, ''); } catch {} return; } close(undefined, fromPop); };
+  function close(result, fromPop) {
     if (closed) return;
     closed = true;
+    const i = sheetStack.indexOf(viaBack);
+    if (i >= 0) sheetStack.splice(i, 1);
+    if (!fromPop && history.state && history.state.brSheet === id) { skipPop++; try { history.back(); } catch { skipPop--; } }
     document.removeEventListener('keydown', onKey);
     wrap.remove();
     if (!document.querySelector('.sheet-backdrop')) document.documentElement.classList.remove('sheet-open');
@@ -139,8 +153,10 @@ export function sheet(o = {}) {
   // the page behind stays put: scrolling a list in the popup must not scroll the page (phones)
   document.documentElement.classList.add('sheet-open');
   if (typeof o.onOpen === 'function') { try { o.onOpen(wrap.querySelector('.sheet'), close); } catch (e) { console.error(e); } }
+  try { history.pushState({ brSheet: id }, ''); sheetStack.push(viaBack); } catch {}
+  // no automatic keyboard on phones: only focus the first field when asked (o.focus) or with a real keyboard + mouse
   const first = wrap.querySelector('.sheet-body input, .sheet-body select, .sheet-body textarea');
-  if (first) { try { first.focus(); } catch {} }
+  if (first && (o.focus === true || (o.focus !== false && !matchMedia('(pointer: coarse)').matches))) { try { first.focus(); } catch {} }
   return close;
 }
 
@@ -167,6 +183,7 @@ export function promptSheet(o = {}) {
   return new Promise(resolve => {
     let result = null;
     sheet({
+      focus: true,   // a prompt is for typing
       title: o.title || 'Input',
       body: `<label class="field"><span>${esc(o.label || '')}</span><input type="text" name="v" value="${esc(o.value || '')}" placeholder="${esc(o.placeholder || '')}" autocomplete="off"></label>`,
       actions: [

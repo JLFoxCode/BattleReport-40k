@@ -408,7 +408,8 @@ export function parseArmyText(text) {
     return {
       name: u.name, models, modelsStart: models, points: u.points, oc: 1, move: 6, wounds: 1, keywords: kw, character: isChar, r: radiusFor(models),
       wargear: mergeGear(gear), enhancements: [...new Set(u.enhancements)], warlord: !!u.warlord, leading: u.leading, attachedTo: u.attachedTo,
-      attachGroup: u.attachGroup || 0, attachRole: u.attachRole || null
+      attachGroup: u.attachGroup || 0, attachRole: u.attachRole || null,
+      modelLines: u.items.filter(i => i.count > 0 && i.name).map(i => ({ count: i.count, name: i.name }))   // army builder import: model types
     };
   });
 }

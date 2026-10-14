@@ -120,7 +120,7 @@ export const PHRASES = {
   'In which phase of this turn did you use it?': 'In welcher Phase dieses Zuges hast du es genutzt?', 'Booked automatically:': 'Automatisch gebucht:', 'Changed automatically:': 'Automatisch geändert:',
   'Adjusted to the rules': 'An die Regeln angepasst', 'marked as used': 'als genutzt markiert',
   // ── army builder
-  'New army': 'Neue Armee', 'Problems': 'Probleme', 'No problems': 'Keine Probleme',
+  'New army': 'Neue Armee', '⇩ Import from New Recruit': '⇩ Aus New Recruit importieren', 'text export or roster file (.ros / .rosz)': 'Text-Export oder Roster-Datei (.ros / .rosz)', 'Import army': 'Armee importieren', 'Import done': 'Import fertig', 'Please check these by hand:': 'Bitte von Hand prüfen:', 'Everything was matched.': 'Alles wurde zugeordnet.', 'or paste the text export': 'oder Text-Export einfügen', 'Paste the New Recruit text export here': 'New-Recruit-Text-Export hier einfügen', 'Choose a file or paste the export': 'Datei wählen oder Export einfügen', 'Importing …': 'Importiere …', 'Problems': 'Probleme', 'No problems': 'Keine Probleme',
   'No army lists yet.': 'Noch keine Armeelisten.', 'Battle size': 'Battle size', 'Custom points limit': 'Eigenes Punktelimit', 
   'Choose a faction': 'Fraktion wählen', 'Army configuration': 'Armee-Konfiguration', '+ Add unit': '+ Einheit hinzufügen', 'Copy as text': 'Als Text kopieren',
   'Search units': 'Einheiten suchen', 'Model types': 'Modelltypen', 'Compare': 'Vergleichen', 'Compare detachments': 'Detachments vergleichen', 'Each equipped with': 'Jeweils ausgerüstet mit',
@@ -141,7 +141,7 @@ export const PHRASES = {
 };
 
 /* short interface words – only translated when they are the whole text of a button / label */
-export const EXACT = {
+export const EXACT = { 'File': 'Datei',
   'Yes': 'Ja', 'No': 'Nein', 'All': 'Alle', 'Delete': 'Löschen', 'Done': 'Fertig', 'Close': 'Schließen',
   'Save': 'Speichern', 'Join': 'Beitreten', 'Import': 'Importieren', 'Back': 'Zurück', 'Score': 'Spielstand',
   'Note': 'Notiz', 'More': 'Mehr', 'Less': 'Weniger', 'Fewer': 'Weniger', 'Status': 'Status', 'Limit': 'Limit', 'Step': 'Schritt',

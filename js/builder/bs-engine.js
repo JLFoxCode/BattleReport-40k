@@ -89,13 +89,19 @@ export class BSystem {
     const key = 'root|' + catalogueId;
     if (this.nodeCache.has(key)) return this.nodeCache.get(key);
     const out = []; const seen = new Set();
-    const add = c => {
+    // root entries of an imported catalogue marked import="false" stay in that catalogue (e.g. the allies' own Detachment entry)
+    const add = (c, imported) => {
       if (!c || seen.has(c.id)) return; seen.add(c.id);
-      for (const e of arr(c.selectionEntries)) out.push(this.node(e, null));
-      for (const l of arr(c.entryLinks)) { const t = this.idx.get(l.targetId); if (t) out.push(this.node(t, l)); }
-      for (const cl of arr(c.catalogueLinks)) if (cl.importRootEntries) add(this.cats.get(cl.targetId));
+      for (const e of arr(c.selectionEntries)) if (!(imported && e.import === false)) out.push(this.node(e, null));
+      for (const l of arr(c.entryLinks)) { if (imported && l.import === false) continue; const t = this.idx.get(l.targetId); if (t) out.push(this.node(t, l)); }
+      for (const cl of arr(c.catalogueLinks)) if (cl.importRootEntries) add(this.cats.get(cl.targetId), true);
     };
-    add(this.cats.get(catalogueId));
+    add(this.cats.get(catalogueId), false);
+    // some catalogues keep their own detachments only as a shared entry without a root link (Adeptus Custodes): offer it
+    if (!out.some(n => /^Detachments?$/.test(n.name))) {
+      const own = this.cats.get(catalogueId);
+      for (const e of arr(own && own.sharedSelectionEntries)) if (/^Detachments?$/.test(e.name)) out.unshift(this.node(e, null));
+    }
     add(this.gst);
     this.nodeCache.set(key, out);
     return out;
@@ -154,10 +160,18 @@ function categoriesOf(V, w) {
   if (w._cats) return w._cats;
   const cats = new Set(w.node.categoryLinks.map(c => c.targetId));
   w._cats = cats;   // set first: category modifiers may themselves test categories
-  applyMods(V, w.node, w, (m, times) => {
-    if (m.field !== 'category') return;
-    if (m.type === 'add') cats.add(m.value); else if (m.type === 'remove') cats.delete(m.value);
-  });
+  const use = m => { if (m.type === 'add' || m.type === 'set-primary') cats.add(m.value); else if (m.type === 'remove') cats.delete(m.value); };
+  applyMods(V, w.node, w, m => { if (m.field === 'category' && (!m.scope || m.scope === 'self' || m.scope === 'root-entry')) use(m); });
+  // a selection below can change the categories of its unit ("Character Upgrade" makes a Banesword a CHARACTER)
+  if (!w.parent || w.parent.kind !== 'sel') {
+    (function f(x) {
+      for (const c of x.ch || []) {
+        if (c.kind !== 'sel' || !c.node) continue;
+        applyMods(V, c.node, c, m => { if (m.field === 'category' && m.scope === 'root-entry') use(m); });
+        f(c);
+      }
+    })(w);
+  }
   return cats;
 }
 function matches(V, w, childId) {
