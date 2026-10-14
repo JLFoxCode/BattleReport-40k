@@ -214,3 +214,8 @@
 .arm-title-t { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .arm-cfg-h { display: flex; align-items: center; }
 .arm-unit { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+/* add units: stay in the list, count goes up */
+.arm-plus { width: 30px; height: 30px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; background: var(--panel2); border: 1px solid var(--line); font-weight: 800; font-size: 18px; flex: none; }
+.arm-have.added { color: var(--ok); font-weight: 700; }
+@keyframes arm-flash { from { background: color-mix(in srgb, var(--ok) 30%, transparent); } to { background: transparent; } }
+.arm-addrow.flash { animation: arm-flash .6s ease-out; }

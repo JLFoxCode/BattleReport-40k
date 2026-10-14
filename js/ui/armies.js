@@ -782,9 +782,10 @@ function openAdd() {
     <div class="arm-roles">${cats.map(c => `<button type="button" class="chip sm" data-jump="${esc(c)}">${esc(c)}</button>`).join('')}</div></div>
     <div class="arm-addlist">${cats.map(c => `<div class="arm-sec-h" data-role="${esc(c)}">${esc(c)}</div>${rows.filter(r => r.cat === c).map(r => `
       <button type="button" class="arm-addrow" data-tok="${esc(r.n.token)}" data-name="${esc(r.l.name.toLowerCase())}"${r.l.max >= 0 && r.have >= r.l.max ? ' disabled' : ''}>
-        <span>${esc(r.l.name)}</span><span class="muted xs">${r.l.max >= 0 ? `${r.have}/${r.l.max}` : r.have ? r.have + '×' : ''}</span><span class="arm-u-pts">${r.pts}</span></button>`).join('')}`).join('')}</div>`;
-  const close = sheet({
-    title: 'Add unit', body, cls: 'arm-add-sheet wide',
+        <span>${esc(r.l.name)}</span><span class="arm-have muted xs" data-max="${r.l.max}">${r.l.max >= 0 ? `${r.have}/${r.l.max}` : r.have ? r.have + '×' : ''}</span><span class="arm-u-pts">${r.pts}</span><span class="arm-plus" aria-hidden="true">+</span></button>`).join('')}`).join('')}</div>`;
+  let added = 0;
+  sheet({
+    title: 'Add units', body, cls: 'arm-add-sheet wide',
     onOpen: el => {
       const q = el.querySelector('.arm-search');
       q.addEventListener('input', () => {
@@ -802,14 +803,22 @@ function openAdd() {
         }
         const b = e.target.closest('.arm-addrow');
         if (!b || b.disabled) return;
-        const before = new Set(E.view(ed.sys, ed.army).force.ch.map(w => w.s.id));
+        // add and stay in the list: first all units, then set them up
         apply(r => E.addSel(ed.sys, r, null, b.dataset.tok));
-        close();
-        const added = E.view(ed.sys, ed.army).force.ch.find(w => !before.has(w.s.id));
-        if (added) openUnit(added.s.id);
+        const V2 = E.view(ed.sys, ed.army);
+        const node = ed.sys.rootNodes(ed.army.catalogueId).find(n => n.token === b.dataset.tok);
+        const have = node ? E.selsOf(V2, V2.force, node).length : 0;
+        const hv = b.querySelector('.arm-have'), max = Number(hv.dataset.max);
+        hv.textContent = max >= 0 ? `${have}/${max}` : `${have}×`;
+        hv.classList.toggle('added', have > 0);
+        if (max >= 0 && have >= max) b.disabled = true;
+        b.classList.remove('flash'); void b.offsetWidth; b.classList.add('flash');
+        added++;
+        const t = el.querySelector('.sheet-head .title');
+        if (t) t.textContent = `Add units · ${added} added · ${E.totalPoints(V2)} pts`;
       });
     },
-    actions: [{ label: 'Close', kind: 'ghost' }]
+    actions: [{ label: 'Done', kind: 'primary' }]
   });
 }
 const costCache = new Map();
