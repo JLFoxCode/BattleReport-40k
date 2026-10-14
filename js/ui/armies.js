@@ -31,6 +31,8 @@ const sizeName = pts => (SIZES.find(x => x.pts === Number(pts)) || {}).name || '
 const dpUsed = V => V.force.ch.reduce((x, w) => x + E.totalCost(V, w, DP), 0);
 const CAT_ORDER = ['Configuration', 'Epic Hero', 'Character', 'Battleline', 'Infantry', 'Mounted', 'Beast', 'Swarm', 'Monster', 'Vehicle', 'Dedicated Transport', 'Fortification'];
 const byRole = (a, b) => ((CAT_ORDER.indexOf(a) + 1 || 99) - (CAT_ORDER.indexOf(b) + 1 || 99)) || a.localeCompare(b);
+// model names of a unit's leader (not a CHARACTER – the one who leads his squad): shown first in the unit
+const LEAD_RE = /\b(Sergeant|Superior|Exarch|Watchmaster|Theyn|Hesyr|Shas'(ui|vre)|Sybarite|Acothyst|Hekatrix|Kill-broker|Tempestor|Justicar|Aspiring Champion|Sword Brother|Nob|Pack Leader|Huntmaster|Alpha|Alphus|Champion|Spotter|Fire Coordinator)\b/i;
 const HIDE_ROOT = /^(Show\/Hide|Show Legends|Show Unaligned|Show Crucible|Order of Battle|Experience Points|Legendary Veterans|Weapon Modifications)/i;
 const SIZES = [{ pts: 1000, name: 'Incursion' }, { pts: 2000, name: 'Strike Force' }];
 
@@ -646,6 +648,11 @@ function block(V, pw, nodes, prefix, depth, compact, caps = []) {
     const src = srcs.find(x => caps.every(c => c.max - c.total > 0 || (x.s.t.startsWith(c.tok + '>') && tok.startsWith(c.tok + '>'))));
     return src ? { add: false, swap: src } : { add: false };
   };
+  // the unit's leader model (Sergeant, Superior, Exarch, Nob …) first, then the other models; special weapons follow
+  // after them anyway (specialsOn / specials). The data often lists the Sergeant after the troopers' group.
+  const isLead = k => !k.group && k.type === 'model' && LEAD_RE.test(k.name);
+  const leadGroup = k => k.group && (() => { const ms = sys.children(k).filter(x => x.type === 'model' || x.group); return ms.length > 0 && ms.every(isLead); })();
+  nodes = [...nodes].sort((a, b) => ((isLead(b) || leadGroup(b)) - (isLead(a) || leadGroup(a))));
   for (const k of nodes) {
     if (/^(Crusade|Weapon Modifications|Battle Scars|Battle Honours|Override points limit)/i.test(k.name)) continue;
     const lim = E.limits(V, k, null, pw);
@@ -940,10 +947,11 @@ function dsHtml(V, w) {
     const enh = enhOf(V, x);
     return { ds: lds, unit: lu, enh, buffs: leaderBuffs(lds, enh, lu, dets) };
   }).filter(Boolean);
+  const head = `<div class="arm-ds-h"><span class="arm-sec-h">Datasheet</span><span class="muted xs">tap the box to open it</span></div>`;
   if (leaders.length && u) {
-    return `<div class="arm-ds"><p class="muted xs">Led by ${leaders.map(l => esc(l.ds.name)).join(' + ')} – what a leader adds is shown in its colour.</p>${datasheetGroupCard({ body: { ds, unit: u, enh: enhOf(V, w) }, leaders }, { open: true, noInfo: true, detachments: dets })}</div>`;
+    return `<div class="arm-ds">${head}<p class="muted xs">Led by ${leaders.map(l => esc(l.ds.name)).join(' + ')} – what a leader adds is shown in its colour.</p>${datasheetGroupCard({ body: { ds, unit: u, enh: enhOf(V, w) }, leaders }, { open: true, noInfo: true, detachments: dets })}</div>`;
   }
-  return `<div class="arm-ds">${datasheetCard(ds, { compact: true, detachments: dets, enhNames: u ? u.enhancements.map(e => normName(e.name)) : [], enhancements: enhOf(V, w), unit: u })}</div>`;
+  return `<div class="arm-ds">${head}${datasheetCard(ds, { compact: true, detachments: dets, enhNames: u ? u.enhancements.map(e => normName(e.name)) : [], enhancements: enhOf(V, w), unit: u })}</div>`;
 }
 /** Enhancements of a unit selection with their rule text (BSData profile) – leaders' buffs come from them too. */
 function enhOf(V, w) {

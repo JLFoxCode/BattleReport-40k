@@ -251,3 +251,8 @@
 /* Show/Hide switches: two columns */
 .arm-showhide .arm-choices { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 8px; margin-top: 6px; }
 .arm-showhide .arm-check { margin: 0; }
+/* datasheet at the bottom of a unit: heading + an arrow so it is clear the box opens */
+.arm-ds-h { display: flex; align-items: baseline; gap: 8px; margin: 14px 0 4px; }
+.arm-ds .ds-card > summary { position: relative; padding-right: 30px; }
+.arm-ds .ds-card > summary::after { content: '▾'; position: absolute; right: 12px; top: 50%; transform: translateY(-50%); font-size: 1.1rem; color: var(--muted); }
+.arm-ds .ds-card[open] > summary::after { content: '▴'; }
