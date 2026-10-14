@@ -2,6 +2,7 @@
  * Wird von player.js, player-tabs.js und player-sheets.js genutzt. Alle Funktionen liefern escaped HTML oder reine Daten. */
 import { WH } from '../../data/rules.js';
 import { esc, badge } from './components.js';
+import { kwify } from './keywords.js';
 import { loadDatasheets, matchUnit, normName } from '../data/datasheets.js';
 import { memberWargearAbilities, abilityVisible } from './datasheet.js';
 
@@ -370,7 +371,7 @@ export function origBlock(o, label = 'Original text') {
     (o.restrictions || o.restr) ? 'RESTRICTIONS: ' + (o.restrictions || o.restr) : '', (!o.when && !o.effect && o.text) ? o.text : ''
   ].filter(Boolean);
   if (!parts.length) return '';
-  return `<div class="orig-block"><div class="orig-label">${esc(label)}</div><div class="orig-text">${esc(cleanOrig(parts.join('\n')))}</div></div>`;
+  return `<div class="orig-block"><div class="orig-label">${esc(label)}</div><div class="orig-text">${kwify(esc(cleanOrig(parts.join('\n'))))}</div></div>`;
 }
 
 /** Original text of a stratagem (verbatim), falling back to the when/target/effect/restr fields of the data file. */
@@ -408,8 +409,8 @@ export function stratCard(s, ctx, ui, opts = {}) {
       ${cpBadge(s.cost, inBattle ? cp : Infinity)}
     </div>
     <div class="strat-tags">${phasePill(phase)}${stratSrc(s)}${addonBadge}${s.once ? '<span class="badge xs">once per battle</span>' : ''}${s.notRound1 ? '<span class="badge xs">not in round 1</span>' : ''}</div>
-    ${o.when ? `<p class="strat-orig"><b>WHEN</b> ${esc(cleanOrig(o.when))}</p>` : ''}
-    ${o.effect ? `<p class="strat-orig"><b>EFFECT</b> ${esc(cleanOrig(o.effect))}</p>` : ''}
+    ${o.when ? `<p class="strat-orig"><b>WHEN</b> ${kwify(esc(cleanOrig(o.when)))}</p>` : ''}
+    ${o.effect ? `<p class="strat-orig"><b>EFFECT</b> ${kwify(esc(cleanOrig(o.effect)))}</p>` : ''}
     ${dim && s.reason ? `<div class="strat-reason xs text-warn">Not available: ${esc(s.reason)}</div>` : cpOnly && !used ? `<div class="strat-reason xs muted">${esc(s.reason)} – usable with a CP reduction</div>` : ''}
     ${kwLine(kws)}
     ${foot ? `<div class="strat-foot">${foot}</div>` : ''}

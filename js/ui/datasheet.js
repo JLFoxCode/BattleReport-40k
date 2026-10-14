@@ -8,13 +8,14 @@
  * LEADER · TRANSPORT · UNIT COMPOSITION / Optionen · Keywords-Leiste + Faction Keywords.
  */
 import { esc } from './components.js';
+import { kwify, kwList } from './keywords.js';
 import { normName as normKey } from '../data/datasheets.js';   // same normalisation as the callers' detachment/enhancement lists
 
 const STAT_KEYS = [['M', 'M'], ['T', 'T'], ['SV', 'SV'], ['W', 'W'], ['LD', 'LD'], ['OC', 'OC']];
 
 /** Light markup of the data files (**bold**) → safe HTML. */
 function rich(text) {
-  return esc(String(text == null ? '' : text).replace(/\^\^/g, '')).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/\n/g, '<br>');
+  return kwify(esc(String(text == null ? '' : text).replace(/\^\^/g, '')).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/\n/g, '<br>'));
 }
 
 function statRow(p) {
@@ -22,7 +23,7 @@ function statRow(p) {
 }
 
 function weaponName(w, count) {
-  return `<span class="ds-wname">${esc(w.name)}${count > 1 ? ` <span class="ds-wcount">×${count}</span>` : ''}${w.profile ? ` <span class="ds-wprofile">– ${esc(w.profile)}</span>` : ''}</span>${(w.abilities || []).length ? `<span class="ds-wabil">[${w.abilities.map(a => esc(a)).join(', ')}]</span>` : ''}`;
+  return `<span class="ds-wname">${esc(w.name)}${count > 1 ? ` <span class="ds-wcount">×${count}</span>` : ''}${w.profile ? ` <span class="ds-wprofile">– ${esc(w.profile)}</span>` : ''}</span>${(w.abilities || []).length ? `<span class="ds-wabil">${kwList(w.abilities)}</span>` : ''}`;
 }
 
 function weaponTable(list, kind, chosen) {
@@ -105,7 +106,7 @@ export function datasheetCard(ds, opt = {}) {
     ${weaponTable(ds.ranged, 'ranged', chosen)}
     ${weaponTable(ds.melee, 'melee', chosen)}
     <div class="ds-section"><div class="ds-section-h">ABILITIES</div>
-      ${(ab.core || []).length ? `<div class="ds-ab"><b>CORE:</b> ${ab.core.map(esc).join(', ')}</div>` : ''}
+      ${(ab.core || []).length ? `<div class="ds-ab"><b>CORE:</b> ${kwList(ab.core)}</div>` : ''}
       ${(ab.faction || []).length ? `<div class="ds-ab"><b>FACTION:</b> ${ab.faction.map(esc).join(', ')}</div>` : ''}
       ${abilityList((ab.unit || []).filter(a => abilityVisible(a, opt.detachments || null, opt.enhNames || null)), marks)}
       ${ab.invul ? `<div class="ds-ab ds-inv"><b>INVULNERABLE SAVE:</b> ${esc(String(ab.invul))}</div>` : ''}

@@ -9,6 +9,7 @@ import { summarize, armyText } from '../builder/export.js';
 import { loadDatasheets, matchUnit, normName } from '../data/datasheets.js';
 import { datasheetCard } from './datasheet.js';
 import { leaderTargets } from './player-tabs.js';
+import { kwList } from './keywords.js';
 
 const dsCache = new Map();   // faction id → datasheet package (or 'loading')
 
@@ -323,7 +324,7 @@ function openCompare(pid, gtok) {
   const g = sys.resolve(pw.node || null, gtok, ed.army.catalogueId);
   if (!g) return;
   const kids = sys.children(g).filter(x => !E.limits(V, x, null, pw).hidden);
-  const row = (w, color) => `<tr style="--oc:${color}"><td class="cmp-w"><b>${w.n > 1 ? w.n + '× ' : ''}${esc(w.name.replace(/^➤\s*/, ''))}</b>${w.ch.Keywords && w.ch.Keywords !== '-' ? `<span class="cmp-kw">${esc(w.ch.Keywords)}</span>` : ''}</td>
+  const row = (w, color) => `<tr style="--oc:${color}"><td class="cmp-w"><b>${w.n > 1 ? w.n + '× ' : ''}${esc(w.name.replace(/^➤\s*/, ''))}</b>${w.ch.Keywords && w.ch.Keywords !== '-' ? `<span class="cmp-kw">${kwList(w.ch.Keywords)}</span>` : ''}</td>
     <td>${esc(w.ch.Range || '')}</td><td>${esc(w.ch.A || '')}</td><td>${esc(w.ch.BS || w.ch.WS || '')}</td><td>${esc(w.ch.S || '')}</td><td>${esc(w.ch.AP || '')}</td><td>${esc(w.ch.D || '')}</td></tr>`;
   const build = () => {
   const V1 = E.view(sys, ed.army);
@@ -560,7 +561,7 @@ function openModelCompare(unitId, cat = '') {
   const all = types.map(m => weaponsOf(m.node)).filter(ws => ws.length);
   const common = all.length > 1 ? all[0].filter(x => all.every(ws => ws.some(y => wkey(y) === wkey(x)))) : [];
   const commonKeys = new Set(common.map(wkey));
-  const table = ws => `<div class="cmp-scroll"><table class="cmp-table"><thead><tr><th>Weapon</th><th>Range</th><th>A</th><th>BS/WS</th><th>S</th><th>AP</th><th>D</th></tr></thead><tbody>${ws.map(x => `<tr><td class="cmp-w"><b>${x.n > 1 ? x.n + '× ' : ''}${esc(x.name.replace(/^➤ */, ''))}</b>${x.ch.Keywords && x.ch.Keywords !== '-' ? `<span class="cmp-kw">${esc(x.ch.Keywords)}</span>` : ''}</td><td>${esc(x.ch.Range || '')}</td><td>${esc(x.ch.A || '')}</td><td>${esc(x.ch.BS || x.ch.WS || '')}</td><td>${esc(x.ch.S || '')}</td><td>${esc(x.ch.AP || '')}</td><td>${esc(x.ch.D || '')}</td></tr>`).join('')}</tbody></table></div>`;
+  const table = ws => `<div class="cmp-scroll"><table class="cmp-table"><thead><tr><th>Weapon</th><th>Range</th><th>A</th><th>BS/WS</th><th>S</th><th>AP</th><th>D</th></tr></thead><tbody>${ws.map(x => `<tr><td class="cmp-w"><b>${x.n > 1 ? x.n + '× ' : ''}${esc(x.name.replace(/^➤ */, ''))}</b>${x.ch.Keywords && x.ch.Keywords !== '-' ? `<span class="cmp-kw">${kwList(x.ch.Keywords)}</span>` : ''}</td><td>${esc(x.ch.Range || '')}</td><td>${esc(x.ch.A || '')}</td><td>${esc(x.ch.BS || x.ch.WS || '')}</td><td>${esc(x.ch.S || '')}</td><td>${esc(x.ch.AP || '')}</td><td>${esc(x.ch.D || '')}</td></tr>`).join('')}</tbody></table></div>`;
   const body = (common.length ? `<div class="cmp-opt cmp-common" style="--oc:var(--muted)"><div class="cmp-opt-h"><b>Every model has</b></div>${table(common)}</div>` : '') + types.map(m => {
     const color = modelColor.get(m.node) || OPT_COLORS[0];
     const have = (w.ch || []).filter(c => c.node === m.node).reduce((x, c) => x + c.n, 0);
@@ -571,7 +572,7 @@ function openModelCompare(unitId, cat = '') {
     const tag = have ? `<span class="badge ok">${have} in the unit</span>` : picked ? '<span class="badge">selected</span>' : b ? '<span class="cmp-pick">Tap to select</span>' : '<span class="muted xs">not possible right now</span>';
     return `<div class="cmp-opt${have || picked ? ' on' : ''}" style="--oc:${color}"${!have && b ? ` role="button" tabindex="0" data-mt="${esc(m.tok)}"` : ''}>
       <div class="cmp-opt-h"><span class="arm-dot" aria-hidden="true"></span><b>${esc(E.limits(V, m.node, null, w).name)}</b>${cost ? ` <span class="arm-cost">${cost} pts</span>` : ''}${tag}</div>
-      ${ws.length ? `<div class="cmp-scroll"><table class="cmp-table"><thead><tr><th>Weapon</th><th>Range</th><th>A</th><th>BS/WS</th><th>S</th><th>AP</th><th>D</th></tr></thead><tbody>${ws.map(x => `<tr><td class="cmp-w"><b>${x.n > 1 ? x.n + '× ' : ''}${esc(x.name.replace(/^➤\s*/, ''))}</b>${x.ch.Keywords && x.ch.Keywords !== '-' ? `<span class="cmp-kw">${esc(x.ch.Keywords)}</span>` : ''}</td><td>${esc(x.ch.Range || '')}</td><td>${esc(x.ch.A || '')}</td><td>${esc(x.ch.BS || x.ch.WS || '')}</td><td>${esc(x.ch.S || '')}</td><td>${esc(x.ch.AP || '')}</td><td>${esc(x.ch.D || '')}</td></tr>`).join('')}</tbody></table></div>` : (common.length ? '<p class="muted xs">Only the weapons every model has.</p>' : '<p class="muted xs">Weapons are chosen on the model.</p>')}
+      ${ws.length ? `<div class="cmp-scroll"><table class="cmp-table"><thead><tr><th>Weapon</th><th>Range</th><th>A</th><th>BS/WS</th><th>S</th><th>AP</th><th>D</th></tr></thead><tbody>${ws.map(x => `<tr><td class="cmp-w"><b>${x.n > 1 ? x.n + '× ' : ''}${esc(x.name.replace(/^➤\s*/, ''))}</b>${x.ch.Keywords && x.ch.Keywords !== '-' ? `<span class="cmp-kw">${kwList(x.ch.Keywords)}</span>` : ''}</td><td>${esc(x.ch.Range || '')}</td><td>${esc(x.ch.A || '')}</td><td>${esc(x.ch.BS || x.ch.WS || '')}</td><td>${esc(x.ch.S || '')}</td><td>${esc(x.ch.AP || '')}</td><td>${esc(x.ch.D || '')}</td></tr>`).join('')}</tbody></table></div>` : (common.length ? '<p class="muted xs">Only the weapons every model has.</p>' : '<p class="muted xs">Weapons are chosen on the model.</p>')}
     </div>`;
   }).join('');
   sheet({

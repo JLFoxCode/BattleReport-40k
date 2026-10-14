@@ -405,3 +405,9 @@ html.sheet-open, html.sheet-open body { overflow: hidden; overscroll-behavior: n
 /* a chip used as radio label (<label class="chip"><input hidden>) looks like any chip, not like a field label */
 label.chip { display: inline-flex; margin: 0; text-transform: none; letter-spacing: normal; font-size: 15px; font-weight: 500; color: var(--text); }
 label.chip.on { color: var(--bg); }
+/* [KEYWORD] tags: tap opens the rule (js/ui/keywords.js) */
+.kw-tag { all: unset; display: inline; cursor: pointer; font-weight: 700; font-size: .92em; letter-spacing: .02em; color: var(--warn);
+  text-decoration: underline dotted color-mix(in srgb, var(--warn) 60%, transparent); text-underline-offset: 3px; -webkit-tap-highlight-color: transparent; }
+.kw-tag:hover, .kw-tag:focus-visible { color: var(--text); }
+.kw-tag + .kw-tag { margin-left: .35em; }
+.kw-rule { font-size: 15px; line-height: 1.5; }
