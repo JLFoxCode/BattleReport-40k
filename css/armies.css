@@ -177,3 +177,7 @@
 .cmp-opt[data-tok]:hover { box-shadow: 0 0 0 1px var(--oc); }
 .cmp-opt:focus-visible { outline: 2px solid var(--oc); outline-offset: 2px; }
 .cmp-pick { margin-left: auto; font-size: 12px; font-weight: 700; color: var(--oc); }
+.arm-model-h .arm-dot { width: 12px; height: 12px; margin-right: 0; }
+.arm-avail .arm-dot { vertical-align: 1px; }
+.cmp-common { border-left-color: var(--line); background: var(--panel2); }
+.cmp-opt > p { margin: 0; padding: 0 10px 8px; }
