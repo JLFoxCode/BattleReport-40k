@@ -1,5 +1,5 @@
 {
   "repo": "JLFoxCode/BattleReport-40k",
-  "shell": { "android": 2, "windows": 2 },
+  "shell": { "android": 3, "windows": 3 },
   "_comment": "shell = version of the native part (android/src, desktop/main.js+preload). Raise it ONLY when native code changes – then apps download the full installer; otherwise they only fetch the changed web files listed in release/web-index.json."
 }

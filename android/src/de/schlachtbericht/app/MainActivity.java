@@ -96,6 +96,22 @@ public class MainActivity extends Activity {
             File f = new File(new File(getFilesDir(), "finished"), code + ".json");
             return f.isFile() ? read(f) : null;
         }
+        // Army lists of the army builder (js/builder/store.js): files/armies/<id>.json
+        @JavascriptInterface public void saveArmy(String id, String json) {
+            if (id == null || !id.matches("[A-Za-z0-9_-]{1,40}")) return;
+            File d = new File(getFilesDir(), "armies"); d.mkdirs();
+            write(new File(d, id + ".json"), json);
+        }
+        @JavascriptInterface public String listArmies() {
+            File[] fs = new File(getFilesDir(), "armies").listFiles((x, n) -> n.endsWith(".json"));
+            org.json.JSONArray a = new org.json.JSONArray();
+            if (fs != null) for (File f : fs) try { a.put(new org.json.JSONObject(read(f))); } catch (Exception ignored) {}
+            return a.toString();
+        }
+        @JavascriptInterface public void deleteArmy(String id) {
+            if (id == null || !id.matches("[A-Za-z0-9_-]{1,40}")) return;
+            new File(new File(getFilesDir(), "armies"), id + ".json").delete();
+        }
         @JavascriptInterface public void deleteGame(String code) {
             if (code == null || !code.matches("[A-Z]{4}")) return;
             File d = new File(getFilesDir(), "finished");

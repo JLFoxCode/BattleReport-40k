@@ -40,6 +40,7 @@ export function render(root, ctx) {
       <div class="row hero-actions">
         ${btn({ label: 'New game', kind: 'primary', cta: true, action: 'new' })}
         ${lastExists ? btn({ label: `Continue: ${last.code} · ${roleLabel(last)}`, kind: 'ghost', cta: true, action: 'continue' }) : ''}
+        <a class="btn ghost sm lobby-rules" href="#/armies">My armies</a>
         <a class="btn ghost sm lobby-rules" href="#/rules">Rulebook</a>
       </div>
     </header>

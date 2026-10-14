@@ -1,0 +1,502 @@
+/* Army builder ("My armies"), modelled on New Recruit: #/armies = saved lists, #/armies/<id> = editor.
+ * Everything comes from the BSData catalogues (js/builder/bs-engine.js): units, model counts, wargear options,
+ * enhancements, points and every restriction of the data. Lists are stored on this device (js/builder/store.js). */
+import { esc, btn, toast, sheet, confirmSheet, promptSheet } from './components.js';
+import { listArmies, loadArmy, saveArmy, deleteArmy, armyId } from '../builder/store.js';
+import { playableCatalogues, systemFor } from '../builder/load.js';
+import * as E from '../builder/bs-engine.js';
+import { summarize, armyText } from '../builder/export.js';
+import { loadDatasheets, matchUnit, normName } from '../data/datasheets.js';
+import { datasheetCard } from './datasheet.js';
+
+const dsCache = new Map();   // faction id → datasheet package (or 'loading')
+
+const DP = '82ae-1066-5107-6ae0';
+const DP_LIMIT = { 1000: 2, 2000: 3 };
+const CAT_ORDER = ['Configuration', 'Epic Hero', 'Character', 'Battleline', 'Dedicated Transport'];
+const HIDE_ROOT = /^(Show\/Hide|Show Legends|Show Unaligned|Show Crucible|Order of Battle|Experience Points|Legendary Veterans|Weapon Modifications)/i;
+const SIZES = [{ pts: 1000, name: 'Incursion' }, { pts: 2000, name: 'Strike Force' }];
+
+let lastRoot = null, lastCtx = null;
+const ed = { id: null, army: null, sys: null, loading: false, error: null, openUnit: null, cfgOpen: false };
+
+export function render(root, ctx) {
+  lastRoot = root; lastCtx = ctx;
+  if (!root.__armiesBound) { root.__armiesBound = true; root.addEventListener('click', onClick); }
+  const id = typeof ctx.me === 'string' && ctx.me ? ctx.me : null;
+  if (!id) { ed.id = null; root.innerHTML = listHtml(); return; }
+  if (ed.id !== id) { ed.id = id; ed.army = loadArmy(id); ed.sys = null; ed.error = null; }
+  if (!ed.army) { root.innerHTML = `<div class="card"><div class="title">Army not found</div><p><a class="btn ghost" href="#/armies">Back to My armies</a></p></div>`; return; }
+  if (!ed.sys) {
+    root.innerHTML = `<div class="card center muted">${ed.error ? `<div class="title">Could not load the data</div><p>${esc(ed.error)}</p>` : `<div class="title">Loading ${esc(ed.army.catalogueName || '')} …</div>`}</div>`;
+    if (!ed.loading && !ed.error) {
+      ed.loading = true;
+      systemFor(ed.army.catalogueId).then(sys => { ed.sys = sys; }).catch(e => { ed.error = e.message || String(e); })
+        .finally(() => { ed.loading = false; if (lastRoot && ed.id === id) render(lastRoot, lastCtx); });
+    }
+    return;
+  }
+  root.innerHTML = editorHtml();
+  if (ed.openUnit) refreshUnitSheet();
+}
+const rerender = () => { if (lastRoot && lastCtx) render(lastRoot, lastCtx); };
+
+/* ═══════════════ List of saved armies ═══════════════ */
+function listHtml() {
+  const list = listArmies();
+  return `<div class="armies">
+    <header class="arm-head">
+      <a class="btn ghost sm" href="#/">‹ Lobby</a>
+      <h1 class="title">My armies</h1>
+      ${btn({ label: 'New army', kind: 'primary', action: 'arm-new' })}
+    </header>
+    ${list.length ? `<div class="arm-list">${list.map(a => {
+      const s = a.summary || {};
+      const over = a.limit && s.points > a.limit;
+      return `<article class="card arm-card" data-id="${esc(a.id)}">
+        <button type="button" class="arm-open" data-action="arm-open" data-id="${esc(a.id)}">
+          <span class="arm-name">${esc(a.name || 'Army')}</span>
+          <span class="arm-sub muted">${esc(a.catalogueLabel || a.catalogueName || '')}${s.detachments && s.detachments.length ? ' · ' + esc(s.detachments.join(', ')) : ''}</span>
+        </button>
+        <div class="arm-meta">
+          <span class="arm-pts${over ? ' bad' : ''}"><b>${esc(s.points || 0)}</b> / ${esc(a.limit || '–')} pts</span>
+          ${s.errors ? `<span class="badge warn">${esc(s.errors)} problem${s.errors === 1 ? '' : 's'}</span>` : `<span class="badge ok">valid</span>`}
+          <span class="arm-actions">
+            ${btn({ label: 'Copy', kind: 'ghost', small: true, action: 'arm-dup', data: { id: a.id } })}
+            ${btn({ label: 'Delete', kind: 'ghost', small: true, action: 'arm-del', data: { id: a.id } })}
+          </span>
+        </div>
+      </article>`;
+    }).join('')}</div>` : `<div class="card empty-armies"><p>No army lists yet.</p><p class="muted small">Build your army right here – units, wargear, enhancements and points straight from the New Recruit data (BSData). Saved lists can be taken into any game.</p></div>`}
+  </div>`;
+}
+
+async function newArmy() {
+  let cats;
+  try { cats = await playableCatalogues(); } catch (e) { toast(e.message || String(e), 'bad'); return; }
+  const body = `<label class="field"><span>Name</span><input type="text" name="name" placeholder="e.g. Votann 2000" autocomplete="off"></label>
+    <label class="field"><span>Faction</span><select name="cat">${cats.map(c => `<option value="${esc(c.id)}">${esc(c.label)}</option>`).join('')}</select></label>
+    <div class="field"><span>Battle size</span><div class="chips">${SIZES.map((s, i) => `<label class="chip${i === 1 ? ' on' : ''}"><input type="radio" name="size" value="${s.pts}"${i === 1 ? ' checked' : ''} hidden>${esc(s.name)} · ${s.pts} pts</label>`).join('')}</div></div>`;
+  sheet({
+    title: 'New army', body, cls: 'arm-new-sheet',
+    onOpen: el => el.addEventListener('change', e => { if (e.target.name === 'size') el.querySelectorAll('.chips .chip').forEach(c => c.classList.toggle('on', c.querySelector('input').checked)); }),
+    actions: [{ label: 'Cancel', kind: 'ghost' }, { label: 'Create', kind: 'primary', onClick: (close, el) => {
+      const cat = cats.find(c => c.id === el.querySelector('select[name=cat]').value);
+      const limit = Number((el.querySelector('input[name=size]:checked') || {}).value) || 2000;
+      const name = el.querySelector('input[name=name]').value.trim() || `${cat.label} ${limit}`;
+      createArmy(cat, name, limit);
+    } }]
+  });
+}
+async function createArmy(cat, name, limit) {
+  const army = { id: armyId(), name, catalogueId: cat.id, catalogueName: cat.name, catalogueLabel: cat.label, file: cat.file, faction: cat.faction, limit, sel: [] };
+  let sys;
+  try { sys = await systemFor(cat.id); } catch (e) { toast(e.message || String(e), 'bad'); return; }
+  // mandatory configuration (Battle Size, Detachment, Force Disposition …) right away; battle size preselected
+  let r = army;
+  const V0 = E.view(sys, r);
+  for (const n of sys.rootNodes(r.catalogueId)) {
+    const l = E.limits(V0, n, null, V0.force);
+    if (!l.hidden && l.min > 0 && n.type === 'upgrade') r = E.addSel(sys, r, null, n.token);
+  }
+  r = setBattleSize(sys, r, limit);
+  saveWithSummary(sys, r);
+  lastCtx.nav('#/armies/' + r.id);
+}
+function setBattleSize(sys, r, limit) {
+  const V = E.view(sys, r);
+  const bs = V.force.ch.find(w => w.node && w.node.name === 'Battle Size');
+  if (!bs) return Object.assign({}, r, { limit });
+  const g = sys.children(bs.node).find(k => k.group && k.name === 'Battle Size');
+  const opt = g && sys.children(g).find(o => new RegExp('\\(' + limit + ' Point').test(o.name));
+  if (!opt) return Object.assign({}, r, { limit });
+  return Object.assign(E.chooseInGroup(sys, r, bs.s.id, g.token, g.token + '>' + opt.token), { limit });
+}
+
+/* ═══════════════ Editor ═══════════════ */
+function problems(V) {
+  const out = E.validate(V);
+  const dp = V.force.ch.reduce((x, w) => x + E.totalCost(V, w, DP), 0);
+  const lim = DP_LIMIT[V.roster.limit];
+  if (lim && dp > lim) out.push({ sel: null, msg: `Detachments: ${dp} Detachment Points – at most ${lim} at ${V.roster.limit} pts` });
+  return out;
+}
+function saveWithSummary(sys, r) {
+  const V = E.view(sys, r);
+  const s = summarize(sys, r);
+  r.summary = { points: E.totalPoints(V), errors: problems(V).length, detachments: s.detachments, size: s.size };
+  const saved = saveArmy(r);
+  if (ed.id === r.id) ed.army = saved;
+  return saved;
+}
+const rootOf = (V, id) => { let w = V.byId.get(id); while (w && w.parent && w.parent.kind === 'sel') w = w.parent; return w; };
+const catName = (sys, w) => sys.categoryNames.get(w.node && w.node.primaryCategory) || 'Other';
+
+function editorHtml() {
+  const { sys, army } = ed;
+  const V = E.view(sys, army);
+  const probs = problems(V);
+  const pts = E.totalPoints(V);
+  const over = army.limit && pts > army.limit;
+  const byUnit = new Map();
+  for (const p of probs) { const u = p.sel ? rootOf(V, p.sel) : null; const k = u ? u.s.id : ''; byUnit.set(k, (byUnit.get(k) || []).concat(p)); }
+  const groups = new Map();
+  for (const w of V.force.ch) {
+    if (!w.node) continue;
+    const c = catName(sys, w);
+    if (!groups.has(c)) groups.set(c, []);
+    groups.get(c).push(w);
+  }
+  const order = [...groups.keys()].sort((a, b) => ((CAT_ORDER.indexOf(a) + 1 || 99) - (CAT_ORDER.indexOf(b) + 1 || 99)) || a.localeCompare(b));
+  const general = byUnit.get('') || [];
+  return `<div class="armies arm-editor">
+    <header class="arm-bar">
+      <a class="btn ghost sm" href="#/armies" aria-label="Back to My armies">‹</a>
+      <button type="button" class="arm-title" data-action="arm-rename"><span class="arm-name">${esc(army.name)}</span><span class="arm-sub muted">${esc(army.catalogueLabel || army.catalogueName || '')}</span></button>
+      <div class="arm-total${over ? ' bad' : ''}"><b>${pts}</b><small>/ ${esc(army.limit || '–')} pts</small></div>
+      <button type="button" class="arm-prob ${probs.length ? 'warn' : 'ok'}" data-action="arm-problems" aria-label="Problems">${probs.length ? '⚠ ' + probs.length : '✓'}</button>
+    </header>
+    ${general.length ? `<div class="arm-alerts">${general.map(p => `<div class="arm-alert">${esc(p.msg)}</div>`).join('')}</div>` : ''}
+    ${order.map(c => c === 'Configuration' ? configHtml(V, groups.get(c), byUnit) : `
+      <section class="arm-sec">
+        <div class="arm-sec-h">${esc(c)}</div>
+        ${groups.get(c).map(w => unitRow(V, w, byUnit.get(w.s.id) || [])).join('')}
+      </section>`).join('')}
+    <div class="arm-add">${btn({ label: '+ Add unit', kind: 'primary', cta: true, action: 'arm-add' })}</div>
+    <div class="arm-foot row">
+      ${btn({ label: 'Copy as text', kind: 'ghost', small: true, action: 'arm-text' })}
+      ${btn({ label: 'Battle size', kind: 'ghost', small: true, action: 'arm-size' })}
+    </div>
+  </div>`;
+}
+
+function unitRow(V, w, probs) {
+  const name = E.effective(V, w.node, w, w.parent).name;
+  const models = countModels(w);
+  const enh = w.ch.filter(c => c.groups.some(g => /Enhancement/i.test(g.name))).map(c => E.effective(V, c.node, c, c.parent).name);
+  const warlord = w.ch.some(c => c.node && /^Warlord$/i.test(c.node.name));
+  return `<button type="button" class="arm-unit${probs.length ? ' has-prob' : ''}" data-action="arm-unit" data-id="${esc(w.s.id)}">
+    <span class="arm-u-main"><b>${esc(name)}</b>
+      <span class="muted xs">${models > 1 ? models + ' models' : ''}${warlord ? (models > 1 ? ' · ' : '') + 'Warlord' : ''}${enh.length ? ' · ' + esc(enh.join(', ')) : ''}</span></span>
+    ${probs.length ? '<span class="arm-u-warn" aria-label="Has problems">⚠</span>' : ''}
+    <span class="arm-u-pts">${E.totalCost(V, w)}</span>
+  </button>`;
+}
+const countModels = w => w.ch.reduce((x, c) => x + (!c.node ? 0 : c.node.type === 'model' ? c.n : c.node.type === 'upgrade' ? c.n * countModels(c) : 0), 0) || (w.node && w.node.type === 'model' ? w.n : 0);
+
+function configHtml(V, list, byUnit) {
+  const items = list.filter(w => !HIDE_ROOT.test(w.node.name));
+  const bad = items.some(w => (byUnit.get(w.s.id) || []).length);
+  const open = ed.cfgOpen || bad;
+  const chosen = items.flatMap(w => w.ch.map(c => E.effective(V, c.node, c, c.parent).name.replace(/^\d+\.\s*/, '').replace(/\s*\(\d+ Point limit\)/, ''))).filter(Boolean);
+  if (!open) return `<section class="arm-sec arm-config"><button type="button" class="arm-cfg-sum" data-action="arm-cfg">
+      <span><span class="arm-sec-h">Army configuration</span><span class="arm-cfg-line">${esc(chosen.join(' · '))}</span></span><span class="btn ghost sm">Change</span></button></section>`;
+  return `<section class="arm-sec arm-config">
+    <div class="row between"><div class="arm-sec-h">Army configuration</div>${bad ? '' : btn({ label: 'Done', kind: 'ghost', small: true, action: 'arm-cfg' })}</div>
+    ${items.map(w => {
+      const probs = byUnit.get(w.s.id) || [];
+      return `<div class="arm-cfg${probs.length ? ' has-prob' : ''}"><div class="arm-cfg-h">${esc(E.effective(V, w.node, w, w.parent).name)}</div>
+        ${optionsHtml(V, w, true)}
+        ${probs.map(p => `<div class="arm-alert xs">${esc(p.msg)}</div>`).join('')}</div>`;
+    }).join('')}
+  </section>`;
+}
+
+/* ───────── Options of a selection (generic, like New Recruit): groups, choices, counters, nested ───────── */
+function optionsHtml(V, w, compact) {
+  return block(V, w, ed.sys.children(w.node), '', 0, compact);
+}
+function block(V, pw, nodes, prefix, depth, compact, full = null) {
+  const sys = ed.sys;
+  const pid = pw.kind === 'sel' ? pw.s.id : '';
+  const pfx = t => (prefix ? prefix + '>' + t : t);
+  const fixed = [];
+  let html = '';
+  for (const k of nodes) {
+    if (/^(Crusade|Weapon Modifications|Battle Scars|Battle Honours|Override points limit)/i.test(k.name)) continue;
+    const lim = E.limits(V, k, null, pw);
+    const tok = pfx(k.token);
+    if (k.group) {
+      const inGroup = (pw.ch || []).filter(c => c.s.t.startsWith(tok + '>'));
+      if (lim.hidden && !inGroup.length) continue;
+      const kids = sys.children(k).filter(x => !E.limits(V, x, null, pw).hidden || inGroup.some(c => c.s.t === tok + '>' + x.token));
+      if (!kids.length) continue;
+      const leafs = kids.every(x => !x.group && x.type !== 'model');
+      const total = inGroup.reduce((x, c) => x + c.n, 0);
+      const range = lim.max === 1 ? '' : `<span class="arm-range${lim.max >= 0 && total > lim.max || total < lim.min ? ' bad' : ''}">${total}${lim.max >= 0 ? ' / ' + lim.max : ''}</span>`;
+      const multi = leafs && lim.max !== 1 && kids.every(x => E.limits(V, x, null, pw).max === 1);
+      if (leafs && (lim.max === 1 || multi)) {
+        html += `<div class="arm-grp"><div class="arm-gh">${esc(lim.name)}${lim.min ? '' : ' <span class="muted xs">optional</span>'}</div><div class="arm-choices">${kids.map(x => {
+          const t = tok + '>' + x.token;
+          const on = inGroup.find(c => c.s.t === t);
+          const cost = on ? E.totalCost(V, on) / Math.max(1, on.n) : E.nodeCost(V, x, null, pw);
+          return `<button type="button" class="arm-opt${on ? ' on' : ''}" data-action="arm-op" data-op="${on ? (lim.min && !multi ? 'noop' : 'rm') : multi ? 'add' : 'choose'}" data-p="${esc(pid)}" data-g="${esc(tok)}" data-t="${esc(t)}"${on ? ` data-id="${esc(on.s.id)}"` : ''}>${multi ? `<span class="arm-box" aria-hidden="true">${on ? '✓' : ''}</span>` : ''}${esc(E.limits(V, x, on || null, pw).name)}${cost ? ` <span class="arm-cost">+${cost}</span>` : ''}</button>`;
+        }).join('')}</div>${inGroup.map(c => nested(V, c, depth, compact)).join('')}</div>`;
+      } else {
+        // a full model group (e.g. 9/9 warriors): "+" on another model swaps one in for one of the biggest other stack
+        const isFull = lim.max >= 0 && total >= lim.max && kids.some(x => x.type === 'model' || x.group);
+        const head = lim.name === (pw.node && pw.node.name) && depth === 0 ? '' : `<div class="arm-gh">${esc(lim.name)} ${lim.max >= 0 || lim.min > 0 ? range : ''}</div>`;
+        html += `<div class="arm-grp">${head}${block(V, pw, kids, tok, depth + 1, compact, isFull ? { tok, stacks: inGroup } : full)}</div>`;
+      }
+      continue;
+    }
+    const sels = (pw.ch || []).filter(c => c.s.t === tok);
+    if (lim.hidden && !sels.length) continue;
+    const name = E.limits(V, k, sels[0] || null, pw).name;
+    if (k.type !== 'model' && lim.min > 0 && lim.min === lim.max && sels.length) {   // mandatory, nothing to choose
+      fixed.push(name);
+      for (const c of sels) html += nested(V, c, depth, compact);
+      continue;
+    }
+    const cost = sels.length ? E.totalCost(V, sels[0]) / Math.max(1, sels[0].n) : E.nodeCost(V, k, null, pw);
+    if (k.type === 'model' || lim.max !== 1) {
+      const stacks = sels.length ? sels : [null];
+      stacks.forEach((c, i) => {
+        const n = c ? c.n : 0;
+        const total = sels.reduce((x, s) => x + s.n, 0);
+        const swapFrom = full && k.type === 'model' ? full.stacks.filter(x => x !== c && x.node && x.node.type === 'model' && !sels.includes(x) && x.n > E.limits(V, x.node, x, pw).min).sort((p, q) => q.n - p.n)[0] : null;
+        const canAdd = (lim.max < 0 || total < lim.max) && (!full || k.type !== 'model' || !!swapFrom);
+        const canSplit = c && c.n > 1 && ed.sys.children(k).some(x => x.group || E.limits(V, x, null, c).max !== E.limits(V, x, null, c).min);
+        html += `<div class="arm-row${c ? ' on' : ''}">
+          <span class="arm-row-name">${esc(name)}${cost ? ` <span class="arm-cost">${cost} pts</span>` : ''}${sels.length > 1 ? ` <span class="muted xs">(${i + 1})</span>` : ''}</span>
+          ${canSplit ? `<button type="button" class="btn ghost sm arm-split" data-action="arm-op" data-op="split" data-id="${esc(c.s.id)}" title="Give one model different wargear">Split</button>` : ''}
+          <div class="stepper sm">
+            <button type="button" data-action="arm-op" data-op="${c ? 'count' : 'noop'}" data-d="-1" data-id="${c ? esc(c.s.id) : ''}"${n <= 0 ? ' disabled' : ''} aria-label="Fewer">−</button>
+            <span class="stepper-value">${n}</span>
+            <button type="button" data-action="arm-op" data-op="${c ? 'count' : 'add'}" data-d="1" data-id="${c ? esc(c.s.id) : ''}" data-p="${esc(pid)}" data-t="${esc(tok)}"${swapFrom ? ` data-from="${esc(swapFrom.s.id)}"` : ''}${canAdd ? '' : ' disabled'} aria-label="More">+</button>
+          </div>
+        </div>${c ? nested(V, c, depth, compact) : ''}`;
+      });
+    } else {
+      const c = sels[0];
+      html += `<button type="button" class="arm-check${c ? ' on' : ''}" data-action="arm-op" data-op="${c ? 'rm' : 'add'}" data-p="${esc(pid)}" data-t="${esc(tok)}"${c ? ` data-id="${esc(c.s.id)}"` : ''}>
+        <span class="arm-box" aria-hidden="true">${c ? '✓' : ''}</span><span>${esc(name)}</span>${cost ? `<span class="arm-cost">+${cost} pts</span>` : ''}</button>${c ? nested(V, c, depth, compact) : ''}`;
+    }
+  }
+  return (fixed.length ? `<div class="arm-fixed muted xs">${esc(fixed.join(' · '))}</div>` : '') + html;
+}
+function nested(V, c, depth, compact) {
+  if (!c.node || depth > 6) return '';
+  const inner = block(V, c, ed.sys.children(c.node), '', depth + 1, compact);
+  return inner.trim() ? `<div class="arm-nest">${inner}</div>` : '';
+}
+
+/* ───────── Unit sheet ───────── */
+let unitClose = null;
+function openUnit(id) {
+  ed.openUnit = id;
+  unitClose = sheet({
+    title: '', body: '<div class="arm-usheet"></div>', cls: 'arm-unit-sheet wide',
+    onOpen: el => { el.addEventListener('click', onClick); refreshUnitSheet(el); },
+    onClose: () => { ed.openUnit = null; unitClose = null; },
+    actions: [
+      { label: 'Delete', kind: 'ghost', onClick: () => { const id0 = ed.openUnit; apply(r => E.removeSel(r, id0)); } },
+      { label: 'Copy', kind: 'ghost', onClick: () => { apply(r => E.duplicateSel(r, ed.openUnit)); toast('Unit copied', 'ok', 1500); } },
+      { label: 'Done', kind: 'primary' }
+    ]
+  });
+}
+function refreshUnitSheet(el) {
+  const sh = el || document.querySelector('.sheet.arm-unit-sheet');
+  if (!sh || !ed.openUnit) return;
+  const V = E.view(ed.sys, ed.army);
+  const w = V.byId.get(ed.openUnit);
+  if (!w) { if (unitClose) unitClose(); return; }
+  const probs = problems(V).filter(p => p.sel && rootOf(V, p.sel) === w);
+  sh.querySelector('.sheet-head .title').textContent = E.effective(V, w.node, w, w.parent).name;
+  sh.querySelector('.arm-usheet').innerHTML = `
+    <div class="arm-u-head"><span class="muted">${esc(catName(ed.sys, w))}</span><span class="arm-u-total"><b>${E.totalCost(V, w)}</b> pts</span></div>
+    ${probs.map(p => `<div class="arm-alert">${esc(p.msg)}</div>`).join('')}
+    ${optionsHtml(V, w, false)}
+    ${dsHtml(V, w)}`;
+}
+
+/** Datasheet of the unit (profiles, weapons, abilities) below its options – with the chosen wargear. */
+function dsHtml(V, w) {
+  const fid = ed.army.faction;
+  if (!fid) return '';
+  const pack = dsCache.get(fid);
+  if (!pack) {
+    dsCache.set(fid, 'loading');
+    loadDatasheets(fid).then(d => dsCache.set(fid, d || { units: [] })).catch(() => dsCache.set(fid, { units: [] })).then(() => refreshUnitSheet());
+    return '';
+  }
+  if (pack === 'loading') return '<p class="muted small">Loading datasheet …</p>';
+  const name = E.effective(V, w.node, w, w.parent).name;
+  const ds = matchUnit(pack.units || [], name);
+  if (!ds) return '';
+  const u = summarize(ed.sys, { ...ed.army, sel: [w.s] }).units[0];
+  const dets = summarize(ed.sys, ed.army).detachments.map(normName);
+  const wargear = u ? [...u.gear.map(g => ({ name: g.name, count: g.n })), ...u.stacks.flatMap(m => m.gear.map(g => ({ name: g.name, count: g.n * m.n })))] : [];
+  return `<div class="arm-ds">${datasheetCard(ds, { compact: true, detachments: dets, enhNames: u ? u.enhancements.map(e => normName(e.name)) : [], unit: u ? { models: u.models, points: u.pts, wargear, warlord: u.warlord, enhancements: u.enhancements.map(e => e.name) } : null })}</div>`;
+}
+
+/* ───────── Add unit ───────── */
+function openAdd() {
+  const sys = ed.sys;
+  const V = E.view(sys, ed.army);
+  const roots = sys.rootNodes(ed.army.catalogueId).filter(n => ['unit', 'model'].includes(n.type) && !HIDE_ROOT.test(n.name));
+  const rows = roots.map(n => {
+    const l = E.limits(V, n, null, V.force);
+    if (l.hidden) return null;
+    const have = E.selsOf(V, V.force, n).length;
+    const pts = defaultCost(n);
+    return { n, l, have, pts, cat: sys.categoryNames.get(n.primaryCategory) || 'Other' };
+  }).filter(Boolean);
+  const cats = [...new Set(rows.map(r => r.cat))].sort((a, b) => ((CAT_ORDER.indexOf(a) + 1 || 99) - (CAT_ORDER.indexOf(b) + 1 || 99)) || a.localeCompare(b));
+  const body = `<input type="search" class="arm-search" placeholder="Search units" autocomplete="off">
+    <div class="arm-addlist">${cats.map(c => `<div class="arm-sec-h">${esc(c)}</div>${rows.filter(r => r.cat === c).map(r => `
+      <button type="button" class="arm-addrow" data-tok="${esc(r.n.token)}" data-name="${esc(r.l.name.toLowerCase())}"${r.l.max >= 0 && r.have >= r.l.max ? ' disabled' : ''}>
+        <span>${esc(r.l.name)}</span><span class="muted xs">${r.l.max >= 0 ? `${r.have}/${r.l.max}` : r.have ? r.have + '×' : ''}</span><span class="arm-u-pts">${r.pts}</span></button>`).join('')}`).join('')}</div>`;
+  const close = sheet({
+    title: 'Add unit', body, cls: 'arm-add-sheet wide',
+    onOpen: el => {
+      const q = el.querySelector('.arm-search');
+      q.addEventListener('input', () => {
+        const s = q.value.trim().toLowerCase();
+        el.querySelectorAll('.arm-addrow').forEach(b => { b.hidden = !!s && !b.dataset.name.includes(s); });
+      });
+      el.addEventListener('click', e => {
+        const b = e.target.closest('.arm-addrow');
+        if (!b || b.disabled) return;
+        const before = new Set(E.view(ed.sys, ed.army).force.ch.map(w => w.s.id));
+        apply(r => E.addSel(ed.sys, r, null, b.dataset.tok));
+        close();
+        const added = E.view(ed.sys, ed.army).force.ch.find(w => !before.has(w.s.id));
+        if (added) openUnit(added.s.id);
+      });
+    },
+    actions: [{ label: 'Close', kind: 'ghost' }]
+  });
+}
+const costCache = new Map();
+function defaultCost(n) {
+  const k = ed.army.catalogueId + '|' + n.token;
+  if (costCache.has(k)) return costCache.get(k);
+  let pts = 0;
+  try { pts = E.totalPoints(E.view(ed.sys, E.addSel(ed.sys, { ...ed.army, sel: [] }, null, n.token))); } catch {}
+  costCache.set(k, pts);
+  return pts;
+}
+
+/* ───────── Changes ───────── */
+/** Configuration choices with exactly one possible option (e.g. the Force Disposition of a detachment) are taken. */
+function autoPick(sys, r) {
+  for (let i = 0; i < 4; i++) {
+    const V = E.view(sys, r);
+    let changed = false;
+    for (const w of V.force.ch) {
+      if (!w.node || w.node.type !== 'upgrade') continue;
+      for (const g of sys.children(w.node)) {
+        if (!g.group) continue;
+        const l = E.limits(V, g, null, w);
+        if (l.hidden || l.min < 1 || w.ch.some(c => c.s.t.startsWith(g.token + '>'))) continue;
+        const kids = sys.children(g).filter(x => !x.group && !E.limits(V, x, null, w).hidden);
+        if (kids.length !== 1) continue;
+        r = E.chooseInGroup(sys, r, w.s.id, g.token, g.token + '>' + kids[0].token);
+        changed = true; break;
+      }
+      if (changed) break;
+    }
+    if (!changed) break;
+  }
+  return r;
+}
+function apply(fn) {
+  let r = fn(ed.army);
+  if (!r) return;
+  r = autoPick(ed.sys, r);
+  r.limit = ed.army.limit;
+  saveWithSummary(ed.sys, Object.assign({}, ed.army, r));
+  rerender();
+  refreshUnitSheet();
+}
+/** Swap: one model less in the stack `fromId` (when another model was added to a full group). */
+function takeOne(r, fromId) {
+  if (!fromId) return r;
+  const s = E.findSel(r.sel, fromId);
+  if (!s) return r;
+  return s.n <= 1 ? E.removeSel(r, fromId) : E.setCount(r, fromId, s.n - 1);
+}
+function op(b) {
+  const { sys } = ed;
+  const d = b.dataset;
+  switch (d.op) {
+    case 'add': return apply(r => takeOne(E.addSel(sys, r, d.p || null, d.t), d.from));
+    case 'rm': return apply(r => E.removeSel(r, d.id));
+    case 'choose': return apply(r => E.chooseInGroup(sys, r, d.p || null, d.g, d.t));
+    case 'split': return apply(r => E.splitSel(r, d.id));
+    case 'count': return apply(r => {
+      const s = E.findSel(r.sel, d.id);
+      if (!s) return r;
+      const n = (Number(s.n) || 0) + Number(d.d);
+      return takeOne(n <= 0 ? E.removeSel(r, d.id) : E.setCount(r, d.id, n), d.from);
+    });
+    default: return null;
+  }
+}
+
+async function onClick(e) {
+  const b = e.target.closest('[data-action]');
+  if (!b || b.disabled) return;
+  const a = b.dataset.action;
+  if (a === 'arm-op') { e.stopPropagation(); return op(b); }
+  if (a === 'arm-new') return newArmy();
+  if (a === 'arm-open') return lastCtx.nav('#/armies/' + b.dataset.id);
+  if (a === 'arm-del') {
+    const ar = loadArmy(b.dataset.id);
+    if (ar && await confirmSheet({ title: 'Delete army?', text: `“${ar.name}” will be deleted from this device.`, ok: 'Delete', kind: 'danger' })) { deleteArmy(ar.id); rerender(); }
+    return;
+  }
+  if (a === 'arm-dup') {
+    const ar = loadArmy(b.dataset.id);
+    if (ar) { saveArmy(Object.assign({}, ar, { id: armyId(), name: ar.name + ' (copy)' })); rerender(); }
+    return;
+  }
+  if (a === 'arm-unit') return openUnit(b.dataset.id);
+  if (a === 'arm-cfg') { ed.cfgOpen = !ed.cfgOpen; return rerender(); }
+  if (a === 'arm-add') return openAdd();
+  if (a === 'arm-rename') {
+    const n = await promptSheet({ title: 'Rename army', label: 'Name', value: ed.army.name, ok: 'Save' });
+    if (n && n.trim()) { saveArmy(Object.assign({}, ed.army, { name: n.trim() })); ed.army = loadArmy(ed.army.id); rerender(); }
+    return;
+  }
+  if (a === 'arm-problems') {
+    const V = E.view(ed.sys, ed.army);
+    const probs = problems(V);
+    sheet({ title: probs.length ? `${probs.length} problem${probs.length === 1 ? '' : 's'}` : 'No problems', body: probs.length ? `<ul class="arm-problist">${probs.map(p => { const u = p.sel ? rootOf(V, p.sel) : null; return `<li>${u ? `<b>${esc(E.effective(V, u.node, u, u.parent).name)}</b>: ` : ''}${esc(p.msg)}</li>`; }).join('')}</ul>` : '<p>The list is valid.</p>', actions: [{ label: 'Close', kind: 'ghost' }] });
+    return;
+  }
+  if (a === 'arm-text') {
+    const txt = armyText(ed.sys, ed.army, { faction: ed.army.catalogueLabel });
+    try { await navigator.clipboard.writeText(txt); toast('List copied as text', 'ok'); }
+    catch { sheet({ title: 'Army list', body: `<textarea class="arm-textout" rows="14" readonly>${esc(txt)}</textarea>`, actions: [{ label: 'Close', kind: 'ghost' }] }); }
+    return;
+  }
+  if (a === 'arm-size') {
+    sheet({
+      title: 'Battle size', body: `<div class="chips">${SIZES.map(s => `<button type="button" class="chip${ed.army.limit === s.pts ? ' on' : ''}" data-size="${s.pts}">${esc(s.name)} · ${s.pts} pts</button>`).join('')}</div>`,
+      onOpen: (el, close) => el.addEventListener('click', ev => {
+        const c = ev.target.closest('[data-size]'); if (!c) return;
+        const limit = Number(c.dataset.size);
+        saveWithSummary(ed.sys, setBattleSize(ed.sys, Object.assign({}, ed.army, { limit }), limit));
+        close(); rerender();
+      }),
+      actions: [{ label: 'Close', kind: 'ghost' }]
+    });
+  }
+}
+
+/* ═══════════════ Into a game ═══════════════ */
+/** Saved armies for the import sheet: [{ id, name, label, points, faction }]. */
+export function armyChoices() {
+  return listArmies().map(a => ({ id: a.id, name: a.name, label: a.catalogueLabel || a.catalogueName || '', points: (a.summary || {}).points || 0, faction: a.faction, errors: (a.summary || {}).errors || 0 }));
+}
+/** { text, faction, detachments: [names] } of a saved army – loads its catalogues. */
+export async function armyForGame(id) {
+  const a = loadArmy(id);
+  if (!a) throw new Error('Army not found');
+  const sys = await systemFor(a.catalogueId);
+  const s = summarize(sys, a);
+  return { text: armyText(sys, a, { faction: a.catalogueLabel }), faction: a.faction, detachments: s.detachments, name: a.name, limit: a.limit };
+}

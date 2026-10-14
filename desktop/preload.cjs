@@ -17,6 +17,9 @@ contextBridge.exposeInMainWorld('BR', {
   listGames: () => s('listGames'),                             // JSON: metas, savedAt desc
   loadGame: code => s('loadGame', str(code)),                  // string | null
   deleteGame: code => { s('deleteGame', str(code)); },
+  saveArmy: (id, json) => { s('saveArmy', str(id), str(json)); },   // army builder: one list
+  listArmies: () => s('listArmies'),                           // JSON: [roster]
+  deleteArmy: id => { s('deleteArmy', str(id)); },
   installUpdate: url => { ipcRenderer.send('br:installUpdate', str(url)); },
   saveWeb: (rel, b64) => s('saveWeb', str(rel), str(b64)),       // boolean – partial update: one changed web file
   setWebVersion: code => { s('setWebVersion', str(code)); },

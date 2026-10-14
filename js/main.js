@@ -34,9 +34,10 @@ import * as camera from './ui/camera.js';
 import * as markers from './ui/markers.js';
 import * as photo from './ui/photo.js';
 import * as rulebook from './ui/rulebook.js';
+import * as armies from './ui/armies.js';
 
 const LS_KEY = 'sb40k.last';
-const MODULES = { lobby, setup, player, desktop, map, table, camera, markers, photo, rules: rulebook, archive: archiveView };
+const MODULES = { lobby, setup, player, desktop, map, table, camera, markers, photo, rules: rulebook, archive: archiveView, armies };
 const data = Object.freeze({ WH, FACTIONS, TERRAIN_LAYOUTS });
 
 // ---------------------------------------------------------------- Store
@@ -152,6 +153,8 @@ export function parseHash(hash = location.hash) {
   const parts = h.split('?')[0].split('/').filter(Boolean);
   if (parts[0] === 'print' && parts[1] === 'markers') return { view: 'markers', code: null, me: null };
   if (parts[0] === 'rules') return { view: 'rules', code: null, me: null };
+  // army builder: list of saved armies / one army in the editor
+  if (parts[0] === 'armies') return { view: 'armies', code: null, me: parts[1] ? decodeURIComponent(parts[1]) : null };
   // finished game stored on this device (no server needed)
   if (parts[0] === 'archive' && parts[1]) return { view: 'archive', code: null, me: null, archive: String(parts[1]).toUpperCase() };
   if (parts[0] !== 'g' || !parts[1]) return { view: 'lobby', code: null, me: null };

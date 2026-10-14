@@ -1,0 +1,102 @@
+/* Army builder ("My armies") – js/ui/armies.js. Phone first, like New Recruit: list of sections with unit rows,
+   one sheet per unit with all its options. */
+.armies { max-width: 760px; margin: 0 auto; padding: 12px 12px calc(32px + var(--sa-bottom)); }
+.arm-head { display: flex; align-items: center; gap: 10px; margin: 4px 0 14px; }
+.arm-head .title { flex: 1; margin: 0; font-size: 26px; }
+
+/* list */
+.arm-list { display: flex; flex-direction: column; gap: 10px; }
+.arm-card { padding: 0; overflow: hidden; }
+.arm-open { all: unset; display: flex; flex-direction: column; gap: 2px; padding: 14px 14px 8px; cursor: pointer; width: 100%; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+.arm-name { font: 700 18px/1.2 var(--font-body); }
+.arm-sub { font-size: 13px; }
+.arm-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding: 0 14px 12px; }
+.arm-pts { font-size: 14px; color: var(--muted); }
+.arm-pts b { color: var(--text); font-size: 17px; }
+.arm-pts.bad b { color: var(--bad); }
+.arm-actions { margin-left: auto; display: flex; gap: 6px; }
+.empty-armies p { margin: 6px 0; }
+
+/* editor bar */
+.arm-bar { position: sticky; top: 0; z-index: 30; display: flex; align-items: center; gap: 8px; margin: -12px -12px 10px; padding: calc(8px + var(--sa-top)) 12px 8px;
+  background: color-mix(in srgb, var(--panel) 94%, transparent); backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); }
+.arm-title { all: unset; flex: 1; min-width: 0; display: flex; flex-direction: column; cursor: pointer; }
+.arm-title .arm-name, .arm-title .arm-sub { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.arm-total { display: flex; align-items: baseline; gap: 4px; white-space: nowrap; }
+.arm-total b { font: 700 24px/1 var(--font-title); }
+.arm-total small { color: var(--muted); font-size: 12px; }
+.arm-total.bad b { color: var(--bad); }
+.arm-prob { min-width: 44px; min-height: 36px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel2); color: var(--text); font: 700 14px/1 var(--font-body); cursor: pointer; }
+.arm-prob.warn { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 50%, var(--line)); background: var(--warn-soft); }
+.arm-prob.ok { color: var(--ok); }
+.arm-alerts { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
+.arm-alert { padding: 8px 10px; border-radius: 8px; background: var(--warn-soft); color: var(--warn); font-size: 13px; line-height: 1.3; }
+.arm-alert.xs { padding: 6px 8px; font-size: 12px; margin-top: 6px; }
+
+/* sections + unit rows */
+.arm-sec { margin: 0 0 14px; }
+.arm-sec-h { font: 700 13px/1 var(--font-body); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 14px 2px 8px; }
+.arm-unit { all: unset; box-sizing: border-box; display: flex; align-items: center; gap: 10px; width: 100%; min-height: 56px; padding: 10px 12px; margin-bottom: 6px;
+  border: 1px solid var(--line); border-radius: 10px; background: var(--panel); cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.arm-unit:active { background: var(--panel2); }
+.arm-unit.has-prob { border-color: color-mix(in srgb, var(--warn) 55%, var(--line)); }
+.arm-u-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.arm-u-main b { font-size: 16px; }
+.arm-u-warn { color: var(--warn); }
+.arm-u-pts { font: 700 18px/1 var(--font-title); min-width: 40px; text-align: right; }
+.arm-add { margin: 16px 0 10px; }
+.arm-add .btn { width: 100%; }
+.arm-foot { gap: 8px; justify-content: center; }
+
+/* configuration */
+.arm-cfg { padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); margin-bottom: 8px; }
+.arm-cfg.has-prob { border-color: color-mix(in srgb, var(--warn) 55%, var(--line)); }
+.arm-cfg-h { font-weight: 700; margin-bottom: 6px; }
+
+/* options (unit sheet + configuration) */
+.arm-grp { margin: 10px 0; }
+.arm-gh { font: 700 12px/1.2 var(--font-body); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
+.arm-range { font-weight: 700; color: var(--text); letter-spacing: 0; }
+.arm-range.bad { color: var(--bad); }
+.arm-choices { display: flex; flex-wrap: wrap; gap: 6px; }
+.arm-opt { min-height: 38px; padding: 6px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel2); color: var(--text); font: 600 14px/1.2 var(--font-body); cursor: pointer; text-align: left; }
+.arm-opt.on { background: color-mix(in srgb, var(--ok) 22%, var(--panel2)); border-color: var(--ok); }
+.arm-cost { color: var(--muted); font-weight: 600; font-size: 12px; white-space: nowrap; }
+.arm-row { display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 4px 0; border-bottom: 1px solid color-mix(in srgb, var(--line) 60%, transparent); }
+.arm-row-name { flex: 1; min-width: 0; font-size: 15px; }
+.arm-row:not(.on) .arm-row-name { color: var(--muted); }
+.arm-row .stepper button { min-width: 36px; min-height: 36px; }
+.arm-split { min-height: 32px; }
+.arm-check { all: unset; box-sizing: border-box; display: flex; align-items: center; gap: 10px; width: 100%; min-height: 44px; padding: 4px 0; cursor: pointer; font-size: 15px; border-bottom: 1px solid color-mix(in srgb, var(--line) 60%, transparent); }
+.arm-check .arm-cost { margin-left: auto; }
+.arm-box { width: 22px; height: 22px; flex: none; border-radius: 6px; border: 2px solid var(--line); display: inline-flex; align-items: center; justify-content: center; font-weight: 800; color: #05210F; }
+.arm-check.on .arm-box { background: var(--ok); border-color: var(--ok); }
+.arm-check:not(.on) { color: var(--muted); }
+.arm-nest { margin: 2px 0 6px 12px; padding-left: 10px; border-left: 2px solid var(--line); }
+.arm-fixed { margin: 4px 0; line-height: 1.35; }
+.arm-usheet .arm-u-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
+.arm-u-total b { font: 700 24px/1 var(--font-title); }
+.arm-problist { padding-left: 18px; }
+.arm-problist li { margin: 6px 0; line-height: 1.35; }
+.arm-textout { width: 100%; font: 13px/1.4 ui-monospace, Consolas, monospace; }
+
+/* add-unit sheet */
+.arm-search { width: 100%; min-height: 44px; margin-bottom: 6px; }
+.arm-addrow { all: unset; box-sizing: border-box; display: flex; align-items: center; gap: 10px; width: 100%; min-height: 48px; padding: 8px 10px; border-bottom: 1px solid var(--line); cursor: pointer; }
+.arm-addrow > span:first-child { flex: 1; font-size: 15px; }
+.arm-addrow:disabled { opacity: .4; cursor: not-allowed; }
+.arm-addrow:active { background: var(--panel2); }
+
+/* import sheet: saved armies */
+.arm-pick { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
+.arm-pickrow { all: unset; box-sizing: border-box; display: flex; justify-content: space-between; align-items: center; gap: 10px; min-height: 48px; padding: 8px 12px;
+  border: 1px solid var(--line); border-radius: 10px; background: var(--panel2); cursor: pointer; }
+.arm-pickrow:active { filter: brightness(1.1); }
+.arm-opt .arm-box { width: 18px; height: 18px; margin-right: 6px; vertical-align: -4px; display: inline-flex; }
+.arm-opt.on .arm-box { background: var(--ok); border-color: var(--ok); }
+.arm-cfg-sum { all: unset; box-sizing: border-box; display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); cursor: pointer; }
+.arm-cfg-sum > span:first-child { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.arm-cfg-sum .arm-sec-h { margin: 0 0 4px; }
+.arm-cfg-line { font-weight: 600; font-size: 14px; line-height: 1.3; }
+.arm-config .row.between .arm-sec-h { margin-bottom: 8px; }
+.arm-ds { margin-top: 14px; }

@@ -753,5 +753,8 @@ export function convertAll(catalogues, opts = {}) {
   for (const r of gst.sharedRules || []) { const k = up(r.name); if (!core[k]) core[k] = S(r.description); }
   for (const p of gst.sharedProfiles || []) if (p.typeName === 'Abilities') { const k = up(p.name); if (!core[k]) core[k] = char(p, 'Description'); }
   files_['core-abilities.json'] = core;
+  // Catalogue index for the army builder (js/builder): which repo file holds which catalogue and what it links
+  files_['bs-catalogues.json'] = [...byFile.entries()].map(([file, r]) => ({ id: r.id, file, name: S(r.name), gameSystem: r === gst, library: !!r.library,
+    links: (r.catalogueLinks || []).map(l => ({ id: l.targetId, root: !!l.importRootEntries })) }));
   return { files: files_, report: reportMd, unresolved, stats: { units: total, bytes: totalBytes, coreRules: Object.keys(core).length, ...reportTotals } };
 }

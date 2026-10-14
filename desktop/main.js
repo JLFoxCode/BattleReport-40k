@@ -177,6 +177,24 @@ sync('deleteGame', code => {
   return null;
 });
 
+// Army lists of the army builder (js/builder/store.js): userData/armies/<id>.json
+const ARMY_DIR = path.join(USER, 'armies');
+const isArmyId = id => typeof id === 'string' && /^[A-Za-z0-9_-]{1,40}$/.test(id);
+sync('saveArmy', (id, json) => {
+  if (!isArmyId(id)) return null;
+  fs.mkdirSync(ARMY_DIR, { recursive: true });
+  fs.writeFileSync(path.join(ARMY_DIR, id + '.json'), json == null ? '' : String(json), 'utf8');
+  return null;
+});
+sync('listArmies', () => {
+  let files = [];
+  try { files = fs.readdirSync(ARMY_DIR).filter(n => n.endsWith('.json')); } catch {}
+  const list = [];
+  for (const n of files) { try { const o = JSON.parse(read(path.join(ARMY_DIR, n))); if (o && typeof o === 'object' && !Array.isArray(o)) list.push(o); } catch {} }
+  return JSON.stringify(list);
+});
+sync('deleteArmy', id => { if (isArmyId(id)) { try { fs.unlinkSync(path.join(ARMY_DIR, id + '.json')); } catch {} } return null; });
+
 // Release app update (update popup, GitHub Releases): download the setup, run it silently (/S, no setup window) and let it
 // start the new version afterwards (--force-run), then quit so the files can be replaced. Errors → window.__appUpdateError
 ipcMain.on('br:installUpdate', (e, url) => {

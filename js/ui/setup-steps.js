@@ -5,6 +5,7 @@ import { esc, btn, chip, badge, sheet, confirmSheet, toast, playerLabel } from '
 import { mapThumb } from './map.js';
 import { radiusFor } from '../../engine/reduce.js';
 import { loadOrig, origArmyRules, origDetachmentRule } from '../data/orig.js';
+import { armyChoices, armyForGame } from './armies.js';
 
 /* Army rule + detachment rules: BSData (New Recruit) only – one source for everything about the army. */
 const BS = new Map(); // factionId → loaded data | null (loading) | false (none)
@@ -199,13 +200,22 @@ export function openUnitSheet(ctx, p, unit) {
 
 /** Sheet: Textimport (GW-App / New Recruit). */
 export function openImportSheet(ctx, p) {
-  const body = `
+  const saved = armyChoices();
+  const body = (saved.length ? `<div class="label">From My armies</div><div class="arm-pick">${saved.map(a => `<button type="button" class="arm-pickrow" data-army="${esc(a.id)}">
+      <span><b>${esc(a.name)}</b><span class="muted xs"> ${esc(a.label)}</span></span><span class="muted xs">${esc(a.points)} pts${a.errors ? ' · ⚠ ' + esc(a.errors) : ''}</span></button>`).join('')}</div>
+    <div class="label mt">Or import a text export</div>` : '') + `
     <p class="small muted">Text export from New Recruit (choose file or paste text). Units, number of models and wargear are recognised and linked to the datasheets.</p>
     <label class="field"><span>File (.txt)</span><input type="file" name="file" accept=".txt,text/plain"></label>
     <label class="field"><span>or paste text</span><textarea name="text" rows="8" placeholder="Paste the export from New Recruit or the GW app here" spellcheck="false"></textarea></label>`;
   sheet({
     title: `Import – ${playerLabel(ctx.state, p)}`, cls: `p${p} wide`, body,
-    onOpen: el => {
+    onOpen: (el, close) => {
+      el.addEventListener('click', async e => {
+        const b = e.target.closest('[data-army]');
+        if (!b) return;
+        close();
+        await importSavedArmy(ctx, p, b.dataset.army);
+      });
       const inp = el.querySelector('input[type=file]');
       if (inp) inp.addEventListener('change', async () => {
         const f = inp.files && inp.files[0];
@@ -227,6 +237,27 @@ export function openImportSheet(ctx, p) {
       } }
     ]
   });
+}
+
+/** A list from "My armies" into the game: faction + detachment (before the battle) and the units. */
+async function importSavedArmy(ctx, p, id) {
+  let a;
+  try { a = await armyForGame(id); } catch (e) { toast(e.message || String(e), 'bad'); return; }
+  let st0 = ctx.state;
+  if (st0.stage !== 'battle' && st0.stage !== 'over' && a.faction) {
+    const fac = (ctx.data.FACTIONS || []).find(f => f.id === a.faction);
+    const norm = s => String(s || '').normalize('NFD').replace(/\p{M}/gu, '').toLowerCase().replace(/[^a-z0-9]+/g, '');
+    const dets = fac ? a.detachments.map(n => (fac.detachments || []).find(d => norm(d.name) === norm(n))).filter(Boolean).map(d => d.id) : [];
+    st0 = (await ctx.dispatch({ type: 'player.army', player: p, faction: a.faction, detachments: dets })) || st0;
+  }
+  const pl = st0.players[p];
+  if (pl.units.length && !(await confirmSheet({ title: 'Replace units?', text: `${pl.units.length} unit(s) are already in the list. Remove them and take “${a.name}”?`, ok: 'Replace', cancel: 'Add to them' }))) {
+    // keep the existing units
+  } else if (pl.units.length && st0.stage !== 'battle' && st0.stage !== 'over') {
+    for (const u of pl.units.slice()) await ctx.dispatch({ type: 'unit.remove', player: p, unitId: u.id });
+  }
+  const st = await ctx.dispatch({ type: 'army.import', player: p, text: a.text });
+  if (st && st.players) toast(`“${a.name}” taken into the game`, 'ok');
 }
 
 /* ═══════════════ Schritt 4: Mission ═══════════════ */
