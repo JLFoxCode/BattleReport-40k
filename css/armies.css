@@ -201,3 +201,8 @@
 .arm-mbox-foot .stepper-value { min-width: 34px; font-size: 18px; font-weight: 800; }
 .arm-mbox .arm-fixed { margin: 8px 0 0; }
 .arm-mbox-cmp { display: flex; justify-content: flex-end; margin-top: 6px; }
+/* what a piece of wargear does (no weapon profile) */
+.arm-effect { margin: 4px 0 6px; padding: 6px 8px; border-radius: 8px; background: var(--sunk); font-size: 12.5px; line-height: 1.4; color: var(--text); }
+.arm-effect b { font-weight: 700; }
+.arm-fixed .arm-effect { margin-top: 6px; }
+.cmp-fx { padding: 0 10px 8px; }
