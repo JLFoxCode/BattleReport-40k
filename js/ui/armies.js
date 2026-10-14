@@ -42,7 +42,9 @@ const ed = { id: null, army: null, sys: null, loading: false, error: null, openU
 export function render(root, ctx) {
   lastRoot = root; lastCtx = ctx;
   if (!root.__armiesBound) { root.__armiesBound = true; root.addEventListener('click', onClick); bindLongPress(root); }
-  const id = typeof ctx.me === 'string' && ctx.me ? ctx.me : null;
+  const [id0, mode] = typeof ctx.me === 'string' && ctx.me ? ctx.me.split('/') : [null, null];
+  const id = id0 || null;
+  ed.mode = mode || null;
   if (!id) { ed.id = null; root.innerHTML = listHtml(); return; }
   if (ed.id !== id) { ed.id = id; ed.army = loadArmy(id); ed.sys = null; ed.error = null; }
   if (!ed.army) { root.innerHTML = `<div class="card"><div class="title">Army not found</div><p><a class="btn ghost" href="#/armies">Back to My armies</a></p></div>`; return; }
@@ -55,6 +57,7 @@ export function render(root, ctx) {
     }
     return;
   }
+  if (ed.mode === 'view') { root.innerHTML = playHtml(); return; }
   root.innerHTML = editorHtml();
   if (ed.openUnit) refreshUnitSheet();
 }
@@ -317,6 +320,7 @@ function editorHtml() {
       <div class="arm-total${over ? ' bad' : ''}"><b>${pts}</b><small>/ ${esc(army.limit || '–')} pts</small></div>
       <button type="button" class="arm-prob ${probs.length ? 'warn' : 'ok'}" data-action="arm-problems" aria-label="Problems">${probs.length ? '⚠ ' + probs.length : '✓'}</button>
     </header>
+    ${viewToggle(army.id, false)}
     ${armyRulesHtml()}
     ${(() => { const loose = looseLeaders(V, dsPack()); return loose.length ? `<div class="arm-lead-info">ⓘ ${loose.length === 1 ? '1 leader is' : loose.length + ' leaders are'} not attached to a unit yet: ${loose.map(w => `<button type="button" class="arm-link" data-action="arm-unit" data-id="${esc(w.s.id)}">${esc(unitName(V, w))}</button>`).join(', ')}</div>` : ''; })()}
     ${order.map(c => c === 'Configuration' ? configHtml(V, groups.get(c), byUnit) : `
@@ -918,13 +922,13 @@ function leadHtml(V, w) {
 }
 
 /** Datasheet of the unit (profiles, weapons, abilities) below its options – with the chosen wargear. */
-function dsHtml(V, w) {
+function dsHtml(V, w, play = false) {
   const fid = ed.army.faction;
   if (!fid) return '';
   const pack = dsCache.get(fid);
   if (!pack) {
     dsCache.set(fid, 'loading');
-    loadDatasheets(fid).then(d => dsCache.set(fid, d || { units: [] })).catch(() => dsCache.set(fid, { units: [] })).then(() => refreshUnitSheet());
+    loadDatasheets(fid).then(d => dsCache.set(fid, d || { units: [] })).catch(() => dsCache.set(fid, { units: [] })).then(() => { refreshUnitSheet(); if (ed.mode === 'view') rerender(); });
     return '';
   }
   if (pack === 'loading') return '<p class="muted small">Loading datasheet …</p>';
@@ -947,11 +951,77 @@ function dsHtml(V, w) {
     const enh = enhOf(V, x);
     return { ds: lds, unit: lu, enh, buffs: leaderBuffs(lds, enh, lu, dets) };
   }).filter(Boolean);
-  const head = `<div class="arm-ds-h"><span class="arm-sec-h">Datasheet</span><span class="muted xs">tap the box to open it</span></div>`;
+  const head = play ? '' : `<div class="arm-ds-h"><span class="arm-sec-h">Datasheet</span><span class="muted xs">tap the box to open it</span></div>`;
   if (leaders.length && u) {
     return `<div class="arm-ds">${head}<p class="muted xs">Led by ${leaders.map(l => esc(l.ds.name)).join(' + ')} – what a leader adds is shown in its colour.</p>${datasheetGroupCard({ body: { ds, unit: u, enh: enhOf(V, w) }, leaders }, { open: true, noInfo: true, detachments: dets })}</div>`;
   }
-  return `<div class="arm-ds">${head}${datasheetCard(ds, { compact: true, detachments: dets, enhNames: u ? u.enhancements.map(e => normName(e.name)) : [], enhancements: enhOf(V, w), unit: u })}</div>`;
+  return `<div class="arm-ds">${head}${datasheetCard(ds, { compact: !play, open: play, detachments: dets, enhNames: u ? u.enhancements.map(e => normName(e.name)) : [], enhancements: enhOf(V, w), unit: u })}</div>`;
+}
+
+/* ───────── Datasheet view (#/armies/<id>/view): the army as a datasheet book – nothing to edit, everything to play ───────── */
+/** The switch between editing and the datasheet view (same place in both). */
+function viewToggle(id, on) {
+  return `<a class="arm-viewtoggle${on ? ' on' : ''}" href="#/armies/${esc(id)}${on ? '' : '/view'}" role="switch" aria-checked="${on}">
+    <span class="arm-switch" aria-hidden="true"><i></i></span><span class="arm-viewtoggle-t">Datasheet view</span><span class="muted xs">${on ? 'read only – switch off to edit' : 'all units as datasheets, to play'}</span></a>`;
+}
+const origCache = new Map();   // faction id → original texts (detachment rules, enhancements, stratagems) or 'loading'
+function playHtml() {
+  const { sys, army } = ed;
+  const V = E.view(sys, army);
+  const s = summarize(sys, army);
+  const pack = dsPack();
+  const fid = army.faction;
+  let orig = fid ? origCache.get(fid) : null;
+  if (fid && orig === undefined) { origCache.set(fid, 'loading'); loadOrig(fid).then(o => origCache.set(fid, o || null)).catch(() => origCache.set(fid, null)).then(() => { if (ed.mode === 'view') rerender(); }); }
+  if (orig === 'loading') orig = null;
+  const rich = t => kwify(esc(String(t || '').replace(/\^\^/g, '').replace(/\*\*/g, ''))).replace(/\n/g, '<br>');
+  const pts = E.totalPoints(V);
+  // rules: army rules, each detachment's rule + its stratagems, the enhancements taken
+  const armyRules = (pack && pack.armyRules) || [];
+  const dets = s.detachments.map(name => {
+    const od = orig ? origDetachment(orig, name) : null;
+    const bsd = pack && pack.detachments ? pack.detachments.find(d => normName(d.name) === normName(name)) : null;
+    const rules = (orig ? origDetachmentRule(orig, name) : []).length ? origDetachmentRule(orig, name) : ((od && od.rule) || (bsd && bsd.rules) || []);
+    const strats = od && od.stratagems ? Object.values(od.stratagems) : [];
+    return { name, rules, strats };
+  });
+  const enhTaken = V.force.ch.filter(isUnitSel).flatMap(w => enhOf(V, w).map(e => ({ ...e, on: unitName(V, w) })));
+  const stratHtml = st => `<div class="det-item det-strat"><div><b>${esc(st.name)}</b> <span class="badge num cp">${esc(st.costText || (st.cost + 'CP'))}</span>${st.category ? ` <span class="muted xs">${esc(st.category)}</span>` : ''}</div>
+    ${st.when ? `<div><b class="xs">WHEN</b> ${rich(st.when)}</div>` : ''}${st.target ? `<div><b class="xs">TARGET</b> ${rich(st.target)}</div>` : ''}${st.effect ? `<div><b class="xs">EFFECT</b> ${rich(st.effect)}</div>` : ''}${st.restrictions ? `<div><b class="xs">RESTRICTIONS</b> ${rich(st.restrictions)}</div>` : ''}</div>`;
+  // units: like the editor (Characters, Battleline, …); a leader is shown together with the unit he leads
+  const groups = new Map();
+  for (const w of V.force.ch) {
+    if (!isUnitSel(w)) continue;
+    const c = catName(sys, w);
+    if (!groups.has(c)) groups.set(c, []);
+    groups.get(c).push(w);
+  }
+  const order = [...groups.keys()].sort(byRole);
+  const units = order.map(c => {
+    const list = groups.get(c).map(w => {
+      const led = w.s.lead && V.byId.get(w.s.lead);
+      if (led) return `<p class="arm-play-led muted small">${esc(unitName(V, w))} leads <b>${esc(unitName(V, led))}</b> – shown with that unit.</p>`;
+      return dsHtml(V, w, true) || `<div class="card muted small">${esc(unitName(V, w))}: no datasheet in the data.</div>`;
+    }).join('');
+    return `<section class="arm-play-sec"><div class="arm-sec-h">${esc(c)}</div>${list}</section>`;
+  }).join('');
+  const line = [army.catalogueLabel || army.catalogueName, s.size, s.detachments.join(' + '), s.disposition].filter(Boolean).map(esc).join(' · ');
+  return `<div class="armies arm-play">
+    <header class="arm-bar">
+      <a class="btn ghost sm" href="#/armies/${esc(army.id)}" aria-label="Back to the editor">‹</a>
+      <div class="arm-title arm-play-title"><span class="arm-name">${esc(army.name)}</span><span class="arm-sub muted">${line}</span></div>
+      <div class="arm-total"><b>${pts}</b><small>/ ${esc(army.limit || '–')} pts</small></div>
+    </header>
+    ${viewToggle(army.id, true)}
+    <div class="arm-play-tools"><span class="muted xs">All datasheets of this army to play – nothing to edit here.</span><button type="button" class="btn ghost sm" data-action="arm-print">Print / PDF</button></div>
+    ${armyRules.length ? `<section class="arm-play-sec"><div class="arm-sec-h">Army rules</div><div class="arm-play-box">${armyRules.map(r => `<div class="det-rule"><b>${esc(r.name)}:</b> ${rich(r.text)}</div>`).join('')}</div></section>` : ''}
+    ${dets.map(d => `<section class="arm-play-sec"><div class="arm-sec-h">Detachment · ${esc(d.name)}</div><div class="arm-play-box">
+      ${d.rules.map(r => `<div class="det-rule"><b>${esc(r.name)}:</b> ${rich(r.text)}</div>`).join('') || '<p class="muted xs">Rule not in the data.</p>'}
+      ${d.strats.length ? `<details class="det-sec"><summary>Stratagems (${d.strats.length})</summary>${d.strats.map(stratHtml).join('')}</details>` : ''}</div></section>`).join('')}
+    ${enhTaken.length ? `<section class="arm-play-sec"><div class="arm-sec-h">Enhancements</div><div class="arm-play-box">${enhTaken.map(e => `<div class="det-item"><b>${esc(e.name)}</b> <span class="muted xs">on ${esc(e.on)}</span>${e.text ? `: ${rich(e.text)}` : ''}</div>`).join('')}</div></section>` : ''}
+    ${units}
+    <p class="muted xs arm-play-foot">${esc(army.name)} · ${pts} pts · Battle Report 40k</p>
+  </div>`;
 }
 /** Enhancements of a unit selection with their rule text (BSData profile) – leaders' buffs come from them too. */
 function enhOf(V, w) {
@@ -1129,6 +1199,7 @@ async function onClick(e) {
   if (a === 'arm-detcmp') { e.stopPropagation(); return openDetCompare(b.dataset.id); }
   if (a === 'arm-unit') return openUnit(b.dataset.id);
   if (a === 'arm-cfg') { ed.cfgOpen = !ed.cfgOpen; return rerender(); }
+  if (a === 'arm-print') { try { window.print(); } catch {} return; }
   if (a === 'arm-show') return toggleShow(b.dataset.t);
   if (a === 'arm-dp' || a === 'arm-dp-auto') {
     const dp = a === 'arm-dp-auto' ? null : Math.max(0, Math.min(9, dpLimitOf(ed.army) + Number(b.dataset.d)));

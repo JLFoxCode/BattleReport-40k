@@ -256,3 +256,26 @@
 .arm-ds .ds-card > summary { position: relative; padding-right: 30px; }
 .arm-ds .ds-card > summary::after { content: '▾'; position: absolute; right: 12px; top: 50%; transform: translateY(-50%); font-size: 1.1rem; color: var(--muted); }
 .arm-ds .ds-card[open] > summary::after { content: '▴'; }
+
+/* ───────── Datasheet view (switch in the army: edit ↔ datasheets) ───────── */
+.arm-viewtoggle { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 8px 0 10px; padding: 10px 12px; border-radius: var(--radius); background: var(--panel); border: 1px solid var(--line); color: var(--text); text-decoration: none; }
+.arm-viewtoggle-t { font-weight: 700; }
+.arm-switch { position: relative; width: 40px; height: 22px; border-radius: 11px; background: var(--panel2); border: 1px solid var(--line); flex: none; transition: background .15s; }
+.arm-switch i { position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: var(--muted); transition: left .15s, background .15s; }
+.arm-viewtoggle.on { border-color: var(--ok); }
+.arm-viewtoggle.on .arm-switch { background: var(--ok-soft); border-color: var(--ok); }
+.arm-viewtoggle.on .arm-switch i { left: 20px; background: var(--ok); }
+.arm-play-title { cursor: default; }
+.arm-play-tools { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 0 0 6px; }
+.arm-play-sec { margin: 14px 0; }
+.arm-play-sec > .arm-sec-h { margin-bottom: 6px; }
+.arm-play-box { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 10px 12px; }
+.arm-play-box .det-rule, .arm-play-box .det-item { margin: 0 0 8px; line-height: 1.45; }
+.arm-play-led { margin: 6px 2px; }
+.arm-play-foot { text-align: center; margin: 18px 0 8px; }
+.arm-play .ds-card { margin: 8px 0 12px; }
+@media print {
+  .appbar, .statusbar, .arm-viewtoggle, .arm-play-tools, .arm-bar .btn, .toasts { display: none !important; }
+  .arm-play .ds-card, .arm-play-box { break-inside: avoid; }
+  .arm-play details:not([open]) > *:not(summary) { display: block; }
+}

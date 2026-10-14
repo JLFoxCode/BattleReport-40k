@@ -161,7 +161,7 @@ export function parseHash(hash = location.hash) {
   // Learn to play: chapter list / one step (#/learn/<chapter>/<step>)
   if (parts[0] === 'learn') return { view: 'learn', code: null, me: parts[1] ? parts.slice(1, 3).join('/') : null };
   if (parts[0] === 'play') return { view: 'lobby', code: null, me: parts[1] || null };
-  if (parts[0] === 'armies') return { view: 'armies', code: null, me: parts[1] ? decodeURIComponent(parts[1]) : null };
+  if (parts[0] === 'armies') return { view: 'armies', code: null, me: parts[1] ? decodeURIComponent(parts[1]) + (parts[2] ? '/' + parts[2] : '') : null };   // #/armies/<id>/view = play view
   // finished game stored on this device (no server needed)
   if (parts[0] === 'archive' && parts[1]) return { view: 'archive', code: null, me: null, archive: String(parts[1]).toUpperCase() };
   if (parts[0] !== 'g' || !parts[1]) return { view: 'lobby', code: null, me: null };
