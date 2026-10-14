@@ -294,7 +294,10 @@ function block(V, pw, nodes, prefix, depth, compact, full = null) {
   const pid = pw.kind === 'sel' ? pw.s.id : '';
   const pfx = t => (prefix ? prefix + '>' + t : t);
   const fixed = [];
+  const models = [];   // model types not in the unit yet
   let html = '';
+  const each = pw.kind === 'sel' && pw.node && pw.node.type === 'model' && pw.n > 1 ? pw.n : 0;
+  const eachTag = each ? ` <span class="arm-each">each of the ${each}</span>` : '';
   for (const k of nodes) {
     if (/^(Crusade|Weapon Modifications|Battle Scars|Battle Honours|Override points limit)/i.test(k.name)) continue;
     const lim = E.limits(V, k, null, pw);
@@ -310,7 +313,7 @@ function block(V, pw, nodes, prefix, depth, compact, full = null) {
       const multi = leafs && lim.max !== 1 && kids.every(x => E.limits(V, x, null, pw).max === 1);
       if (leafs && (lim.max === 1 || multi)) {
         const same = depth === 0 && pw.node && lim.name === pw.node.name;   // "Detachment" inside "Detachment": one heading is enough
-        html += `<div class="arm-grp">${same && lim.min ? '' : `<div class="arm-gh">${same ? '' : esc(lim.name)}${lim.min ? '' : ' <span class="muted xs">optional</span>'}</div>`}<div class="arm-choices">${kids.map(x => {
+        html += `<div class="arm-grp">${same && lim.min ? '' : `<div class="arm-gh">${same ? '' : esc(lim.name)}${lim.min ? '' : ' <span class="muted xs">optional</span>'}${eachTag}</div>`}<div class="arm-choices">${kids.map(x => {
           const t = tok + '>' + x.token;
           const on = inGroup.find(c => c.s.t === t);
           const cost = on ? E.totalCost(V, on) / Math.max(1, on.n) : E.nodeCost(V, x, null, pw);
@@ -319,8 +322,12 @@ function block(V, pw, nodes, prefix, depth, compact, full = null) {
       } else {
         // a full model group (e.g. 9/9 warriors): "+" on another model swaps one in for one of the biggest other stack
         const isFull = lim.max >= 0 && total >= lim.max && kids.some(x => x.type === 'model' || x.group);
-        const head = lim.name === (pw.node && pw.node.name) && depth === 0 ? '' : `<div class="arm-gh">${esc(lim.name)} ${lim.max >= 0 || lim.min > 0 ? range : ''}</div>`;
-        html += `<div class="arm-grp">${head}${block(V, pw, kids, tok, depth + 1, compact, isFull ? { tok, stacks: inGroup } : full)}</div>`;
+        const hasModels = kids.some(x => x.type === 'model' || (x.group && sys.children(x).some(y => y.type === 'model')));
+        const title = lim.name;
+        const head = !hasModels && lim.name === (pw.node && pw.node.name) && depth === 0 ? '' : `<div class="arm-gh${hasModels ? ' arm-gh-models' : ''}">${esc(title)} ${lim.max >= 0 || lim.min > 0 ? range : ''}${hasModels ? '' : eachTag}</div>`;
+        const g = `<div class="arm-grp">${head}${block(V, pw, kids, tok, depth + 1, compact, isFull ? { tok, stacks: inGroup } : full)}</div>`;
+        // a model group nobody of the unit is in yet (e.g. heavy weapons) comes after the models that are there
+        if (hasModels && !inGroup.length) models.push(g); else html += g;
       }
       continue;
     }
@@ -333,7 +340,36 @@ function block(V, pw, nodes, prefix, depth, compact, full = null) {
       continue;
     }
     const cost = sels.length ? E.totalCost(V, sels[0]) / Math.max(1, sels[0].n) : E.nodeCost(V, k, null, pw);
-    if (k.type === 'model' || lim.max !== 1) {
+    if (k.type === 'model') {
+      const total = sels.reduce((x, c) => x + c.n, 0);
+      const swapOf = c => (full ? full.stacks.filter(x => x !== c && x.node && x.node.type === 'model' && !sels.includes(x) && x.n > E.limits(V, x.node, x, pw).min).sort((p, q) => q.n - p.n)[0] : null);
+      if (!sels.length) {
+        const from = swapOf(null);
+        const can = (lim.max < 0 || total < lim.max) && (!full || !!from);
+        models.push(`<div class="arm-avail"><span class="arm-row-name">${esc(name)}${cost ? ` <span class="arm-cost">${cost} pts</span>` : ''}${lim.max > 0 ? ` <span class="muted xs">max ${lim.max}</span>` : ''}</span>
+          <button type="button" class="btn ghost sm" data-action="arm-op" data-op="add" data-p="${esc(pid)}" data-t="${esc(tok)}"${from ? ` data-from="${esc(from.s.id)}"` : ''}${can ? '' : ' disabled'} title="${from ? 'Takes the place of one ' + esc(unitName(V, from)) : ''}">${from ? '⇄ Swap in' : '+ Add'}</button></div>`);
+        continue;
+      }
+      sels.forEach((c, i) => {
+        const from = swapOf(c);
+        const canAdd = (lim.max < 0 || total < lim.max) && (!full || !!from);
+        const canSplit = c.n > 1 && ed.sys.children(k).some(x => x.group || E.limits(V, x, null, c).max !== E.limits(V, x, null, c).min);
+        html += `<div class="arm-model">
+          <div class="arm-model-h">
+            <span class="arm-model-n">${c.n}×</span>
+            <span class="arm-model-name">${esc(name)}${sels.length > 1 ? ` <span class="muted xs">(group ${i + 1})</span>` : ''}${cost ? ` <span class="arm-cost">${cost} pts each</span>` : ''}</span>
+            <div class="stepper sm">
+              <button type="button" data-action="arm-op" data-op="count" data-d="-1" data-id="${esc(c.s.id)}" aria-label="One model less">−</button>
+              <button type="button" data-action="arm-op" data-op="count" data-d="1" data-id="${esc(c.s.id)}"${from ? ` data-from="${esc(from.s.id)}"` : ''}${canAdd ? '' : ' disabled'} aria-label="One model more">+</button>
+            </div>
+          </div>
+          ${nested(V, c, depth, compact)}
+          ${canSplit ? `<button type="button" class="arm-split-btn" data-action="arm-op" data-op="split" data-id="${esc(c.s.id)}">Equip one of these ${c.n} models differently</button>` : ''}
+        </div>`;
+      });
+      continue;
+    }
+    if (lim.max !== 1) {
       const stacks = sels.length ? sels : [null];
       stacks.forEach((c, i) => {
         const n = c ? c.n : 0;
@@ -357,7 +393,8 @@ function block(V, pw, nodes, prefix, depth, compact, full = null) {
         <span class="arm-box" aria-hidden="true">${c ? '✓' : ''}</span><span>${esc(name)}</span>${cost ? `<span class="arm-cost">+${cost} pts</span>` : ''}</button>${c ? nested(V, c, depth, compact) : ''}`;
     }
   }
-  return (fixed.length ? `<div class="arm-fixed muted xs">${esc(fixed.join(' · '))}</div>` : '') + html;
+  return (fixed.length ? `<div class="arm-fixed"><span class="arm-fixed-l">${each ? 'Each equipped with' : 'Equipped with'}</span> ${esc(fixed.join(' · '))}</div>` : '') + html
+    + (models.length ? `<div class="arm-others">${html.includes('arm-model') ? '<div class="arm-gh arm-gh-models">Other models you can take</div>' : ''}${models.join('')}</div>` : '');
 }
 function nested(V, c, depth, compact) {
   if (!c.node || depth > 6) return '';

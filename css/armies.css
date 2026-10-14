@@ -130,3 +130,22 @@
 .arm-link { all: unset; cursor: pointer; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
 .arm-loose { color: var(--warn); font-weight: 600; }
 .arm-lead { padding: 8px 0 4px; border-bottom: 1px solid var(--line); }
+/* models of a unit: one card per model group – who is equipped with what */
+.arm-gh-models { font-size: 13px; color: var(--text); margin-top: 6px; }
+.arm-model { margin: 8px 0; border: 1px solid var(--line); border-radius: 12px; background: var(--panel2); overflow: hidden; }
+.arm-model-h { display: flex; align-items: center; gap: 10px; padding: 8px 10px; background: color-mix(in srgb, var(--text) 6%, var(--panel2)); border-bottom: 1px solid var(--line); }
+.arm-model-n { font: 800 22px/1 var(--font-title); min-width: 34px; }
+.arm-model-name { flex: 1; min-width: 0; font-weight: 700; font-size: 15px; line-height: 1.25; }
+.arm-model-h .stepper button { min-width: 38px; min-height: 36px; }
+.arm-model > .arm-nest { margin: 0; padding: 6px 10px 8px; border-left: 0; }
+.arm-split-btn { all: unset; box-sizing: border-box; display: block; width: 100%; padding: 9px 10px; text-align: center; font-size: 13px; font-weight: 600; color: var(--muted); border-top: 1px dashed var(--line); cursor: pointer; }
+.arm-split-btn:active { background: var(--panel); }
+.arm-fixed { margin: 6px 0; font-size: 13px; line-height: 1.4; }
+.arm-fixed-l { display: block; font: 700 11px/1.2 var(--font-body); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin-bottom: 2px; }
+.arm-each { font-weight: 600; letter-spacing: 0; text-transform: none; color: var(--warn); font-size: 11px; }
+.arm-others { margin: 10px 0 4px; }
+.arm-avail { display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 4px 0; border-bottom: 1px solid color-mix(in srgb, var(--line) 60%, transparent); }
+.arm-avail .arm-row-name { color: var(--muted); }
+.arm-others { padding: 4px 10px 6px; border: 1px dashed var(--line); border-radius: 12px; }
+.arm-others .arm-others { padding: 0; border: 0; }
+.arm-others .arm-grp { margin: 6px 0; }

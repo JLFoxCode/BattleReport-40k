@@ -390,6 +390,7 @@ export function validate(V) {
     const self = node.group ? null : sels[0] || null;
     const eff = effective(V, node, self, parent);
     if (sels.length) for (const m of eff.errors) out.push({ sel: (owner ? owner.s.id : sels[0].s.id) || null, msg: `${owner ? label(owner) + ': ' : ''}${m}` });
+    if (eff.hidden && !sels.length) { if (node.group) for (const k of V.sys.children(node)) checkNode(k, parent, owner); return; }   // not available here → its rules do not apply
     if (eff.hidden && sels.length) out.push({ sel: (sels[0].s || {}).id || null, msg: `${eff.name} is not available${owner ? ' for ' + label(owner) : ''}` });
     for (const c of eff.constraints) {
       if (c.field === 'associations' || (c.type === 'max' && c.value < 0)) continue;
