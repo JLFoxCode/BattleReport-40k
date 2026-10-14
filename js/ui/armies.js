@@ -7,7 +7,8 @@ import { playableCatalogues, systemFor, ALLIANCES } from '../builder/load.js';
 import * as E from '../builder/bs-engine.js';
 import { summarize, armyText } from '../builder/export.js';
 import { loadDatasheets, matchUnit, normName } from '../data/datasheets.js';
-import { datasheetCard } from './datasheet.js';
+import { datasheetCard, datasheetGroupCard } from './datasheet.js';
+import { leaderBuffs } from './player-common.js';
 import { leaderTargets } from './player-tabs.js';
 import { kwList } from './keywords.js';
 
@@ -669,10 +670,34 @@ function dsHtml(V, w) {
   const name = E.effective(V, w.node, w, w.parent).name;
   const ds = matchUnit(pack.units || [], name);
   if (!ds) return '';
-  const u = summarize(ed.sys, { ...ed.army, sel: [w.s] }).units[0];
   const dets = summarize(ed.sys, ed.army).detachments.map(normName);
-  const wargear = u ? [...u.gear.map(g => ({ name: g.name, count: g.n })), ...u.stacks.flatMap(m => m.gear.map(g => ({ name: g.name, count: g.n * m.n })))] : [];
-  return `<div class="arm-ds">${datasheetCard(ds, { compact: true, detachments: dets, enhNames: u ? u.enhancements.map(e => normName(e.name)) : [], unit: u ? { models: u.models, points: u.pts, wargear, warlord: u.warlord, enhancements: u.enhancements.map(e => e.name) } : null })}</div>`;
+  const member = x => {
+    const u = summarize(ed.sys, { ...ed.army, sel: [x.s] }).units[0];
+    if (!u) return null;
+    const wargear = [...u.gear.map(g => ({ name: g.name, count: g.n })), ...u.stacks.flatMap(m => m.gear.map(g => ({ name: g.name, count: g.n * m.n })))];
+    return { id: x.s.id, name: u.name, models: u.models, points: u.pts, wargear, warlord: u.warlord, enhancements: u.enhancements.map(e => e.name) };
+  };
+  const u = member(w);
+  // leaders attached to this unit: one group datasheet, every leader's buffs in its own colour
+  const leaders = V.force.ch.filter(x => x.s.lead === w.s.id && isUnitSel(x)).map(x => {
+    const lds = matchUnit(pack.units || [], unitName(V, x));
+    if (!lds) return null;
+    const lu = member(x);
+    const enh = enhOf(V, x);
+    return { ds: lds, unit: lu, enh, buffs: leaderBuffs(lds, enh, lu, dets) };
+  }).filter(Boolean);
+  if (leaders.length && u) {
+    return `<div class="arm-ds"><p class="muted xs">Led by ${leaders.map(l => esc(l.ds.name)).join(' + ')} – what a leader adds is shown in its colour.</p>${datasheetGroupCard({ body: { ds, unit: u, enh: enhOf(V, w) }, leaders }, { open: true, noInfo: true, detachments: dets })}</div>`;
+  }
+  return `<div class="arm-ds">${datasheetCard(ds, { compact: true, detachments: dets, enhNames: u ? u.enhancements.map(e => normName(e.name)) : [], enhancements: enhOf(V, w), unit: u })}</div>`;
+}
+/** Enhancements of a unit selection with their rule text (BSData profile) – leaders' buffs come from them too. */
+function enhOf(V, w) {
+  return w.ch.filter(c => c.groups.some(g => /Enhancement/i.test(g.name))).map(c => {
+    const p = c.node.profiles.find(x => /Abilities/i.test(x.typeName || '')) || null;
+    const text = p ? ((p.characteristics || []).find(x => /Description/i.test(x.name)) || {}).$text || '' : '';
+    return { name: unitName(V, c), cost: E.totalCost(V, c) || null, text: String(text) };
+  });
 }
 
 /* ───────── Add unit ───────── */

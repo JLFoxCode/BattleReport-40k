@@ -192,22 +192,27 @@ export function memberWargearAbilities(ds, unit) {
 
 export function datasheetGroupCard(group, opt = {}) {
   const body = group.body, leaders = group.leaders || [];
-  const leaderNames = leaders.map(l => l.ds.name).join(' + ');
-  const tagOf = name => `<span class="ds-tag ldr">${esc(name)}</span>`;
+  // every leader its own colour – what a leader adds to the unit carries it (several leaders: combined buffs at a glance)
+  const LDR = ['#ECAA48', '#B48CFF', '#46C8C0', '#F07FA8'];
+  const colorById = new Map(leaders.map((l, i) => [l.unit.id, LDR[i % LDR.length]]));
+  const colorByName = new Map(leaders.map((l, i) => [l.ds.name, LDR[i % LDR.length]]));
+  const st = c => (c ? ` style="--ldr:${c}"` : '');
+  const leaderNames = leaders.map(l => `<span class="ldr-name"${st(colorById.get(l.unit.id))}>${esc(l.ds.name)}</span>`).join(' + ');
+  const tagOf = name => `<span class="ds-tag ldr"${st(colorByName.get(name))}>${esc(name)}</span>`;
   // Leader buffs, numbered for (i): { leaderId, index, buff, leaderName, scope }
   const buffs = leaders.flatMap(l => (l.buffs || []).map((b, i) => ({ leaderId: l.unit.id, index: i, buff: b, leaderName: l.ds.name, scope: buffWeaponScope(b.text) })));
-  const info = b => `<button type="button" class="btn ghost icon ds-info ds-info-sm" data-action="buff.info" data-leader="${esc(b.leaderId)}" data-buff="${b.index}" aria-label="${esc(b.buff.name)} – from ${esc(b.leaderName)}">i</button>`;
+  const info = b => (opt.noInfo ? '' : `<button type="button" class="btn ghost icon ds-info ds-info-sm" data-action="buff.info" data-leader="${esc(b.leaderId)}" data-buff="${b.index}" aria-label="${esc(b.buff.name)} – from ${esc(b.leaderName)}">i</button>`);
   // ── stats: leaders first, then the unit
-  const statBlock = (ds, isLeader) => {
+  const statBlock = (ds, isLeader, color) => {
     const profiles = (ds.profiles && ds.profiles.length) ? ds.profiles : [{ name: ds.name, M: '–', T: '–', SV: '–', W: '–', LD: '–', OC: '–' }];
-    return profiles.map(p => `<div class="ds-profile-name${isLeader ? ' from-leader' : ''}">${esc(p.name)}</div>${statRow(p)}`).join('');
+    return profiles.map(p => `<div class="ds-profile-name${isLeader ? ' from-leader' : ''}"${st(color)}>${esc(p.name)}</div>${statRow(p)}`).join('');
   };
   // ── unit-wide buffs (no weapon ability): chips under the stats
   const unitBuffs = buffs.filter(b => !b.scope);
   // the effect itself first ("5+ invulnerable save"), the ability and the leader small underneath
   const unitBuffHtml = unitBuffs.length ? `<div class="ds-unitbuffs">${unitBuffs.map(b => {
     const fx = buffEffects(b.buff.text);
-    return `<span class="ds-unitbuff">${fx.length ? `<b>${fx.map(esc).join(' · ')}</b><span class="ds-unitbuff-src">${esc(b.buff.name)} · ${esc(b.leaderName)}</span>` : `${esc(b.buff.name)}<span class="ds-unitbuff-src">${esc(b.leaderName)}</span>`}${info(b)}</span>`;
+    return `<span class="ds-unitbuff"${st(colorById.get(b.leaderId))}>${fx.length ? `<b>${fx.map(esc).join(' · ')}</b><span class="ds-unitbuff-src">${esc(b.buff.name)} · ${esc(b.leaderName)}</span>` : `${esc(b.buff.name)}<span class="ds-unitbuff-src">${esc(b.leaderName)}</span>`}${info(b)}</span>`;
   }).join('')}</div>` : '';
   // ── weapons: unit + leaders in one table per kind; same weapon in both → one row
   const weaponRows = kind => {
@@ -229,9 +234,9 @@ export function datasheetGroupCard(group, opt = {}) {
     const html = rows.map(r => {
       const own = (r.w.abilities || []).map(a => `[${String(a).toUpperCase()}]`);
       const marks = buffs.filter(b => b.scope === 'all' || b.scope === kind).flatMap(b => (clean(b.buff.text).match(WEAPON_AB()) || [])
-        .map(x => x.toUpperCase()).filter(x => !own.includes(x)).map(x => `<span class="ds-wbuff">${esc(x)}*${info(b)}</span>`));
+        .map(x => x.toUpperCase()).filter(x => !own.includes(x)).map(x => `<span class="ds-wbuff"${st(colorById.get(b.leaderId))}>${esc(x)}*${info(b)}</span>`));
       const leaderOnly = r.owner !== 'unit' && r.owner !== 'both';
-      return `<tr class="ds-wrow${leaderOnly ? ' from-leader' : ''}"><td class="ds-wcell-name">${weaponName(r.w, r.n)}${leaderOnly ? tagOf(r.owner) : ''}${marks.length ? `<span class="ds-wbuffs">${[...new Set(marks)].join('')}</span>` : ''}</td><td>${esc(String(r.w.range ?? ''))}</td><td>${esc(String(r.w.A ?? ''))}</td><td>${esc(String(r.w[skill] ?? ''))}</td><td>${esc(String(r.w.S ?? ''))}</td><td>${esc(String(r.w.AP ?? ''))}</td><td>${esc(String(r.w.D ?? ''))}</td></tr>`;
+      return `<tr class="ds-wrow${leaderOnly ? ' from-leader' : ''}"${leaderOnly ? st(colorByName.get(r.owner)) : ''}><td class="ds-wcell-name">${weaponName(r.w, r.n)}${leaderOnly ? tagOf(r.owner) : ''}${marks.length ? `<span class="ds-wbuffs">${[...new Set(marks)].join('')}</span>` : ''}</td><td>${esc(String(r.w.range ?? ''))}</td><td>${esc(String(r.w.A ?? ''))}</td><td>${esc(String(r.w[skill] ?? ''))}</td><td>${esc(String(r.w.S ?? ''))}</td><td>${esc(String(r.w.AP ?? ''))}</td><td>${esc(String(r.w.D ?? ''))}</td></tr>`;
     }).join('');
     return `<div class="ds-section"><div class="ds-section-h">${kind === 'ranged' ? 'RANGED WEAPONS' : 'MELEE WEAPONS'}</div>
       <table class="ds-weapons"><thead><tr><th></th><th>RANGE</th><th>A</th><th>${skill}</th><th>S</th><th>AP</th><th>D</th></tr></thead><tbody>${html}</tbody></table></div>`;
@@ -243,7 +248,7 @@ export function datasheetGroupCard(group, opt = {}) {
   const seen = new Set(unitAb.map(a => normName(a.name)));
   const leaderAb = leaders.flatMap(l => [].concat((l.ds.abilities || {}).unit || [], memberWargearAbilities(l.ds, l.unit)).filter(a => abilityVisible(a, dets, enhNames))
     .filter(a => { const k = normName(a.name); if (seen.has(k)) return false; seen.add(k); return true; }).map(a => Object.assign({ leaderName: l.ds.name }, a)));
-  const abRow = (a, leader) => `<div class="ds-ab${leader ? ' from-leader' : ''}"><b>${esc(a.name)}:</b> ${rich(a.text || '')}${leader ? tagOf(leader) : ''}${detTag(a)}</div>`;
+  const abRow = (a, leader) => `<div class="ds-ab${leader ? ' from-leader' : ''}"${leader ? st(colorByName.get(leader)) : ''}><b>${esc(a.name)}:</b> ${rich(a.text || '')}${leader ? tagOf(leader) : ''}${detTag(a)}</div>`;
   const core = [...new Set([...((body.ds.abilities || {}).core || []), ...leaders.flatMap(l => (l.ds.abilities || {}).core || [])])];
   const fac = [...new Set([...((body.ds.abilities || {}).faction || []), ...leaders.flatMap(l => (l.ds.abilities || {}).faction || [])])];
   const invs = [body, ...leaders].map(m => (m.ds.abilities || {}).invul).filter(Boolean);
@@ -254,20 +259,20 @@ export function datasheetGroupCard(group, opt = {}) {
   const pts = members.reduce((t, u) => t + (Number(u.points) || 0), 0);
   const models = members.reduce((t, u) => t + (Number(u.models) || 0), 0);
   const html = `${opt.top || ''}
-    ${leaders.map(l => statBlock(l.ds, true)).join('')}
+    ${leaders.map(l => statBlock(l.ds, true, colorById.get(l.unit.id))).join('')}
     ${statBlock(body.ds, false)}
     ${unitBuffHtml}
     ${weaponTable2('ranged')}
     ${weaponTable2('melee')}
     <div class="ds-section"><div class="ds-section-h">ABILITIES</div>
-      ${core.length ? `<div class="ds-ab"><b>CORE:</b> ${core.map(esc).join(', ')}</div>` : ''}
+      ${core.length ? `<div class="ds-ab"><b>CORE:</b> ${kwList(core)}</div>` : ''}
       ${fac.length ? `<div class="ds-ab"><b>FACTION:</b> ${fac.map(esc).join(', ')}</div>` : ''}
       ${unitAb.map(a => abRow(a, null)).join('')}
       ${leaderAb.map(a => abRow(a, a.leaderName)).join('')}
       ${invs.length ? `<div class="ds-ab ds-inv"><b>INVULNERABLE SAVE:</b> ${[...new Set(invs.map(String))].map(esc).join(' / ')}</div>` : ''}
     </div>
-    ${enh.length ? `<div class="ds-section"><div class="ds-section-h">ENHANCEMENTS</div>${enh.map(e => `<div class="ds-ab${e.leaderName ? ' from-leader' : ''}"><b>${esc(e.name)}${e.cost ? ` (${esc(String(e.cost))} pts)` : ''}${e.text ? ':' : ''}</b> ${e.text ? rich(e.text) : '<span class="muted xs">not in the BSData (New Recruit) data</span>'}${e.leaderName ? tagOf(e.leaderName) : ''}</div>`).join('')}</div>` : ''}
-    <div class="ds-keywords"><span class="ds-kw-label">KEYWORDS:</span> ${[...kwUnit].map(k => `<span class="ds-kw">${esc(k)}</span>`).join('')}${kwLeader.map(k => `<span class="ds-kw from-leader">${esc(k)}</span>`).join('')}</div>`;
-  const head = `<div class="ds-head"><div class="ds-head-main"><div class="ds-title"><span class="ldr-name">${esc(leaderNames)}</span> + ${esc(body.ds.name)}</div><div class="ds-attach leader">Attached unit · acts as one unit</div></div><div class="ds-meta">${models} models${pts ? ` · ${pts} pts` : ''}</div></div>`;
+    ${enh.length ? `<div class="ds-section"><div class="ds-section-h">ENHANCEMENTS</div>${enh.map(e => `<div class="ds-ab${e.leaderName ? ' from-leader' : ''}"${e.leaderName ? st(colorByName.get(e.leaderName)) : ''}><b>${esc(e.name)}${e.cost ? ` (${esc(String(e.cost))} pts)` : ''}${e.text ? ':' : ''}</b> ${e.text ? rich(e.text) : '<span class="muted xs">not in the BSData (New Recruit) data</span>'}${e.leaderName ? tagOf(e.leaderName) : ''}</div>`).join('')}</div>` : ''}
+    <div class="ds-keywords"><span class="ds-kw-label">KEYWORDS:</span> ${[...kwUnit].map(k => `<span class="ds-kw">${esc(k)}</span>`).join('')}${kwLeader.map(k => `<span class="ds-kw from-leader"${st(colorById.get((leaders.find(l => (l.ds.keywords || []).includes(k)) || { unit: {} }).unit.id))}>${esc(k)}</span>`).join('')}</div>`;
+  const head = `<div class="ds-head"><div class="ds-head-main"><div class="ds-title">${leaderNames} + ${esc(body.ds.name)}</div><div class="ds-attach leader">Attached unit · acts as one unit</div></div><div class="ds-meta">${models} models${pts ? ` · ${pts} pts` : ''}</div></div>`;
   return `<details class="ds-card ds-group"${opt.key ? ` data-key="${esc(opt.key)}"` : ''}${opt.defaultOpen ? ' data-default-open="1"' : ''}${opt.open ? ' open' : ''}><summary>${head}</summary><div class="ds-body">${html}</div></details>`;
 }
