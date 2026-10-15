@@ -49,7 +49,8 @@ export const MAP = [
 ];
 
 // Unterbäume, die keine Datenblatt-Information tragen (Crusade, Enhancements, Warlord-Marker, Boarding Actions …)
-const SKIP_RE = /^(Crusade|Enhancements?\b|Enhancement Upgrades|Warlord$|Weapon Upgrades|Weapon Modifications|Battle Honours|Battle Tallies|Legendary Veterans|Experience Points|Battle Scars|Boarding Acti|Bestest Bossloot|Crusade Relics|Battle Traits|Tyrannic War|Pariah Nexus|Waaagh!boss$|Terminator Honours|Show\/Hide)/i;
+// ("Crusade\b": the Crusade subtree, not units/groups like "Crusaders" – Crusader Squad's models sit in a group "Crusaders")
+const SKIP_RE = /^(Crusade\b|Enhancements?\b|Enhancement Upgrades|Warlord$|Weapon Upgrades|Weapon Modifications|Battle Honours|Battle Tallies|Legendary Veterans|Experience Points|Battle Scars|Chaos Boons|Boarding Acti|Bestest Bossloot|Crusade Relics|Battle Traits|Tyrannic War|Pariah Nexus|Waaagh!boss$|Terminator Honours|Show\/Hide)/i;
 const PTS_ID = '51b2-306e-1021-d207';
 // Waffenfähigkeiten (stehen bereits im Waffenprofil) – nicht als Kernfähigkeit der Einheit führen
 const WEAPON_RULE_RE = /^(Pistol|Hazardous|Devastating Wounds|Assault|Extra Attacks|Twin-linked|Anti|Sustained Hits|Heavy|Melta|Blast|Precision|Indirect Fire|Lance|Lethal Hits|Ignores Cover|Rapid Fire|Torrent|One Shot|Cleave|Close-quarters|Psychic)\b/i;
@@ -75,7 +76,7 @@ export function fileText(name, obj) {
  */
 export function convertAll(catalogues, opts = {}) {
   const version = opts.version == null || opts.version === '' ? 'unknown' : String(opts.version);
-  const KEEP_LEGENDS = !!opts.keepLegends;
+  const KEEP_LEGENDS = opts.keepLegends !== false;   // the builder offers Legends units → converted unless switched off
   const FACTIONS = opts.factions || DEFAULT_FACTIONS || [];
   const log = opts.log || (() => {});
   const warn = opts.warn || log;
@@ -127,7 +128,11 @@ export function convertAll(catalogues, opts = {}) {
     let name = S(link.name || (target && target.name));
     const mods = (link.modifiers || []).filter(m => m.field === 'name');
     const uncond = mods.filter(m => !m.conditions && !m.conditionGroups);
-    for (const m of (uncond.length ? uncond : mods.slice(0, 1))) {
+    // only conditional ones: the one for the unit on its own (conditions = something absent, e.g. Electro-Priests
+    // "5+" unless led by a Tech-Priest Dominus → "4+"), else the first
+    const absentC = c => (c.type === 'lessThan' && Number(c.value) <= 1) || ((c.type === 'equalTo' || c.type === 'atMost') && Number(c.value) === 0) || c.type === 'notInstanceOf';
+    const dflt = mods.find(m => !m.conditionGroups && (m.conditions || []).length && m.conditions.every(absentC));
+    for (const m of (uncond.length ? uncond : dflt ? [dflt] : mods.slice(0, 1))) {
       if (m.type === 'set') name = S(m.value);
       else if (m.type === 'append') name = (name + (m.join != null ? m.join : ' ') + S(m.value)).replace(/\s+/g, ' ').trim();
     }
@@ -148,25 +153,54 @@ export function convertAll(catalogues, opts = {}) {
   }
 
   // Wurzel-Einträge eines Katalogs inkl. importierter Kataloge (catalogueLinks mit importRootEntries)
-  function rootEntries(cat, seen = new Set(), out = []) {
+  // __imported: the entry comes from a catalogue imported via importRootEntries (allies such as Agents, Knights) – only
+  // entries of the catalogue itself are offered regardless of their faction keyword (Corsairs in Drukhari, Shadow Legion
+  // in Chaos Daemons, Questor Forgepact/Iconoclast Fiefdom units in the Knights catalogues)
+  function rootEntries(cat, seen = new Set(), out = [], imported = false) {
     if (!cat || seen.has(cat.id)) return out;
     seen.add(cat.id);
-    for (const e of cat.selectionEntries || []) out.push(e);
+    for (const e of cat.selectionEntries || []) out.push(imported ? { ...e, __imported: cat } : e);
     for (const l of cat.entryLinks || []) {
       const t = resolve(l);
       if (!t || l.hidden === true) continue;
       if (t.type !== 'unit' && t.type !== 'model') continue;
-      out.push({ ...t, name: l.name || t.name, categoryLinks: [...(t.categoryLinks || []), ...(l.categoryLinks || [])], __link: l });
+      out.push({ ...t, name: l.name || t.name, categoryLinks: [...(t.categoryLinks || []), ...(l.categoryLinks || [])], __link: l, ...(imported ? { __imported: cat } : {}) });
     }
-    for (const cl of cat.catalogueLinks || []) if (cl.importRootEntries) rootEntries(cats.get(cl.targetId), seen, out);
+    for (const cl of cat.catalogueLinks || []) if (cl.importRootEntries) rootEntries(cats.get(cl.targetId), seen, out, true);
     return out;
   }
+  // "Faction: X" keywords of an entry incl. those on its models (Traitor Enforcer carries it only on the models)
+  function factionKws(e) {
+    const out = new Set();
+    const add = cl => { for (const c of cl || []) if (/^Faction:/i.test(c.name || '')) out.add(up(c.name.replace(/^Faction:\s*/i, ''))); };
+    add(e.categoryLinks);
+    (function walk(n, d) {
+      if (!n || d > 4) return;
+      for (const g of n.selectionEntryGroups || []) walk(g, d + 1);
+      for (const c of n.selectionEntries || []) { if (c.type === 'model') add(c.categoryLinks); walk(c, d + 1); }
+      for (const l of n.entryLinks || []) { const t = resolve(l); if (t && t.type === 'model') { add(t.categoryLinks); add(l.categoryLinks); } if (t && !t.type) walk(t, d + 1); }
+    })(e, 0);
+    return [...out];
+  }
+  // Playable catalogues per app faction (as the builder maps them, js/builder/load.js): the MAP catalogue + catalogues
+  // that link to it, e.g. the Space Marines chapter supplements (Ultramarines … with their own characters)
+  const fidOfFile = new Map(MAP.map(([id, file]) => [file, id]));
+  const ownCats = fid => {
+    const main = [...byFile.entries()].find(([f]) => fidOfFile.get(f) === fid)?.[1];
+    const factionOfCat = c => { const seen = new Set(); const walk = x => { if (!x || seen.has(x.id)) return null; seen.add(x.id); const f = fidOfFile.get(x.__file); if (f) return f; for (const l of x.catalogueLinks || []) { const r = walk(cats.get(l.targetId)); if (r) return r; } return null; }; return walk(c); };
+    const extra = [...byFile.values()].filter(c => c !== gst && c !== main && !c.library && !/Unaligned|Titanicus|Library/i.test(S(c.name)) && !fidOfFile.has(c.__file) && factionOfCat(c) === fid)
+      .sort((a, b) => (a.__file < b.__file ? -1 : a.__file > b.__file ? 1 : 0));
+    return main ? [main, ...extra] : extra;
+  };
 
   // ───────── Waffen & Profile ─────────
   function parseWeapon(p) {
     let name = cleanName(p.name), profile = null;
-    const m = /^➤\s*(.+?)\s+[-–]\s+(.+)$/.exec(name);
+    // profile lines: "➤ Bolt rifle - standard", "➤ Plasma pistol- supercharge", "➤ Grenade Launcher (Frag)",
+    // "➤ Melta Rifle HUNTER:Monster/Vehicle", or only "➤ Flamestorm Gauntlets" (one profile, no suffix)
+    const m = /^➤\s*(.+?)\s*[-–]\s+(.+)$/.exec(name) || /^➤\s*(.+?)\s*\(([^()]+)\)$/.exec(name) || /^➤\s*(.+?)\s+(HUNTER:.+)$/i.exec(name);
     if (m) { name = m[1].trim(); profile = m[2].trim(); }
+    else name = name.replace(/^➤\s*/, '');
     const ranged = p.typeName === 'Ranged Weapons';
     const kw = char(p, 'Keywords');
     const abilities = kw && kw !== 'undefined' && kw !== '-' ? kw.split(',').map(s => up(s)).filter(s => s && s !== 'UNDEFINED') : [];
@@ -176,6 +210,30 @@ export function convertAll(catalogues, opts = {}) {
     w.abilities = abilities;
     if (profile) w.profile = profile;
     return w;
+  }
+  // Bodyguard units of a Leader/Support text: "… attached to the following unit(s):" followed by a bullet list
+  // ("- **BOYZ**", "■ Outrider Squad", "- **^^Guardian Defenders^^**") or a comma list ("ASSAULT INTERCESSOR SQUAD, …");
+  // text after the list ("You can attach this model … even if …") is not part of it.
+  function attachTargets(text) {
+    const t = S(text);
+    const m = /attached to the following units?\s*:([\s\S]*)$/i.exec(t);
+    const clean = x => cleanName(x.replace(/\*\*|\^\^|\*/g, '').replace(/[.;]\s*$/, ''));
+    const ok = x => x && x.length <= 60 && !/:/.test(x);
+    const out = [];
+    if (m) {
+      for (const line of m[1].split('\n')) {
+        const l = line.trim();
+        if (!l) continue;
+        const b = /^[-•■▪●]\s*(.+)$/.exec(l);
+        if (b) { const n = clean(b[1]); if (ok(n)) out.push(n); continue; }
+        if (out.length) break;               // sentence after the list
+        if (/\b(units?|excluding|which|that|share|model)\b/.test(l)) break;   // prose ("INFANTRY DAEMON units (excluding …) which …"), no list
+        for (const x of l.split(',')) { const n = clean(x); if (ok(n)) out.push(n); }
+        break;
+      }
+    }
+    if (!out.length) for (const x of t.matchAll(/\*\*([^*\n]+?)\*\*/g)) { const n = clean(x[1]); if (ok(n)) out.push(n); }
+    return [...new Set(out)];
   }
   function parseUnitProfile(p) {
     const inv = S(char(p, 'InSv'));
@@ -236,13 +294,81 @@ export function convertAll(catalogues, opts = {}) {
   function convertUnit(root, factionId, acceptedKw, catNames = null) {
     const u = {
       id: slug(root.name), name: cleanName(root.name), points: [], composition: '', models: [], profiles: [], keywords: [], factionKeywords: [],
-      ranged: [], melee: [], abilities: { core: [], faction: [], unit: [], wargear: [], invul: null, damaged: null }, leader: null, transport: null, options: [], modelsRange: [1, 1]
+      ranged: [], melee: [], abilities: { core: [], faction: [], unit: [], wargear: [], invul: null, damaged: null }, leader: null, support: null, transport: null, options: [], modelsRange: [1, 1]
     };
     const factionRules = {};
+    const modelCats = [];  // category names of the unit's model entries
     const seenW = new Set(), seenP = new Set(), seenA = new Set(), seenCore = new Set();
     if (!unitGateStats.has(factionId)) unitGateStats.set(factionId, { tagged: new Map(), other: new Set() });
     const stats = unitGateStats.get(factionId);
     let inh = [];  // von übergeordneten (Wargear-)Einträgen geerbte Detachment-Abhängigkeit
+    // ids (entries, links, categories) of the walked ancestors: "hidden unless ancestor instanceOf X" (Daemonic Allegiance
+    // profiles only on a Daemon Prince) is evaluated against them; only plain condition lists of ancestor instanceOf checks
+    let anc = new Set();
+    let optWg = null;  // nearest optional (min 0) upgrade above: { name, hasAbility }
+    // default state of the unit on its own: entries inside it with their minimum count (everything else counts 0)
+    const inUnit = new Map();
+    (function pre(n, d) {
+      if (!n || d > 8) return;
+      for (const g of n.selectionEntryGroups || []) pre(g, d + 1);
+      for (const e of n.selectionEntries || []) { if (!inUnit.has(e.id)) { inUnit.set(e.id, selConstraints(e).min || 0); pre(e, d + 1); } }
+      for (const l of n.entryLinks || []) { const t = resolve(l); if (t && !inUnit.has(t.id)) { const mn = selConstraints({ constraints: [...(t.constraints || []), ...(l.constraints || [])] }).min || 0; inUnit.set(t.id, mn); inUnit.set(l.id, mn); pre(t, d + 1); } }
+    })(root, 0);
+    const dCond = c => {
+      const v = Number(c.value);
+      if (/instanceOf/i.test(c.type)) {
+        if (NOT_SELECTED_FORCES.has(c.childId)) return c.type === 'notInstanceOf';
+        if (c.scope === 'ancestor') { const hit = anc.has(c.childId); return c.type === 'instanceOf' ? hit : !hit; }
+        return null;
+      }
+      if (NOT_SELECTED_FORCES.has(c.childId)) { const r = cmp(0, c.type, v); return r === undefined ? null : r; }
+      if ((c.field !== 'selections' && c.field !== 'associations') || !c.childId || DET_NAME.has(c.childId)) return null;   // associations: led by …
+      const t = idx.get(c.childId);
+      if (!t || !t.type || !['unit', 'model', 'upgrade'].includes(t.type)) return null;   // categories, 'model', unknown → undecidable
+      const r = cmp(inUnit.get(c.childId) || 0, c.type, v);
+      return r === undefined ? null : r;
+    };
+    const dGroup = g => { const xs = [...(g.conditions || []).map(dCond), ...(g.conditionGroups || []).map(dGroup)]; return g.type === 'or' ? or3(xs) : and3(xs); };
+    // profile modifiers of the walked entries ("affects": "profiles.Ranged Weapons" / "entries.profiles.…"), unconditional
+    // or with plain ancestor conditions – e.g. a Lord Exultant's pistols BS 2+, Tormentors' plasma pistol + PRECISION
+    let pmods = [];
+    const profModsOf = o => {
+      const out = [];
+      for (const m of (o && o.modifiers) || []) {
+        const mm = /^(?:entries\.)?profiles\.(.+)$/.exec(S(m.affects));
+        if (!mm || m.conditionGroups || !['set', 'append', 'increment', 'decrement'].includes(m.type)) continue;
+        const cs = m.conditions || [];
+        if (!cs.every(c => c.scope === 'ancestor' && (c.type === 'instanceOf' || c.type === 'notInstanceOf'))) continue;
+        if (!cs.every(c => (c.type === 'instanceOf') === anc.has(c.childId))) continue;
+        out.push({ typeName: mm[1], field: m.field, type: m.type, value: m.value, join: m.join });
+      }
+      return out;
+    };
+    const applyPm = p => {
+      const ms = pmods.filter(m => m.typeName === p.typeName);
+      if (!ms.length) return p;
+      return { ...p, characteristics: (p.characteristics || []).map(c => {
+        let t = S(c.$text), hit = false;
+        for (const m of ms) {
+          if (m.field !== c.typeId) continue;
+          hit = true;
+          if (m.type === 'set') t = S(m.value);
+          else if (m.type === 'append') t = t && t !== '-' ? t + (m.join != null ? m.join : ' ') + S(m.value) : S(m.value);
+          else if (/^-?\d+$/.test(t) && /^-?\d+$/.test(S(m.value))) t = String(Number(t) + (m.type === 'increment' ? 1 : -1) * Number(m.value));
+        }
+        return hit ? { ...c, $text: t } : c;
+      }) };
+    };
+    const ancIds = n => [n.id, n.__linkObj && n.__linkObj.id, n.__linkObj && n.__linkObj.targetId, n.__link && n.__link.id, n.__link && n.__link.targetId, ...(n.categoryLinks || []).map(c => c.targetId)].filter(Boolean);
+    const ancHidden = o => {
+      for (const m of (o && o.modifiers) || []) {
+        if (m.field !== 'hidden' || m.type !== 'set' || !(m.value === true || m.value === 'true') || m.conditionGroups) continue;
+        const cs = m.conditions || [];
+        if (!cs.length || !cs.every(c => c.scope === 'ancestor' && (c.type === 'instanceOf' || c.type === 'notInstanceOf'))) continue;
+        if (cs.every(c => (c.type === 'instanceOf') === anc.has(c.childId))) return true;
+      }
+      return false;
+    };
     // Detachment-Abhängigkeit für ein Element (+ Link) bestimmen, mit geerbter zusammenführen
     const gateOf = (label, ...objs) => {
       const g = gating(...objs);
@@ -250,7 +376,8 @@ export function convertAll(catalogues, opts = {}) {
       return [...new Set([...inh, ...g.dets])];
     };
     const noteTag = (name, dets) => { if (!dets.length) return; const k = cleanName(name); if (!stats.tagged.has(k)) stats.tagged.set(k, new Set()); for (const d of dets) stats.tagged.get(k).add(d); };
-    const addWeapon = (p, dets = []) => { const w = parseWeapon(p); const k = w.name + '|' + (w.profile || '') + '|' + dets.join(','); if (seenW.has(k)) return w; seenW.add(k); if (dets.length) { w.detachment = detTag(dets); noteTag(w.name, dets); } (p.typeName === 'Ranged Weapons' ? u.ranged : u.melee).push(w); return w; };
+    // key includes the type: a weapon with a ranged AND a melee profile of the same name (ripper gun, laser lance …) keeps both
+    const addWeapon = (p, dets = []) => { const w = parseWeapon(p); const k = p.typeName + '|' + w.name + '|' + (w.profile || '') + '|' + dets.join(','); if (seenW.has(k)) return w; seenW.add(k); if (dets.length) { w.detachment = detTag(dets); noteTag(w.name, dets); } (p.typeName === 'Ranged Weapons' ? u.ranged : u.melee).push(w); return w; };
     const addAbility = (name, text, kind, dets = []) => {
       name = cleanName(name); text = S(text);
       if (!name) return;
@@ -259,11 +386,16 @@ export function convertAll(catalogues, opts = {}) {
       // nur mit bestimmtem Detachment sichtbar → als eigene Fähigkeit mit "detachment"-Markierung (UI filtert)
       if (dets.length) { noteTag(name, dets); (kind === 'wargear' ? u.abilities.wargear : u.abilities.unit).push({ name, text, detachment: detTag(dets) }); return; }
       let m;
-      if (/^leader$/i.test(name) || /^leader\b/i.test(name) && /attached to the following/i.test(text)) {
-        const canLead = [...text.matchAll(/\*\*([^*\n]+?)\*\*/g)].map(x => cleanName(x[1]).replace(/\^/g, ''));
-        if (!canLead.length) for (const l of text.split('\n')) { m = /^\s*[-•]\s*(.+)$/.exec(l); if (m) canLead.push(cleanName(m[1]).replace(/\*/g, '')); }
-        u.leader = u.leader ? { canLead: [...new Set([...u.leader.canLead, ...canLead])], text: u.leader.text + '\n' + text } : { canLead: [...new Set(canLead)], text };
-        return;
+      // LEADER → u.leader, SUPPORT (11th ed., core rules 24.22: a support unit leads a bodyguard unit like a leader,
+      // one leader + one support per bodyguard) → u.support; both { canLead: [bodyguard names], text }.
+      // The Support ability also stays in abilities.unit (shown as before).
+      const att = /^leader$/i.test(name) || /^leader\b/i.test(name) && /attached to the following/i.test(text) ? 'leader'
+        : (/^support$/i.test(name) || /^support\b/i.test(name)) && /attached to the following/i.test(text) ? 'support' : null;
+      if (att) {
+        const canLead = attachTargets(text);
+        const prev = u[att];
+        u[att] = prev ? { canLead: [...new Set([...prev.canLead, ...canLead])], text: prev.text + '\n' + text } : { canLead: [...new Set(canLead)], text };
+        if (att === 'leader') return;
       }
       if ((m = /^Invulnerable Save\s*\((\d\+\*?)\)/i.exec(name))) { if (!u.abilities.invul) u.abilities.invul = m[1]; if (!text) return; }
       if (/^Damaged\b/i.test(name)) { u.abilities.damaged = text ? name + ': ' + text : name; return; }
@@ -279,8 +411,23 @@ export function convertAll(catalogues, opts = {}) {
         if (!seenA.has(k)) { seenA.add(k); noteTag(name, dets); u.abilities.unit.push({ name: cleanName(name), text: S(target.description), detachment: detTag(dets), ...(gstRuleIds.has(target.id) ? { core: true } : {}) }); }
         return;
       }
-      // nur unter Bedingungen verfügbar (z. B. DEEP STRIKE nur mit bestimmtem Leader) → mit * markiert
-      if ((link.modifiers || []).some(m => m.field === 'hidden' && (m.conditions || m.conditionGroups))) name += '*';
+      // rule that only comes with optional wargear (Impulsor: Orbital Comms Array → Scouts 6", Reiver: Grav-chute → Deep
+      // Strike): not the unit's own core ability; the wargear's ability text says it – without one, a wargear ability
+      if (optWg) {
+        if (!optWg.hasAbility) { const k = 'wargear|' + optWg.name + '|' + up(name); if (!seenA.has(k)) { seenA.add(k); u.abilities.wargear.push({ name: optWg.name + ': ' + cleanName(name), text: S(target.description), ...(gstRuleIds.has(target.id) ? { core: true } : {}) }); } }
+        return;
+      }
+      // conditionally hidden: evaluated for the unit on its own (no leader/enhancement/optional wargear, no Crusade/Boarding
+      // Actions) – hidden then → not the unit's own ability (Skitarii FEEL NO PAIN 5+ only led by a Dominus, T'au DEEP STRIKE
+      // only in Boarding Actions); visible then → its own; undecidable → marked with *
+      {
+        const hm = (link.modifiers || []).filter(m => m.field === 'hidden' && m.type === 'set' && (m.value === true || m.value === 'true') && (m.conditions || m.conditionGroups));
+        if (hm.length) {
+          const st = hm.map(m => dGroup({ type: 'and', conditions: m.conditions, conditionGroups: m.conditionGroups }));
+          if (st.some(x => x === true)) return;
+          if (!st.every(x => x === false)) name += '*';
+        }
+      }
       if (gstRuleIds.has(target.id) || /^(Deep Strike|Deadly Demise|Feel No Pain|Scouts|Stealth|Fights First|Lone Operative|Infiltrators|Leader|Damaged|Firing Deck|Hover|Super-Heavy Walker|Psychic|Fortification)\b/i.test(name)) {
         if (/^Damaged\b/i.test(name)) { u.abilities.damaged = u.abilities.damaged || name.replace(/\*$/, ''); return; }
         if (/^Invulnerable Save\s*\((\d\+\*?)\)/i.test(name)) { u.abilities.invul = u.abilities.invul || /\((\d\+\*?)\)/.exec(name)[1]; return; }
@@ -291,7 +438,8 @@ export function convertAll(catalogues, opts = {}) {
       }
     };
     const handleProfile = (p, kind, link) => {
-      if (!p || p.hidden === true) return;
+      if (!p || p.hidden === true || ancHidden(p) || (link && ancHidden(link))) return false;
+      if (pmods.length) p = applyPm(p);
       const dets = p.typeName === 'Unit' || p.typeName === 'Transport' ? [] : gateOf(p.name, p, link);
       switch (p.typeName) {
         case 'Unit': { const pr = parseUnitProfile(p); if (!seenP.has(pr.name)) { seenP.add(pr.name); u.profiles.push(pr); if (pr.INV && !u.abilities.invul) u.abilities.invul = pr.INV; } return; }
@@ -304,19 +452,26 @@ export function convertAll(catalogues, opts = {}) {
     };
     // Rekursiver Durchlauf; kind = 'unit' (Einheit/Modell) | 'wargear' (Upgrade)
     function walk(node, kind, depth, modelCtx, seen) {
-      if (!node || node.hidden === true || depth > 12) return;
+      if (!node || (node.hidden === true && depth > 0) || depth > 12) return;
       if (seen.has(node)) return; seen.add(node);
       const name = S(node.name);
       if (depth > 0 && SKIP_RE.test(name)) return;
+      if (depth > 0 && (ancHidden(node) || (node.__linkObj && ancHidden(node.__linkObj)))) return;
       const isModel = node.type === 'model' || (depth === 0 && node.type === 'unit');
       const k = node.type === 'upgrade' ? 'wargear' : (node.type ? 'unit' : kind);
-      const savedInh = inh;
+      const savedInh = inh, savedAnc = anc, savedOpt = optWg, savedPm = pmods;
+      anc = new Set([...anc, ...ancIds(node)]);
+      { const pm = [...profModsOf(node), ...profModsOf(node.__linkObj)]; if (pm.length) pmods = [...pmods, ...pm]; }
+      if (depth > 0 && node.type === 'upgrade' && !(selConstraints(node).min >= 1)) {
+        const hasAbility = (node.profiles || []).some(p => p.typeName === 'Abilities') || (node.infoLinks || []).some(l => l.type === 'profile' && (resolve(l) || {}).typeName === 'Abilities');
+        optWg = { name: cleanName(name), hasAbility };
+      }
       if (depth > 0) inh = gateOf(null, node, node.__linkObj);
-      for (const p of node.profiles || []) { handleProfile(p, k); if (modelCtx && (p.typeName === 'Ranged Weapons' || p.typeName === 'Melee Weapons')) modelCtx.weapons.add(parseWeapon(p).name); }
+      for (const p of node.profiles || []) { if (handleProfile(p, k) !== false && modelCtx && (p.typeName === 'Ranged Weapons' || p.typeName === 'Melee Weapons')) modelCtx.weapons.add(parseWeapon(p).name); }
       for (const l of node.infoLinks || []) {
         if (l.hidden === true || linkHiddenUnconditionally(l)) continue;
         const t = resolve(l); if (!t) continue;
-        if (l.type === 'profile') { const p = { ...t, name: linkName(l, t) }; handleProfile(p, k, l); if (modelCtx && (p.typeName === 'Ranged Weapons' || p.typeName === 'Melee Weapons')) modelCtx.weapons.add(parseWeapon(p).name); }
+        if (l.type === 'profile') { const p = { ...t, name: linkName(l, t) }; if (handleProfile(p, k, l) !== false && modelCtx && (p.typeName === 'Ranged Weapons' || p.typeName === 'Melee Weapons')) modelCtx.weapons.add(parseWeapon(p).name); }
         else if (l.type === 'rule') addRule(l, t);
         else if (l.type === 'infoGroup') { const sv = inh; inh = gateOf(null, l, t); for (const p of t.profiles || []) handleProfile(p, k); for (const r of t.rules || []) addRule({ name: r.name }, r); inh = sv; }
       }
@@ -329,6 +484,8 @@ export function convertAll(catalogues, opts = {}) {
         if (c.min == null && c.max == null && node.__groupRange) { c.min = node.__groupRange.min; c.max = node.__groupRange.max; }
         ctx = { name: cleanName(name), min: c.min, max: c.max, weapons: new Set() };
         u.models.push(ctx);
+        // model-level keywords (OFFICER of a Command Squad's commander, CHARACTER of Saint Celestine, a faction keyword on the models)
+        for (const cl of [...(node.categoryLinks || []), ...((node.__linkObj && node.__linkObj.categoryLinks) || [])]) if (cl && cl.hidden !== true && cl.name && !/\bLoadout$|\bHeavy Weapon$|^Unit Champion$/i.test(S(cl.name))) modelCats.push(cl.name);   // not BSData helper categories
       }
       const gr = !node.type ? (() => { const c = selConstraints(node); return c.min != null || c.max != null ? c : node.__groupRange; })() : null;
       const children = [];
@@ -346,21 +503,21 @@ export function convertAll(catalogues, opts = {}) {
         u.models.push(ctx0);
         for (const w of [...u.ranged, ...u.melee]) ctx0.weapons.add(w.name);
       }
-      inh = savedInh;
+      inh = savedInh; anc = savedAnc; optWg = savedOpt; pmods = savedPm;
     }
     walk(root, 'unit', 0, null, new Set());
     u.models = u.models.map(m => ({ name: m.name, min: m.min != null ? m.min : (m.max != null ? 0 : 1), max: m.max != null ? m.max : (m.min != null ? m.min : 1), weapons: [...m.weapons] }));
 
     // Keywords – as the army builder's engine evaluates them for this catalogue (category modifiers included, e.g. an
     // INFANTRY correction or RAVENWING inside Dark Angels); without the engine the raw category links
-    for (const c of catNames ? catNames.map(name => ({ name })) : root.categoryLinks || []) {
+    for (const c of [...(catNames ? catNames.map(name => ({ name })) : root.categoryLinks || []), ...modelCats.map(name => ({ name }))]) {
       const n = cleanName(c.name);
       if (!n || /^(Configuration|Unit|Warlord|Legends)$/i.test(n) || /^Allies:/i.test(n)) continue;   // "Allies: …" marks what may be allied in, no keyword
       const m = /^Faction:\s*(.+)$/i.exec(n);
       if (m) { const f = up(m[1]); if (!u.factionKeywords.includes(f)) u.factionKeywords.push(f); }
       else { const kw = up(n); if (!u.keywords.includes(kw)) u.keywords.push(kw); }
     }
-    if (isLegendsName(root.name) || (root.categoryLinks || []).some(c => /legends/i.test(c.name))) u.legends = true;
+    if (isLegendsName(root.name) || root.hidden === true || (root.categoryLinks || []).some(c => /legends/i.test(c.name))) u.legends = true;
 
     // Modellzahl: Gruppen mit Constraints auf oberster Ebene, sonst Modelle
     const range = [0, 0]; let any = false;
@@ -669,23 +826,33 @@ export function convertAll(catalogues, opts = {}) {
     const cat = byFile.get(file);
     if (!cat) { warn('FEHLT: ' + file + ' für ' + fid); unresolved.push(fid + ': Katalogdatei ' + file + ' fehlt'); continue; }
     const accept = new Set(kws.map(up));
-    const entries = rootEntries(cat);
+    // every unit the builder offers for this faction: the faction's catalogues (main + supplements such as Ultramarines);
+    // entries imported from other catalogues (allies) only with an accepted faction keyword
+    const own = ownCats(fid);
     const units = []; const seenIds = new Set(); const factionRules = {}; const ruleUse = new Map();
-    for (const e of entries) {
+    for (const oc of own) for (const e of rootEntries(oc)) {
       if (e.type !== 'unit' && e.type !== 'model') continue;
-      const fk = (e.categoryLinks || []).filter(c => /^Faction:/i.test(c.name || '')).map(c => up(c.name.replace(/^Faction:\s*/i, '')));
-      if (!fk.some(k => accept.has(k))) continue;
+      // hidden by default: only when a modifier can show it (e.g. "HIDDEN UNTIL LEGENDS" Marneus Calgar with Honour Guard) –
+      // converted as Legends then; never shown (old Tactical Squad …) → not offered, no (empty) datasheet
+      if (e.hidden === true && !allMods(e).some(m => m.field === 'hidden' && (m.value === false || m.value === 'false'))) continue;
+      if (e.__imported) {
+        // imported: an accepted faction keyword; without any (BSData gap, e.g. Drop Pod, Knight Magaera) when it comes
+        // from a faction catalogue (Space Marines → chapters) or the faction's own library ("Chaos - Chaos Knights Library")
+        const fk = factionKws(e), src = e.__imported;
+        if (fk.length ? !fk.some(k => accept.has(k)) : !(fidOfFile.has(src.__file) || S(src.name).startsWith(S(cat.name)))) continue;
+      }
       if (seenIds.has(e.id)) continue; seenIds.add(e.id);
-      const { unit, factionRules: fr } = convertUnit(e, fid, accept, engineKeywords(cat.id, e));
+      const { unit, factionRules: fr } = convertUnit(e, fid, accept, engineKeywords(oc.id, e));
       if (unit.legends && !KEEP_LEGENDS) continue;
+      if (oc !== cat) unit.catalogue = S(oc.name);
       Object.assign(factionRules, fr);
       for (const k of unit.abilities.faction) ruleUse.set(k, (ruleUse.get(k) || 0) + 1);
       units.push(unit);
     }
-    // doppelte IDs eindeutig machen
+    // doppelte IDs eindeutig machen (Legends-Einheiten zuletzt, damit reguläre Einheiten ihre ID behalten)
     const ids = new Map();
-    for (const un of units) { const n = (ids.get(un.id) || 0) + 1; ids.set(un.id, n); if (n > 1) un.id = un.id + '-' + n; }
-    units.sort((a, b) => a.name.localeCompare(b.name, 'en'));
+    for (const un of [...units.filter(x => !x.legends), ...units.filter(x => x.legends)]) { const n = (ids.get(un.id) || 0) + 1; ids.set(un.id, n); if (n > 1) un.id = un.id + '-' + n; }
+    units.sort((a, b) => a.name.localeCompare(b.name, 'en') || (a.legends ? 1 : 0) - (b.legends ? 1 : 0));
     const name = FACTIONS.find(f => f.id === fid)?.name || fid;
     const army = buildArmyData(fid, cat, kws, ruleUse, units.length, factionRules, (SUPPLEMENTS[fid] || []).map(f => byFile.get(f)).filter(Boolean));
     armyReport.push({ fid, name, ...army });

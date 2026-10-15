@@ -5,7 +5,7 @@
   {
    "id": "adepta-sororitas",
    "name": "Adepta Sororitas",
-   "units": 36,
+   "units": 41,
    "file": "adepta-sororitas.json"
   },
   {
@@ -17,73 +17,73 @@
   {
    "id": "adeptus-mechanicus",
    "name": "Adeptus Mechanicus",
-   "units": 37,
+   "units": 41,
    "file": "adeptus-mechanicus.json"
   },
   {
    "id": "aeldari",
    "name": "Aeldari",
-   "units": 79,
+   "units": 102,
    "file": "aeldari.json"
   },
   {
    "id": "astra-militarum",
    "name": "Astra Militarum",
-   "units": 75,
+   "units": 138,
    "file": "astra-militarum.json"
   },
   {
    "id": "black-templars",
    "name": "Black Templars",
-   "units": 91,
+   "units": 173,
    "file": "black-templars.json"
   },
   {
    "id": "blood-angels",
    "name": "Blood Angels",
-   "units": 90,
+   "units": 181,
    "file": "blood-angels.json"
   },
   {
    "id": "chaos-daemons",
    "name": "Chaos Daemons",
-   "units": 59,
+   "units": 101,
    "file": "chaos-daemons.json"
   },
   {
    "id": "chaos-knights",
    "name": "Chaos Knights",
-   "units": 19,
+   "units": 37,
    "file": "chaos-knights.json"
   },
   {
    "id": "chaos-space-marines",
    "name": "Chaos Space Marines",
-   "units": 59,
+   "units": 114,
    "file": "chaos-space-marines.json"
   },
   {
    "id": "dark-angels",
    "name": "Dark Angels",
-   "units": 91,
+   "units": 173,
    "file": "dark-angels.json"
   },
   {
    "id": "death-guard",
    "name": "Death Guard",
-   "units": 42,
+   "units": 75,
    "file": "death-guard.json"
   },
   {
    "id": "deathwatch",
    "name": "Deathwatch",
-   "units": 85,
+   "units": 167,
    "file": "deathwatch.json"
   },
   {
    "id": "drukhari",
    "name": "Drukhari",
-   "units": 33,
+   "units": 48,
    "file": "drukhari.json"
   },
   {
@@ -95,25 +95,25 @@
   {
    "id": "genestealer-cults",
    "name": "Genestealer Cults",
-   "units": 45,
+   "units": 153,
    "file": "genestealer-cults.json"
   },
   {
    "id": "grey-knights",
    "name": "Grey Knights",
-   "units": 29,
+   "units": 34,
    "file": "grey-knights.json"
   },
   {
    "id": "imperial-agents",
    "name": "Imperial Agents",
-   "units": 32,
+   "units": 52,
    "file": "imperial-agents.json"
   },
   {
    "id": "imperial-knights",
    "name": "Imperial Knights",
-   "units": 22,
+   "units": 27,
    "file": "imperial-knights.json"
   },
   {
@@ -125,49 +125,49 @@
   {
    "id": "necrons",
    "name": "Necrons",
-   "units": 55,
+   "units": 67,
    "file": "necrons.json"
   },
   {
    "id": "orks",
    "name": "Orks",
-   "units": 58,
+   "units": 73,
    "file": "orks.json"
   },
   {
    "id": "space-marines",
    "name": "Space Marines",
-   "units": 75,
+   "units": 173,
    "file": "space-marines.json"
   },
   {
    "id": "space-wolves",
    "name": "Space Wolves",
-   "units": 97,
+   "units": 196,
    "file": "space-wolves.json"
   },
   {
    "id": "tau-empire",
    "name": "T'au Empire",
-   "units": 46,
+   "units": 66,
    "file": "tau-empire.json"
   },
   {
    "id": "thousand-sons",
    "name": "Thousand Sons",
-   "units": 41,
+   "units": 66,
    "file": "thousand-sons.json"
   },
   {
    "id": "tyranids",
    "name": "Tyranids",
-   "units": 59,
+   "units": 64,
    "file": "tyranids.json"
   },
   {
    "id": "world-eaters",
    "name": "World Eaters",
-   "units": 36,
+   "units": 64,
    "file": "world-eaters.json"
   }
  ]
