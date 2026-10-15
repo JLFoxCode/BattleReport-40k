@@ -119,6 +119,8 @@ export function convertAll(catalogues, opts = {}) {
   const numOrStr = v => { const s = S(v); return /^-?\d+$/.test(s) ? Number(s) : (s || null); };
   const char = (p, name) => { const c = (p.characteristics || []).find(c => c.name === name); return c ? S(c.$text) : ''; };
   const resolve = l => (l && l.targetId ? idx.get(l.targetId) : null);
+  // BSData helper category (hidden categoryEntry that no modifier unhides: Leader, Support, Non-Kroot, AC Walker …) – no keyword
+  const helperCat = id => { const c = id ? idx.get(id) : null; return !!c && c.hidden === true && !(c.modifiers || []).some(m => m.field === 'hidden'); };
   const isLegendsName = n => /\[legends\]/i.test(n || '');
   const groupName = n => cleanName(n).replace(/^\d+\s*[-–]\s*\d+\s+/, '').replace(/^\d+\s+/, '');
   const cleanName = n => S(n).replace(/\s*\[Legends\]\s*/ig, ' ').replace(/\s+/g, ' ').trim();
@@ -164,7 +166,8 @@ export function convertAll(catalogues, opts = {}) {
       const t = resolve(l);
       if (!t || l.hidden === true) continue;
       if (t.type !== 'unit' && t.type !== 'model') continue;
-      out.push({ ...t, name: l.name || t.name, categoryLinks: [...(t.categoryLinks || []), ...(l.categoryLinks || [])], __link: l, ...(imported ? { __imported: cat } : {}) });
+      // profiles on the root link count for the unit (Sicarian Infiltrators 'Voices in the Code')
+      out.push({ ...t, name: l.name || t.name, categoryLinks: [...(t.categoryLinks || []), ...(l.categoryLinks || [])], ...((l.profiles || []).length ? { profiles: [...(t.profiles || []), ...l.profiles] } : {}), __link: l, ...(imported ? { __imported: cat } : {}) });
     }
     for (const cl of cat.catalogueLinks || []) if (cl.importRootEntries) rootEntries(cats.get(cl.targetId), seen, out, true);
     return out;
@@ -377,7 +380,10 @@ export function convertAll(catalogues, opts = {}) {
     };
     const noteTag = (name, dets) => { if (!dets.length) return; const k = cleanName(name); if (!stats.tagged.has(k)) stats.tagged.set(k, new Set()); for (const d of dets) stats.tagged.get(k).add(d); };
     // key includes the type: a weapon with a ranged AND a melee profile of the same name (ripper gun, laser lance …) keeps both
-    const addWeapon = (p, dets = []) => { const w = parseWeapon(p); const k = p.typeName + '|' + w.name + '|' + (w.profile || '') + '|' + dets.join(','); if (seenW.has(k)) return w; seenW.add(k); if (dets.length) { w.detachment = detTag(dets); noteTag(w.name, dets); } (p.typeName === 'Ranged Weapons' ? u.ranged : u.melee).push(w); return w; };
+    const addWeapon = (p, dets = []) => { const w = parseWeapon(p); const k = p.typeName + '|' + w.name + '|' + (w.profile || '') + '|' + dets.join(','); if (seenW.has(k)) return w; seenW.add(k);
+      // same weapon spelt with other capitals and identical stats ('Shuriken Pistol' / 'Shuriken pistol' on Corsair Voidscarred): one row
+      const ki = (k + '|' + JSON.stringify({ ...w, name: 0 })).toLowerCase(); if (seenW.has(ki)) return w; seenW.add(ki);
+      if (dets.length) { w.detachment = detTag(dets); noteTag(w.name, dets); } (p.typeName === 'Ranged Weapons' ? u.ranged : u.melee).push(w); return w; };
     const addAbility = (name, text, kind, dets = []) => {
       name = cleanName(name); text = S(text);
       if (!name) return;
@@ -467,11 +473,12 @@ export function convertAll(catalogues, opts = {}) {
         optWg = { name: cleanName(name), hasAbility };
       }
       if (depth > 0) inh = gateOf(null, node, node.__linkObj);
-      for (const p of node.profiles || []) { if (handleProfile(p, k) !== false && modelCtx && (p.typeName === 'Ranged Weapons' || p.typeName === 'Melee Weapons')) modelCtx.weapons.add(parseWeapon(p).name); }
+      // "C'tan Powers" (Tesseract Vault): a ranged-weapon profile type of its own (Range/A/BS/S/AP/D/Keywords)
+      for (const p0 of node.profiles || []) { const p = p0.typeName === "C'tan Powers" ? { ...p0, typeName: 'Ranged Weapons' } : p0; if (handleProfile(p, k) !== false && modelCtx && (p.typeName === 'Ranged Weapons' || p.typeName === 'Melee Weapons')) modelCtx.weapons.add(parseWeapon(p).name); }
       for (const l of node.infoLinks || []) {
         if (l.hidden === true || linkHiddenUnconditionally(l)) continue;
         const t = resolve(l); if (!t) continue;
-        if (l.type === 'profile') { const p = { ...t, name: linkName(l, t) }; if (handleProfile(p, k, l) !== false && modelCtx && (p.typeName === 'Ranged Weapons' || p.typeName === 'Melee Weapons')) modelCtx.weapons.add(parseWeapon(p).name); }
+        if (l.type === 'profile') { const p = { ...t, name: linkName(l, t), ...(t.typeName === "C'tan Powers" ? { typeName: 'Ranged Weapons' } : {}) }; if (handleProfile(p, k, l) !== false && modelCtx && (p.typeName === 'Ranged Weapons' || p.typeName === 'Melee Weapons')) modelCtx.weapons.add(parseWeapon(p).name); }
         else if (l.type === 'rule') addRule(l, t);
         else if (l.type === 'infoGroup') { const sv = inh; inh = gateOf(null, l, t); for (const p of t.profiles || []) handleProfile(p, k); for (const r of t.rules || []) addRule({ name: r.name }, r); inh = sv; }
       }
@@ -485,7 +492,7 @@ export function convertAll(catalogues, opts = {}) {
         ctx = { name: cleanName(name), min: c.min, max: c.max, weapons: new Set() };
         u.models.push(ctx);
         // model-level keywords (OFFICER of a Command Squad's commander, CHARACTER of Saint Celestine, a faction keyword on the models)
-        for (const cl of [...(node.categoryLinks || []), ...((node.__linkObj && node.__linkObj.categoryLinks) || [])]) if (cl && cl.hidden !== true && cl.name && !/\bLoadout$|\bHeavy Weapon$|^Unit Champion$/i.test(S(cl.name))) modelCats.push(cl.name);   // not BSData helper categories
+        for (const cl of [...(node.categoryLinks || []), ...((node.__linkObj && node.__linkObj.categoryLinks) || [])]) if (cl && cl.hidden !== true && cl.name && !helperCat(cl.targetId) && !/\bLoadout$|\bHeavy Weapon$|^Unit Champion$/i.test(S(cl.name))) modelCats.push(cl.name);   // not BSData helper categories
       }
       const gr = !node.type ? (() => { const c = selConstraints(node); return c.min != null || c.max != null ? c : node.__groupRange; })() : null;
       const children = [];
@@ -506,11 +513,13 @@ export function convertAll(catalogues, opts = {}) {
       inh = savedInh; anc = savedAnc; optWg = savedOpt; pmods = savedPm;
     }
     walk(root, 'unit', 0, null, new Set());
-    u.models = u.models.map(m => ({ name: m.name, min: m.min != null ? m.min : (m.max != null ? 0 : 1), max: m.max != null ? m.max : (m.min != null ? m.min : 1), weapons: [...m.weapons] }));
+    const wCanon = new Map(); for (const w of [...u.ranged, ...u.melee]) if (!wCanon.has(w.name.toLowerCase())) wCanon.set(w.name.toLowerCase(), w.name);
+    const wName = n => (u.ranged.some(w => w.name === n) || u.melee.some(w => w.name === n) ? n : wCanon.get(String(n).toLowerCase()) || n);
+    u.models = u.models.map(m => ({ name: m.name, min: m.min != null ? m.min : (m.max != null ? 0 : 1), max: m.max != null ? m.max : (m.min != null ? m.min : 1), weapons: [...new Set([...m.weapons].map(wName))] }));
 
     // Keywords – as the army builder's engine evaluates them for this catalogue (category modifiers included, e.g. an
     // INFANTRY correction or RAVENWING inside Dark Angels); without the engine the raw category links
-    for (const c of [...(catNames ? catNames.map(name => ({ name })) : root.categoryLinks || []), ...modelCats.map(name => ({ name }))]) {
+    for (const c of [...(catNames ? catNames.map(name => ({ name })) : (root.categoryLinks || []).filter(cl => !helperCat(cl.targetId))), ...modelCats.map(name => ({ name }))]) {
       const n = cleanName(c.name);
       if (!n || /^(Configuration|Unit|Warlord|Legends)$/i.test(n) || /^Allies:/i.test(n)) continue;   // "Allies: …" marks what may be allied in, no keyword
       const m = /^Faction:\s*(.+)$/i.exec(n);
@@ -813,7 +822,7 @@ export function convertAll(catalogues, opts = {}) {
       if (!n) return null;
       const V = bsView(SYS, { id: 'kw', catalogueId: catId, limit: 0, sel: [{ id: 'kw1', t: n.token, n: 1, ch: [] }] });
       const w = V.force.ch[0];
-      return w ? [...categoriesOfSel(V, w)].map(id => SYS.categoryNames.get(id)).filter(Boolean) : null;
+      return w ? [...categoriesOfSel(V, w)].filter(id => !helperCat(id)).map(id => SYS.categoryNames.get(id)).filter(Boolean) : null;
     } catch { return null; }
   };
 
