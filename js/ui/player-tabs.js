@@ -9,6 +9,7 @@ import {
   effectItems, resourceFor, thresholdActive, thresholdDerive, choicePicked, toggleOn, counterNow, effectsOf, optionCost
 } from './player-common.js';
 import { DS, ensureDatasheets } from './player-common.js';
+import { ruleBoxes, roleSections, roleOf as bookRole } from './army-book.js';
 import { datasheetCard, datasheetMissing, datasheetGroupCard, memberWargearAbilities, abilityVisible } from './datasheet.js';
 import { matchUnit, normName } from '../data/datasheets.js';
 
@@ -507,7 +508,7 @@ export function renderUnitList(ctx, ui) {
   const fac = pl.faction;
   if (fac && !DS.cache.has(fac)) { ensureDatasheets(fac, ctx.rerender); return `<div class="ds-wrap"><div class="card muted small">Loading datasheets …</div></div>`; }
   const data = DS.cache.get(fac) || { units: [] };
-  if (units.some(u => (u.enhancements || []).length) && !origData(fac)) ensureOrig(fac, ctx.rerender);
+  if (fac && !origData(fac)) ensureOrig(fac, ctx.rerender);   // army / detachment rules + enhancement texts
   const links = resolveLeaders(units);
   const q = String(ui.search || '').trim().toLowerCase();
   const sheets = new Map(units.map(u => [u.id, data.units.length ? matchUnit(data.units, u.name) : null]));
@@ -523,17 +524,21 @@ export function renderUnitList(ctx, ui) {
   const merged = new Set([...leadersOf.values()].flat().map(u => u.id));
   const hayOf = u => { const ds = sheets.get(u.id); return [u.name, ...(u.keywords || []), ...((ds && ds.keywords) || []), ...((ds && ds.factionKeywords) || [])].join(' ').toLowerCase(); };
   const shown = units.filter(u => !merged.has(u.id) && (!q || [u, ...(leadersOf.get(u.id) || [])].some(m => hayOf(m).includes(q))));
-  const cards = shown.map((u, i) => {
+  // the same book as the army builder's "Datasheet view": rule boxes on top, then every unit closed, grouped by role
+  const cards = shown.map(u => {
     const ds = sheets.get(u.id);
     const key = `ds:${u.id}`;
-    const first = i === 0;
-    const open = first ? !ui.closed.has(key) : ui.open.has(key);
+    const open = ui.open.has(key);
+    const role = bookRole([...(u.keywords || []), ...((ds && ds.keywords) || [])]);
+    return { role, html: card(u, ds, key, open) };
+  });
+  function card(u, ds, key, open) {
     const ldrs = leadersOf.get(u.id);
     if (ldrs && ds) {
       return datasheetGroupCard({
         body: { ds, unit: u, enh: unitEnhancements(ctx, u) },
         leaders: ldrs.map(L => ({ ds: sheets.get(L.id), unit: L, enh: unitEnhancements(ctx, L), buffs: buffsOf(ctx, data, L) }))
-      }, { open, key, defaultOpen: first, detachments: myDetNames(ctx), top: ldrs.map(L => attachPicker(L, sheets.get(L.id), units, sheets, links)).join('') });
+      }, { open, key, detachments: myDetNames(ctx), top: ldrs.map(L => attachPicker(L, sheets.get(L.id), units, sheets, links)).join('') });
     }
     const l = links.get(u.id) || {};
     let attach = null;
@@ -542,8 +547,21 @@ export function renderUnitList(ctx, ui) {
     } else if (l.ledByName || l.ledBy) {
       attach = { role: 'bodyguard', name: l.ledBy ? l.ledBy.name : l.ledByName, resolved: !!l.ledBy, leaderId: l.ledBy ? l.ledBy.id : '', buffs: l.ledBy ? buffsOf(ctx, data, l.ledBy) : [] };
     }
-    return ds ? datasheetCard(ds, { unit: u, compact: true, open, key, defaultOpen: first, enhancements: unitEnhancements(ctx, u), attach, detachments: myDetNames(ctx), enhNames: [u, l.ledBy].filter(Boolean).flatMap(m => (m.enhancements || []).map(normName)), top: attachPicker(u, ds, units, sheets, links) }) : datasheetMissing(u, { attach });
-  }).join('');
+    return ds ? datasheetCard(ds, { unit: u, compact: true, open, key, enhancements: unitEnhancements(ctx, u), attach, detachments: myDetNames(ctx), enhNames: [u, l.ledBy].filter(Boolean).flatMap(m => (m.enhancements || []).map(normName)), top: attachPicker(u, ds, units, sheets, links) }) : datasheetMissing(u, { attach });
+  }
+  // army rule, detachment rule(s), enhancements – original texts (BSData / New Recruit), so none of them is forgotten
+  const o = origData(fac), mod = origMod();
+  const army = armyOf(ctx, me);
+  const fromOrig = (fn, ...a) => (o && mod && mod[fn] ? mod[fn](o, ...a) || [] : []);
+  const book = {
+    armyRules: fromOrig('origArmyRules').length ? fromOrig('origArmyRules') : (data.armyRules || []),
+    detachments: army.detachments.map(d => {
+      const r = fromOrig('origDetachmentRule', d.name);
+      const bsd = (data.detachments || []).find(x => normName(x.name) === normName(d.name));
+      return { name: d.name, rules: r.length ? r : ((bsd && bsd.rules) || []) };
+    }),
+    enhancements: enhancementsOfList(ctx).map(e => ({ name: e.name, on: e.unit, text: cleanOrig(e.text) }))
+  };
   const found = units.filter(u => sheets.get(u.id)).length;
   const pts = units.reduce((x, u) => x + (u.points || 0), 0);
   const loose = q ? [] : unattachedLeaders(units, sheets, links);
@@ -552,7 +570,8 @@ export function renderUnitList(ctx, ui) {
       <p class="muted xs">${loose.length === 1 ? 'This character can' : 'These characters can'} lead a unit of your army – attach to give the unit the leader's abilities.</p>
       ${loose.map(L => attachPicker(L, sheets.get(L.id), units, sheets, links)).join('')}</div>` : ''}
     <p class="muted xs ds-summary">${units.length} unit${units.length === 1 ? '' : 's'}${pts ? ` · ${pts} pts` : ''} · ${found}/${units.length} with a datasheet${data.version ? ` · data ${esc(String(data.version))}` : ''}${!data.units.length ? ' · no datasheets available for this faction' : ''}${q ? ` · ${shown.length} match${shown.length === 1 ? '' : 'es'}` : ''}</p>
-    ${cards || '<p class="muted small center">No unit matches.</p>'}</div>`;
+    ${q ? '' : ruleBoxes(book, k => ui.open.has(k))}
+    ${cards.length ? `<div class="book-units">${roleSections(cards)}</div>` : '<p class="muted small center">No unit matches.</p>'}</div>`;
 }
 
 /* ═══════════════ Right column (≥ 900 px): general-info tiles ═══════════════ */

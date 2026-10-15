@@ -77,3 +77,19 @@
 .ds-unitbuff { flex-direction: row; flex-wrap: wrap; }
 .ds-unitbuff b { font-weight: 700; }
 .ds-unitbuff-src { display: block; width: 100%; font-size: .7rem; opacity: .75; order: 3; }
+
+/* ───────── Army book (js/ui/army-book.js): builder "Datasheet view" and the game's "Army list" ───────── */
+.book-rules { margin: 6px 0 12px; }
+.book-box .book-head { display: flex; flex-direction: column; gap: 2px; padding: 10px 34px 10px 12px; }
+.book-kind { font-family: var(--font-title); text-transform: uppercase; font-size: 1.02rem; letter-spacing: .02em; }
+.book-names { font-size: .82rem; color: var(--warn); line-height: 1.3; }
+.book-body { padding: 4px 12px 10px; }
+.book-body .det-rule, .book-body .det-item { margin: 0 0 8px; line-height: 1.45; }
+.book-sec { margin: 12px 0; }
+.book-sec-h { font-size: .78rem; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); font-weight: 700; margin: 0 2px 4px; }
+.book-search { flex: 1; min-width: 0; }
+.book-rules .ds-card, .book-units .ds-card { margin: 6px 0; }
+.book-rules .ds-card > summary, .book-units .ds-card > summary { position: relative; }
+.book-rules .ds-card > summary::after, .book-units .ds-card > summary::after { content: '▾'; position: absolute; right: 12px; top: 50%; transform: translateY(-50%); font-size: 1.1rem; color: var(--muted); pointer-events: none; }
+.book-rules .ds-card[open] > summary::after, .book-units .ds-card[open] > summary::after { content: '▴'; top: 22px; }
+.book-units .ds-card > summary .ds-head { padding-right: 30px; }
