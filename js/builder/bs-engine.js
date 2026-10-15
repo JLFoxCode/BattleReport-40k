@@ -339,7 +339,12 @@ function evalCond(V, c, self, parent) {
     if (!is && c.scope === 'primary-catalogue') is = catalogueImports(V, c.childId);
     return c.type === 'instanceOf' ? is : !is;
   }
-  return cmp(c.type, countIn(V, c, scope), num(c.value));
+  let v = countIn(V, c, scope);
+  // a category counted in the parent also counts on the parent itself: the Khorne mark adds KHORNE to its Daemon
+  // Prince (not to the mark), so "KHORNE in parent: at least 1" (Conduit of Chaos hidden) must see the unit
+  if (c.scope === 'parent' && c.field === 'selections' && scope && scope.kind === 'sel' && c.childId && !scope.ids.has(c.childId)
+    && V.sys.categoryNames.has(c.childId) && categoriesOf(V, scope).has(c.childId)) v += 1;
+  return cmp(c.type, v, num(c.value));
 }
 /* The army's catalogue counts as an instance of a catalogue it is built on – one whose root entries it imports (Blood
    Angels → Space Marines). A plain catalogue link only borrows entries: Chaos Daemons link Chaos Space Marines for the
@@ -472,6 +477,8 @@ function countNode(V, node, c, self, parent) {
 export function validate(V) {
   const out = [];
   const label = w => (w && w.kind === 'sel' ? effective(V, w.node, w, w.parent).name : 'Army');
+  // a constraint scope as words: 'army', or the name of the entry / group it means (never its raw id)
+  const scopeName = s => (s === 'force' || s === 'roster' ? 'army' : (V.sys.idx.get(s) || {}).name || (/^[0-9a-f]{3,4}-/.test(s) ? 'unit' : s));
   // under: inside a hidden group (Crusade options …) – its minimums do not apply
   const checkNode = (node, parent, owner, under = false) => {
     const sels = selsOf(V, parent, node);
@@ -484,13 +491,13 @@ export function validate(V) {
       if (c.field === 'associations' || (c.type === 'max' && c.value < 0)) continue;
       if (c.type === 'min' && !sels.length && c.scope === 'parent' && eff.hidden) continue;
       if (c.type === 'min' && under) continue;
-      if (c.scope === 'self' && !self) continue;
+      if (c.scope === 'self' && !self && !node.group) continue;   // a group's scope self = its parent (enhancements: max 1)
       if (c.scope !== 'parent' && c.scope !== 'self' && !sels.length && c.type === 'max') continue;
       const v = countNode(V, node, c, self, parent);
       if (v == null) continue;
       const what = c.field === PTS ? ' pts' : '';
-      if (c.type === 'min' && v < c.value) out.push({ sel: owner ? owner.s.id : null, msg: c.message ? c.message.replace(/{this}/g, eff.name) : `${label(owner)}: ${eff.name} needs at least ${c.value}${what} (has ${v})` });
-      if (c.type === 'max' && v > c.value) out.push({ sel: (sels[0] && sels[0].s.id) || (owner ? owner.s.id : null), msg: c.message ? c.message.replace(/{this}/g, eff.name) : `${eff.name}: at most ${c.value}${what} ${c.scope === 'parent' ? (owner ? 'in ' + label(owner) : '') : 'per ' + (c.scope === 'force' || c.scope === 'roster' ? 'army' : c.scope)} (has ${v})` });
+      if (c.type === 'min' && v < c.value) out.push({ sel: owner ? owner.s.id : null, msg: c.message ? c.message.replace(/{this}/g, eff.name) : `${label(owner)}: ${eff.name === label(owner) ? '' : eff.name + ' '}needs at least ${c.value}${what} (has ${v})` });
+      if (c.type === 'max' && v > c.value) out.push({ sel: (sels[0] && sels[0].s.id) || (owner ? owner.s.id : null), msg: c.message ? c.message.replace(/{this}/g, eff.name) : `${eff.name}: at most ${c.value}${what} ${c.scope === 'parent' || c.scope === 'self' ? (owner ? 'in ' + label(owner) : '') : 'per ' + scopeName(c.scope)} (has ${v})` });
     }
     if (node.group) for (const k of V.sys.children(node)) checkNode(k, parent, owner, under);
   };
@@ -550,7 +557,8 @@ export function validate(V) {
   const pts = totalPoints(V);
   if (num(V.roster.limit) > 0 && pts > num(V.roster.limit)) out.push({ sel: null, msg: `${pts} / ${V.roster.limit} pts – over the points limit` });
   const seen = new Set();
-  return out.filter(e => { const k = e.sel + '|' + e.msg; if (seen.has(k)) return false; seen.add(k); return true; });
+  // an army-wide limit is checked under every unit that has the entry: list it once
+  return out.filter(e => { const k = / per army \(has /.test(e.msg) ? e.msg : e.sel + '|' + e.msg; if (seen.has(k)) return false; seen.add(k); return true; });
 }
 /** The army roster's own limits (game system force entry) with their modifiers applied: [{ field, type, value, message }]. */
 export function rosterLimits(V) {

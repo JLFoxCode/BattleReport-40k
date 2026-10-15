@@ -241,7 +241,7 @@ function dismissImport(id = ed.id) {
 function openImport(fallbackCat = null) {
   const body = `<p class="small muted">Paste a list – a New Recruit text export, a GW app list or a list copied from Reddit, a forum or a chat – or choose a file (New Recruit <b>.txt</b> or roster <b>.rosz</b>). Units, models, wargear, enhancements and the Warlord are matched by name; the import becomes a new army.${fallbackCat ? ' Without a faction line in the list, the faction of this army is used.' : ''}</p>
     <label class="field"><span>Paste the list</span><textarea name="text" rows="9" placeholder="Paste the army list here" spellcheck="false"></textarea></label>
-    <label class="field"><span>or choose a file</span><input type="file" name="file" accept=".txt,.ros,.rosz,text/plain"></label>`;
+    <div class="field"><span>or choose a file</span><div class="arm-file-row"><label class="btn ghost small arm-file-btn">Choose file<input type="file" name="file" accept=".txt,.ros,.rosz,text/plain" hidden></label><span class="arm-file-name muted small">No file chosen</span></div></div>`;
   sheet({
     title: 'Import army', body, cls: 'arm-import-sheet wide', focus: false,
     actions: [{ label: 'Cancel', kind: 'ghost' }, { label: 'Import', kind: 'primary', onClick: (close, el) => {
@@ -258,6 +258,10 @@ function openImport(fallbackCat = null) {
       return false;
     } }]
   });
+  // the native file input would show the OS language ("Datei auswählen"): own button, chosen name next to it
+  const fi = document.querySelector('.arm-import-sheet input[type=file]');
+  const fn = document.querySelector('.arm-import-sheet .arm-file-name');
+  if (fi && fn) fi.addEventListener('change', () => { fn.textContent = fi.files && fi.files[0] ? fi.files[0].name : 'No file chosen'; });
 }
 
 async function createArmy(cat, name, limit) {
@@ -303,7 +307,8 @@ function dsPack() {
   return p === 'loading' ? null : p;
 }
 const unitName = (V, w) => E.effective(V, w.node, w, w.parent).name;
-const isUnitSel = w => w.node && (w.node.type === 'unit' || w.node.type === 'model');
+// the data's "Show/Hide Options" entry is a unit only in form: its switches live in the configuration panel
+const isUnitSel = w => w.node && (w.node.type === 'unit' || w.node.type === 'model') && !/^Show\/Hide Options$/i.test(w.node.name);
 /** The unit's own converted datasheet – exact (normalised) name only: a fuzzy match would show another unit's
  *  card and LEADER list (Land Raider Excelsior → Land Raider, Chaos Lord → Lord of Change). No datasheet → null. */
 const sheetIndex = new WeakMap();
@@ -427,7 +432,7 @@ function editorHtml() {
   for (const p of probs) { const u = p.sel ? rootOf(V, p.sel) : null; const k = u ? u.s.id : ''; byUnit.set(k, (byUnit.get(k) || []).concat(p)); }
   const groups = new Map();
   for (const w of V.force.ch) {
-    if (!w.node) continue;
+    if (!w.node || /^Show\/Hide Options$/i.test(w.node.name)) continue;   // its switches are in the configuration panel
     const c = catName(sys, w);
     if (!groups.has(c)) groups.set(c, []);
     groups.get(c).push(w);
@@ -562,7 +567,8 @@ function detParts(name, orig, pack) {
     strats: od && od.stratagems ? Object.values(od.stratagems) : []
   };
 }
-const richText = t => kwify(esc(String(t || '').replace(/\^\^/g, '').replace(/\*\*/g, ''))).replace(/\n/g, '<br>');
+// BSData markup: ^^**KEYWORD**^^ is a keyword (UPPERCASE, as on the cards), <ins>…</ins> is emphasis only
+const richText = t => kwify(esc(String(t || '').replace(/<\/?ins>/gi, '').replace(/\^\^\*\*(.+?)\*\*\^\^/g, (_, k) => k.toUpperCase()).replace(/\^\^/g, '').replace(/\*\*/g, ''))).replace(/\n/g, '<br>');
 function stratItem(st) {
   return `<div class="det-item det-strat"><div><b>${esc(st.name)}</b> <span class="badge num cp">${esc(st.costText || (st.cost + 'CP'))}</span>${st.category ? ` <span class="muted xs">${esc(st.category)}</span>` : ''}</div>
     ${st.when ? `<div><b class="xs">WHEN</b> ${richText(st.when)}</div>` : ''}${st.target ? `<div><b class="xs">TARGET</b> ${richText(st.target)}</div>` : ''}${st.effect ? `<div><b class="xs">EFFECT</b> ${richText(st.effect)}</div>` : ''}${st.restrictions ? `<div><b class="xs">RESTRICTIONS</b> ${richText(st.restrictions)}</div>` : ''}</div>`;
@@ -838,7 +844,10 @@ function block(V, pw, nodes, prefix, depth, compact, caps = []) {
       if (lim.hidden && !inGroup.length) continue;
       const altOf = new Map();   // option → selection to take back so it comes again
       const kids = sys.children(k).filter(x => {
-        if (!E.limits(V, x, null, pw).hidden || inGroup.some(c => c.s.t === tok + '>' + x.token)) return true;
+        if (inGroup.some(c => c.s.t === tok + '>' + x.token || c.s.t.startsWith(tok + '>' + x.token + '>'))) return true;
+        // a sub-group whose options are all hidden (another detachment's enhancements) shows nothing: no empty heading
+        const anyVisible = (y, d) => !E.limits(V, y, null, pw).hidden && (!y.group || (d < 4 && sys.children(y).some(z => anyVisible(z, d + 1))));
+        if (anyVisible(x, 0)) return true;
         if (!inGroup.length || !pid) return false;
         const back = altVisible(pid, tok, x, inGroup);
         if (back) altOf.set(x, back);
@@ -1428,7 +1437,11 @@ async function onClick(e) {
     const imp = (ed.army.importNotes || []).length;
     sheet({
       title: probs.length ? `${probs.length} problem${probs.length === 1 ? '' : 's'}` : 'No problems',
-      body: (probs.length ? `<ul class="arm-problist">${probs.map(p => { const u = p.sel ? rootOf(V, p.sel) : null; return `<li>${u ? `<b>${esc(E.effective(V, u.node, u, u.parent).name)}</b>: ` : ''}${esc(p.msg)}</li>`; }).join('')}</ul>` : '<p>The list is valid.</p>')
+      body: (probs.length ? `<ul class="arm-problist">${probs.map(p => {
+        const u = p.sel ? rootOf(V, p.sel) : null; const nm = u ? E.effective(V, u.node, u, u.parent).name : '';
+        let msg = p.msg; while (nm && msg.startsWith(nm + ': ')) msg = msg.slice(nm.length + 2);   // the unit name only once
+        return `<li>${u ? `<b>${esc(nm)}</b>: ` : ''}${esc(msg)}</li>`;
+      }).join('')}</ul>` : '<p>The list is valid.</p>')
         + (imp ? `<details class="arm-imp-sec"><summary><b>Import report</b> <span class="badge">${imp}</span> <span class="muted xs">what the import could not take over 1:1</span></summary>${importReportHtml(ed.army)}</details>` : ''),
       actions: [...(imp ? [{ label: 'Hide import report', kind: 'ghost', onClick: () => dismissImport() }] : []), { label: 'Close', kind: 'ghost' }]
     });

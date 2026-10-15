@@ -36,6 +36,10 @@
 .ds-kw-label { color: var(--muted); letter-spacing: .06em; font-size: .68rem; margin-right: 4px; }
 .ds-kw { background: var(--sunk, rgba(0,0,0,.25)); border: 1px solid var(--line); border-radius: 4px; padding: 1px 6px; text-transform: uppercase; letter-spacing: .03em; }
 @media (max-width: 400px) { .ds-weapons { font-size: .78rem; } .ds-stat-v { font-size: 1.1rem; } }
+/* "Melee" / "Nahkampf" in the narrow range column: smaller, and it may break instead of running into the A value */
+/* narrow phones: column heads without letter spacing and a gap, so RANGE and A do not run together */
+@media (max-width: 400px) { .ds-weapons th { letter-spacing: 0; padding: 2px 1px; overflow-wrap: anywhere; } }
+.ds-weapons td.ds-melee { font-size: .66rem; overflow-wrap: anywhere; hyphens: auto; line-height: 1.15; }
 /* Head: title + flags + leader line */
 .ds-head-main { flex: 1 1 auto; min-width: 0; }
 .ds-tag { display: inline-block; vertical-align: middle; font: 600 .62rem/1 var(--font-body, sans-serif); letter-spacing: .08em; text-transform: uppercase; padding: 3px 6px; border-radius: 4px; border: 1px solid var(--line); color: var(--muted); margin-left: 6px; }

@@ -305,3 +305,7 @@
 .arm-det-box .det-body { padding: 0 10px 10px; }
 .det-sec > summary .det-names { display: block; font-size: .78rem; color: var(--warn); font-weight: 400; margin-top: 2px; }
 .arm-det-none { margin-top: 8px; }
+/* import: own file button (the native input shows the OS language) */
+.arm-file-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; min-width: 0; }
+.arm-file-btn { cursor: pointer; }
+.arm-file-name { min-width: 0; overflow-wrap: anywhere; }

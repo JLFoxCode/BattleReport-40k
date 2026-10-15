@@ -231,7 +231,9 @@ function importNotes(sys, r, report, made, listTotal, hasWarlord, dets = []) {
     const c = E.totalCost(V, w);
     if (u.points > 0 && c !== u.points) add('warn', `${u.name}: ${u.points} pts in the list, ${c} pts with the current data${c < u.points || c > u.points ? ' (points update or different options)' : ''}`);
     const m = modelsOf(w);
-    if (u.models > 0 && m > 0 && m !== u.models) add('warn', `${u.name}: ${u.models} model${u.models === 1 ? '' : 's'} in the list, ${m} imported`);
+    // a single-model unit (Doomsday Ark, Knight Castellan): "• 2x Gauss Flayer Array" lines are its weapons, not models
+    const single = w.node.type === 'model' && m === 1;
+    if (u.models > 0 && m > 0 && m !== u.models && !single) add('warn', `${u.name}: ${u.models} model${u.models === 1 ? '' : 's'} in the list, ${m} imported`);
   }
   // total of the units that were imported: the list's points against the current data (the list's header total is often
   // the battle size, so the units' own points are compared)

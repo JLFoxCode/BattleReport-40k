@@ -128,7 +128,7 @@ export const PHRASES = {
   'The end-of-battle scoring is already requested': 'Die Wertung zum Schlachtende ist bereits angefordert',
   'If Cleanse is active for you, you can shuffle Plunder back into your deck and draw a new card.': 'Wenn Cleanse für dich aktiv ist, kannst du Plunder zurück in dein Deck mischen und eine neue Karte ziehen.',
   'If Plunder is active for you, you can shuffle Cleanse back into your deck and draw a new card.': 'Wenn Plunder für dich aktiv ist, kannst du Cleanse zurück in dein Deck mischen und eine neue Karte ziehen.',
-  'no change': 'keine Änderung',
+  'no change': 'keine Änderung', 'Choose file': 'Datei wählen', 'No file chosen': 'Keine Datei gewählt', 'per unit': 'pro Einheit',
   'Games on the host device': 'Spiele auf dem Host-Gerät', 'No games on the host device yet.': 'Noch keine Spiele auf dem Host-Gerät.',
   'Only the device hosting the game can delete it': 'Nur das Gerät, auf dem das Spiel läuft, kann es löschen',
   'The last action was not made on this phone': 'Die letzte Aktion wurde nicht auf diesem Handy gemacht', 'it can only be undone there or on the scoreboard.': 'sie kann nur dort oder an der Anzeigetafel rückgängig gemacht werden.',

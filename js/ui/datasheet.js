@@ -43,7 +43,7 @@ function modelMod(mods, p, single) {
 /** A value cell: changed values highlighted, the original as tooltip. */
 function cell(v, m, key) {
   const ch = m && m.chars && m.chars[key] != null;
-  return ch ? `<td class="ds-mod" title="was ${esc(String(m.base[key] ?? ''))}">${esc(String(m.chars[key]))}</td>` : `<td>${esc(String(v ?? ''))}</td>`;
+  return ch ? `<td class="ds-mod" title="was ${esc(String(m.base[key] ?? ''))}">${esc(String(m.chars[key]))}</td>` : `<td${key === 'range' && /^melee$/i.test(String(v)) ? ' class="ds-melee"' : ''}>${esc(String(v ?? ''))}</td>`;
 }
 const modTags = m => (m ? `${(m.keywords || []).length ? `<span class="ds-wabil ds-mod-kw">${kwList(m.keywords)}</span>` : ''}${(m.notes || []).map(n => `<span class="ds-mod-src">★ ${esc(n)}</span>`).join('')}` : '');
 
@@ -127,7 +127,7 @@ export function datasheetCard(ds, opt = {}) {
   // Safety: if none of the listed names matches a weapon of the datasheet, show all weapons instead of none
   if (chosen && ![...(ds.ranged || []), ...(ds.melee || [])].some(w => chosen.has(normName(w.name)))) chosen = null;
   const pts = unit && unit.points ? `${unit.points} pts` : (ds.points && ds.points.length ? ds.points.map(p => `${p.models ? p.models + ' × ' : ''}${p.pts} pts`).join(' · ') : '');
-  const models = unit ? `${unit.models} model${unit.models === 1 ? '' : 's'}` : (ds.modelsRange ? `${ds.modelsRange[0]}${ds.modelsRange[1] && ds.modelsRange[1] !== ds.modelsRange[0] ? '–' + ds.modelsRange[1] : ''} models` : '');
+  const models = unit ? `${unit.models} model${unit.models === 1 ? '' : 's'}` : (ds.modelsRange ? `${ds.modelsRange[0]}${ds.modelsRange[1] && ds.modelsRange[1] !== ds.modelsRange[0] ? '–' + ds.modelsRange[1] : ''} model${Math.max(ds.modelsRange[0], ds.modelsRange[1] || 0) === 1 ? '' : 's'}` : '');
   const ab = ds.abilities || {};
   const attach = opt.attach || null;
   const marks = attach && attach.role === 'leader' ? attach.marks : null;
