@@ -115,19 +115,42 @@ export async function importText(text, opts = {}) {
   const tot = /TOTAL ARMY POINTS:\s*(\d+)/i.exec(head) || /\((\d{3,5}) points?\)/i.exec(lines[0] || '');
   const limit = sz ? Number(sz[2]) : tot && Number(tot[1]) > 1000 ? 2000 : 1000;
   let r = base(sys, cat, limit);
-  // detachment(s) – "DETACHMENT: A, B (note)"; a faction can have more than one Detachment entry (allies), every one is searched
-  const dl = /DETACHMENT:\s*(.+)/i.exec(head);
-  const wanted = (dl ? dl[1].split(/\s*,\s*/) : lines.slice(0, 8)).map(x => norm(x.replace(/\s*\(.*\)\s*$/, '')));
-  let any = false;
-  for (const wn of wanted) {
+  // detachment(s): every name of this faction's detachments that appears in the list's head (the lines before the first
+  // unit) or in any line mentioning "Detachment" – "+ DETACHMENT: A, B", "Detachment: A", "A Detachment",
+  // "Strike Force (2000) – A", "A + B", a line of its own (GW app / New Recruit text) …
+  // a unit line: points below 500 ("Beastboss (80 points)", "[25 pts]", "10x …") or a section heading; the list's title
+  // and the battle size carry 1000 / 2000 points and belong to the head
+  const isUnitLine = l => {
+    if (/^\+/.test(l)) return false;
+    if (/^(CHARACTERS?|BATTLELINE|OTHER DATASHEETS|DEDICATED TRANSPORTS?|EPIC HEROE?S?|INFANTRY|VEHICLES?|MONSTERS?|ALLIED UNITS)\b/i.test(l)) return true;
+    if (/^\d+\s*x\s/i.test(l) || /^Char\d/i.test(l)) return true;
+    const m = /[([]\s*(\d+)\s*(pts?|points?)\s*[)\]]/i.exec(l);
+    return !!m && Number(m[1]) < 500;
+  };
+  const firstUnit = lines.findIndex(isUnitLine);
+  const cand = [...lines.slice(0, firstUnit < 0 ? 15 : Math.max(firstUnit, 1)), ...lines.filter(l => /detachment/i.test(l))];
+  const hayDet = ' ' + cand.map(norm).join(' | ') + ' ';
+  const found = [];
+  {
     const V0 = E.view(sys, r);
     for (const dw of V0.force.ch.filter(w => w.node && /^Detachments?$/.test(w.node.name))) {
       const g = sys.children(dw.node).find(k => k.group);
-      const o = g && sys.children(g).find(x => norm(x.name) === wn);
-      if (o) { r = E.addSel(sys, r, dw.s.id, g.token + '>' + o.token); any = true; break; }
+      for (const o of g ? sys.children(g) : []) {
+        const n = norm(o.name);
+        const at = n ? hayDet.indexOf(' ' + n + ' ') : -1;
+        if (at >= 0 && !found.some(f => f.o === o)) found.push({ o, dw, g, at, len: n.length });
+      }
     }
   }
-  if (!any) report.push('Detachment not recognised – choose it in the army configuration');
+  // longer names first when one is part of another ("Combined Arms" inside "Combined Arms Regiment"), list order after
+  found.sort((a, b) => a.at - b.at || b.len - a.len);
+  const taken = [];
+  for (const f of found) {
+    if (taken.some(t => t.at <= f.at && f.at < t.at + t.len + 1 && t.o !== f.o)) continue;   // part of a longer name taken
+    r = E.addSel(sys, r, f.dw.s.id, f.g.token + '>' + f.o.token);
+    taken.push(f);
+  }
+  if (!taken.length) report.push('Detachment not recognised – choose it in the army configuration');
   // units
   const roots = sys.rootNodes(cat.id).filter(n => ['unit', 'model'].includes(n.type));
   const units = parseArmyText(text);
@@ -164,7 +187,7 @@ export async function importText(text, opts = {}) {
   r = E.autoSync(sys, r);
   const pts = E.totalPoints(E.view(sys, r));
   r.name = `${cat.label} ${pts}`;
-  const notes = importNotes(sys, r, report, made, tot ? Number(tot[1]) : null, units.some(u => u.warlord));
+  const notes = importNotes(sys, r, report, made, tot ? Number(tot[1]) : null, units.some(u => u.warlord), taken.map(t => t.o.name));
   r.importNotes = notes;
   return { army: r, sys, report, notes, units: units.length };
 }
@@ -173,9 +196,10 @@ export async function importText(text, opts = {}) {
 /** Everything the import could not take over 1:1, by importance:
  *  error = not imported · warn = different from the list · rule = rule problem of the imported army · info = note.
  *  → [{ level, text }] (also stored on the army as army.importNotes, shown in the editor until dismissed) */
-function importNotes(sys, r, report, made, listTotal, hasWarlord) {
+function importNotes(sys, r, report, made, listTotal, hasWarlord, dets = []) {
   const notes = [];
   const add = (level, text) => { if (!notes.some(n => n.text === text)) notes.push({ level, text }); };
+  if (dets.length) add('info', `Detachment${dets.length === 1 ? '' : 's'} from the list: ${dets.join(' + ')}`);
   for (const t of report) add(/^Unit not found/.test(t) ? 'error' : 'warn', t);
   const V = E.view(sys, r);
   const modelsOf = w => {
