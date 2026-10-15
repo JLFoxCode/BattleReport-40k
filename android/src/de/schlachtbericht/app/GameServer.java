@@ -123,23 +123,37 @@ class GameServer {
         s.put("code", g.code);
         s.put("createdAt", state.has("createdAt") ? state.get("createdAt") : JSONObject.NULL);
         s.put("stage", state.has("stage") ? state.get("stage") : JSONObject.NULL);
-        JSONArray names = new JSONArray(), ps = state.optJSONArray("players");
+        JSONArray names = new JSONArray(), colors = new JSONArray(), ps = state.optJSONArray("players");
         if (ps != null) for (int i = 0; i < ps.length(); i++) {
             JSONObject p = ps.optJSONObject(i);
             names.put(p == null ? "" : p.optString("name", ""));
+            Object c = p == null ? null : p.opt("color");   // player colours for the join list (integer or null)
+            double d = c instanceof Number ? ((Number) c).doubleValue() : Double.NaN;
+            colors.put(!Double.isNaN(d) && !Double.isInfinite(d) && d == Math.rint(d) ? (Object) (long) d : JSONObject.NULL);
         }
         s.put("players", names);
+        s.put("colors", colors);
         s.put("round", state.optInt("round", 0));
         s.put("seq", g.actions.size());
         g.summary = s;
     }
 
+    /** One write per game at a time (two devices acting at once must not race on the same .tmp file); each write takes
+     *  the current action log, so the last write always holds the newest state. A removed game is not written again. */
     private void persist(Game g) {
+        synchronized (g) {
+            persistLocked(g);
+        }
+    }
+    private void persistLocked(Game g) {
         try {
+            if (games.get(g.code) != g) return;
             File tmp = new File(dir, g.code + ".json.tmp");
             JSONObject o = new JSONObject();
             o.put("code", g.code);
-            o.put("actions", new JSONArray(g.actions));
+            JSONArray actions;
+            synchronized (this) { actions = new JSONArray(g.actions); }   // apply/undo change the list under this lock
+            o.put("actions", actions);
             try (Writer w = new OutputStreamWriter(new FileOutputStream(tmp), StandardCharsets.UTF_8)) { w.write(o.toString()); }
             File dst = new File(dir, g.code + ".json");
             if (!tmp.renameTo(dst)) { dst.delete(); tmp.renameTo(dst); }
@@ -195,7 +209,7 @@ class GameServer {
         for (OutputStream o : g.clients) try { o.close(); } catch (Exception ignored) {}
         games.remove(code);
         try { engine.call("H.drop(" + EngineHost.q(code) + ")"); } catch (Exception ignored) {}
-        new File(dir, code + ".json").delete();
+        synchronized (g) { new File(dir, code + ".json").delete(); }
         notifyListener();
     }
 
@@ -351,11 +365,15 @@ class GameServer {
             if (sub == null) {
                 if (m.equals("GET")) { json(out, 200, game(code).stateJson); return false; }
                 if (m.equals("DELETE")) {
+                    // only the device hosting the game (its own app = loopback) may delete it – not a guest phone on the Wi-Fi
+                    if (!sock.getInetAddress().isLoopbackAddress()) throw new HttpErr(403, "Only the device hosting the game can delete it");
                     Game g = game(code);
+                    send(g, "event: signal\ndata: " + new JSONObject().put("type", "game.deleted").put("code", code).put("ts", System.currentTimeMillis()) + "\n\n");
                     for (OutputStream o : g.clients) try { o.close(); } catch (Exception ignored) {}
+                    synchronized (this) { if (g.closeTimer != null) { g.closeTimer.cancel(false); g.closeTimer = null; } }
                     games.remove(code);
                     engine.call("H.drop(" + EngineHost.q(code) + ")");
-                    new File(dir, code + ".json").delete();
+                    synchronized (g) { new File(dir, code + ".json").delete(); }
                     notifyListener();
                     json(out, 200, new JSONObject().put("ok", true).put("code", code));
                     return false;
@@ -377,8 +395,26 @@ class GameServer {
             }
             if (sub.equals("undo") && m.equals("POST")) {
                 Game g = game(code);
+                // A player's phone ({ by: 0 | 1 }) only undoes its own last action; the scoreboard / setup (no player) undoes any
+                JSONObject b = bodyJson(r);
+                Object bo = b.opt("by");
+                double bd = bo instanceof Number ? ((Number) bo).doubleValue() : -1;
+                Integer by = bd == 0 ? Integer.valueOf(0) : bd == 1 ? Integer.valueOf(1) : null;
                 synchronized (this) {
                     if (g.actions.size() <= 1) { json(out, 400, err("Nothing to undo")); return false; }
+                    JSONObject last = g.actions.get(g.actions.size() - 1);
+                    Object lb = last.opt("by");
+                    if (by != null && !(lb instanceof Number && ((Number) lb).doubleValue() == by)) {
+                        String text = null;
+                        JSONArray log = new JSONObject(g.stateJson).optJSONArray("log");
+                        if (log != null) for (int i = log.length() - 1; i >= 0; i--) {
+                            JSONObject l = log.optJSONObject(i);
+                            if (l != null && l.has("type") && l.opt("type").equals(last.opt("type"))) { text = l.optString("text", ""); break; }
+                        }
+                        json(out, 409, err("The last action was not made on this phone" + (text != null ? " (\u201c" + text + "\u201d)" : "")
+                            + " \u2013 it can only be undone there or on the scoreboard."));
+                        return false;
+                    }
                     List<JSONObject> rest = new ArrayList<>(g.actions.subList(0, g.actions.size() - 1));
                     JSONObject res = engine.call("H.load(" + EngineHost.q(code) + "," + EngineHost.q(new JSONArray(rest).toString()) + ")");
                     if (res.has("error")) { json(out, 400, err("Undo failed: " + res.getString("error"))); return false; }
