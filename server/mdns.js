@@ -2,7 +2,7 @@
  * HostService (NsdManager.registerService) + Discovery (NsdManager.discoverServices/resolveService).
  *
  *   const md = createMdns({ type: '_br40k._tcp', log })
- *   md.setGames(port, summaries)   // advertise every unfinished game as "Battle Report <CODE>" (TXT code/p0/p1/stage);
+ *   md.setGames(port, summaries)   // advertise every unfinished game hosted here (not moved away) as "Battle Report <CODE>" (TXT code/p0/p1/stage);
  *                                  // games that are finished / gone are unadvertised (goodbye, TTL 0)
  *   md.startBrowse()               // find games of other devices
  *   md.list()                      // → [{ name, host, port, code, p0, p1, stage }] (own IPs excluded unless includeSelf)
@@ -353,7 +353,7 @@ export function createMdns(opts = {}) {
     ensureOpen();
     const want = new Map();
     for (const g of summaries || []) {
-      if (!g || g.stage === 'over' || !g.code) continue;
+      if (!g || g.stage === 'over' || !g.code || g.movedTo) continue;   // a game handed over to another device is advertised there
       const players = g.players || [];
       const cut = s => String(s || '').slice(0, 40);
       want.set(g.code, { code: g.code, instance: 'Battle Report ' + g.code, port, txt: { code: g.code, p0: cut(players[0]), p1: cut(players[1]), stage: g.stage || '' } });

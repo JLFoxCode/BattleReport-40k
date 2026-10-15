@@ -343,3 +343,27 @@ PATTERNS.push(
   ['^Last step undone \\((\\d+) actions\\)$', (m, n) => 'Letzter Schritt rückgängig gemacht (' + n + ' Aktionen)'],
   ['^\\((-?\\d+) VP before the caps\\)$', (m, n) => '(' + n + ' VP vor den Obergrenzen)']
 );
+
+/* Handing a game over to another host device (lobby "Take over as host", server messages, the switch on every device) */
+Object.assign(PHRASES, {
+  'Take over as host': 'Als Host übernehmen',
+  'The game moves here with its whole history and this device hosts it from now on. All connected devices switch over automatically; the other device keeps a read-only copy.': 'Das Spiel zieht mit seinem ganzen Verlauf hierher um, und ab jetzt hostet dieses Gerät es. Alle verbundenen Geräte wechseln automatisch; das andere Gerät behält eine schreibgeschützte Kopie.',
+  'Could not take over the game': 'Das Spiel konnte nicht übernommen werden',
+  'A game with this code already exists on this device': 'Auf diesem Gerät gibt es schon ein Spiel mit diesem Code',
+  'The game changed meanwhile – try again': 'Das Spiel hat sich inzwischen geändert – bitte noch einmal versuchen',
+  'The game kept changing during the handover – try again': 'Das Spiel hat sich während der Übergabe immer wieder geändert – bitte noch einmal versuchen',
+  'Only this device itself can take over a game': 'Nur dieses Gerät selbst kann ein Spiel übernehmen',
+  'The old host did not hand over the game': 'Das bisherige Host-Gerät hat das Spiel nicht übergeben',
+  'The other device could not be reached': 'Das andere Gerät war nicht erreichbar',
+  'Invalid address of the old host': 'Ungültige Adresse des bisherigen Host-Geräts',
+  'Port of the new host missing': 'Port des neuen Host-Geräts fehlt',
+  'Action log missing': 'Aktionsprotokoll fehlt', 'Import failed': 'Import fehlgeschlagen'
+});
+Object.assign(EXACT, { 'Take over': 'Übernehmen', 'Moved': 'Umgezogen' });
+PATTERNS.push(
+  ['^Host game (\\w{4}) on this device\\?$', (m, c) => 'Spiel ' + c + ' auf diesem Gerät hosten?'],
+  ['^You are now hosting game (\\w{4})$', (m, c) => 'Dieses Gerät hostet jetzt Spiel ' + c],
+  ['^Game (\\w{4}) moved to (.+) – switching …$', (m, c, n) => 'Spiel ' + c + ' ist auf ' + n + ' umgezogen – wechsle …'],
+  ['^This game was moved to (.+) – continue there\\.$', (m, n) => 'Dieses Spiel ist auf ' + n + ' umgezogen – dort weiterspielen.'],
+  ['^Moved to (.+)$', (m, n) => 'Umgezogen auf ' + n]
+);

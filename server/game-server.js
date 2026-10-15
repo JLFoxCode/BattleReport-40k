@@ -2,6 +2,8 @@
  * Used by the dev server (server.js) and the Windows desktop app (desktop/main.js). Same behaviour as the Android
  * app's GameServer.java: static files + JSON API + SSE, action log persisted as <gamesDir>/<CODE>.json, state = replay
  * of the log through the engine, finished games closed after 2 min (signal "game.closed").
+ * Handover: another device with its own server takes a game over (POST /api/games/import with from → it fetches the log
+ * and calls POST /api/games/CODE/moved here); this server then sends "game.moved" and keeps a read-only copy.
  * No npm dependencies.
  *
  *   const srv = await startGameServer({ root, gamesDir, overlayDir, bsdataDir, port, host, onGamesChanged, log, extraApi, info, engine })
@@ -77,6 +79,8 @@ export async function startGameServer(opts = {}) {
   const onGamesChanged = typeof opts.onGamesChanged === 'function' ? opts.onGamesChanged : null;
   const extraApi = typeof opts.extraApi === 'function' ? opts.extraApi : null;
   let PORT = opts.port == null ? 8417 : Number(opts.port);
+  // shown on the other devices when a game moves here ("moved to <name>")
+  const DEVICE_NAME = String((opts.info && opts.info.name) || os.hostname() || 'host').slice(0, 60);
 
   // ---------------------------------------------------------------- engine
   let engine = opts.engine;
@@ -121,7 +125,7 @@ export async function startGameServer(opts = {}) {
       try {
         await fsp.mkdir(GAMES_DIR, { recursive: true });
         const tmp = path.join(GAMES_DIR, game.code + '.json.tmp');
-        await fsp.writeFile(tmp, JSON.stringify({ code: game.code, actions: game.actions }));
+        await fsp.writeFile(tmp, JSON.stringify(Object.assign({ code: game.code, actions: game.actions }, game.movedTo ? { movedTo: game.movedTo } : {})));
         await fsp.rename(tmp, path.join(GAMES_DIR, game.code + '.json'));
       } catch (e) {
         log.error('Persist failed for', game.code, e);
@@ -140,7 +144,8 @@ export async function startGameServer(opts = {}) {
         const raw = JSON.parse(await fsp.readFile(path.join(GAMES_DIR, f), 'utf8'));
         const actions = Array.isArray(raw.actions) ? raw.actions : [];
         const state = replay(code, actions);
-        games.set(code, { code, actions, state, clients: new Set(), photos: await loadPhotos(code), camera: await loadCamera(code) });
+        const movedTo = raw.movedTo && typeof raw.movedTo === 'object' ? raw.movedTo : null;   // handed over to another host: read-only here
+        games.set(code, { code, actions, state, clients: new Set(), photos: await loadPhotos(code), camera: await loadCamera(code), movedTo });
         checkClose(games.get(code));
         ok++;
       } catch (e) {
@@ -157,6 +162,24 @@ export async function startGameServer(opts = {}) {
     game.state = next;
     game.state.seq = game.actions.length;
     return a;
+  }
+
+  /** A game taken over from another host: replays its log (actions keep their timestamps). Replaces a local copy only if
+   *  that one was moved away earlier (the game comes back). → { game, previous } – not persisted yet. */
+  function installImport(code, actions) {
+    const previous = games.get(code) || null;
+    if (previous && !previous.movedTo) throw httpError(409, 'A game with this code already exists on this device');
+    if (!Array.isArray(actions) || !actions.length || !actions[0] || actions[0].type !== 'game.init') throw httpError(400, 'Action log missing');
+    let state;
+    try { state = replay(code, actions); }
+    catch (e) { throw httpError(400, 'Import failed: ' + (e && e.message ? e.message : e)); }
+    if (previous) {
+      if (previous.closeTimer) { clearTimeout(previous.closeTimer); previous.closeTimer = null; }
+      for (const c of previous.clients) { try { c.end(); } catch {} }
+    }
+    const game = { code, actions: actions.slice(), state, clients: new Set(), photos: previous ? previous.photos : [], camera: previous ? previous.camera : emptyCamera(), movedTo: null };
+    games.set(code, game);
+    return { game, previous };
   }
 
   // Finished game: every connected device stores its own copy (js/archive.js); after a grace period (undo possible) the
@@ -199,7 +222,8 @@ export async function startGameServer(opts = {}) {
       players: (s.players || []).map(p => (p && p.name) || ''),
       colors: (s.players || []).map(p => (p && Number.isInteger(p.color) ? p.color : null)),   // player colours for the join list
       round: s.round || 0,
-      seq: game.actions.length
+      seq: game.actions.length,
+      movedTo: game.movedTo || null   // { host, port, name, at } once the game was handed over to another device
     };
   }
   const summaries = () => [...games.values()].map(summary)
@@ -352,10 +376,78 @@ export async function startGameServer(opts = {}) {
       throw httpError(405, 'Method not allowed');
     }
 
+    // /api/games/import – take over a game hosted by another device (only from this device itself = loopback):
+    //   { code, actions }                → create the game here from this action log
+    //   { code, from: { host, port } }   → handover: fetch the log from the old host, create the game here, then tell the
+    //                                      old host (POST …/moved) – it sends "game.moved" to its devices and refuses actions
+    if (parts.length === 3 && parts[1] === 'games' && parts[2] === 'import') {
+      if (m !== 'POST') throw httpError(405, 'Method not allowed');
+      if (!isLoopback(req)) throw httpError(403, 'Only this device itself can take over a game');
+      const body = await readJson(req);
+      const code = String(body.code || '').toUpperCase();
+      if (!isCode(code)) throw httpError(400, 'Invalid game code');
+      const from = body.from && typeof body.from === 'object' ? body.from : null;
+      if (!from) {
+        const { game } = installImport(code, body.actions);
+        await persist(game);
+        checkClose(game);
+        changed();
+        return sendJson(res, 201, { code, state: game.state });
+      }
+      const fromHost = String(from.host || ''), fromPort = Number(from.port);
+      if (!/^[\w.:-]+$/.test(fromHost) || !Number.isInteger(fromPort) || fromPort < 1 || fromPort > 65535) throw httpError(400, 'Invalid address of the old host');
+      const remote = `http://${fromHost.includes(':') ? '[' + fromHost + ']' : fromHost}:${fromPort}/api/games/${code}`;
+      // the old host checks that nothing happened between reading the log and the move; then simply read it again
+      for (let attempt = 0; attempt < 3; attempt++) {
+        const got = await remoteJson('GET', remote + '/log');
+        if (!got.ok) throw httpError(502, 'The old host did not hand over the game: ' + ((got.data && got.data.error) || 'HTTP ' + got.status));
+        const { game, previous } = installImport(code, got.data && got.data.actions);
+        const last = game.actions[game.actions.length - 1];
+        const mv = await remoteJson('POST', remote + '/moved', { port: PORT, name: DEVICE_NAME, seq: game.actions.length, lastTs: (last && last.ts) || null }).catch(e => ({ ok: false, status: 502, data: { error: e.message } }));
+        if (mv.ok) {
+          await persist(game);
+          checkClose(game);
+          changed();
+          log.log('Game ' + code + ' taken over from ' + fromHost + ':' + fromPort);
+          return sendJson(res, 201, { code, state: game.state });
+        }
+        if (previous) games.set(code, previous); else games.delete(code);   // undo the local import
+        if (!(mv.status === 409 && mv.data && mv.data.changed)) throw httpError(502, 'The old host did not hand over the game: ' + ((mv.data && mv.data.error) || 'HTTP ' + mv.status));
+      }
+      throw httpError(409, 'The game kept changing during the handover – try again');
+    }
+
     // /api/games/:code[/...]
     if (parts.length >= 3 && parts[1] === 'games') {
       const code = String(parts[2]).toUpperCase();
       const sub = parts[3] || null;
+
+      // The game was handed over to another device: the old host only keeps a read-only copy
+      if (sub && sub !== 'moved' && m !== 'GET' && m !== 'HEAD') {
+        const mg = games.get(code);
+        if (mg && mg.movedTo) return sendJson(res, 409, { error: movedMessage(mg.movedTo), movedTo: mg.movedTo });
+      }
+
+      // /api/games/:code/moved { port, name, seq, lastTs } – called by the new host after it imported the game. The new
+      // address is the caller's own (a device can only move a game to itself); seq/lastTs must still match this log.
+      if (sub === 'moved' && m === 'POST') {
+        const g = getGame(code);
+        const body = await readJson(req);
+        const port = Number(body.port);
+        if (!Number.isInteger(port) || port < 1 || port > 65535) throw httpError(400, 'Port of the new host missing');
+        const host = remoteIp(req);
+        if (g.movedTo && !(g.movedTo.host === host && g.movedTo.port === port)) return sendJson(res, 409, { error: movedMessage(g.movedTo), movedTo: g.movedTo });
+        const last = g.actions[g.actions.length - 1];
+        if (!g.movedTo && (Number(body.seq) !== g.actions.length || (body.lastTs != null && last && body.lastTs !== last.ts))) {
+          return sendJson(res, 409, { error: 'The game changed meanwhile – try again', changed: true });
+        }
+        g.movedTo = { host, port, name: String(body.name || '').trim().slice(0, 60) || host, at: new Date().toISOString() };
+        await persist(g);
+        sseSend(g, 'signal', Object.assign({ type: 'game.moved', code, ts: Date.now() }, g.movedTo));
+        log.log('Game ' + code + ' moved to ' + g.movedTo.name + ' (' + host + ':' + port + ')');
+        changed();
+        return sendJson(res, 200, { ok: true, movedTo: g.movedTo });
+      }
 
       if (!sub) {
         if (m === 'GET') return sendJson(res, 200, getGame(code).state);
@@ -428,6 +520,8 @@ export async function startGameServer(opts = {}) {
         });
         res.write(': verbunden\n\n');
         res.write(`event: state\ndata: ${JSON.stringify(g.state)}\n\n`);
+        // a device that missed the handover (offline, opened an old link) switches to the new host right away
+        if (g.movedTo) res.write(`event: signal\ndata: ${JSON.stringify(Object.assign({ type: 'game.moved', code, ts: Date.now() }, g.movedTo))}\n\n`);
         g.clients.add(res);
         const hb = setInterval(() => { try { res.write(': hb\n\n'); } catch { cleanup(); } }, HEARTBEAT_MS);
         const cleanup = () => { clearInterval(hb); g.clients.delete(res); };
@@ -727,6 +821,21 @@ async function readJson(req) {
 }
 
 function httpError(status, message) { return Object.assign(new Error(message), { status }); }
+const movedMessage = to => 'This game was moved to ' + ((to && (to.name || to.host)) || 'another device') + ' – continue there.';
+/** IP address of the calling device (IPv4-mapped IPv6 → plain IPv4). */
+function remoteIp(req) { return String((req.socket && req.socket.remoteAddress) || '').replace(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/, '$1'); }
+/** JSON request to another game server on the LAN (handover) → { ok, status, data }; unreachable → HTTP error 502. */
+async function remoteJson(method, url, body) {
+  let r;
+  try {
+    r = await fetch(url, { method, headers: body ? { 'Content-Type': 'application/json' } : undefined, body: body ? JSON.stringify(body) : undefined, signal: AbortSignal.timeout(10000) });
+  } catch (e) {
+    throw httpError(502, 'The other device could not be reached (' + (e && e.message ? e.message : e) + ')');
+  }
+  let data = null;
+  try { data = JSON.parse(await r.text()); } catch {}
+  return { ok: r.ok, status: r.status, data };
+}
 /** Request from this machine itself (the hosting device's own app / browser), not from another device on the network. */
 function isLoopback(req) {
   const a = String((req.socket && req.socket.remoteAddress) || '');

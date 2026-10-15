@@ -173,10 +173,34 @@ function nearbySection() {
             ${btn({ label: 'Scoreboard', kind: 'ghost', small: true, action: 'remote', data: { route: 'table' } })}
             ${btn({ label: 'Spectator', kind: 'ghost', small: true, action: 'remote', data: { route: 'watch' } })}
           </div>
+          ${canTakeOver(g) ? `<div class="row game-foot">${btn({ label: 'Take over as host', kind: 'ghost', small: true, action: 'takeover' })}</div>` : ''}
         </article>`).join('')}</div>`
       : '<p class="muted small">Searching the Wi-Fi … A game appears here as soon as a device in the same network creates one with this app.</p>'}
       <p class="muted hint">A game you create on this device is hosted by it – the other devices find it automatically, or scan the QR codes shown at "Roll off for the first turn".</p>
     </section>`;
+}
+
+/* Handover: a game hosted by another device (e.g. the phone it was started on) moves to this device, which has its own
+ * server – only on this device's own page (its server accepts the import only from itself), not for a game hosted here. */
+function canTakeOver(g) {
+  return onHost() && g.stage !== 'over' && !(games || []).some(x => x.code === g.code && !x.movedTo);
+}
+async function takeOver(c) {
+  const code = c.dataset.ncode;
+  const ok = await confirmSheet({
+    title: `Host game ${code} on this device?`,
+    text: 'The game moves here with its whole history and this device hosts it from now on. All connected devices switch over automatically; the other device keeps a read-only copy.',
+    ok: 'Take over'
+  });
+  if (!ok) return;
+  try {
+    await api.takeOver(code, c.dataset.host, c.dataset.port);
+    toast(`You are now hosting game ${code}`, 'ok');
+    games = null;
+    lastCtx.nav(`#/g/${code}/table`);
+  } catch (e) {
+    toast(e && e.message ? e.message : 'Could not take over the game', 'bad', 5000);
+  }
 }
 
 /* Finished games stored on THIS device (the host closes a game when it is over; every connected device keeps a copy). */
@@ -246,12 +270,15 @@ function renderList(host) {
   if (loadErr) return `<div class="card bad"><p>Could not load the list: ${esc(loadErr)}</p></div>`;
   if (games === null) return `<div class="card muted">Loading …</div>`;
   if (!games.length) return `<div class="card muted empty">${onHost() ? 'No games on this device yet.' : 'No games on the host device yet.'}</div>`;
+  // a game handed over to another device: read-only here, the role buttons open it on the new host
+  const mv = g => g.movedTo && g.movedTo.host && g.movedTo.port ? g.movedTo : null;
   return `<div class="grid game-grid">${games.map(g => `
-    <article class="card game" data-code="${esc(g.code)}"${Array.isArray(g.colors) ? ` style="${g.colors.map((c, i) => (c == null ? '' : `--p${i}:${colorOf(c)};`)).join('')}"` : ''}>
+    <article class="card game${mv(g) ? ' moved' : ''}" data-code="${esc(g.code)}"${mv(g) ? ` data-ncode="${esc(g.code)}" data-host="${esc(mv(g).host)}" data-port="${esc(mv(g).port)}"` : ''}${Array.isArray(g.colors) ? ` style="${g.colors.map((c, i) => (c == null ? '' : `--p${i}:${colorOf(c)};`)).join('')}"` : ''}>
       <div class="row between game-head">
         <div class="code">${esc(g.code)}</div>
-        ${badge(STAGE_LABEL[g.stage] || g.stage || '–', STAGE_KIND[g.stage] || '')}
+        ${mv(g) ? badge('Moved', 'warn') : badge(STAGE_LABEL[g.stage] || g.stage || '–', STAGE_KIND[g.stage] || '')}
       </div>
+      ${mv(g) ? `<div class="muted small moved-to">Moved to ${esc(mv(g).name || mv(g).host)}</div>` : ''}
       <div class="game-players">
         <span class="pname p0">${esc(g.players && g.players[0] || 'Player 1')}</span>
         <span class="muted vs">vs</span>
@@ -259,10 +286,12 @@ function renderList(host) {
       </div>
       <div class="muted small">${g.stage === 'battle' || g.stage === 'over' ? `Round ${esc(g.round || 0)} · ` : ''}${g.createdAt ? fmtDate(g.createdAt) : ''}</div>
       <div class="row roles">
-        ${ROLES.map(r => btn({ label: r.label, kind: r.kind, cls: r.cls, small: true, action: 'open', data: { view: r.view, me: r.me == null ? '' : r.me } })).join('')}
+        ${ROLES.map(r => (mv(g)
+          ? btn({ label: r.label, kind: r.kind, cls: r.cls, small: true, action: 'remote', data: { route: r.view === 'player' ? 'p/' + r.me : r.view } })
+          : btn({ label: r.label, kind: r.kind, cls: r.cls, small: true, action: 'open', data: { view: r.view, me: r.me == null ? '' : r.me } }))).join('')}
       </div>
       <div class="row between game-foot">
-        <span class="muted tiny">http://${esc(host)}/#/g/${esc(g.code)}/table</span>
+        <span class="muted tiny">http://${esc(mv(g) ? mv(g).host + ':' + mv(g).port : host)}/#/g/${esc(g.code)}/table</span>
         ${onHost() ? btn({ label: 'Delete', kind: 'danger', small: true, action: 'delete' }) : ''}
       </div>
     </article>`).join('')}</div>`;
@@ -309,6 +338,11 @@ function onClick(e) {
   if (action === 'remote') {
     const c = b.closest('[data-ncode]');
     if (c) location.href = `http://${c.dataset.host}:${c.dataset.port}/index.html#/g/${c.dataset.ncode}/${b.dataset.route}`;
+    return;
+  }
+  if (action === 'takeover') {
+    const c = b.closest('[data-ncode]');
+    if (c) takeOver(c);
     return;
   }
   if (action === 'reload') return load();

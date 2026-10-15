@@ -79,6 +79,7 @@ public class HostService extends Service {
         Set<String> active = new HashSet<>();
         for (JSONObject g : games) {
             if ("over".equals(g.optString("stage"))) continue;
+            if (g.optJSONObject("movedTo") != null) continue;   // handed over to another device – advertised there
             String code = g.optString("code");
             active.add(code);
             String p0 = g.optJSONArray("players") != null ? g.optJSONArray("players").optString(0, "") : "";

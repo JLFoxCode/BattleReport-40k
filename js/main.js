@@ -254,6 +254,8 @@ async function connect(code) {
   unsubState = net.subscribe(s => { if (net && s && s.code === code) pushState(s); });
   // The host closes a finished game (signal "game.closed") → continue with the copy stored on this device
   const unsubClosed = net.onSignal(sig => {
+    // The game was handed over to another device (it hosts it now) → continue there in the same role
+    if (sig && sig.type === 'game.moved' && sig.code === code) { followMove(code, sig); return; }
     if (!sig || sig.type !== 'game.closed' || store.code !== code) return;
     toast('Game ' + code + ' was closed by the host – it is saved on this device.', 'ok', 5000);
     const href = archiveHref(code);
@@ -274,6 +276,21 @@ async function connect(code) {
     }
     // andere Fehler: SSE/Reconnect übernimmt
   }
+}
+
+/** Game moved to another host ({ host, port, name }): open the same game in the same role (same hash) there. */
+let moving = false;
+function followMove(code, to) {
+  if (moving || !to || !to.host || !to.port || store.code !== code) return;
+  moving = true;
+  const host = String(to.host).includes(':') ? `[${to.host}]` : String(to.host);
+  const origin = `http://${host}:${Number(to.port)}`;
+  toast(`Game ${code} moved to ${to.name || to.host} – switching …`, 'ok', 4000);
+  disconnect();
+  setTimeout(() => {
+    if (origin === location.origin) { moving = false; store.code = null; route(); }
+    else location.href = `${origin}/index.html${location.hash}`;
+  }, 800);
 }
 
 /** Battle over → store the final state + full action log on THIS device (once per game code and device). */
@@ -306,6 +323,7 @@ async function dispatch(action) {
   try {
     return await net.dispatch(a);
   } catch (e) {
+    if (e && e.status === 409 && e.data && e.data.movedTo) { followMove(store.code, e.data.movedTo); return null; }
     console.warn('dispatch', a.type, e);
     toast(e && e.message ? e.message : 'Action failed', 'bad');
     return null;
@@ -320,6 +338,7 @@ async function undo() {
     toast(r && r.undone > 1 ? `Last step undone (${r.undone} actions)` : 'Last action undone', 'ok', 1500);
     return r ? r.state : null;
   } catch (e) {
+    if (e && e.status === 409 && e.data && e.data.movedTo) { followMove(store.code, e.data.movedTo); return null; }
     toast(e && e.message ? e.message : 'Undo failed', 'bad');
     return null;
   }

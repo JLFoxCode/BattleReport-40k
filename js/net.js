@@ -13,7 +13,7 @@
  *   getCamera() → Promise<camera>, setCamera(patch) → Promise<camera>, clearCamera() → Promise<camera>
  *   close()
  * }
- * api = { listGames(), createGame(names), deleteGame(code), getState(code), getLog(code, since), listPhotos(code) }
+ * api = { listGames(), createGame(names), deleteGame(code), getState(code), getLog(code, since), takeOver(code, host, port), listPhotos(code) }
  */
 
 async function request(method, url, body) {
@@ -47,6 +47,8 @@ export const api = {
   deleteGame: (code) => request('DELETE', `/api/games/${encodeURIComponent(code)}`),
   getState: (code) => request('GET', `/api/games/${encodeURIComponent(code)}`),
   getLog: (code, since = 0) => request('GET', `/api/games/${encodeURIComponent(code)}/log?since=${since | 0}`),
+  // handover: this device's own server takes the game over from the device at host:port (it then hosts it)
+  takeOver: (code, host, port) => request('POST', '/api/games/import', { code, from: { host, port: Number(port) } }),
   listPhotos: (code) => request('GET', `/api/games/${encodeURIComponent(code)}/photos`)
 };
 

@@ -23,6 +23,8 @@ class GameServer {
         JSONObject summary = new JSONObject();
         final Set<OutputStream> clients = ConcurrentHashMap.newKeySet();
         ScheduledFuture<?> closeTimer;
+        /** { host, port, name, at } once the game was handed over to another device – read-only here from then on. */
+        JSONObject movedTo;
         Game(String code) { this.code = code; }
     }
 
@@ -107,6 +109,7 @@ class GameServer {
                 Game g = new Game(f.getName().substring(0, 4));
                 JSONArray a = raw.optJSONArray("actions");
                 if (a != null) for (int i = 0; i < a.length(); i++) g.actions.add(a.getJSONObject(i));
+                g.movedTo = raw.optJSONObject("movedTo");
                 JSONObject r = engine.call("H.load(" + EngineHost.q(g.code) + "," + EngineHost.q(new JSONArray(g.actions).toString()) + ")");
                 if (r.has("error")) throw new Exception(r.getString("error"));
                 setState(g, r.getJSONObject("state"));
@@ -135,6 +138,7 @@ class GameServer {
         s.put("colors", colors);
         s.put("round", state.optInt("round", 0));
         s.put("seq", g.actions.size());
+        s.put("movedTo", g.movedTo != null ? g.movedTo : JSONObject.NULL);
         g.summary = s;
     }
 
@@ -154,6 +158,7 @@ class GameServer {
             JSONArray actions;
             synchronized (this) { actions = new JSONArray(g.actions); }   // apply/undo change the list under this lock
             o.put("actions", actions);
+            if (g.movedTo != null) o.put("movedTo", g.movedTo);
             try (Writer w = new OutputStreamWriter(new FileOutputStream(tmp), StandardCharsets.UTF_8)) { w.write(o.toString()); }
             File dst = new File(dir, g.code + ".json");
             if (!tmp.renameTo(dst)) { dst.delete(); tmp.renameTo(dst); }
@@ -191,6 +196,63 @@ class GameServer {
         int k = 1;
         while (k < n - 1 && grp.equals(actions.get(n - 1 - k).opt("group"))) k++;
         return k;
+    }
+
+    /** A game taken over from another host: replays its log (actions keep their timestamps). Replaces a local copy only if
+     *  that one was moved away earlier (the game comes back). Not persisted yet. */
+    private synchronized Game installImport(String code, JSONArray actions) throws Exception {
+        Game previous = games.get(code);
+        if (previous != null && previous.movedTo == null) throw new HttpErr(409, "A game with this code already exists on this device");
+        JSONObject first = actions == null ? null : actions.optJSONObject(0);
+        if (first == null || !"game.init".equals(first.optString("type"))) throw new HttpErr(400, "Action log missing");
+        JSONObject res = engine.call("H.load(" + EngineHost.q(code) + "," + EngineHost.q(actions.toString()) + ")");
+        if (res.has("error")) throw new HttpErr(400, "Import failed: " + res.getString("error"));
+        Game g = new Game(code);
+        for (int i = 0; i < actions.length(); i++) g.actions.add(actions.getJSONObject(i));
+        setState(g, res.getJSONObject("state"));
+        if (previous != null) {
+            if (previous.closeTimer != null) { previous.closeTimer.cancel(false); previous.closeTimer = null; }
+            for (OutputStream o : previous.clients) try { o.close(); } catch (Exception ignored) {}
+        }
+        games.put(code, g);
+        return g;
+    }
+
+    private static String movedMessage(JSONObject to) {
+        String n = to.optString("name", "");
+        return "This game was moved to " + (n.isEmpty() ? to.optString("host", "another device") : n) + " – continue there.";
+    }
+    private static JSONObject movedSignal(String code, JSONObject to) throws Exception {
+        JSONObject s = new JSONObject().put("type", "game.moved").put("code", code).put("ts", System.currentTimeMillis());
+        for (Iterator<String> it = to.keys(); it.hasNext(); ) { String k = it.next(); s.put(k, to.get(k)); }
+        return s;
+    }
+
+    private static class Resp { final int status; final JSONObject data; Resp(int s, JSONObject d) { status = s; data = d; } }
+    /** JSON request to another game server on the LAN (handover); unreachable → HTTP error 502. */
+    private static Resp remoteJson(String method, String url, JSONObject body) throws HttpErr {
+        HttpURLConnection c = null;
+        try {
+            c = (HttpURLConnection) new URL(url).openConnection();
+            c.setConnectTimeout(10000);
+            c.setReadTimeout(10000);
+            c.setRequestMethod(method);
+            if (body != null) {
+                byte[] b = body.toString().getBytes(StandardCharsets.UTF_8);
+                c.setDoOutput(true);
+                c.setRequestProperty("Content-Type", "application/json");
+                c.setFixedLengthStreamingMode(b.length);
+                try (OutputStream o = c.getOutputStream()) { o.write(b); }
+            }
+            int status = c.getResponseCode();
+            InputStream in = status < 400 ? c.getInputStream() : c.getErrorStream();
+            String t = in == null ? "" : new String(readAll(in), StandardCharsets.UTF_8);
+            JSONObject data;
+            try { data = new JSONObject(t); } catch (Exception e) { data = new JSONObject(); }
+            return new Resp(status, data);
+        } catch (IOException e) {
+            throw new HttpErr(502, "The other device could not be reached (" + e.getMessage() + ")");
+        } finally { if (c != null) c.disconnect(); }
     }
 
     private static String iso() {
@@ -371,9 +433,99 @@ class GameServer {
             throw new HttpErr(405, "Method not allowed");
         }
 
+        // /api/games/import – take over a game hosted by another device (only from this device itself = loopback):
+        //   { code, actions } → create it here from this log; { code, from: { host, port } } → handover: fetch the log from
+        //   the old host, create the game here, then tell the old host (POST …/moved). Same as server/game-server.js.
+        if (parts.length == 3 && parts[1].equals("games") && parts[2].equals("import")) {
+            if (!m.equals("POST")) throw new HttpErr(405, "Method not allowed");
+            if (!sock.getInetAddress().isLoopbackAddress()) throw new HttpErr(403, "Only this device itself can take over a game");
+            JSONObject b = bodyJson(r);
+            String code = b.optString("code", "").toUpperCase(Locale.ROOT);
+            if (!code.matches("[A-Z]{4}")) throw new HttpErr(400, "Invalid game code");
+            JSONObject from = b.optJSONObject("from");
+            if (from == null) {
+                Game g = installImport(code, b.optJSONArray("actions"));
+                persist(g);
+                checkClose(g);
+                notifyListener();
+                json(out, 201, "{\"code\":\"" + code + "\",\"state\":" + g.stateJson + "}");
+                return false;
+            }
+            String fromHost = from.optString("host", "");
+            int fromPort = from.optInt("port", 0);
+            if (!fromHost.matches("[\\w.:-]+") || fromPort < 1 || fromPort > 65535) throw new HttpErr(400, "Invalid address of the old host");
+            String remote = "http://" + (fromHost.contains(":") ? "[" + fromHost + "]" : fromHost) + ":" + fromPort + "/api/games/" + code;
+            // the old host checks that nothing happened between reading the log and the move; then simply read it again
+            for (int attempt = 0; attempt < 3; attempt++) {
+                Resp got = remoteJson("GET", remote + "/log", null);
+                if (got.status >= 300) throw new HttpErr(502, "The old host did not hand over the game: " + got.data.optString("error", "HTTP " + got.status));
+                Game previous = games.get(code);
+                Game g = installImport(code, got.data.optJSONArray("actions"));
+                JSONObject last = g.actions.get(g.actions.size() - 1);
+                Resp mv;
+                try {
+                    mv = remoteJson("POST", remote + "/moved", new JSONObject().put("port", port).put("name", android.os.Build.MODEL)
+                        .put("seq", g.actions.size()).put("lastTs", last.has("ts") ? last.get("ts") : JSONObject.NULL));
+                } catch (HttpErr e) { mv = new Resp(502, err(e.getMessage())); }
+                if (mv.status < 300) {
+                    persist(g);
+                    checkClose(g);
+                    notifyListener();
+                    json(out, 201, "{\"code\":\"" + code + "\",\"state\":" + g.stateJson + "}");
+                    return false;
+                }
+                synchronized (this) {   // undo the local import
+                    if (previous != null) {
+                        games.put(code, previous);
+                        engine.call("H.load(" + EngineHost.q(code) + "," + EngineHost.q(new JSONArray(previous.actions).toString()) + ")");
+                    } else { games.remove(code); engine.call("H.drop(" + EngineHost.q(code) + ")"); }
+                }
+                if (!(mv.status == 409 && mv.data.optBoolean("changed"))) throw new HttpErr(502, "The old host did not hand over the game: " + mv.data.optString("error", "HTTP " + mv.status));
+            }
+            throw new HttpErr(409, "The game kept changing during the handover – try again");
+        }
+
         if (parts.length >= 3 && parts[1].equals("games")) {
             String code = parts[2].toUpperCase(Locale.ROOT);
             String sub = parts.length > 3 ? parts[3] : null;
+            // The game was handed over to another device: the old host only keeps a read-only copy
+            if (sub != null && !sub.equals("moved") && !m.equals("GET") && !m.equals("HEAD")) {
+                Game mg = games.get(code);
+                if (mg != null && mg.movedTo != null) { json(out, 409, err(movedMessage(mg.movedTo)).put("movedTo", mg.movedTo)); return false; }
+            }
+            // /api/games/:code/moved { port, name, seq, lastTs } – called by the new host after it imported the game. The new
+            // address is the caller's own (a device can only move a game to itself); seq/lastTs must still match this log.
+            if ("moved".equals(sub) && m.equals("POST")) {
+                Game g = game(code);
+                JSONObject b = bodyJson(r);
+                int newPort = b.optInt("port", 0);
+                if (newPort < 1 || newPort > 65535) throw new HttpErr(400, "Port of the new host missing");
+                String host = sock.getInetAddress().getHostAddress();
+                JSONObject sig;
+                synchronized (this) {
+                    if (g.movedTo != null && !(host.equals(g.movedTo.optString("host")) && g.movedTo.optInt("port") == newPort)) {
+                        json(out, 409, err(movedMessage(g.movedTo)).put("movedTo", g.movedTo));
+                        return false;
+                    }
+                    JSONObject last = g.actions.isEmpty() ? null : g.actions.get(g.actions.size() - 1);
+                    Object lastTs = b.opt("lastTs");
+                    if (g.movedTo == null && (b.optInt("seq", -1) != g.actions.size()
+                            || (lastTs instanceof String && last != null && !lastTs.equals(last.optString("ts", null))))) {
+                        json(out, 409, err("The game changed meanwhile – try again").put("changed", true));
+                        return false;
+                    }
+                    String name = b.optString("name", "").trim();
+                    if (name.length() > 60) name = name.substring(0, 60);
+                    g.movedTo = new JSONObject().put("host", host).put("port", newPort).put("name", name.isEmpty() ? host : name).put("at", iso());
+                    g.summary.put("movedTo", g.movedTo);
+                    sig = movedSignal(code, g.movedTo);
+                }
+                persist(g);
+                send(g, "event: signal\ndata: " + sig + "\n\n");
+                notifyListener();
+                json(out, 200, new JSONObject().put("ok", true).put("movedTo", g.movedTo));
+                return false;
+            }
             if (sub == null) {
                 if (m.equals("GET")) { json(out, 200, game(code).stateJson); return false; }
                 if (m.equals("DELETE")) {
@@ -453,6 +605,9 @@ class GameServer {
                 sock.setSoTimeout(0);
                 head(out, 200, "text/event-stream; charset=utf-8", 0, true);
                 out.write((": connected\n\nevent: state\ndata: " + g.stateJson + "\n\n").getBytes(StandardCharsets.UTF_8));
+                // a device that missed the handover (offline, opened an old link) switches to the new host right away
+                JSONObject moved = g.movedTo;
+                if (moved != null) out.write(("event: signal\ndata: " + movedSignal(code, moved) + "\n\n").getBytes(StandardCharsets.UTF_8));
                 out.flush();
                 g.clients.add(out);
                 return true;
