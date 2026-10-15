@@ -113,7 +113,7 @@ function listHtml() {
     <header class="arm-head">
       <a class="btn ghost sm" href="#/">‹ Menu</a>
       <h1 class="title">My armies</h1>
-      ${btn({ label: 'New army', kind: 'primary', action: 'arm-new' })}
+      <div class="row nowrap">${btn({ label: '⇩ Import list', kind: 'ghost', small: true, action: 'arm-import' })}${btn({ label: 'New army', kind: 'primary', action: 'arm-new' })}</div>
     </header>
     ${list.length ? `<div class="arm-list">${list.map(a => {
       const s = a.summary || {};
@@ -198,10 +198,10 @@ async function newArmy() {
   });
 }
 /** Import from New Recruit: a file (.txt text export, .ros/.rosz roster) or pasted text → a new army, opened in the editor. */
-function openImport() {
-  const body = `<p class="small muted">In New Recruit: <b>Export → Text</b> (paste it or choose the .txt) or <b>Download roster</b> (.rosz). The roster file is matched exactly; a text export is matched by names.</p>
-    <label class="field"><span>File</span><input type="file" name="file" accept=".txt,.ros,.rosz,text/plain"></label>
-    <label class="field"><span>or paste the text export</span><textarea name="text" rows="8" placeholder="Paste the New Recruit text export here" spellcheck="false"></textarea></label>`;
+function openImport(fallbackCat = null) {
+  const body = `<p class="small muted">Paste a list – a New Recruit text export, a GW app list or a list copied from Reddit, a forum or a chat – or choose a file (New Recruit <b>.txt</b> or roster <b>.rosz</b>). Units, models, wargear, enhancements and the Warlord are matched by name; the import becomes a new army.${fallbackCat ? ' Without a faction line in the list, the faction of this army is used.' : ''}</p>
+    <label class="field"><span>Paste the list</span><textarea name="text" rows="9" placeholder="Paste the army list here" spellcheck="false"></textarea></label>
+    <label class="field"><span>or choose a file</span><input type="file" name="file" accept=".txt,.ros,.rosz,text/plain"></label>`;
   sheet({
     title: 'Import army', body, cls: 'arm-import-sheet wide', focus: false,
     actions: [{ label: 'Cancel', kind: 'ghost' }, { label: 'Import', kind: 'primary', onClick: (close, el) => {
@@ -209,7 +209,7 @@ function openImport() {
       const text = el.querySelector('textarea').value;
       if (!file && !text.trim()) { toast('Choose a file or paste the export', 'warn'); return false; }
       toast('Importing …', 'ok', 1500);
-      (file ? importArmyFile(file) : importText(text)).then(res => {
+      (file ? importArmyFile(file) : importText(text, { catalogueId: fallbackCat })).then(res => {
         close();
         const saved = saveWithSummary(res.sys, res.army);
         lastCtx.nav('#/armies/' + saved.id);
@@ -295,6 +295,7 @@ function problems(V) {
   return out;
 }
 function saveWithSummary(sys, r) {
+  try { r = Object.assign({}, r, { sel: E.nameSels(sys, r).sel }); } catch {}   // names kept for later data updates
   const V = E.view(sys, r);
   const s = summarize(sys, r);
   r.summary = { points: E.totalPoints(V), errors: problems(V).length, detachments: s.detachments, size: s.size };
@@ -341,6 +342,7 @@ function editorHtml() {
     <div class="arm-add">${btn({ label: '+ Add unit', kind: 'primary', cta: true, action: 'arm-add' })}</div>
     <div class="arm-foot row">
       ${btn({ label: 'Copy as text', kind: 'ghost', small: true, action: 'arm-text' })}
+      ${btn({ label: '⇩ Import list', kind: 'ghost', small: true, action: 'arm-import' })}
       ${btn({ label: 'Battle size', kind: 'ghost', small: true, action: 'arm-size' })}
     </div>
   </div>`;
@@ -1179,6 +1181,7 @@ async function onClick(e) {
   if (a === 'arm-mcmp') { e.stopPropagation(); return openModelCompare(b.dataset.id, b.dataset.cat || ''); }
   if (a === 'arm-mpick') { e.stopPropagation(); ed.modelPick[b.dataset.key] = b.dataset.tok; return refreshUnitSheet(); }
   if (a === 'arm-new') return newArmy();
+  if (a === 'arm-import') return openImport(ed.id && ed.army ? ed.army.catalogueId : null);
   if (a === 'arm-open') return lastCtx.nav('#/armies/' + b.dataset.id);
   if (a === 'arm-del') {
     const ar = loadArmy(b.dataset.id);
@@ -1272,6 +1275,8 @@ function syncDiff(a, b) {
 function syncOnOpen(sys) {
   try {
     const before = JSON.stringify(ed.army.sel);
+    const stale = E.view(sys, ed.army).stale.length;
+    if (stale) setTimeout(() => toast(`New Recruit data changed: ${stale} choice${stale === 1 ? ' was' : 's were'} adjusted (found again by name, or replaced by the default). Please check the army.`, 'warn', 8000), 300);
     const r = autoPick(sys, E.autoSync(sys, ed.army));
     if (JSON.stringify(r.sel) !== before) saveWithSummary(sys, Object.assign({}, ed.army, { sel: r.sel }));
   } catch (e) { console.warn('sync', e); }

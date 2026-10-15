@@ -78,7 +78,8 @@
           {"name": "W", "$text": "2", "typeId": "750a-a2ec-90d3-21fe"},
           {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
           {"name": "OC", "$text": "2", "typeId": "bef7-942a-1a23-59f8"},
-          {"name": "InSv", "$text": "", "typeId": "55a7-5b54-c60d-11dc"}
+          {"name": "InSv", "$text": "", "typeId": "55a7-5b54-c60d-11dc"},
+          {"name": "Base", "$text": "28.5mm", "typeId": "nr-base-size"}
         ]
       },
       {
@@ -94,7 +95,8 @@
           {"name": "W", "$text": "2", "typeId": "750a-a2ec-90d3-21fe"},
           {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
           {"name": "OC", "$text": "2", "typeId": "bef7-942a-1a23-59f8"},
-          {"name": "InSv", "$text": "", "typeId": "55a7-5b54-c60d-11dc"}
+          {"name": "InSv", "$text": "", "typeId": "55a7-5b54-c60d-11dc"},
+          {"name": "Base", "$text": "32mm", "typeId": "nr-base-size"}
         ]
       }
     ],
@@ -264,7 +266,8 @@
                   {"name": "W", "$text": "5", "typeId": "750a-a2ec-90d3-21fe"},
                   {"name": "LD", "$text": "5+", "typeId": "58d2-b879-49c7-43bc"},
                   {"name": "OC", "$text": "1", "typeId": "bef7-942a-1a23-59f8"},
-                  {"name": "InSv", "$text": "4+", "typeId": "55a7-5b54-c60d-11dc"}
+                  {"name": "InSv", "$text": "4+", "typeId": "55a7-5b54-c60d-11dc"},
+                  {"name": "Base", "$text": "40mm", "typeId": "nr-base-size"}
                 ]
               }
             ],
@@ -373,7 +376,8 @@
                   {"name": "W", "$text": "1", "typeId": "750a-a2ec-90d3-21fe"},
                   {"name": "LD", "$text": "8+", "typeId": "58d2-b879-49c7-43bc"},
                   {"name": "OC", "$text": "1", "typeId": "bef7-942a-1a23-59f8"},
-                  {"name": "InSv", "$text": "4+", "typeId": "55a7-5b54-c60d-11dc"}
+                  {"name": "InSv", "$text": "4+", "typeId": "55a7-5b54-c60d-11dc"},
+                  {"name": "Base", "$text": "40mm", "typeId": "nr-base-size"}
                 ]
               }
             ],
@@ -558,7 +562,10 @@
             ]
           }
         ],
-        "infoLinks": [{"name": "Combat Doctrines", "id": "9b7-7f23-d635-d7f2", "hidden": false, "targetId": "3b76-4053-ece9-6e7d", "type": "rule"}],
+        "infoLinks": [
+          {"name": "Combat Doctrines", "id": "9b7-7f23-d635-d7f2", "hidden": false, "targetId": "3b76-4053-ece9-6e7d", "type": "rule"},
+          {"name": "Transhuman Strategist", "id": "5f23-7721-a8c5-94e0", "hidden": false, "targetId": "c6cc-c38c-dfe6-dbb8", "type": "rule"}
+        ],
         "modifierGroups": [
           {
             "type": "and",
@@ -582,7 +589,8 @@
               {"name": "W", "$text": "6", "typeId": "750a-a2ec-90d3-21fe"},
               {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
               {"name": "OC", "$text": "3", "typeId": "bef7-942a-1a23-59f8"},
-              {"name": "InSv", "$text": "4+", "typeId": "55a7-5b54-c60d-11dc"}
+              {"name": "InSv", "$text": "4+", "typeId": "55a7-5b54-c60d-11dc"},
+              {"name": "Base", "$text": "60mm", "typeId": "nr-base-size"}
             ]
           },
           {
@@ -1018,7 +1026,8 @@
                       {"name": "W", "$text": "2", "typeId": "750a-a2ec-90d3-21fe"},
                       {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
                       {"name": "OC", "$text": "2", "typeId": "bef7-942a-1a23-59f8"},
-                      {"name": "InSv", "$text": "", "typeId": "55a7-5b54-c60d-11dc"}
+                      {"name": "InSv", "$text": "", "typeId": "55a7-5b54-c60d-11dc"},
+                      {"name": "Base", "$text": "40mm", "typeId": "nr-base-size"}
                     ]
                   }
                 ],
@@ -1929,26 +1938,8 @@
               {"name": "W", "$text": "3", "typeId": "750a-a2ec-90d3-21fe"},
               {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
               {"name": "OC", "$text": "1", "typeId": "bef7-942a-1a23-59f8"},
-              {"name": "InSv", "$text": "", "typeId": "55a7-5b54-c60d-11dc"}
-            ],
-            "modifiers": [
-              {
-                "field": "bef7-942a-1a23-59f8",
-                "type": "increment",
-                "value": 1,
-                "conditions": [
-                  {
-                    "childId": "e533-c51a-5949-a579",
-                    "childName": "Marshal's Household",
-                    "field": "selections",
-                    "includeChildSelections": true,
-                    "scope": "force",
-                    "shared": true,
-                    "type": "atLeast",
-                    "value": 1
-                  }
-                ]
-              }
+              {"name": "InSv", "$text": "", "typeId": "55a7-5b54-c60d-11dc"},
+              {"name": "Base", "$text": "40mm", "typeId": "nr-base-size"}
             ]
           }
         ],
@@ -2609,7 +2600,8 @@
               {"name": "W", "$text": "5", "typeId": "750a-a2ec-90d3-21fe"},
               {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
               {"name": "OC", "$text": "1", "typeId": "bef7-942a-1a23-59f8"},
-              {"name": "InSv", "$text": "4+", "typeId": "55a7-5b54-c60d-11dc"}
+              {"name": "InSv", "$text": "4+", "typeId": "55a7-5b54-c60d-11dc"},
+              {"name": "Base", "$text": "40mm", "typeId": "nr-base-size"}
             ]
           },
           {
@@ -2978,7 +2970,8 @@
               {"name": "W", "$text": "12", "typeId": "750a-a2ec-90d3-21fe"},
               {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
               {"name": "OC", "$text": "3", "typeId": "bef7-942a-1a23-59f8"},
-              {"name": "InSv", "$text": "", "typeId": "55a7-5b54-c60d-11dc"}
+              {"name": "InSv", "$text": "", "typeId": "55a7-5b54-c60d-11dc"},
+              {"name": "Base", "$text": "100mm", "typeId": "nr-base-size"}
             ]
           },
           {
@@ -3031,6 +3024,18 @@
                 "entryLinks": [
                   {"name": "Weapon Modifications", "id": "a900-6d63-ff33-18ba", "hidden": false, "import": true, "targetId": "f9da-852a-d7f0-92e9", "type": "selectionEntryGroup"}
                 ]
+              },
+              {
+                "name": "Defensive Array",
+                "id": "05a6-726b-0c58-ecf6",
+                "hidden": false,
+                "import": true,
+                "targetId": "12c2-d0b7-ca22-3da0",
+                "type": "selectionEntry",
+                "constraints": [
+                  {"id": "4285-5477-4211-666f", "field": "selections", "includeChildSelections": false, "scope": "parent", "shared": true, "type": "max", "value": 1},
+                  {"id": "e7e4-9437-540e-a5ee", "field": "selections", "includeChildSelections": false, "scope": "parent", "shared": true, "type": "min", "value": 1}
+                ]
               }
             ],
             "selectionEntries": [
@@ -3063,39 +3068,6 @@
                       {"name": "AP", "$text": "-4", "typeId": "9ead-8a10-520-de15"},
                       {"name": "D", "$text": "D6+3", "typeId": "a354-c1c8-a745-f9e3"},
                       {"name": "Keywords", "$text": "Heavy", "typeId": "7f1b-8591-2fcf-d01c"}
-                    ]
-                  }
-                ]
-              },
-              {
-                "name": "Defensive Array",
-                "id": "c95f-71df-6d90-f1dc",
-                "hidden": false,
-                "import": true,
-                "type": "upgrade",
-                "constraints": [
-                  {"id": "e021-422e-37a9-8f1a-min", "field": "selections", "includeChildSelections": false, "scope": "parent", "shared": true, "type": "min", "value": 1},
-                  {"id": "e021-422e-37a9-8f1a-max", "field": "selections", "includeChildSelections": false, "scope": "parent", "shared": true, "type": "max", "value": 1}
-                ],
-                "entryLinks": [
-                  {"name": "Weapon Modifications", "id": "4cbe-eea2-f8c3-8334", "hidden": false, "import": true, "targetId": "f9da-852a-d7f0-92e9", "type": "selectionEntryGroup"}
-                ],
-                "infoLinks": [{"name": "Rapid Fire", "id": "8cc3-cedb-21c5-83a7", "hidden": false, "targetId": "c5c8-8b58-b8b6-7786", "type": "rule"}],
-                "profiles": [
-                  {
-                    "name": "Defensive Array",
-                    "id": "b0cf-2f95-d398-cd8d",
-                    "hidden": false,
-                    "typeId": "f77d-b953-8fa4-b762",
-                    "typeName": "Ranged Weapons",
-                    "characteristics": [
-                      {"name": "Range", "$text": "24\"", "typeId": "9896-9419-16a1-92fc"},
-                      {"name": "A", "$text": "6", "typeId": "3bb-c35f-f54-fb08"},
-                      {"name": "BS", "$text": "3+", "typeId": "94d-8a98-cf90-183e"},
-                      {"name": "S", "$text": "5", "typeId": "2229-f494-25db-c5d3"},
-                      {"name": "AP", "$text": "-1", "typeId": "9ead-8a10-520-de15"},
-                      {"name": "D", "$text": "1", "typeId": "a354-c1c8-a745-f9e3"},
-                      {"name": "Keywords", "$text": "Rapid Fire 6", "typeId": "7f1b-8591-2fcf-d01c"}
                     ]
                   }
                 ]
@@ -3353,7 +3325,8 @@
               {"name": "W", "$text": "12", "typeId": "750a-a2ec-90d3-21fe"},
               {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
               {"name": "OC", "$text": "3", "typeId": "bef7-942a-1a23-59f8"},
-              {"name": "InSv", "$text": "", "typeId": "55a7-5b54-c60d-11dc"}
+              {"name": "InSv", "$text": "", "typeId": "55a7-5b54-c60d-11dc"},
+              {"name": "Base", "$text": "100mm", "typeId": "nr-base-size"}
             ]
           },
           {
@@ -3712,6 +3685,23 @@
                 ]
               }
             ]
+          },
+          {
+            "field": "warning",
+            "type": "add",
+            "value": "The points are not incorrect for this, the MFM says per Multi-melta. this tank comes with 2 by default. Each one costs 10 points. Do not report this as an error, it will not be fixed. Check the box to remove this error and confirm you have read this. ",
+            "conditions": [
+              {
+                "childId": "664e-e178-ab57-901c",
+                "childName": "Clear Warning",
+                "field": "selections",
+                "includeChildSelections": true,
+                "scope": "parent",
+                "shared": true,
+                "type": "lessThan",
+                "value": 1
+              }
+            ]
           }
         ],
         "profiles": [
@@ -3728,7 +3718,8 @@
               {"name": "W", "$text": "12", "typeId": "750a-a2ec-90d3-21fe"},
               {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
               {"name": "OC", "$text": "3", "typeId": "bef7-942a-1a23-59f8"},
-              {"name": "InSv", "$text": "", "typeId": "55a7-5b54-c60d-11dc"}
+              {"name": "InSv", "$text": "", "typeId": "55a7-5b54-c60d-11dc"},
+              {"name": "Base", "$text": "100mm", "typeId": "nr-base-size"}
             ]
           },
           {
@@ -3738,6 +3729,16 @@
             "typeId": "9cc3-6d83-4dd3-9b64",
             "typeName": "Abilities",
             "characteristics": [{"name": "Description", "$text": "This unit’s ranged attacks that target a unit within 12\" of this unit have +1 S.", "typeId": "9b8f-694b-e5e-b573"}]
+          }
+        ],
+        "selectionEntries": [
+          {
+            "name": "Clear Warning",
+            "id": "664e-e178-ab57-901c",
+            "hidden": false,
+            "import": true,
+            "type": "upgrade",
+            "constraints": [{"id": "e2f6-559c-d143-2d91", "field": "selections", "includeChildSelections": false, "scope": "parent", "shared": true, "type": "max", "value": 1}]
           }
         ],
         "selectionEntryGroups": [
@@ -4101,7 +4102,8 @@
               {"name": "W", "$text": "11", "typeId": "750a-a2ec-90d3-21fe"},
               {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
               {"name": "OC", "$text": "2", "typeId": "bef7-942a-1a23-59f8"},
-              {"name": "InSv", "$text": "", "typeId": "55a7-5b54-c60d-11dc"}
+              {"name": "InSv", "$text": "", "typeId": "55a7-5b54-c60d-11dc"},
+              {"name": "Base", "$text": "100mm", "typeId": "nr-base-size"}
             ]
           },
           {
@@ -4582,7 +4584,8 @@
               {"name": "W", "$text": "16", "typeId": "750a-a2ec-90d3-21fe"},
               {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
               {"name": "OC", "$text": "5", "typeId": "bef7-942a-1a23-59f8"},
-              {"name": "InSv", "$text": "", "typeId": "55a7-5b54-c60d-11dc"}
+              {"name": "InSv", "$text": "", "typeId": "55a7-5b54-c60d-11dc"},
+              {"name": "Base", "$text": "100mm", "typeId": "nr-base-size"}
             ]
           },
           {
@@ -5017,7 +5020,8 @@
               {"name": "W", "$text": "16", "typeId": "750a-a2ec-90d3-21fe"},
               {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
               {"name": "OC", "$text": "5", "typeId": "bef7-942a-1a23-59f8"},
-              {"name": "InSv", "$text": "", "typeId": "55a7-5b54-c60d-11dc"}
+              {"name": "InSv", "$text": "", "typeId": "55a7-5b54-c60d-11dc"},
+              {"name": "Base", "$text": "100mm", "typeId": "nr-base-size"}
             ]
           },
           {
@@ -5537,7 +5541,8 @@
               {"name": "W", "$text": "4", "typeId": "750a-a2ec-90d3-21fe"},
               {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
               {"name": "OC", "$text": "1", "typeId": "bef7-942a-1a23-59f8"},
-              {"name": "InSv", "$text": "", "typeId": "55a7-5b54-c60d-11dc"}
+              {"name": "InSv", "$text": "", "typeId": "55a7-5b54-c60d-11dc"},
+              {"name": "Base", "$text": "40mm", "typeId": "nr-base-size"}
             ]
           },
           {
@@ -5995,7 +6000,8 @@
               {"name": "W", "$text": "5", "typeId": "750a-a2ec-90d3-21fe"},
               {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
               {"name": "OC", "$text": "1", "typeId": "bef7-942a-1a23-59f8"},
-              {"name": "InSv", "$text": "4+", "typeId": "55a7-5b54-c60d-11dc"}
+              {"name": "InSv", "$text": "4+", "typeId": "55a7-5b54-c60d-11dc"},
+              {"name": "Base", "$text": "40mm", "typeId": "nr-base-size"}
             ]
           },
           {
@@ -6496,7 +6502,8 @@
               {"name": "W", "$text": "4", "typeId": "750a-a2ec-90d3-21fe"},
               {"name": "LD", "$text": "5+", "typeId": "58d2-b879-49c7-43bc"},
               {"name": "OC", "$text": "1", "typeId": "bef7-942a-1a23-59f8"},
-              {"name": "InSv", "$text": "4+", "typeId": "55a7-5b54-c60d-11dc"}
+              {"name": "InSv", "$text": "4+", "typeId": "55a7-5b54-c60d-11dc"},
+              {"name": "Base", "$text": "40mm", "typeId": "nr-base-size"}
             ]
           },
           {
@@ -6895,7 +6902,8 @@
               {"name": "W", "$text": "4", "typeId": "750a-a2ec-90d3-21fe"},
               {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
               {"name": "OC", "$text": "1", "typeId": "bef7-942a-1a23-59f8"},
-              {"name": "InSv", "$text": "", "typeId": "55a7-5b54-c60d-11dc"}
+              {"name": "InSv", "$text": "", "typeId": "55a7-5b54-c60d-11dc"},
+              {"name": "Base", "$text": "40mm", "typeId": "nr-base-size"}
             ]
           },
           {
@@ -7326,7 +7334,8 @@
               {"name": "W", "$text": "5", "typeId": "750a-a2ec-90d3-21fe"},
               {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
               {"name": "OC", "$text": "1", "typeId": "bef7-942a-1a23-59f8"},
-              {"name": "InSv", "$text": "4+", "typeId": "55a7-5b54-c60d-11dc"}
+              {"name": "InSv", "$text": "4+", "typeId": "55a7-5b54-c60d-11dc"},
+              {"name": "Base", "$text": "40mm", "typeId": "nr-base-size"}
             ]
           },
           {

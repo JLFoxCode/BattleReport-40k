@@ -146,7 +146,7 @@ export class BSystem {
 // ───────── Roster context: a resolved view of the roster used for every evaluation ─────────
 /** Wraps a roster: resolves every selection to its node and builds parent links. */
 export function view(sys, roster) {
-  const V = { sys, roster, catalogueId: roster.catalogueId, all: [], byId: new Map(), force: null };
+  const V = { sys, roster, catalogueId: roster.catalogueId, all: [], byId: new Map(), force: null, stale: [] };
   const force = { kind: 'force', ids: new Set([sys.forceEntry && sys.forceEntry.id, roster.catalogueId].filter(Boolean)), ch: [], n: 1, parent: null };
   V.force = force;
   const rosterObj = { kind: 'roster', ch: [force], n: 1, parent: null, ids: new Set(['roster']) };
@@ -157,11 +157,14 @@ export function view(sys, roster) {
     const w = { kind: 'sel', s, node, groups: ch ? ch.slice(0, -1) : [], parent, n: Math.max(0, num(s.n) || 0), ch: [] };
     w.ids = new Set();
     if (node) { node.ids.forEach(i => w.ids.add(i)); w.groups.forEach(g => g.ids.forEach(i => w.ids.add(i))); }
-    V.all.push(w); V.byId.set(s.id, w);
-    if (node) w.ch = arr(s.ch).map(c => wrap(c, w, node)); else w.ch = [];
+    V.all.push(w); if (node) V.byId.set(s.id, w);
+    if (node) w.ch = arr(s.ch).map(c => wrap(c, w, node)).filter(Boolean); else w.ch = [];
+    // a selection the data does not know (any more – e.g. after a New Recruit data update): kept out of the tree, so
+    // nothing trips over it; autoSync removes it, validate reports it
+    if (!node) { V.stale.push(w); return null; }
     return w;
   };
-  force.ch = arr(roster.sel).map(s => wrap(s, force, null));
+  force.ch = arr(roster.sel).map(s => wrap(s, force, null)).filter(Boolean);
   return V;
 }
 
@@ -504,6 +507,7 @@ export function validate(V) {
     w.ch.forEach(walk);
   };
   V.force.ch.forEach(walk);
+  for (const w of V.stale) out.push({ sel: w.parent && w.parent.kind === 'sel' ? w.parent.s.id : null, msg: 'An entry that is no longer in the data (data update) – it is removed when the army is opened' });
   const pts = totalPoints(V);
   if (num(V.roster.limit) > 0 && pts > num(V.roster.limit)) out.push({ sel: null, msg: `${pts} / ${V.roster.limit} pts – over the points limit` });
   const seen = new Set();
@@ -553,7 +557,9 @@ function fillDefaults(sys, V, node, s, parentW) {
   const fillGroup = (k, tok, need) => {
     const opts = sys.children(k).filter(x => !x.group).map(x => ({ x, l: limits(V, x, null, w) })).filter(o => !o.l.hidden);
     const groups = sys.children(k).filter(x => x.group).map(g => ({ g, l: limits(V, g, null, w) })).filter(o => !o.l.hidden);
-    const share = new Map(groups.map(o => [o.g, Math.max(0, o.l.min)]));
+    // a group's share: its own minimum, or what the mandatory entries inside it need (4 + 3 + 3 of 10 Heavy Intercessors)
+    const minInside = (g, d = 0) => d > 4 ? 0 : sys.children(g).reduce((x, c) => { const l = limits(V, c, null, w); return l.hidden ? x : x + (c.group ? Math.max(l.min, minInside(c, d + 1)) : Math.max(0, l.min)); }, 0);
+    const share = new Map(groups.map(o => [o.g, Math.max(0, o.l.min, minInside(o.g))]));
     const counts = new Map();
     let left = Math.max(0, need - [...share.values()].reduce((a, b) => a + b, 0));
     for (const o of opts) if (o.l.min > 0 && left > 0) { const c = Math.min(o.l.min, left); counts.set(o.x, c); left -= c; }
@@ -673,8 +679,36 @@ export { PTS, DP, findSel };
  *  - a mandatory piece of wargear that is available now but missing (min > 0, e.g. the Hesyr's weapon that follows the
  *    squad's choice) is added; a mandatory choice without selection gets its default (only when it is unambiguous).
  *  Model counts are left to the player. */
+/** All entries below a node through its groups: [{ node, tok }] (tok = token path relative to the node). */
+function optionPaths(sys, node, pre = '', depth = 0, out = []) {
+  if (depth > 4) return out;
+  for (const k of sys.children(node)) {
+    const tok = pre ? pre + '>' + k.token : k.token;
+    if (k.group) optionPaths(sys, k, tok, depth + 1, out); else out.push({ node: k, tok });
+  }
+  return out;
+}
+/** Store each selection's entry name on it (s.nm) – lets autoSync find a choice again after a data update changed ids. */
+export function nameSels(sys, roster) {
+  const V = view(sys, roster);
+  const r = clone(roster);
+  (function f(list) { for (const s of list || []) { const w = V.byId.get(s.id); if (w && w.node) s.nm = w.node.name; f(s.ch); } })(r.sel);
+  return r;
+}
 export function autoSync(sys, roster) {
   let r = roster;
+  // selections the data does not know any more (a data update changed their ids): found again by their stored name
+  // below the same parent (s.nm, see nameSels) – otherwise removed
+  for (let i = 0; i < 80; i++) {
+    const V0 = view(sys, r);
+    const st = V0.stale[0];
+    if (!st) break;
+    const p = st.parent && st.parent.kind === 'sel' ? st.parent : null;
+    const pool = p ? p.node && optionPaths(sys, p.node) : sys.rootNodes(r.catalogueId).map(n => ({ node: n, tok: n.token }));
+    const hit = st.s.nm && (pool || []).find(o => o.node.name === st.s.nm);
+    if (hit) { r = clone(r); const x = findSel(r.sel, st.s.id); if (x) x.t = hit.tok; }
+    else r = removeSel(r, st.s.id);
+  }
   for (let pass = 0; pass < 12; pass++) {
     const V = view(sys, r);
     let change = null;
@@ -717,7 +751,8 @@ export function autoSync(sys, roster) {
         const eff = effective(V, k, sels[0] || null, w);
         const maxNow = eff.constraints.filter(c => c.type === 'max' && c.field === 'selections' && !c.childId && c.scope === 'parent').reduce((m, c) => Math.min(m, c.value), Infinity);
         if (eff.hidden || (maxNow === 0 && k.type !== 'model')) { if (sels.length) change = { rm: sels[0].s.id }; continue; }   // not available (any more)
-        if (k.type === 'model') continue;
+        // models: counts are the player's – only a mandatory model that is missing entirely comes back (the Sergeant)
+        if (k.type === 'model') { if (lim.min > 0 && !sels.length && room >= lim.min) change = { add: { p: w.s.id, t: tok, n: lim.min } }; continue; }
         const have = sels.reduce((x, c) => x + c.n, 0);
         if (lim.min > 0 && have < lim.min && room >= lim.min - have) change = sels.length ? { set: { id: sels[0].s.id, n: sels[0].s.n + lim.min - have } } : { add: { p: w.s.id, t: tok, n: lim.min - have } };
       }

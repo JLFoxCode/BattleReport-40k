@@ -517,7 +517,8 @@
           {"name": "W", "$text": "3", "typeId": "750a-a2ec-90d3-21fe"},
           {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
           {"name": "OC", "$text": "1", "typeId": "bef7-942a-1a23-59f8"},
-          {"name": "InSv", "$text": "", "typeId": "55a7-5b54-c60d-11dc"}
+          {"name": "InSv", "$text": "", "typeId": "55a7-5b54-c60d-11dc"},
+          {"name": "Base", "$text": "-", "typeId": "nr-base-size"}
         ]
       },
       {
@@ -533,7 +534,8 @@
           {"name": "W", "$text": "3", "typeId": "750a-a2ec-90d3-21fe"},
           {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
           {"name": "OC", "$text": "2", "typeId": "bef7-942a-1a23-59f8"},
-          {"name": "InSv", "$text": "", "typeId": "55a7-5b54-c60d-11dc"}
+          {"name": "InSv", "$text": "", "typeId": "55a7-5b54-c60d-11dc"},
+          {"name": "Base", "$text": "28.5mm", "typeId": "nr-base-size"}
         ]
       },
       {
@@ -565,7 +567,8 @@
           {"name": "W", "$text": "1", "typeId": "750a-a2ec-90d3-21fe"},
           {"name": "LD", "$text": "7+", "typeId": "58d2-b879-49c7-43bc"},
           {"name": "OC", "$text": "2", "typeId": "bef7-942a-1a23-59f8"},
-          {"name": "InSv", "$text": "", "typeId": "55a7-5b54-c60d-11dc"}
+          {"name": "InSv", "$text": "", "typeId": "55a7-5b54-c60d-11dc"},
+          {"name": "Base", "$text": "28.5mm", "typeId": "nr-base-size"}
         ]
       },
       {
@@ -581,7 +584,8 @@
           {"name": "W", "$text": "2", "typeId": "750a-a2ec-90d3-21fe"},
           {"name": "LD", "$text": "7+", "typeId": "58d2-b879-49c7-43bc"},
           {"name": "OC", "$text": "2", "typeId": "bef7-942a-1a23-59f8"},
-          {"name": "InSv", "$text": "6+", "typeId": "55a7-5b54-c60d-11dc"}
+          {"name": "InSv", "$text": "6+", "typeId": "55a7-5b54-c60d-11dc"},
+          {"name": "Base", "$text": "32mm Flying", "typeId": "nr-base-size"}
         ]
       },
       {
@@ -625,7 +629,8 @@
           {"name": "W", "$text": "1", "typeId": "750a-a2ec-90d3-21fe"},
           {"name": "LD", "$text": "7+", "typeId": "58d2-b879-49c7-43bc"},
           {"name": "OC", "$text": "2", "typeId": "bef7-942a-1a23-59f8"},
-          {"name": "InSv", "$text": "", "typeId": "55a7-5b54-c60d-11dc"}
+          {"name": "InSv", "$text": "", "typeId": "55a7-5b54-c60d-11dc"},
+          {"name": "Base", "$text": "28.5mm", "typeId": "nr-base-size"}
         ]
       },
       {
@@ -641,7 +646,8 @@
           {"name": "W", "$text": "1", "typeId": "750a-a2ec-90d3-21fe"},
           {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
           {"name": "OC", "$text": "1", "typeId": "bef7-942a-1a23-59f8"},
-          {"name": "InSv", "$text": "", "typeId": "55a7-5b54-c60d-11dc"}
+          {"name": "InSv", "$text": "", "typeId": "55a7-5b54-c60d-11dc"},
+          {"name": "Base", "$text": "28.5mm", "typeId": "nr-base-size"}
         ]
       },
       {
@@ -680,7 +686,8 @@
           {"name": "W", "$text": "1", "typeId": "750a-a2ec-90d3-21fe"},
           {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
           {"name": "OC", "$text": "2", "typeId": "bef7-942a-1a23-59f8"},
-          {"name": "InSv", "$text": "6+", "typeId": "55a7-5b54-c60d-11dc"}
+          {"name": "InSv", "$text": "6+", "typeId": "55a7-5b54-c60d-11dc"},
+          {"name": "Base", "$text": "25mm", "typeId": "nr-base-size"}
         ]
       },
       {
@@ -712,7 +719,8 @@
           {"name": "W", "$text": "1", "typeId": "750a-a2ec-90d3-21fe"},
           {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
           {"name": "OC", "$text": "1", "typeId": "bef7-942a-1a23-59f8"},
-          {"name": "InSv", "$text": "4+", "typeId": "55a7-5b54-c60d-11dc"}
+          {"name": "InSv", "$text": "4+", "typeId": "55a7-5b54-c60d-11dc"},
+          {"name": "Base", "$text": "25mm", "typeId": "nr-base-size"}
         ],
         "modifiers": [
           {
@@ -744,7 +752,8 @@
           {"name": "W", "$text": "1", "typeId": "750a-a2ec-90d3-21fe"},
           {"name": "LD", "$text": "7+", "typeId": "58d2-b879-49c7-43bc"},
           {"name": "OC", "$text": "1", "typeId": "bef7-942a-1a23-59f8"},
-          {"name": "InSv", "$text": "6+", "typeId": "55a7-5b54-c60d-11dc"}
+          {"name": "InSv", "$text": "6+", "typeId": "55a7-5b54-c60d-11dc"},
+          {"name": "Base", "$text": "25mm", "typeId": "nr-base-size"}
         ]
       },
       {
@@ -785,7 +794,8 @@
           {"name": "W", "$text": "1", "typeId": "750a-a2ec-90d3-21fe"},
           {"name": "LD", "$text": "7+", "typeId": "58d2-b879-49c7-43bc"},
           {"name": "OC", "$text": "1", "typeId": "bef7-942a-1a23-59f8"},
-          {"name": "InSv", "$text": "", "typeId": "55a7-5b54-c60d-11dc"}
+          {"name": "InSv", "$text": "", "typeId": "55a7-5b54-c60d-11dc"},
+          {"name": "Base", "$text": "28.5mm", "typeId": "nr-base-size"}
         ]
       },
       {
@@ -801,7 +811,8 @@
           {"name": "W", "$text": "2", "typeId": "750a-a2ec-90d3-21fe"},
           {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
           {"name": "OC", "$text": "1", "typeId": "bef7-942a-1a23-59f8"},
-          {"name": "InSv", "$text": "4+", "typeId": "55a7-5b54-c60d-11dc"}
+          {"name": "InSv", "$text": "4+", "typeId": "55a7-5b54-c60d-11dc"},
+          {"name": "Base", "$text": "32mm", "typeId": "nr-base-size"}
         ]
       },
       {
@@ -817,7 +828,8 @@
           {"name": "W", "$text": "3", "typeId": "750a-a2ec-90d3-21fe"},
           {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
           {"name": "OC", "$text": "2", "typeId": "bef7-942a-1a23-59f8"},
-          {"name": "InSv", "$text": "4+", "typeId": "55a7-5b54-c60d-11dc"}
+          {"name": "InSv", "$text": "4+", "typeId": "55a7-5b54-c60d-11dc"},
+          {"name": "Base", "$text": "32mm Flying", "typeId": "nr-base-size"}
         ]
       },
       {
@@ -833,7 +845,8 @@
           {"name": "W", "$text": "1", "typeId": "750a-a2ec-90d3-21fe"},
           {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
           {"name": "OC", "$text": "2", "typeId": "bef7-942a-1a23-59f8"},
-          {"name": "InSv", "$text": "4+* / 6+", "typeId": "55a7-5b54-c60d-11dc"}
+          {"name": "InSv", "$text": "4+* / 6+", "typeId": "55a7-5b54-c60d-11dc"},
+          {"name": "Base", "$text": "25mm", "typeId": "nr-base-size"}
         ]
       },
       {
@@ -850,7 +863,8 @@
           {"name": "W", "$text": "2", "typeId": "750a-a2ec-90d3-21fe"},
           {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
           {"name": "OC", "$text": "2", "typeId": "bef7-942a-1a23-59f8"},
-          {"name": "InSv", "$text": "6+", "typeId": "55a7-5b54-c60d-11dc"}
+          {"name": "InSv", "$text": "6+", "typeId": "55a7-5b54-c60d-11dc"},
+          {"name": "Base", "$text": "32mm Flying", "typeId": "nr-base-size"}
         ]
       },
       {
@@ -867,7 +881,8 @@
           {"name": "W", "$text": "1", "typeId": "750a-a2ec-90d3-21fe"},
           {"name": "LD", "$text": "7+", "typeId": "58d2-b879-49c7-43bc"},
           {"name": "OC", "$text": "2", "typeId": "bef7-942a-1a23-59f8"},
-          {"name": "InSv", "$text": "6+", "typeId": "55a7-5b54-c60d-11dc"}
+          {"name": "InSv", "$text": "6+", "typeId": "55a7-5b54-c60d-11dc"},
+          {"name": "Base", "$text": "25mm", "typeId": "nr-base-size"}
         ]
       },
       {
@@ -884,7 +899,8 @@
           {"name": "W", "$text": "1", "typeId": "750a-a2ec-90d3-21fe"},
           {"name": "LD", "$text": "7+", "typeId": "58d2-b879-49c7-43bc"},
           {"name": "OC", "$text": "2", "typeId": "bef7-942a-1a23-59f8"},
-          {"name": "InSv", "$text": "4+* / 6+", "typeId": "55a7-5b54-c60d-11dc"}
+          {"name": "InSv", "$text": "4+* / 6+", "typeId": "55a7-5b54-c60d-11dc"},
+          {"name": "Base", "$text": "25mm", "typeId": "nr-base-size"}
         ]
       },
       {
@@ -901,7 +917,8 @@
           {"name": "W", "$text": "2", "typeId": "750a-a2ec-90d3-21fe"},
           {"name": "LD", "$text": "7+", "typeId": "58d2-b879-49c7-43bc"},
           {"name": "OC", "$text": "2", "typeId": "bef7-942a-1a23-59f8"},
-          {"name": "InSv", "$text": "6+", "typeId": "55a7-5b54-c60d-11dc"}
+          {"name": "InSv", "$text": "6+", "typeId": "55a7-5b54-c60d-11dc"},
+          {"name": "Base", "$text": "32mm Flying", "typeId": "nr-base-size"}
         ]
       },
       {
@@ -917,7 +934,8 @@
           {"name": "W", "$text": "2", "typeId": "750a-a2ec-90d3-21fe"},
           {"name": "LD", "$text": "7+", "typeId": "58d2-b879-49c7-43bc"},
           {"name": "OC", "$text": "1", "typeId": "bef7-942a-1a23-59f8"},
-          {"name": "InSv", "$text": "6+", "typeId": "55a7-5b54-c60d-11dc"}
+          {"name": "InSv", "$text": "6+", "typeId": "55a7-5b54-c60d-11dc"},
+          {"name": "Base", "$text": "32mm Flying", "typeId": "nr-base-size"}
         ]
       },
       {
@@ -933,7 +951,8 @@
           {"name": "W", "$text": "2", "typeId": "750a-a2ec-90d3-21fe"},
           {"name": "LD", "$text": "7+", "typeId": "58d2-b879-49c7-43bc"},
           {"name": "OC", "$text": "2", "typeId": "bef7-942a-1a23-59f8"},
-          {"name": "InSv", "$text": "6+", "typeId": "55a7-5b54-c60d-11dc"}
+          {"name": "InSv", "$text": "6+", "typeId": "55a7-5b54-c60d-11dc"},
+          {"name": "Base", "$text": "25mm", "typeId": "nr-base-size"}
         ]
       },
       {
@@ -949,7 +968,8 @@
           {"name": "W", "$text": "1", "typeId": "750a-a2ec-90d3-21fe"},
           {"name": "LD", "$text": "7+", "typeId": "58d2-b879-49c7-43bc"},
           {"name": "OC", "$text": "1", "typeId": "bef7-942a-1a23-59f8"},
-          {"name": "InSv", "$text": "5+", "typeId": "55a7-5b54-c60d-11dc"}
+          {"name": "InSv", "$text": "5+", "typeId": "55a7-5b54-c60d-11dc"},
+          {"name": "Base", "$text": "28.5mm", "typeId": "nr-base-size"}
         ]
       },
       {
@@ -965,7 +985,8 @@
           {"name": "W", "$text": "1", "typeId": "750a-a2ec-90d3-21fe"},
           {"name": "LD", "$text": "7+", "typeId": "58d2-b879-49c7-43bc"},
           {"name": "OC", "$text": "1", "typeId": "bef7-942a-1a23-59f8"},
-          {"name": "InSv", "$text": "5+", "typeId": "55a7-5b54-c60d-11dc"}
+          {"name": "InSv", "$text": "5+", "typeId": "55a7-5b54-c60d-11dc"},
+          {"name": "Base", "$text": "32mm", "typeId": "nr-base-size"}
         ]
       },
       {
@@ -981,7 +1002,8 @@
           {"name": "W", "$text": "2", "typeId": "750a-a2ec-90d3-21fe"},
           {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
           {"name": "OC", "$text": "2", "typeId": "bef7-942a-1a23-59f8"},
-          {"name": "InSv", "$text": "", "typeId": "55a7-5b54-c60d-11dc"}
+          {"name": "InSv", "$text": "", "typeId": "55a7-5b54-c60d-11dc"},
+          {"name": "Base", "$text": "60x35.5mm", "typeId": "nr-base-size"}
         ]
       },
       {
@@ -997,7 +1019,8 @@
           {"name": "W", "$text": "2", "typeId": "750a-a2ec-90d3-21fe"},
           {"name": "LD", "$text": "7+", "typeId": "58d2-b879-49c7-43bc"},
           {"name": "OC", "$text": "1", "typeId": "bef7-942a-1a23-59f8"},
-          {"name": "InSv", "$text": "5+", "typeId": "55a7-5b54-c60d-11dc"}
+          {"name": "InSv", "$text": "5+", "typeId": "55a7-5b54-c60d-11dc"},
+          {"name": "Base", "$text": "25mm", "typeId": "nr-base-size"}
         ]
       },
       {
@@ -1013,7 +1036,8 @@
           {"name": "W", "$text": "4", "typeId": "750a-a2ec-90d3-21fe"},
           {"name": "LD", "$text": "7+", "typeId": "58d2-b879-49c7-43bc"},
           {"name": "OC", "$text": "1", "typeId": "bef7-942a-1a23-59f8"},
-          {"name": "InSv", "$text": "6+", "typeId": "55a7-5b54-c60d-11dc"}
+          {"name": "InSv", "$text": "6+", "typeId": "55a7-5b54-c60d-11dc"},
+          {"name": "Base", "$text": "40mm", "typeId": "nr-base-size"}
         ]
       },
       {
@@ -1029,7 +1053,8 @@
           {"name": "W", "$text": "4", "typeId": "750a-a2ec-90d3-21fe"},
           {"name": "LD", "$text": "7+", "typeId": "58d2-b879-49c7-43bc"},
           {"name": "OC", "$text": "2", "typeId": "bef7-942a-1a23-59f8"},
-          {"name": "InSv", "$text": "", "typeId": "55a7-5b54-c60d-11dc"}
+          {"name": "InSv", "$text": "", "typeId": "55a7-5b54-c60d-11dc"},
+          {"name": "Base", "$text": "75x42mm", "typeId": "nr-base-size"}
         ]
       }
     ],
@@ -1217,7 +1242,8 @@
               {"name": "W", "$text": "5", "typeId": "750a-a2ec-90d3-21fe"},
               {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
               {"name": "OC", "$text": "1", "typeId": "bef7-942a-1a23-59f8"},
-              {"name": "InSv", "$text": "4+", "typeId": "55a7-5b54-c60d-11dc"}
+              {"name": "InSv", "$text": "4+", "typeId": "55a7-5b54-c60d-11dc"},
+              {"name": "Base", "$text": "40mm", "typeId": "nr-base-size"}
             ]
           },
           {
@@ -1685,7 +1711,8 @@
               {"name": "W", "$text": "5", "typeId": "750a-a2ec-90d3-21fe"},
               {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
               {"name": "OC", "$text": "2", "typeId": "bef7-942a-1a23-59f8"},
-              {"name": "InSv", "$text": "4+", "typeId": "55a7-5b54-c60d-11dc"}
+              {"name": "InSv", "$text": "4+", "typeId": "55a7-5b54-c60d-11dc"},
+              {"name": "Base", "$text": "~32mm", "typeId": "nr-base-size"}
             ]
           }
         ],
@@ -2361,7 +2388,8 @@
               {"name": "W", "$text": "4", "typeId": "750a-a2ec-90d3-21fe"},
               {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
               {"name": "OC", "$text": "1", "typeId": "bef7-942a-1a23-59f8"},
-              {"name": "InSv", "$text": "4+", "typeId": "55a7-5b54-c60d-11dc"}
+              {"name": "InSv", "$text": "4+", "typeId": "55a7-5b54-c60d-11dc"},
+              {"name": "Base", "$text": "32mm", "typeId": "nr-base-size"}
             ]
           },
           {
@@ -3090,7 +3118,8 @@
               {"name": "W", "$text": "4", "typeId": "750a-a2ec-90d3-21fe"},
               {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
               {"name": "OC", "$text": "1", "typeId": "bef7-942a-1a23-59f8"},
-              {"name": "InSv", "$text": "4+", "typeId": "55a7-5b54-c60d-11dc"}
+              {"name": "InSv", "$text": "4+", "typeId": "55a7-5b54-c60d-11dc"},
+              {"name": "Base", "$text": "32mm", "typeId": "nr-base-size"}
             ]
           },
           {
@@ -3631,7 +3660,8 @@
               {"name": "W", "$text": "14", "typeId": "750a-a2ec-90d3-21fe"},
               {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
               {"name": "OC", "$text": "5", "typeId": "bef7-942a-1a23-59f8"},
-              {"name": "InSv", "$text": "4+", "typeId": "55a7-5b54-c60d-11dc"}
+              {"name": "InSv", "$text": "4+", "typeId": "55a7-5b54-c60d-11dc"},
+              {"name": "Base", "$text": "80mm", "typeId": "nr-base-size"}
             ]
           },
           {
@@ -4004,7 +4034,8 @@
               {"name": "W", "$text": "5", "typeId": "750a-a2ec-90d3-21fe"},
               {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
               {"name": "OC", "$text": "1", "typeId": "bef7-942a-1a23-59f8"},
-              {"name": "InSv", "$text": "4+", "typeId": "55a7-5b54-c60d-11dc"}
+              {"name": "InSv", "$text": "4+", "typeId": "55a7-5b54-c60d-11dc"},
+              {"name": "Base", "$text": "40mm", "typeId": "nr-base-size"}
             ]
           },
           {
@@ -7294,7 +7325,8 @@
               {"name": "W", "$text": "12", "typeId": "750a-a2ec-90d3-21fe"},
               {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
               {"name": "OC", "$text": "-", "typeId": "bef7-942a-1a23-59f8"},
-              {"name": "InSv", "$text": "5+", "typeId": "55a7-5b54-c60d-11dc"}
+              {"name": "InSv", "$text": "5+", "typeId": "55a7-5b54-c60d-11dc"},
+              {"name": "Base", "$text": "120x92mm", "typeId": "nr-base-size"}
             ]
           },
           {
@@ -7914,7 +7946,8 @@
                       {"name": "W", "$text": "1", "typeId": "750a-a2ec-90d3-21fe"},
                       {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
                       {"name": "OC", "$text": "1", "typeId": "bef7-942a-1a23-59f8"},
-                      {"name": "InSv", "$text": "5+", "typeId": "55a7-5b54-c60d-11dc"}
+                      {"name": "InSv", "$text": "5+", "typeId": "55a7-5b54-c60d-11dc"},
+                      {"name": "Base", "$text": "28.5mm", "typeId": "nr-base-size"}
                     ]
                   }
                 ],
@@ -8073,7 +8106,8 @@
                       {"name": "W", "$text": "2", "typeId": "750a-a2ec-90d3-21fe"},
                       {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
                       {"name": "OC", "$text": "1", "typeId": "bef7-942a-1a23-59f8"},
-                      {"name": "InSv", "$text": "5+", "typeId": "55a7-5b54-c60d-11dc"}
+                      {"name": "InSv", "$text": "5+", "typeId": "55a7-5b54-c60d-11dc"},
+                      {"name": "Base", "$text": "28.5mm", "typeId": "nr-base-size"}
                     ]
                   }
                 ],
@@ -8703,7 +8737,8 @@
               {"name": "W", "$text": "4", "typeId": "750a-a2ec-90d3-21fe"},
               {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
               {"name": "OC", "$text": "1", "typeId": "bef7-942a-1a23-59f8"},
-              {"name": "InSv", "$text": "4+", "typeId": "55a7-5b54-c60d-11dc"}
+              {"name": "InSv", "$text": "4+", "typeId": "55a7-5b54-c60d-11dc"},
+              {"name": "Base", "$text": "25mm", "typeId": "nr-base-size"}
             ]
           },
           {
@@ -9131,7 +9166,8 @@
                       {"name": "W", "$text": "1", "typeId": "750a-a2ec-90d3-21fe"},
                       {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
                       {"name": "OC", "$text": "1", "typeId": "bef7-942a-1a23-59f8"},
-                      {"name": "InSv", "$text": "5+", "typeId": "55a7-5b54-c60d-11dc"}
+                      {"name": "InSv", "$text": "5+", "typeId": "55a7-5b54-c60d-11dc"},
+                      {"name": "Base", "$text": "28.5mm", "typeId": "nr-base-size"}
                     ]
                   }
                 ],
@@ -9199,7 +9235,8 @@
                       {"name": "W", "$text": "2", "typeId": "750a-a2ec-90d3-21fe"},
                       {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
                       {"name": "OC", "$text": "1", "typeId": "bef7-942a-1a23-59f8"},
-                      {"name": "InSv", "$text": "5+", "typeId": "55a7-5b54-c60d-11dc"}
+                      {"name": "InSv", "$text": "5+", "typeId": "55a7-5b54-c60d-11dc"},
+                      {"name": "Base", "$text": "28.5mm", "typeId": "nr-base-size"}
                     ]
                   }
                 ],
@@ -9670,7 +9707,8 @@
               {"name": "W", "$text": "5", "typeId": "750a-a2ec-90d3-21fe"},
               {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
               {"name": "OC", "$text": "1", "typeId": "bef7-942a-1a23-59f8"},
-              {"name": "InSv", "$text": "4+", "typeId": "55a7-5b54-c60d-11dc"}
+              {"name": "InSv", "$text": "4+", "typeId": "55a7-5b54-c60d-11dc"},
+              {"name": "Base", "$text": "32mm", "typeId": "nr-base-size"}
             ]
           },
           {
@@ -10098,7 +10136,8 @@
               {"name": "W", "$text": "12", "typeId": "750a-a2ec-90d3-21fe"},
               {"name": "LD", "$text": "7+", "typeId": "58d2-b879-49c7-43bc"},
               {"name": "OC", "$text": "3", "typeId": "bef7-942a-1a23-59f8"},
-              {"name": "InSv", "$text": "", "typeId": "55a7-5b54-c60d-11dc"}
+              {"name": "InSv", "$text": "", "typeId": "55a7-5b54-c60d-11dc"},
+              {"name": "Base", "$text": "60mm Flying", "typeId": "nr-base-size"}
             ]
           },
           {
@@ -10595,7 +10634,8 @@
               {"name": "W", "$text": "4", "typeId": "750a-a2ec-90d3-21fe"},
               {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
               {"name": "OC", "$text": "1", "typeId": "bef7-942a-1a23-59f8"},
-              {"name": "InSv", "$text": "4+", "typeId": "55a7-5b54-c60d-11dc"}
+              {"name": "InSv", "$text": "4+", "typeId": "55a7-5b54-c60d-11dc"},
+              {"name": "Base", "$text": "25mm", "typeId": "nr-base-size"}
             ]
           },
           {
@@ -11113,7 +11153,8 @@
               {"name": "W", "$text": "5", "typeId": "750a-a2ec-90d3-21fe"},
               {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
               {"name": "OC", "$text": "2", "typeId": "bef7-942a-1a23-59f8"},
-              {"name": "InSv", "$text": "4+", "typeId": "55a7-5b54-c60d-11dc"}
+              {"name": "InSv", "$text": "4+", "typeId": "55a7-5b54-c60d-11dc"},
+              {"name": "Base", "$text": "32mm Flying", "typeId": "nr-base-size"}
             ]
           }
         ],
@@ -11692,7 +11733,8 @@
                       {"name": "W", "$text": "1", "typeId": "750a-a2ec-90d3-21fe"},
                       {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
                       {"name": "OC", "$text": "1", "typeId": "bef7-942a-1a23-59f8"},
-                      {"name": "InSv", "$text": "5+", "typeId": "55a7-5b54-c60d-11dc"}
+                      {"name": "InSv", "$text": "5+", "typeId": "55a7-5b54-c60d-11dc"},
+                      {"name": "Base", "$text": "28.5mm", "typeId": "nr-base-size"}
                     ]
                   }
                 ],
@@ -11799,7 +11841,8 @@
                       {"name": "W", "$text": "2", "typeId": "750a-a2ec-90d3-21fe"},
                       {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
                       {"name": "OC", "$text": "1", "typeId": "bef7-942a-1a23-59f8"},
-                      {"name": "InSv", "$text": "5+", "typeId": "55a7-5b54-c60d-11dc"}
+                      {"name": "InSv", "$text": "5+", "typeId": "55a7-5b54-c60d-11dc"},
+                      {"name": "Base", "$text": "28.5mm", "typeId": "nr-base-size"}
                     ]
                   }
                 ],
@@ -12289,7 +12332,8 @@
               {"name": "W", "$text": "12", "typeId": "750a-a2ec-90d3-21fe"},
               {"name": "LD", "$text": "7+", "typeId": "58d2-b879-49c7-43bc"},
               {"name": "OC", "$text": "3", "typeId": "bef7-942a-1a23-59f8"},
-              {"name": "InSv", "$text": "", "typeId": "55a7-5b54-c60d-11dc"}
+              {"name": "InSv", "$text": "", "typeId": "55a7-5b54-c60d-11dc"},
+              {"name": "Base", "$text": "60mm Flying", "typeId": "nr-base-size"}
             ]
           },
           {
@@ -12739,7 +12783,8 @@
               {"name": "W", "$text": "5", "typeId": "750a-a2ec-90d3-21fe"},
               {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
               {"name": "OC", "$text": "1", "typeId": "bef7-942a-1a23-59f8"},
-              {"name": "InSv", "$text": "4+", "typeId": "55a7-5b54-c60d-11dc"}
+              {"name": "InSv", "$text": "4+", "typeId": "55a7-5b54-c60d-11dc"},
+              {"name": "Base", "$text": "40mm", "typeId": "nr-base-size"}
             ]
           },
           {
@@ -13293,7 +13338,8 @@
                   {"name": "W", "$text": "1", "typeId": "750a-a2ec-90d3-21fe"},
                   {"name": "LD", "$text": "7+", "typeId": "58d2-b879-49c7-43bc"},
                   {"name": "OC", "$text": "2", "typeId": "bef7-942a-1a23-59f8"},
-                  {"name": "InSv", "$text": "", "typeId": "55a7-5b54-c60d-11dc"}
+                  {"name": "InSv", "$text": "", "typeId": "55a7-5b54-c60d-11dc"},
+                  {"name": "Base", "$text": "28.5mm", "typeId": "nr-base-size"}
                 ]
               }
             ]
@@ -13337,7 +13383,8 @@
                   {"name": "W", "$text": "2", "typeId": "750a-a2ec-90d3-21fe"},
                   {"name": "LD", "$text": "7+", "typeId": "58d2-b879-49c7-43bc"},
                   {"name": "OC", "$text": "0", "typeId": "bef7-942a-1a23-59f8"},
-                  {"name": "InSv", "$text": "", "typeId": "55a7-5b54-c60d-11dc"}
+                  {"name": "InSv", "$text": "", "typeId": "55a7-5b54-c60d-11dc"},
+                  {"name": "Base", "$text": "40mm", "typeId": "nr-base-size"}
                 ]
               }
             ]
@@ -13589,7 +13636,8 @@
               {"name": "W", "$text": "12", "typeId": "750a-a2ec-90d3-21fe"},
               {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
               {"name": "OC", "$text": "-", "typeId": "bef7-942a-1a23-59f8"},
-              {"name": "InSv", "$text": "", "typeId": "55a7-5b54-c60d-11dc"}
+              {"name": "InSv", "$text": "", "typeId": "55a7-5b54-c60d-11dc"},
+              {"name": "Base", "$text": "120x92mm", "typeId": "nr-base-size"}
             ]
           },
           {
@@ -13969,7 +14017,8 @@
                       {"name": "W", "$text": "1", "typeId": "750a-a2ec-90d3-21fe"},
                       {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
                       {"name": "OC", "$text": "1", "typeId": "bef7-942a-1a23-59f8"},
-                      {"name": "InSv", "$text": "4+* / 5+", "typeId": "55a7-5b54-c60d-11dc"}
+                      {"name": "InSv", "$text": "4+* / 5+", "typeId": "55a7-5b54-c60d-11dc"},
+                      {"name": "Base", "$text": "28.5mm", "typeId": "nr-base-size"}
                     ]
                   }
                 ],
@@ -14073,7 +14122,8 @@
                       {"name": "W", "$text": "2", "typeId": "750a-a2ec-90d3-21fe"},
                       {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
                       {"name": "OC", "$text": "1", "typeId": "bef7-942a-1a23-59f8"},
-                      {"name": "InSv", "$text": "4+* / 5+", "typeId": "55a7-5b54-c60d-11dc"}
+                      {"name": "InSv", "$text": "4+* / 5+", "typeId": "55a7-5b54-c60d-11dc"},
+                      {"name": "Base", "$text": "28.5mm", "typeId": "nr-base-size"}
                     ]
                   }
                 ],
@@ -14566,7 +14616,8 @@
               {"name": "W", "$text": "3", "typeId": "750a-a2ec-90d3-21fe"},
               {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
               {"name": "OC", "$text": "1", "typeId": "bef7-942a-1a23-59f8"},
-              {"name": "InSv", "$text": "5+", "typeId": "55a7-5b54-c60d-11dc"}
+              {"name": "InSv", "$text": "5+", "typeId": "55a7-5b54-c60d-11dc"},
+              {"name": "Base", "$text": "25mm", "typeId": "nr-base-size"}
             ]
           },
           {
@@ -14964,7 +15015,8 @@
               {"name": "W", "$text": "5", "typeId": "750a-a2ec-90d3-21fe"},
               {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
               {"name": "OC", "$text": "1", "typeId": "bef7-942a-1a23-59f8"},
-              {"name": "InSv", "$text": "4+", "typeId": "55a7-5b54-c60d-11dc"}
+              {"name": "InSv", "$text": "4+", "typeId": "55a7-5b54-c60d-11dc"},
+              {"name": "Base", "$text": "40mm", "typeId": "nr-base-size"}
             ]
           }
         ],
@@ -15255,7 +15307,8 @@
               {"name": "W", "$text": "5", "typeId": "750a-a2ec-90d3-21fe"},
               {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
               {"name": "OC", "$text": "1", "typeId": "bef7-942a-1a23-59f8"},
-              {"name": "InSv", "$text": "4+", "typeId": "55a7-5b54-c60d-11dc"}
+              {"name": "InSv", "$text": "4+", "typeId": "55a7-5b54-c60d-11dc"},
+              {"name": "Base", "$text": "40mm", "typeId": "nr-base-size"}
             ]
           },
           {
@@ -15566,7 +15619,8 @@
               {"name": "W", "$text": "5", "typeId": "750a-a2ec-90d3-21fe"},
               {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
               {"name": "OC", "$text": "1", "typeId": "bef7-942a-1a23-59f8"},
-              {"name": "InSv", "$text": "4+", "typeId": "55a7-5b54-c60d-11dc"}
+              {"name": "InSv", "$text": "4+", "typeId": "55a7-5b54-c60d-11dc"},
+              {"name": "Base", "$text": "40mm", "typeId": "nr-base-size"}
             ]
           },
           {
@@ -15943,7 +15997,8 @@
               {"name": "W", "$text": "12", "typeId": "750a-a2ec-90d3-21fe"},
               {"name": "LD", "$text": "7+", "typeId": "58d2-b879-49c7-43bc"},
               {"name": "OC", "$text": "3", "typeId": "bef7-942a-1a23-59f8"},
-              {"name": "InSv", "$text": "", "typeId": "55a7-5b54-c60d-11dc"}
+              {"name": "InSv", "$text": "", "typeId": "55a7-5b54-c60d-11dc"},
+              {"name": "Base", "$text": "60mm Flying", "typeId": "nr-base-size"}
             ]
           },
           {
@@ -16478,7 +16533,8 @@
                   {"name": "W", "$text": "1", "typeId": "750a-a2ec-90d3-21fe"},
                   {"name": "LD", "$text": "7+", "typeId": "58d2-b879-49c7-43bc"},
                   {"name": "OC", "$text": "1", "typeId": "bef7-942a-1a23-59f8"},
-                  {"name": "InSv", "$text": "5+*", "typeId": "55a7-5b54-c60d-11dc"}
+                  {"name": "InSv", "$text": "5+*", "typeId": "55a7-5b54-c60d-11dc"},
+                  {"name": "Base", "$text": "28.5mm", "typeId": "nr-base-size"}
                 ]
               }
             ],
@@ -16954,7 +17010,8 @@
               {"name": "W", "$text": "4", "typeId": "750a-a2ec-90d3-21fe"},
               {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
               {"name": "OC", "$text": "1", "typeId": "bef7-942a-1a23-59f8"},
-              {"name": "InSv", "$text": "4+", "typeId": "55a7-5b54-c60d-11dc"}
+              {"name": "InSv", "$text": "4+", "typeId": "55a7-5b54-c60d-11dc"},
+              {"name": "Base", "$text": "25mm", "typeId": "nr-base-size"}
             ]
           },
           {
@@ -17420,7 +17477,8 @@
                       {"name": "W", "$text": "2", "typeId": "750a-a2ec-90d3-21fe"},
                       {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
                       {"name": "OC", "$text": "2", "typeId": "bef7-942a-1a23-59f8"},
-                      {"name": "InSv", "$text": "5+", "typeId": "55a7-5b54-c60d-11dc"}
+                      {"name": "InSv", "$text": "5+", "typeId": "55a7-5b54-c60d-11dc"},
+                      {"name": "Base", "$text": "60mm Flying", "typeId": "nr-base-size"}
                     ]
                   }
                 ],
@@ -17555,7 +17613,8 @@
                       {"name": "W", "$text": "3", "typeId": "750a-a2ec-90d3-21fe"},
                       {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
                       {"name": "OC", "$text": "2", "typeId": "bef7-942a-1a23-59f8"},
-                      {"name": "InSv", "$text": "5+", "typeId": "55a7-5b54-c60d-11dc"}
+                      {"name": "InSv", "$text": "5+", "typeId": "55a7-5b54-c60d-11dc"},
+                      {"name": "Base", "$text": "60mm Flying", "typeId": "nr-base-size"}
                     ]
                   }
                 ],
@@ -18072,7 +18131,8 @@
                   {"name": "W", "$text": "3", "typeId": "750a-a2ec-90d3-21fe"},
                   {"name": "LD", "$text": "7+", "typeId": "58d2-b879-49c7-43bc"},
                   {"name": "OC", "$text": "2", "typeId": "bef7-942a-1a23-59f8"},
-                  {"name": "InSv", "$text": "5+*", "typeId": "55a7-5b54-c60d-11dc"}
+                  {"name": "InSv", "$text": "5+*", "typeId": "55a7-5b54-c60d-11dc"},
+                  {"name": "Base", "$text": "60mm Flying", "typeId": "nr-base-size"}
                 ]
               }
             ],
@@ -18444,7 +18504,8 @@
                   {"name": "W", "$text": "3", "typeId": "750a-a2ec-90d3-21fe"},
                   {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
                   {"name": "OC", "$text": "2", "typeId": "bef7-942a-1a23-59f8"},
-                  {"name": "InSv", "$text": "4+", "typeId": "55a7-5b54-c60d-11dc"}
+                  {"name": "InSv", "$text": "4+", "typeId": "55a7-5b54-c60d-11dc"},
+                  {"name": "Base", "$text": "60mm Flying", "typeId": "nr-base-size"}
                 ]
               }
             ],
@@ -18786,7 +18847,8 @@
               {"name": "W", "$text": "4", "typeId": "750a-a2ec-90d3-21fe"},
               {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
               {"name": "OC", "$text": "1", "typeId": "bef7-942a-1a23-59f8"},
-              {"name": "InSv", "$text": "4+", "typeId": "55a7-5b54-c60d-11dc"}
+              {"name": "InSv", "$text": "4+", "typeId": "55a7-5b54-c60d-11dc"},
+              {"name": "Base", "$text": "25mm", "typeId": "nr-base-size"}
             ]
           },
           {
@@ -19124,7 +19186,8 @@
               {"name": "W", "$text": "3", "typeId": "750a-a2ec-90d3-21fe"},
               {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
               {"name": "OC", "$text": "1", "typeId": "bef7-942a-1a23-59f8"},
-              {"name": "InSv", "$text": "4+", "typeId": "55a7-5b54-c60d-11dc"}
+              {"name": "InSv", "$text": "4+", "typeId": "55a7-5b54-c60d-11dc"},
+              {"name": "Base", "$text": "25mm", "typeId": "nr-base-size"}
             ]
           },
           {
@@ -19515,7 +19578,8 @@
               {"name": "W", "$text": "6", "typeId": "750a-a2ec-90d3-21fe"},
               {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
               {"name": "OC", "$text": "2", "typeId": "bef7-942a-1a23-59f8"},
-              {"name": "InSv", "$text": "4+", "typeId": "55a7-5b54-c60d-11dc"}
+              {"name": "InSv", "$text": "4+", "typeId": "55a7-5b54-c60d-11dc"},
+              {"name": "Base", "$text": "60mm Flying", "typeId": "nr-base-size"}
             ]
           },
           {
@@ -20019,7 +20083,8 @@
                   {"name": "W", "$text": "2", "typeId": "750a-a2ec-90d3-21fe"},
                   {"name": "LD", "$text": "7+", "typeId": "58d2-b879-49c7-43bc"},
                   {"name": "OC", "$text": "0", "typeId": "bef7-942a-1a23-59f8"},
-                  {"name": "InSv", "$text": "", "typeId": "55a7-5b54-c60d-11dc"}
+                  {"name": "InSv", "$text": "", "typeId": "55a7-5b54-c60d-11dc"},
+                  {"name": "Base", "$text": "40mm", "typeId": "nr-base-size"}
                 ]
               }
             ],
@@ -20638,7 +20703,8 @@
                       {"name": "W", "$text": "1", "typeId": "750a-a2ec-90d3-21fe"},
                       {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
                       {"name": "OC", "$text": "1", "typeId": "bef7-942a-1a23-59f8"},
-                      {"name": "InSv", "$text": "5+", "typeId": "55a7-5b54-c60d-11dc"}
+                      {"name": "InSv", "$text": "5+", "typeId": "55a7-5b54-c60d-11dc"},
+                      {"name": "Base", "$text": "28.5mm", "typeId": "nr-base-size"}
                     ]
                   }
                 ],
@@ -20742,7 +20808,8 @@
                       {"name": "W", "$text": "2", "typeId": "750a-a2ec-90d3-21fe"},
                       {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
                       {"name": "OC", "$text": "1", "typeId": "bef7-942a-1a23-59f8"},
-                      {"name": "InSv", "$text": "5+", "typeId": "55a7-5b54-c60d-11dc"}
+                      {"name": "InSv", "$text": "5+", "typeId": "55a7-5b54-c60d-11dc"},
+                      {"name": "Base", "$text": "28.5mm", "typeId": "nr-base-size"}
                     ]
                   }
                 ],
@@ -21256,7 +21323,8 @@
               {"name": "W", "$text": "5", "typeId": "750a-a2ec-90d3-21fe"},
               {"name": "LD", "$text": "7+", "typeId": "58d2-b879-49c7-43bc"},
               {"name": "OC", "$text": "1", "typeId": "bef7-942a-1a23-59f8"},
-              {"name": "InSv", "$text": "", "typeId": "55a7-5b54-c60d-11dc"}
+              {"name": "InSv", "$text": "", "typeId": "55a7-5b54-c60d-11dc"},
+              {"name": "Base", "$text": "40mm", "typeId": "nr-base-size"}
             ]
           },
           {
@@ -21706,7 +21774,8 @@
                       {"name": "W", "$text": "1", "typeId": "750a-a2ec-90d3-21fe"},
                       {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
                       {"name": "OC", "$text": "1", "typeId": "bef7-942a-1a23-59f8"},
-                      {"name": "InSv", "$text": "5+", "typeId": "55a7-5b54-c60d-11dc"}
+                      {"name": "InSv", "$text": "5+", "typeId": "55a7-5b54-c60d-11dc"},
+                      {"name": "Base", "$text": "32mm", "typeId": "nr-base-size"}
                     ]
                   }
                 ],
@@ -21809,7 +21878,8 @@
                       {"name": "W", "$text": "2", "typeId": "750a-a2ec-90d3-21fe"},
                       {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
                       {"name": "OC", "$text": "1", "typeId": "bef7-942a-1a23-59f8"},
-                      {"name": "InSv", "$text": "5+", "typeId": "55a7-5b54-c60d-11dc"}
+                      {"name": "InSv", "$text": "5+", "typeId": "55a7-5b54-c60d-11dc"},
+                      {"name": "Base", "$text": "32mm", "typeId": "nr-base-size"}
                     ]
                   }
                 ],
@@ -22274,7 +22344,8 @@
               {"name": "W", "$text": "5", "typeId": "750a-a2ec-90d3-21fe"},
               {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
               {"name": "OC", "$text": "1", "typeId": "bef7-942a-1a23-59f8"},
-              {"name": "InSv", "$text": "4+", "typeId": "55a7-5b54-c60d-11dc"}
+              {"name": "InSv", "$text": "4+", "typeId": "55a7-5b54-c60d-11dc"},
+              {"name": "Base", "$text": "32mm", "typeId": "nr-base-size"}
             ]
           },
           {
@@ -22532,7 +22603,8 @@
               {"name": "W", "$text": "12", "typeId": "750a-a2ec-90d3-21fe"},
               {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
               {"name": "OC", "$text": "3", "typeId": "bef7-942a-1a23-59f8"},
-              {"name": "InSv", "$text": "4+", "typeId": "55a7-5b54-c60d-11dc"}
+              {"name": "InSv", "$text": "4+", "typeId": "55a7-5b54-c60d-11dc"},
+              {"name": "Base", "$text": "80mm", "typeId": "nr-base-size"}
             ]
           },
           {
@@ -24221,7 +24293,8 @@
               {"name": "W", "$text": "4", "typeId": "750a-a2ec-90d3-21fe"},
               {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
               {"name": "OC", "$text": "1", "typeId": "bef7-942a-1a23-59f8"},
-              {"name": "InSv", "$text": "4+", "typeId": "55a7-5b54-c60d-11dc"}
+              {"name": "InSv", "$text": "4+", "typeId": "55a7-5b54-c60d-11dc"},
+              {"name": "Base", "$text": "25mm", "typeId": "nr-base-size"}
             ]
           },
           {
@@ -24716,7 +24789,8 @@
               {"name": "W", "$text": "6", "typeId": "750a-a2ec-90d3-21fe"},
               {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
               {"name": "OC", "$text": "2", "typeId": "bef7-942a-1a23-59f8"},
-              {"name": "InSv", "$text": "4+", "typeId": "55a7-5b54-c60d-11dc"}
+              {"name": "InSv", "$text": "4+", "typeId": "55a7-5b54-c60d-11dc"},
+              {"name": "Base", "$text": "60mm Flying", "typeId": "nr-base-size"}
             ]
           },
           {
@@ -26193,7 +26267,8 @@
                       {"name": "W", "$text": "1", "typeId": "750a-a2ec-90d3-21fe"},
                       {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
                       {"name": "OC", "$text": "1", "typeId": "bef7-942a-1a23-59f8"},
-                      {"name": "InSv", "$text": "5+", "typeId": "55a7-5b54-c60d-11dc"}
+                      {"name": "InSv", "$text": "5+", "typeId": "55a7-5b54-c60d-11dc"},
+                      {"name": "Base", "$text": "28.5mm", "typeId": "nr-base-size"}
                     ]
                   }
                 ],
@@ -26283,7 +26358,8 @@
                       {"name": "W", "$text": "2", "typeId": "750a-a2ec-90d3-21fe"},
                       {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
                       {"name": "OC", "$text": "1", "typeId": "bef7-942a-1a23-59f8"},
-                      {"name": "InSv", "$text": "5+", "typeId": "55a7-5b54-c60d-11dc"}
+                      {"name": "InSv", "$text": "5+", "typeId": "55a7-5b54-c60d-11dc"},
+                      {"name": "Base", "$text": "28.5mm", "typeId": "nr-base-size"}
                     ]
                   }
                 ],
@@ -26827,7 +26903,8 @@
               {"name": "W", "$text": "13", "typeId": "750a-a2ec-90d3-21fe"},
               {"name": "LD", "$text": "7+", "typeId": "58d2-b879-49c7-43bc"},
               {"name": "OC", "$text": "2", "typeId": "bef7-942a-1a23-59f8"},
-              {"name": "InSv", "$text": "5+", "typeId": "55a7-5b54-c60d-11dc"}
+              {"name": "InSv", "$text": "5+", "typeId": "55a7-5b54-c60d-11dc"},
+              {"name": "Base", "$text": "60mm Flying", "typeId": "nr-base-size"}
             ]
           },
           {
@@ -27316,7 +27393,8 @@
               {"name": "W", "$text": "14", "typeId": "750a-a2ec-90d3-21fe"},
               {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
               {"name": "OC", "$text": "0", "typeId": "bef7-942a-1a23-59f8"},
-              {"name": "InSv", "$text": "", "typeId": "55a7-5b54-c60d-11dc"}
+              {"name": "InSv", "$text": "", "typeId": "55a7-5b54-c60d-11dc"},
+              {"name": "Base", "$text": "Hull", "typeId": "nr-base-size"}
             ]
           },
           {
@@ -28377,7 +28455,8 @@
               {"name": "W", "$text": "18", "typeId": "750a-a2ec-90d3-21fe"},
               {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
               {"name": "OC", "$text": "10", "typeId": "bef7-942a-1a23-59f8"},
-              {"name": "InSv", "$text": "", "typeId": "55a7-5b54-c60d-11dc"}
+              {"name": "InSv", "$text": "", "typeId": "55a7-5b54-c60d-11dc"},
+              {"name": "Base", "$text": "120x92mm", "typeId": "nr-base-size"}
             ]
           },
           {
@@ -28944,7 +29023,8 @@
               {"name": "W", "$text": "10", "typeId": "750a-a2ec-90d3-21fe"},
               {"name": "LD", "$text": "8+", "typeId": "58d2-b879-49c7-43bc"},
               {"name": "OC", "$text": "3", "typeId": "bef7-942a-1a23-59f8"},
-              {"name": "InSv", "$text": "", "typeId": "55a7-5b54-c60d-11dc"}
+              {"name": "InSv", "$text": "", "typeId": "55a7-5b54-c60d-11dc"},
+              {"name": "Base", "$text": "60mm", "typeId": "nr-base-size"}
             ]
           },
           {
@@ -29794,7 +29874,8 @@
                   {"name": "W", "$text": "3", "typeId": "750a-a2ec-90d3-21fe"},
                   {"name": "LD", "$text": "8+", "typeId": "58d2-b879-49c7-43bc"},
                   {"name": "OC", "$text": "1", "typeId": "bef7-942a-1a23-59f8"},
-                  {"name": "InSv", "$text": "", "typeId": "55a7-5b54-c60d-11dc"}
+                  {"name": "InSv", "$text": "", "typeId": "55a7-5b54-c60d-11dc"},
+                  {"name": "Base", "$text": "40mm", "typeId": "nr-base-size"}
                 ]
               }
             ],
@@ -30227,7 +30308,8 @@
               {"name": "W", "$text": "4", "typeId": "750a-a2ec-90d3-21fe"},
               {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
               {"name": "OC", "$text": "1", "typeId": "bef7-942a-1a23-59f8"},
-              {"name": "InSv", "$text": "4+", "typeId": "55a7-5b54-c60d-11dc"}
+              {"name": "InSv", "$text": "4+", "typeId": "55a7-5b54-c60d-11dc"},
+              {"name": "Base", "$text": "75x42mm", "typeId": "nr-base-size"}
             ]
           },
           {
@@ -30795,7 +30877,8 @@
                   {"name": "W", "$text": "3", "typeId": "750a-a2ec-90d3-21fe"},
                   {"name": "LD", "$text": "8+", "typeId": "58d2-b879-49c7-43bc"},
                   {"name": "OC", "$text": "1", "typeId": "bef7-942a-1a23-59f8"},
-                  {"name": "InSv", "$text": "", "typeId": "55a7-5b54-c60d-11dc"}
+                  {"name": "InSv", "$text": "", "typeId": "55a7-5b54-c60d-11dc"},
+                  {"name": "Base", "$text": "40mm", "typeId": "nr-base-size"}
                 ]
               }
             ],
@@ -31249,7 +31332,8 @@
               {"name": "W", "$text": "4", "typeId": "750a-a2ec-90d3-21fe"},
               {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
               {"name": "OC", "$text": "1", "typeId": "bef7-942a-1a23-59f8"},
-              {"name": "InSv", "$text": "2+*", "typeId": "55a7-5b54-c60d-11dc"}
+              {"name": "InSv", "$text": "2+*", "typeId": "55a7-5b54-c60d-11dc"},
+              {"name": "Base", "$text": "32mm", "typeId": "nr-base-size"}
             ]
           },
           {
@@ -31847,7 +31931,8 @@
                       {"name": "W", "$text": "3", "typeId": "750a-a2ec-90d3-21fe"},
                       {"name": "LD", "$text": "7+", "typeId": "58d2-b879-49c7-43bc"},
                       {"name": "OC", "$text": "1", "typeId": "bef7-942a-1a23-59f8"},
-                      {"name": "InSv", "$text": "6+", "typeId": "55a7-5b54-c60d-11dc"}
+                      {"name": "InSv", "$text": "6+", "typeId": "55a7-5b54-c60d-11dc"},
+                      {"name": "Base", "$text": "32mm Flying", "typeId": "nr-base-size"}
                     ]
                   }
                 ],
@@ -31980,7 +32065,8 @@
                       {"name": "W", "$text": "5", "typeId": "750a-a2ec-90d3-21fe"},
                       {"name": "LD", "$text": "8+", "typeId": "58d2-b879-49c7-43bc"},
                       {"name": "OC", "$text": "1", "typeId": "bef7-942a-1a23-59f8"},
-                      {"name": "InSv", "$text": "6+", "typeId": "55a7-5b54-c60d-11dc"}
+                      {"name": "InSv", "$text": "6+", "typeId": "55a7-5b54-c60d-11dc"},
+                      {"name": "Base", "$text": "40mm", "typeId": "nr-base-size"}
                     ]
                   }
                 ],
@@ -32041,7 +32127,8 @@
                       {"name": "W", "$text": "2", "typeId": "750a-a2ec-90d3-21fe"},
                       {"name": "LD", "$text": "8+", "typeId": "58d2-b879-49c7-43bc"},
                       {"name": "OC", "$text": "1", "typeId": "bef7-942a-1a23-59f8"},
-                      {"name": "InSv", "$text": "6+", "typeId": "55a7-5b54-c60d-11dc"}
+                      {"name": "InSv", "$text": "6+", "typeId": "55a7-5b54-c60d-11dc"},
+                      {"name": "Base", "$text": "40mm", "typeId": "nr-base-size"}
                     ]
                   }
                 ],
@@ -32104,7 +32191,8 @@
                       {"name": "W", "$text": "3", "typeId": "750a-a2ec-90d3-21fe"},
                       {"name": "LD", "$text": "8+", "typeId": "58d2-b879-49c7-43bc"},
                       {"name": "OC", "$text": "1", "typeId": "bef7-942a-1a23-59f8"},
-                      {"name": "InSv", "$text": "6+", "typeId": "55a7-5b54-c60d-11dc"}
+                      {"name": "InSv", "$text": "6+", "typeId": "55a7-5b54-c60d-11dc"},
+                      {"name": "Base", "$text": "40mm", "typeId": "nr-base-size"}
                     ]
                   }
                 ],
@@ -32577,7 +32665,7 @@
                 "hidden": false,
                 "targetId": "f7-85a3-9e39-51f8",
                 "type": "profile",
-                "modifiers": [{"field": "name", "type": "set", "value": "Sslyth"}]
+                "modifiers": [{"field": "name", "type": "set", "value": "Sslyth"}, {"field": "nr-base-size", "type": "set", "value": "40mm"}]
               }
             ],
             "selectionEntries": [
@@ -33147,7 +33235,8 @@
                   {"name": "W", "$text": "7", "typeId": "750a-a2ec-90d3-21fe"},
                   {"name": "LD", "$text": "7+", "typeId": "58d2-b879-49c7-43bc"},
                   {"name": "OC", "$text": "2", "typeId": "bef7-942a-1a23-59f8"},
-                  {"name": "InSv", "$text": "6+", "typeId": "55a7-5b54-c60d-11dc"}
+                  {"name": "InSv", "$text": "6+", "typeId": "55a7-5b54-c60d-11dc"},
+                  {"name": "Base", "$text": "60mm Flying", "typeId": "nr-base-size"}
                 ]
               }
             ],
@@ -33446,7 +33535,8 @@
               {"name": "W", "$text": "5", "typeId": "750a-a2ec-90d3-21fe"},
               {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
               {"name": "OC", "$text": "1", "typeId": "bef7-942a-1a23-59f8"},
-              {"name": "InSv", "$text": "4+", "typeId": "55a7-5b54-c60d-11dc"}
+              {"name": "InSv", "$text": "4+", "typeId": "55a7-5b54-c60d-11dc"},
+              {"name": "Base", "$text": "40mm", "typeId": "nr-base-size"}
             ]
           },
           {
@@ -34202,7 +34292,8 @@
               {"name": "W", "$text": "5", "typeId": "750a-a2ec-90d3-21fe"},
               {"name": "LD", "$text": "7+", "typeId": "58d2-b879-49c7-43bc"},
               {"name": "OC", "$text": "1", "typeId": "bef7-942a-1a23-59f8"},
-              {"name": "InSv", "$text": "6+", "typeId": "55a7-5b54-c60d-11dc"}
+              {"name": "InSv", "$text": "6+", "typeId": "55a7-5b54-c60d-11dc"},
+              {"name": "Base", "$text": "25mm", "typeId": "nr-base-size"}
             ]
           },
           {
@@ -35544,7 +35635,8 @@
                       {"name": "W", "$text": "1", "typeId": "750a-a2ec-90d3-21fe"},
                       {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
                       {"name": "OC", "$text": "1", "typeId": "bef7-942a-1a23-59f8"},
-                      {"name": "InSv", "$text": "5+", "typeId": "55a7-5b54-c60d-11dc"}
+                      {"name": "InSv", "$text": "5+", "typeId": "55a7-5b54-c60d-11dc"},
+                      {"name": "Base", "$text": "28.5mm", "typeId": "nr-base-size"}
                     ]
                   }
                 ],
@@ -35613,7 +35705,8 @@
                       {"name": "W", "$text": "2", "typeId": "750a-a2ec-90d3-21fe"},
                       {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
                       {"name": "OC", "$text": "1", "typeId": "bef7-942a-1a23-59f8"},
-                      {"name": "InSv", "$text": "5+", "typeId": "55a7-5b54-c60d-11dc"}
+                      {"name": "InSv", "$text": "5+", "typeId": "55a7-5b54-c60d-11dc"},
+                      {"name": "Base", "$text": "28.5mm", "typeId": "nr-base-size"}
                     ]
                   }
                 ],
@@ -36790,7 +36883,8 @@
               {"name": "W", "$text": "4", "typeId": "750a-a2ec-90d3-21fe"},
               {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
               {"name": "OC", "$text": "1", "typeId": "bef7-942a-1a23-59f8"},
-              {"name": "InSv", "$text": "4+", "typeId": "55a7-5b54-c60d-11dc"}
+              {"name": "InSv", "$text": "4+", "typeId": "55a7-5b54-c60d-11dc"},
+              {"name": "Base", "$text": "32mm", "typeId": "nr-base-size"}
             ]
           },
           {
@@ -37610,7 +37704,8 @@
               {"name": "W", "$text": "10", "typeId": "750a-a2ec-90d3-21fe"},
               {"name": "LD", "$text": "7+", "typeId": "58d2-b879-49c7-43bc"},
               {"name": "OC", "$text": "2", "typeId": "bef7-942a-1a23-59f8"},
-              {"name": "InSv", "$text": "6+", "typeId": "55a7-5b54-c60d-11dc"}
+              {"name": "InSv", "$text": "6+", "typeId": "55a7-5b54-c60d-11dc"},
+              {"name": "Base", "$text": "60mm Flying", "typeId": "nr-base-size"}
             ]
           },
           {
@@ -38102,7 +38197,8 @@
               {"name": "W", "$text": "11", "typeId": "750a-a2ec-90d3-21fe"},
               {"name": "LD", "$text": "7+", "typeId": "58d2-b879-49c7-43bc"},
               {"name": "OC", "$text": "3", "typeId": "bef7-942a-1a23-59f8"},
-              {"name": "InSv", "$text": "6+", "typeId": "55a7-5b54-c60d-11dc"}
+              {"name": "InSv", "$text": "6+", "typeId": "55a7-5b54-c60d-11dc"},
+              {"name": "Base", "$text": "60mm Flying", "typeId": "nr-base-size"}
             ]
           },
           {
@@ -38446,7 +38542,8 @@
               {"name": "W", "$text": "10", "typeId": "750a-a2ec-90d3-21fe"},
               {"name": "LD", "$text": "7+", "typeId": "58d2-b879-49c7-43bc"},
               {"name": "OC", "$text": "-", "typeId": "bef7-942a-1a23-59f8"},
-              {"name": "InSv", "$text": "6+", "typeId": "55a7-5b54-c60d-11dc"}
+              {"name": "InSv", "$text": "6+", "typeId": "55a7-5b54-c60d-11dc"},
+              {"name": "Base", "$text": "120x92mm", "typeId": "nr-base-size"}
             ]
           },
           {
@@ -39312,8 +39409,58 @@
                 "hidden": false,
                 "import": true,
                 "type": "model",
-                "constraints": [{"id": "7f9e-a625-e094-8676", "field": "selections", "scope": "parent", "shared": true, "type": "max", "value": 1}],
+                "constraints": [{"id": "7f9e-a625-e094-8676", "field": "selections", "scope": "parent", "shared": true, "type": "max", "value": 2}],
                 "entryLinks": [
+                  {
+                    "name": "Blaster",
+                    "id": "7570-e379-5181-c0f8",
+                    "collective": true,
+                    "hidden": false,
+                    "targetId": "71d-7841-c039-e4ce",
+                    "type": "selectionEntry",
+                    "constraints": [
+                      {"id": "176c-7812-7024-ea22", "field": "selections", "scope": "parent", "shared": true, "type": "min", "value": 1},
+                      {"id": "960f-bdb5-94a4-ba18", "field": "selections", "scope": "parent", "shared": true, "type": "max", "value": 1},
+                      {"id": "5f92-d80f-84ec-3c2b", "field": "selections", "includeChildSelections": true, "scope": "unit", "shared": true, "type": "max", "value": 1}
+                    ],
+                    "modifiers": [
+                      {
+                        "field": "5f92-d80f-84ec-3c2b",
+                        "type": "increment",
+                        "value": 1,
+                        "conditions": [
+                          {
+                            "childId": "model",
+                            "childName": "model",
+                            "field": "selections",
+                            "includeChildSelections": true,
+                            "scope": "unit",
+                            "shared": true,
+                            "type": "atLeast",
+                            "value": 6
+                          }
+                        ]
+                      },
+                      {
+                        "field": "5f92-d80f-84ec-3c2b",
+                        "type": "decrement",
+                        "value": 1,
+                        "repeats": [
+                          {
+                            "childId": "6aef-6e34-34ec-25cd",
+                            "childName": "Heat Lance",
+                            "field": "selections",
+                            "includeChildSelections": true,
+                            "repeats": 1,
+                            "roundUp": false,
+                            "scope": "unit",
+                            "shared": true,
+                            "value": 1
+                          }
+                        ]
+                      }
+                    ]
+                  },
                   {
                     "name": "Reaver Wargear",
                     "id": "7687-e074-747c-af06",
@@ -39347,98 +39494,7 @@
                   }
                 ],
                 "infoLinks": [{"name": "Reavers", "id": "9118-bdd7-40b9-fcde", "hidden": false, "targetId": "1385-a2e5-f10b-784b", "type": "profile"}],
-                "modifiers": [
-                  {
-                    "field": "7f9e-a625-e094-8676",
-                    "type": "decrement",
-                    "value": 1,
-                    "repeats": [
-                      {
-                        "id": "8621-f408-a5e9-abf7",
-                        "childId": "8c2-3607-9b28-8c43",
-                        "field": "selections",
-                        "includeChildSelections": true,
-                        "repeats": 1,
-                        "roundUp": false,
-                        "scope": "2c3a-9752-2516-69ab",
-                        "shared": true,
-                        "value": 1
-                      },
-                      {
-                        "id": "8621-f408-a5e9-abf7",
-                        "childId": "b3f7-b615-91c3-4259",
-                        "field": "selections",
-                        "includeChildSelections": true,
-                        "repeats": 1,
-                        "roundUp": false,
-                        "scope": "2c3a-9752-2516-69ab",
-                        "shared": true,
-                        "value": 1
-                      },
-                      {
-                        "id": "8621-f408-a5e9-abf7",
-                        "childId": "6f83-c6e1-22e8-f954",
-                        "field": "selections",
-                        "includeChildSelections": true,
-                        "repeats": 1,
-                        "roundUp": false,
-                        "scope": "2c3a-9752-2516-69ab",
-                        "shared": true,
-                        "value": 1
-                      }
-                    ]
-                  },
-                  {
-                    "field": "7f9e-a625-e094-8676",
-                    "type": "increment",
-                    "value": 1,
-                    "conditions": [
-                      {
-                        "childId": "model",
-                        "field": "selections",
-                        "includeChildForces": false,
-                        "includeChildSelections": true,
-                        "percentValue": false,
-                        "scope": "2c3a-9752-2516-69ab",
-                        "shared": true,
-                        "type": "equalTo",
-                        "value": 6
-                      }
-                    ]
-                  }
-                ],
                 "selectionEntries": [
-                  {
-                    "name": "Blaster",
-                    "id": "71d-7841-c039-e4ce",
-                    "collective": true,
-                    "hidden": false,
-                    "import": true,
-                    "type": "upgrade",
-                    "constraints": [
-                      {"id": "176c-7812-7024-ea22", "field": "selections", "scope": "parent", "shared": true, "type": "min", "value": 1},
-                      {"id": "960f-bdb5-94a4-ba18", "field": "selections", "scope": "parent", "shared": true, "type": "max", "value": 1}
-                    ],
-                    "infoLinks": [{"name": "Assault", "id": "3f2c-3ec4-cf64-a45b", "hidden": false, "targetId": "fc8a-8c24-bae9-cc1c", "type": "rule"}],
-                    "profiles": [
-                      {
-                        "name": "Blaster",
-                        "id": "cf99-94cc-99a2-7dfb",
-                        "hidden": false,
-                        "typeId": "f77d-b953-8fa4-b762",
-                        "typeName": "Ranged Weapons",
-                        "characteristics": [
-                          {"name": "Range", "$text": "18\"", "typeId": "9896-9419-16a1-92fc"},
-                          {"name": "A", "$text": "1", "typeId": "3bb-c35f-f54-fb08"},
-                          {"name": "BS", "$text": "3+", "typeId": "94d-8a98-cf90-183e"},
-                          {"name": "S", "$text": "8", "typeId": "2229-f494-25db-c5d3"},
-                          {"name": "AP", "$text": "-4", "typeId": "9ead-8a10-520-de15"},
-                          {"name": "D", "$text": "D6+1", "typeId": "a354-c1c8-a745-f9e3"},
-                          {"name": "Keywords", "$text": "Assault", "typeId": "7f1b-8591-2fcf-d01c"}
-                        ]
-                      }
-                    ]
-                  },
                   {
                     "name": "Splinter Pistol",
                     "id": "cddf-eb2c-38c2-397f",
@@ -39521,7 +39577,7 @@
                 "hidden": false,
                 "import": true,
                 "type": "model",
-                "constraints": [{"id": "3cd7-3d27-94f2-603a", "field": "selections", "scope": "parent", "shared": true, "type": "max", "value": 1}],
+                "constraints": [{"id": "3cd7-3d27-94f2-603a", "field": "selections", "scope": "parent", "shared": true, "type": "max", "value": 2}],
                 "entryLinks": [
                   {
                     "name": "Reaver Wargear",
@@ -39553,69 +39609,59 @@
                         ]
                       }
                     ]
+                  },
+                  {
+                    "name": "Heat Lance",
+                    "id": "17a0-84f6-c2e1-0207",
+                    "collective": true,
+                    "hidden": false,
+                    "targetId": "6aef-6e34-34ec-25cd",
+                    "type": "selectionEntry",
+                    "constraints": [
+                      {"id": "5012-8ecb-ab10-84d6", "field": "selections", "scope": "parent", "shared": true, "type": "max", "value": 1},
+                      {"id": "2f58-3560-646-e59e", "field": "selections", "scope": "parent", "shared": true, "type": "min", "value": 1},
+                      {"id": "2814-5bcd-641f-4c05", "field": "selections", "includeChildSelections": true, "scope": "unit", "shared": true, "type": "max", "value": 1}
+                    ],
+                    "modifiers": [
+                      {
+                        "field": "2814-5bcd-641f-4c05",
+                        "type": "increment",
+                        "value": 1,
+                        "conditions": [
+                          {
+                            "childId": "model",
+                            "childName": "model",
+                            "field": "selections",
+                            "includeChildSelections": true,
+                            "scope": "unit",
+                            "shared": true,
+                            "type": "atLeast",
+                            "value": 6
+                          }
+                        ]
+                      },
+                      {
+                        "field": "2814-5bcd-641f-4c05",
+                        "type": "decrement",
+                        "value": 1,
+                        "repeats": [
+                          {
+                            "childId": "fde4-7c66-7e0d-562c",
+                            "childName": "Blaster",
+                            "field": "selections",
+                            "includeChildSelections": true,
+                            "repeats": 1,
+                            "roundUp": false,
+                            "scope": "unit",
+                            "shared": true,
+                            "value": 1
+                          }
+                        ]
+                      }
+                    ]
                   }
                 ],
                 "infoLinks": [{"name": "Reavers", "id": "ed4a-f470-303b-ba14", "hidden": false, "targetId": "1385-a2e5-f10b-784b", "type": "profile"}],
-                "modifiers": [
-                  {
-                    "field": "3cd7-3d27-94f2-603a",
-                    "type": "increment",
-                    "value": 1,
-                    "conditions": [
-                      {
-                        "childId": "model",
-                        "field": "selections",
-                        "includeChildForces": false,
-                        "includeChildSelections": true,
-                        "percentValue": false,
-                        "scope": "2c3a-9752-2516-69ab",
-                        "shared": true,
-                        "type": "equalTo",
-                        "value": 6
-                      }
-                    ]
-                  },
-                  {
-                    "field": "3cd7-3d27-94f2-603a",
-                    "type": "decrement",
-                    "value": 1,
-                    "repeats": [
-                      {
-                        "id": "8621-f408-a5e9-abf7",
-                        "childId": "3095-279e-8a92-446c",
-                        "field": "selections",
-                        "includeChildSelections": true,
-                        "repeats": 1,
-                        "roundUp": false,
-                        "scope": "2c3a-9752-2516-69ab",
-                        "shared": true,
-                        "value": 1
-                      },
-                      {
-                        "id": "8621-f408-a5e9-abf7",
-                        "childId": "b3f7-b615-91c3-4259",
-                        "field": "selections",
-                        "includeChildSelections": true,
-                        "repeats": 1,
-                        "roundUp": false,
-                        "scope": "2c3a-9752-2516-69ab",
-                        "shared": true,
-                        "value": 1
-                      },
-                      {
-                        "id": "8621-f408-a5e9-abf7",
-                        "childId": "6f83-c6e1-22e8-f954",
-                        "field": "selections",
-                        "includeChildSelections": true,
-                        "repeats": 1,
-                        "roundUp": false,
-                        "scope": "2c3a-9752-2516-69ab",
-                        "shared": true,
-                        "value": 1
-                      }
-                    ]
-                  }
-                ],
                 "selectionEntries": [
                   {
                     "name": "Splinter Pistol",
@@ -39648,41 +39694,6 @@
                           {"name": "AP", "$text": "0", "typeId": "9ead-8a10-520-de15"},
                           {"name": "D", "$text": "1", "typeId": "a354-c1c8-a745-f9e3"},
                           {"name": "Keywords", "$text": "Anti-Infantry 3+, Assault, Pistol", "typeId": "7f1b-8591-2fcf-d01c"}
-                        ]
-                      }
-                    ]
-                  },
-                  {
-                    "name": "Heat Lance",
-                    "id": "6aef-6e34-34ec-25cd",
-                    "collective": true,
-                    "hidden": false,
-                    "import": true,
-                    "type": "upgrade",
-                    "categoryLinks": [{"name": "Damage Dx Weapon", "id": "d0ba-22fe-f320-d6b6", "hidden": false, "primary": false, "targetId": "4986-bf86-beb4-13ac"}],
-                    "constraints": [
-                      {"id": "5012-8ecb-ab10-84d6", "field": "selections", "scope": "parent", "shared": true, "type": "max", "value": 1},
-                      {"id": "2f58-3560-646-e59e", "field": "selections", "scope": "parent", "shared": true, "type": "min", "value": 1}
-                    ],
-                    "infoLinks": [
-                      {"name": "Assault", "id": "bd15-7d78-c729-43c6", "hidden": false, "targetId": "fc8a-8c24-bae9-cc1c", "type": "rule"},
-                      {"name": "Melta", "id": "e43a-a0bb-8c2f-3322", "hidden": false, "targetId": "7cdb-fb99-44a9-8849", "type": "rule"}
-                    ],
-                    "profiles": [
-                      {
-                        "name": "Heat Lance",
-                        "id": "535d-b608-3bf-c0ae",
-                        "hidden": false,
-                        "typeId": "f77d-b953-8fa4-b762",
-                        "typeName": "Ranged Weapons",
-                        "characteristics": [
-                          {"name": "Range", "$text": "18\"", "typeId": "9896-9419-16a1-92fc"},
-                          {"name": "A", "$text": "1", "typeId": "3bb-c35f-f54-fb08"},
-                          {"name": "BS", "$text": "3+", "typeId": "94d-8a98-cf90-183e"},
-                          {"name": "S", "$text": "14", "typeId": "2229-f494-25db-c5d3"},
-                          {"name": "AP", "$text": "-4", "typeId": "9ead-8a10-520-de15"},
-                          {"name": "D", "$text": "D6", "typeId": "a354-c1c8-a745-f9e3"},
-                          {"name": "Keywords", "$text": "Assault, Melta 3", "typeId": "7f1b-8591-2fcf-d01c"}
                         ]
                       }
                     ]
@@ -39872,6 +39883,114 @@
                       {"id": "69f6-cb03-2648-89dc", "field": "selections", "scope": "parent", "shared": true, "type": "min", "value": 1},
                       {"id": "c343-a7c-63c5-41dc", "field": "selections", "scope": "parent", "shared": true, "type": "max", "value": 1}
                     ],
+                    "entryLinks": [
+                      {
+                        "name": "Blaster",
+                        "id": "d350-dd87-2148-a98f",
+                        "collective": true,
+                        "hidden": false,
+                        "import": true,
+                        "targetId": "71d-7841-c039-e4ce",
+                        "type": "selectionEntry",
+                        "constraints": [
+                          {"id": "aa89-498a-f17d-ff75", "field": "selections", "scope": "parent", "shared": true, "type": "max", "value": 1},
+                          {"id": "2a22-ed76-c2a3-b3d2", "field": "selections", "includeChildSelections": true, "scope": "unit", "shared": true, "type": "max", "value": 1}
+                        ],
+                        "entryLinks": [
+                          {"name": "Weapon Modifications", "id": "302b-e1ba-4db8-cf5e", "hidden": false, "import": true, "targetId": "f9da-852a-d7f0-92e9", "type": "selectionEntryGroup"}
+                        ],
+                        "modifiers": [
+                          {
+                            "field": "2a22-ed76-c2a3-b3d2",
+                            "type": "increment",
+                            "value": 1,
+                            "conditions": [
+                              {
+                                "childId": "model",
+                                "childName": "model",
+                                "field": "selections",
+                                "includeChildSelections": true,
+                                "scope": "unit",
+                                "shared": true,
+                                "type": "atLeast",
+                                "value": 6
+                              }
+                            ]
+                          },
+                          {
+                            "field": "2a22-ed76-c2a3-b3d2",
+                            "type": "decrement",
+                            "value": 1,
+                            "repeats": [
+                              {
+                                "childId": "6aef-6e34-34ec-25cd",
+                                "childName": "Heat Lance",
+                                "field": "selections",
+                                "includeChildSelections": true,
+                                "repeats": 1,
+                                "roundUp": false,
+                                "scope": "unit",
+                                "shared": true,
+                                "value": 1
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "name": "Heat Lance",
+                        "id": "f63d-336d-c76d-52df",
+                        "collective": true,
+                        "hidden": false,
+                        "import": true,
+                        "targetId": "6aef-6e34-34ec-25cd",
+                        "type": "selectionEntry",
+                        "constraints": [
+                          {"id": "2aae-19c9-9b53-d30e", "field": "selections", "scope": "parent", "shared": true, "type": "max", "value": 1},
+                          {"id": "0ef4-91c7-ea2e-35c2", "field": "selections", "includeChildSelections": true, "scope": "unit", "shared": true, "type": "max", "value": 1}
+                        ],
+                        "entryLinks": [
+                          {"name": "Weapon Modifications", "id": "7a38-d9b2-d23d-1375", "hidden": false, "import": true, "targetId": "f9da-852a-d7f0-92e9", "type": "selectionEntryGroup"}
+                        ],
+                        "modifiers": [
+                          {
+                            "field": "0ef4-91c7-ea2e-35c2",
+                            "type": "increment",
+                            "value": 1,
+                            "conditions": [
+                              {
+                                "childId": "model",
+                                "childName": "model",
+                                "field": "selections",
+                                "includeChildSelections": true,
+                                "scope": "unit",
+                                "shared": true,
+                                "type": "atLeast",
+                                "value": 6
+                              }
+                            ]
+                          },
+                          {
+                            "field": "0ef4-91c7-ea2e-35c2",
+                            "type": "decrement",
+                            "value": 1,
+                            "repeats": [
+                              {
+                                "childId": "fde4-7c66-7e0d-562c",
+                                "childName": "Blaster",
+                                "field": "selections",
+                                "includeChildSelections": true,
+                                "repeats": 1,
+                                "roundUp": false,
+                                "scope": "unit",
+                                "shared": true,
+                                "value": 1
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ],
                     "selectionEntries": [
                       {
                         "name": "Splinter Rifle",
@@ -39899,66 +40018,6 @@
                               {"name": "AP", "$text": "0", "typeId": "9ead-8a10-520-de15"},
                               {"name": "D", "$text": "1", "typeId": "a354-c1c8-a745-f9e3"},
                               {"name": "Keywords", "$text": "Anti-Infantry 3+, Assault", "typeId": "7f1b-8591-2fcf-d01c"}
-                            ]
-                          }
-                        ]
-                      },
-                      {
-                        "name": "Blaster",
-                        "id": "b3f7-b615-91c3-4259",
-                        "collective": false,
-                        "hidden": false,
-                        "import": true,
-                        "type": "upgrade",
-                        "constraints": [{"id": "fba3-3ca6-13cb-f623", "field": "selections", "scope": "parent", "shared": true, "type": "max", "value": 1}],
-                        "entryLinks": [
-                          {"name": "Weapon Modifications", "id": "302b-e1ba-4db8-cf5e", "hidden": false, "import": true, "targetId": "f9da-852a-d7f0-92e9", "type": "selectionEntryGroup"}
-                        ],
-                        "profiles": [
-                          {
-                            "name": "Blaster",
-                            "id": "279d-98bf-5b55-6292",
-                            "hidden": false,
-                            "typeId": "f77d-b953-8fa4-b762",
-                            "typeName": "Ranged Weapons",
-                            "characteristics": [
-                              {"name": "Range", "$text": "18\"", "typeId": "9896-9419-16a1-92fc"},
-                              {"name": "A", "$text": "1", "typeId": "3bb-c35f-f54-fb08"},
-                              {"name": "BS", "$text": "3+", "typeId": "94d-8a98-cf90-183e"},
-                              {"name": "S", "$text": "8", "typeId": "2229-f494-25db-c5d3"},
-                              {"name": "AP", "$text": "-4", "typeId": "9ead-8a10-520-de15"},
-                              {"name": "D", "$text": "D6+1", "typeId": "a354-c1c8-a745-f9e3"},
-                              {"name": "Keywords", "$text": "Assault", "typeId": "7f1b-8591-2fcf-d01c"}
-                            ]
-                          }
-                        ]
-                      },
-                      {
-                        "name": "Heat Lance",
-                        "id": "6f83-c6e1-22e8-f954",
-                        "hidden": false,
-                        "import": true,
-                        "type": "upgrade",
-                        "categoryLinks": [{"name": "Damage Dx Weapon", "id": "a095-95ae-73dd-757a", "hidden": false, "primary": false, "targetId": "4986-bf86-beb4-13ac"}],
-                        "constraints": [{"id": "2d88-3974-0461-0733", "field": "selections", "scope": "parent", "shared": true, "type": "max", "value": 1}],
-                        "entryLinks": [
-                          {"name": "Weapon Modifications", "id": "7a38-d9b2-d23d-1375", "hidden": false, "import": true, "targetId": "f9da-852a-d7f0-92e9", "type": "selectionEntryGroup"}
-                        ],
-                        "profiles": [
-                          {
-                            "name": "Heat Lance",
-                            "id": "944f-56c1-8fdf-417a",
-                            "hidden": false,
-                            "typeId": "f77d-b953-8fa4-b762",
-                            "typeName": "Ranged Weapons",
-                            "characteristics": [
-                              {"name": "Range", "$text": "18\"", "typeId": "9896-9419-16a1-92fc"},
-                              {"name": "A", "$text": "1", "typeId": "3bb-c35f-f54-fb08"},
-                              {"name": "BS", "$text": "3+", "typeId": "94d-8a98-cf90-183e"},
-                              {"name": "S", "$text": "14", "typeId": "2229-f494-25db-c5d3"},
-                              {"name": "AP", "$text": "-4", "typeId": "9ead-8a10-520-de15"},
-                              {"name": "D", "$text": "D6", "typeId": "a354-c1c8-a745-f9e3"},
-                              {"name": "Keywords", "$text": "Assault, Melta 3", "typeId": "7f1b-8591-2fcf-d01c"}
                             ]
                           }
                         ]
@@ -40315,7 +40374,16 @@
                 "import": true,
                 "type": "model",
                 "constraints": [{"id": "eac0-97ba-2655-84b", "field": "selections", "scope": "parent", "shared": true, "type": "max", "value": 4}],
-                "infoLinks": [{"name": "Scourges", "id": "41c5-80bc-e6a6-95a8", "hidden": false, "targetId": "d335-77-e81a-3057", "type": "profile"}],
+                "infoLinks": [
+                  {
+                    "name": "Scourges",
+                    "id": "41c5-80bc-e6a6-95a8",
+                    "hidden": false,
+                    "targetId": "d335-77-e81a-3057",
+                    "type": "profile",
+                    "modifiers": [{"field": "nr-base-size", "type": "set", "value": "~32mm"}]
+                  }
+                ],
                 "selectionEntries": [
                   {
                     "name": "Close combat weapon",
@@ -40583,7 +40651,7 @@
                     "hidden": false,
                     "targetId": "d335-77-e81a-3057",
                     "type": "profile",
-                    "modifiers": [{"field": "name", "type": "set", "value": "Solarite"}]
+                    "modifiers": [{"field": "name", "type": "set", "value": "Solarite"}, {"field": "nr-base-size", "type": "set", "value": "~32mm"}]
                   }
                 ],
                 "selectionEntries": [
@@ -41122,7 +41190,8 @@
               {"name": "W", "$text": "4", "typeId": "750a-a2ec-90d3-21fe"},
               {"name": "LD", "$text": "7+", "typeId": "58d2-b879-49c7-43bc"},
               {"name": "OC", "$text": "1", "typeId": "bef7-942a-1a23-59f8"},
-              {"name": "InSv", "$text": "4+", "typeId": "55a7-5b54-c60d-11dc"}
+              {"name": "InSv", "$text": "4+", "typeId": "55a7-5b54-c60d-11dc"},
+              {"name": "Base", "$text": "25mm", "typeId": "nr-base-size"}
             ]
           },
           {
@@ -41563,7 +41632,8 @@
                   {"name": "W", "$text": "7", "typeId": "750a-a2ec-90d3-21fe"},
                   {"name": "LD", "$text": "7+", "typeId": "58d2-b879-49c7-43bc"},
                   {"name": "OC", "$text": "2", "typeId": "bef7-942a-1a23-59f8"},
-                  {"name": "InSv", "$text": "6+", "typeId": "55a7-5b54-c60d-11dc"}
+                  {"name": "InSv", "$text": "6+", "typeId": "55a7-5b54-c60d-11dc"},
+                  {"name": "Base", "$text": "60mm Flying", "typeId": "nr-base-size"}
                 ]
               }
             ],
@@ -42054,7 +42124,8 @@
               {"name": "W", "$text": "5", "typeId": "750a-a2ec-90d3-21fe"},
               {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
               {"name": "OC", "$text": "1", "typeId": "bef7-942a-1a23-59f8"},
-              {"name": "InSv", "$text": "4+", "typeId": "55a7-5b54-c60d-11dc"}
+              {"name": "InSv", "$text": "4+", "typeId": "55a7-5b54-c60d-11dc"},
+              {"name": "Base", "$text": "25mm", "typeId": "nr-base-size"}
             ]
           },
           {
@@ -42427,7 +42498,8 @@
               {"name": "W", "$text": "6", "typeId": "750a-a2ec-90d3-21fe"},
               {"name": "LD", "$text": "7+", "typeId": "58d2-b879-49c7-43bc"},
               {"name": "OC", "$text": "1", "typeId": "bef7-942a-1a23-59f8"},
-              {"name": "InSv", "$text": "6+", "typeId": "55a7-5b54-c60d-11dc"}
+              {"name": "InSv", "$text": "6+", "typeId": "55a7-5b54-c60d-11dc"},
+              {"name": "Base", "$text": "60mm Flying", "typeId": "nr-base-size"}
             ]
           },
           {
@@ -42871,7 +42943,8 @@
               {"name": "W", "$text": "12", "typeId": "750a-a2ec-90d3-21fe"},
               {"name": "LD", "$text": "7+", "typeId": "58d2-b879-49c7-43bc"},
               {"name": "OC", "$text": "-", "typeId": "bef7-942a-1a23-59f8"},
-              {"name": "InSv", "$text": "6+", "typeId": "55a7-5b54-c60d-11dc"}
+              {"name": "InSv", "$text": "6+", "typeId": "55a7-5b54-c60d-11dc"},
+              {"name": "Base", "$text": "120x92mm", "typeId": "nr-base-size"}
             ]
           },
           {
@@ -44809,7 +44882,8 @@
               {"name": "W", "$text": "24", "typeId": "750a-a2ec-90d3-21fe"},
               {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
               {"name": "OC", "$text": "8", "typeId": "bef7-942a-1a23-59f8"},
-              {"name": "InSv", "$text": "5+", "typeId": "55a7-5b54-c60d-11dc"}
+              {"name": "InSv", "$text": "5+", "typeId": "55a7-5b54-c60d-11dc"},
+              {"name": "Base", "$text": "Hull", "typeId": "nr-base-size"}
             ]
           }
         ],
@@ -45172,7 +45246,8 @@
               {"name": "W", "$text": "24", "typeId": "750a-a2ec-90d3-21fe"},
               {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
               {"name": "OC", "$text": "8", "typeId": "bef7-942a-1a23-59f8"},
-              {"name": "InSv", "$text": "5+", "typeId": "55a7-5b54-c60d-11dc"}
+              {"name": "InSv", "$text": "5+", "typeId": "55a7-5b54-c60d-11dc"},
+              {"name": "Base", "$text": "Hull", "typeId": "nr-base-size"}
             ]
           },
           {
@@ -45547,7 +45622,8 @@
               {"name": "W", "$text": "8", "typeId": "750a-a2ec-90d3-21fe"},
               {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
               {"name": "OC", "$text": "2", "typeId": "bef7-942a-1a23-59f8"},
-              {"name": "InSv", "$text": "", "typeId": "55a7-5b54-c60d-11dc"}
+              {"name": "InSv", "$text": "", "typeId": "55a7-5b54-c60d-11dc"},
+              {"name": "Base", "$text": "120x92mm", "typeId": "nr-base-size"}
             ]
           },
           {
@@ -45951,7 +46027,8 @@
               {"name": "W", "$text": "5", "typeId": "750a-a2ec-90d3-21fe"},
               {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
               {"name": "OC", "$text": "1", "typeId": "bef7-942a-1a23-59f8"},
-              {"name": "InSv", "$text": "4+", "typeId": "55a7-5b54-c60d-11dc"}
+              {"name": "InSv", "$text": "4+", "typeId": "55a7-5b54-c60d-11dc"},
+              {"name": "Base", "$text": "40mm", "typeId": "nr-base-size"}
             ]
           },
           {
@@ -46305,7 +46382,8 @@
               {"name": "W", "$text": "16", "typeId": "750a-a2ec-90d3-21fe"},
               {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
               {"name": "OC", "$text": "4", "typeId": "bef7-942a-1a23-59f8"},
-              {"name": "InSv", "$text": "5+", "typeId": "55a7-5b54-c60d-11dc"}
+              {"name": "InSv", "$text": "5+", "typeId": "55a7-5b54-c60d-11dc"},
+              {"name": "Base", "$text": "120x92mm", "typeId": "nr-base-size"}
             ]
           },
           {
@@ -46652,7 +46730,8 @@
               {"name": "W", "$text": "12", "typeId": "750a-a2ec-90d3-21fe"},
               {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
               {"name": "OC", "$text": "-", "typeId": "bef7-942a-1a23-59f8"},
-              {"name": "InSv", "$text": "5+", "typeId": "55a7-5b54-c60d-11dc"}
+              {"name": "InSv", "$text": "5+", "typeId": "55a7-5b54-c60d-11dc"},
+              {"name": "Base", "$text": "120x92mm", "typeId": "nr-base-size"}
             ]
           },
           {
@@ -47050,7 +47129,8 @@
               {"name": "W", "$text": "18", "typeId": "750a-a2ec-90d3-21fe"},
               {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
               {"name": "OC", "$text": "10", "typeId": "bef7-942a-1a23-59f8"},
-              {"name": "InSv", "$text": "", "typeId": "55a7-5b54-c60d-11dc"}
+              {"name": "InSv", "$text": "", "typeId": "55a7-5b54-c60d-11dc"},
+              {"name": "Base", "$text": "Hull", "typeId": "nr-base-size"}
             ]
           },
           {
@@ -47723,7 +47803,8 @@
                   {"name": "W", "$text": "2", "typeId": "750a-a2ec-90d3-21fe"},
                   {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
                   {"name": "OC", "$text": "1", "typeId": "bef7-942a-1a23-59f8"},
-                  {"name": "InSv", "$text": "5+", "typeId": "55a7-5b54-c60d-11dc"}
+                  {"name": "InSv", "$text": "5+", "typeId": "55a7-5b54-c60d-11dc"},
+                  {"name": "Base", "$text": "25mm", "typeId": "nr-base-size"}
                 ]
               }
             ],
@@ -47856,7 +47937,8 @@
                       {"name": "W", "$text": "1", "typeId": "750a-a2ec-90d3-21fe"},
                       {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
                       {"name": "OC", "$text": "1", "typeId": "bef7-942a-1a23-59f8"},
-                      {"name": "InSv", "$text": "5+", "typeId": "55a7-5b54-c60d-11dc"}
+                      {"name": "InSv", "$text": "5+", "typeId": "55a7-5b54-c60d-11dc"},
+                      {"name": "Base", "$text": "25mm", "typeId": "nr-base-size"}
                     ]
                   }
                 ],
@@ -48200,7 +48282,8 @@
               {"name": "W", "$text": "55", "typeId": "750a-a2ec-90d3-21fe"},
               {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
               {"name": "OC", "$text": "20", "typeId": "bef7-942a-1a23-59f8"},
-              {"name": "InSv", "$text": "4+*", "typeId": "55a7-5b54-c60d-11dc"}
+              {"name": "InSv", "$text": "4+*", "typeId": "55a7-5b54-c60d-11dc"},
+              {"name": "Base", "$text": "Hull", "typeId": "nr-base-size"}
             ]
           },
           {
@@ -48933,7 +49016,8 @@
               {"name": "W", "$text": "30", "typeId": "750a-a2ec-90d3-21fe"},
               {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
               {"name": "OC", "$text": "16", "typeId": "bef7-942a-1a23-59f8"},
-              {"name": "InSv", "$text": "4+*", "typeId": "55a7-5b54-c60d-11dc"}
+              {"name": "InSv", "$text": "4+*", "typeId": "55a7-5b54-c60d-11dc"},
+              {"name": "Base", "$text": "Hull", "typeId": "nr-base-size"}
             ]
           },
           {
@@ -49499,7 +49583,8 @@
               {"name": "W", "$text": "12", "typeId": "750a-a2ec-90d3-21fe"},
               {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
               {"name": "OC", "$text": "3", "typeId": "bef7-942a-1a23-59f8"},
-              {"name": "InSv", "$text": "", "typeId": "55a7-5b54-c60d-11dc"}
+              {"name": "InSv", "$text": "", "typeId": "55a7-5b54-c60d-11dc"},
+              {"name": "Base", "$text": "120x92mm", "typeId": "nr-base-size"}
             ]
           }
         ],
@@ -49922,7 +50007,8 @@
               {"name": "W", "$text": "10", "typeId": "750a-a2ec-90d3-21fe"},
               {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
               {"name": "OC", "$text": "3", "typeId": "bef7-942a-1a23-59f8"},
-              {"name": "InSv", "$text": "5+", "typeId": "55a7-5b54-c60d-11dc"}
+              {"name": "InSv", "$text": "5+", "typeId": "55a7-5b54-c60d-11dc"},
+              {"name": "Base", "$text": "60mm", "typeId": "nr-base-size"}
             ]
           },
           {
@@ -50498,7 +50584,8 @@
               {"name": "W", "$text": "18", "typeId": "750a-a2ec-90d3-21fe"},
               {"name": "LD", "$text": "7+", "typeId": "58d2-b879-49c7-43bc"},
               {"name": "OC", "$text": "5", "typeId": "bef7-942a-1a23-59f8"},
-              {"name": "InSv", "$text": "5+", "typeId": "55a7-5b54-c60d-11dc"}
+              {"name": "InSv", "$text": "5+", "typeId": "55a7-5b54-c60d-11dc"},
+              {"name": "Base", "$text": "120x92mm", "typeId": "nr-base-size"}
             ]
           },
           {
@@ -50823,7 +50910,8 @@
               {"name": "W", "$text": "3", "typeId": "750a-a2ec-90d3-21fe"},
               {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
               {"name": "OC", "$text": "1", "typeId": "bef7-942a-1a23-59f8"},
-              {"name": "InSv", "$text": "4+", "typeId": "55a7-5b54-c60d-11dc"}
+              {"name": "InSv", "$text": "4+", "typeId": "55a7-5b54-c60d-11dc"},
+              {"name": "Base", "$text": "32mm", "typeId": "nr-base-size"}
             ]
           },
           {
@@ -51196,7 +51284,8 @@
               {"name": "W", "$text": "3", "typeId": "750a-a2ec-90d3-21fe"},
               {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
               {"name": "OC", "$text": "1", "typeId": "bef7-942a-1a23-59f8"},
-              {"name": "InSv", "$text": "4+", "typeId": "55a7-5b54-c60d-11dc"}
+              {"name": "InSv", "$text": "4+", "typeId": "55a7-5b54-c60d-11dc"},
+              {"name": "Base", "$text": "25mm", "typeId": "nr-base-size"}
             ]
           },
           {
@@ -53910,7 +53999,8 @@
               {"name": "W", "$text": "12", "typeId": "750a-a2ec-90d3-21fe"},
               {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
               {"name": "OC", "$text": "3", "typeId": "bef7-942a-1a23-59f8"},
-              {"name": "InSv", "$text": "", "typeId": "55a7-5b54-c60d-11dc"}
+              {"name": "InSv", "$text": "", "typeId": "55a7-5b54-c60d-11dc"},
+              {"name": "Base", "$text": "120x92mm", "typeId": "nr-base-size"}
             ]
           },
           {
@@ -54359,7 +54449,8 @@
               {"name": "W", "$text": "16", "typeId": "750a-a2ec-90d3-21fe"},
               {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
               {"name": "OC", "$text": "-", "typeId": "bef7-942a-1a23-59f8"},
-              {"name": "InSv", "$text": "", "typeId": "55a7-5b54-c60d-11dc"}
+              {"name": "InSv", "$text": "", "typeId": "55a7-5b54-c60d-11dc"},
+              {"name": "Base", "$text": "120x92mm", "typeId": "nr-base-size"}
             ]
           },
           {
@@ -54818,7 +54909,8 @@
               {"name": "W", "$text": "30", "typeId": "750a-a2ec-90d3-21fe"},
               {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
               {"name": "OC", "$text": "-", "typeId": "bef7-942a-1a23-59f8"},
-              {"name": "InSv", "$text": "4+", "typeId": "55a7-5b54-c60d-11dc"}
+              {"name": "InSv", "$text": "4+", "typeId": "55a7-5b54-c60d-11dc"},
+              {"name": "Base", "$text": "Hull", "typeId": "nr-base-size"}
             ]
           }
         ],
@@ -55260,7 +55352,8 @@
               {"name": "W", "$text": "30", "typeId": "750a-a2ec-90d3-21fe"},
               {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
               {"name": "OC", "$text": "-", "typeId": "bef7-942a-1a23-59f8"},
-              {"name": "InSv", "$text": "4+", "typeId": "55a7-5b54-c60d-11dc"}
+              {"name": "InSv", "$text": "4+", "typeId": "55a7-5b54-c60d-11dc"},
+              {"name": "Base", "$text": "170x109mm", "typeId": "nr-base-size"}
             ]
           }
         ],
@@ -55632,7 +55725,8 @@
               {"name": "W", "$text": "6", "typeId": "750a-a2ec-90d3-21fe"},
               {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
               {"name": "OC", "$text": "2", "typeId": "bef7-942a-1a23-59f8"},
-              {"name": "InSv", "$text": "4+", "typeId": "55a7-5b54-c60d-11dc"}
+              {"name": "InSv", "$text": "4+", "typeId": "55a7-5b54-c60d-11dc"},
+              {"name": "Base", "$text": "60mm", "typeId": "nr-base-size"}
             ]
           },
           {
@@ -55995,7 +56089,8 @@
               {"name": "W", "$text": "10", "typeId": "750a-a2ec-90d3-21fe"},
               {"name": "LD", "$text": "7+", "typeId": "58d2-b879-49c7-43bc"},
               {"name": "OC", "$text": "0", "typeId": "bef7-942a-1a23-59f8"},
-              {"name": "InSv", "$text": "5+", "typeId": "55a7-5b54-c60d-11dc"}
+              {"name": "InSv", "$text": "5+", "typeId": "55a7-5b54-c60d-11dc"},
+              {"name": "Base", "$text": "120x92mm", "typeId": "nr-base-size"}
             ]
           },
           {
@@ -56408,7 +56503,8 @@
               {"name": "W", "$text": "11", "typeId": "750a-a2ec-90d3-21fe"},
               {"name": "LD", "$text": "7+", "typeId": "58d2-b879-49c7-43bc"},
               {"name": "OC", "$text": "3", "typeId": "bef7-942a-1a23-59f8"},
-              {"name": "InSv", "$text": "6+", "typeId": "55a7-5b54-c60d-11dc"}
+              {"name": "InSv", "$text": "6+", "typeId": "55a7-5b54-c60d-11dc"},
+              {"name": "Base", "$text": "100mm", "typeId": "nr-base-size"}
             ]
           },
           {
@@ -57750,7 +57846,8 @@
               {"name": "W", "$text": "4", "typeId": "750a-a2ec-90d3-21fe"},
               {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
               {"name": "OC", "$text": "1", "typeId": "bef7-942a-1a23-59f8"},
-              {"name": "InSv", "$text": "2+*", "typeId": "55a7-5b54-c60d-11dc"}
+              {"name": "InSv", "$text": "2+*", "typeId": "55a7-5b54-c60d-11dc"},
+              {"name": "Base", "$text": "25mm", "typeId": "nr-base-size"}
             ]
           },
           {
@@ -58097,7 +58194,8 @@
               {"name": "W", "$text": "5", "typeId": "750a-a2ec-90d3-21fe"},
               {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
               {"name": "OC", "$text": "1", "typeId": "bef7-942a-1a23-59f8"},
-              {"name": "InSv", "$text": "4+", "typeId": "55a7-5b54-c60d-11dc"}
+              {"name": "InSv", "$text": "4+", "typeId": "55a7-5b54-c60d-11dc"},
+              {"name": "Base", "$text": "40mm", "typeId": "nr-base-size"}
             ]
           },
           {
@@ -58598,7 +58696,8 @@
                   {"name": "W", "$text": "6", "typeId": "750a-a2ec-90d3-21fe"},
                   {"name": "LD", "$text": "7+", "typeId": "58d2-b879-49c7-43bc"},
                   {"name": "OC", "$text": "2", "typeId": "bef7-942a-1a23-59f8"},
-                  {"name": "InSv", "$text": "5+", "typeId": "55a7-5b54-c60d-11dc"}
+                  {"name": "InSv", "$text": "5+", "typeId": "55a7-5b54-c60d-11dc"},
+                  {"name": "Base", "$text": "60mm", "typeId": "nr-base-size"}
                 ]
               },
               {
@@ -58952,7 +59051,8 @@
               {"name": "W", "$text": "5", "typeId": "750a-a2ec-90d3-21fe"},
               {"name": "LD", "$text": "7+", "typeId": "58d2-b879-49c7-43bc"},
               {"name": "OC", "$text": "1", "typeId": "bef7-942a-1a23-59f8"},
-              {"name": "InSv", "$text": "", "typeId": "55a7-5b54-c60d-11dc"}
+              {"name": "InSv", "$text": "", "typeId": "55a7-5b54-c60d-11dc"},
+              {"name": "Base", "$text": "40mm", "typeId": "nr-base-size"}
             ]
           },
           {
@@ -59266,7 +59366,8 @@
               {"name": "W", "$text": "5", "typeId": "750a-a2ec-90d3-21fe"},
               {"name": "LD", "$text": "7+", "typeId": "58d2-b879-49c7-43bc"},
               {"name": "OC", "$text": "1", "typeId": "bef7-942a-1a23-59f8"},
-              {"name": "InSv", "$text": "", "typeId": "55a7-5b54-c60d-11dc"}
+              {"name": "InSv", "$text": "", "typeId": "55a7-5b54-c60d-11dc"},
+              {"name": "Base", "$text": "40mm", "typeId": "nr-base-size"}
             ]
           },
           {
@@ -59725,7 +59826,8 @@
                   {"name": "W", "$text": "6", "typeId": "750a-a2ec-90d3-21fe"},
                   {"name": "LD", "$text": "7+", "typeId": "58d2-b879-49c7-43bc"},
                   {"name": "OC", "$text": "2", "typeId": "bef7-942a-1a23-59f8"},
-                  {"name": "InSv", "$text": "", "typeId": "55a7-5b54-c60d-11dc"}
+                  {"name": "InSv", "$text": "", "typeId": "55a7-5b54-c60d-11dc"},
+                  {"name": "Base", "$text": "60mm Flying", "typeId": "nr-base-size"}
                 ]
               }
             ],
@@ -60242,7 +60344,8 @@
               {"name": "W", "$text": "18", "typeId": "750a-a2ec-90d3-21fe"},
               {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
               {"name": "OC", "$text": "10", "typeId": "bef7-942a-1a23-59f8"},
-              {"name": "InSv", "$text": "", "typeId": "55a7-5b54-c60d-11dc"}
+              {"name": "InSv", "$text": "", "typeId": "55a7-5b54-c60d-11dc"},
+              {"name": "Base", "$text": "120x92mm", "typeId": "nr-base-size"}
             ]
           },
           {
@@ -60768,7 +60871,8 @@
               {"name": "W", "$text": "4", "typeId": "750a-a2ec-90d3-21fe"},
               {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
               {"name": "OC", "$text": "1", "typeId": "bef7-942a-1a23-59f8"},
-              {"name": "InSv", "$text": "4+", "typeId": "55a7-5b54-c60d-11dc"}
+              {"name": "InSv", "$text": "4+", "typeId": "55a7-5b54-c60d-11dc"},
+              {"name": "Base", "$text": "25mm", "typeId": "nr-base-size"}
             ]
           },
           {
@@ -62608,7 +62712,8 @@
                       {"name": "W", "$text": "1", "typeId": "750a-a2ec-90d3-21fe"},
                       {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
                       {"name": "OC", "$text": "1", "typeId": "bef7-942a-1a23-59f8"},
-                      {"name": "InSv", "$text": "5+", "typeId": "55a7-5b54-c60d-11dc"}
+                      {"name": "InSv", "$text": "5+", "typeId": "55a7-5b54-c60d-11dc"},
+                      {"name": "Base", "$text": "28.5mm", "typeId": "nr-base-size"}
                     ]
                   }
                 ],
@@ -62677,7 +62782,8 @@
                       {"name": "W", "$text": "2", "typeId": "750a-a2ec-90d3-21fe"},
                       {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
                       {"name": "OC", "$text": "1", "typeId": "bef7-942a-1a23-59f8"},
-                      {"name": "InSv", "$text": "5+", "typeId": "55a7-5b54-c60d-11dc"}
+                      {"name": "InSv", "$text": "5+", "typeId": "55a7-5b54-c60d-11dc"},
+                      {"name": "Base", "$text": "28.5mm", "typeId": "nr-base-size"}
                     ]
                   }
                 ],
@@ -63314,7 +63420,8 @@
                         "value": 6
                       }
                     ]
-                  }
+                  },
+                  {"field": "71d0-76c0-a43c-4c71", "type": "floor", "value": 0}
                 ],
                 "selectionEntries": [
                   {
@@ -63515,7 +63622,8 @@
                         "value": 1
                       }
                     ]
-                  }
+                  },
+                  {"field": "96f6-70b4-897d-094e", "type": "floor", "value": 0}
                 ],
                 "selectionEntries": [
                   {
@@ -64205,7 +64313,8 @@
               {"name": "W", "$text": "10", "typeId": "750a-a2ec-90d3-21fe"},
               {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
               {"name": "OC", "$text": "2", "typeId": "bef7-942a-1a23-59f8"},
-              {"name": "InSv", "$text": "6+", "typeId": "55a7-5b54-c60d-11dc"}
+              {"name": "InSv", "$text": "6+", "typeId": "55a7-5b54-c60d-11dc"},
+              {"name": "Base", "$text": "60mm Flying", "typeId": "nr-base-size"}
             ]
           },
           {
@@ -64665,7 +64774,8 @@
               {"name": "W", "$text": "6", "typeId": "750a-a2ec-90d3-21fe"},
               {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
               {"name": "OC", "$text": "1", "typeId": "bef7-942a-1a23-59f8"},
-              {"name": "InSv", "$text": "6+", "typeId": "55a7-5b54-c60d-11dc"}
+              {"name": "InSv", "$text": "6+", "typeId": "55a7-5b54-c60d-11dc"},
+              {"name": "Base", "$text": "60mm Flying", "typeId": "nr-base-size"}
             ]
           },
           {
@@ -65538,7 +65648,8 @@
               {"name": "W", "$text": "5", "typeId": "750a-a2ec-90d3-21fe"},
               {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
               {"name": "OC", "$text": "2", "typeId": "bef7-942a-1a23-59f8"},
-              {"name": "InSv", "$text": "4+", "typeId": "55a7-5b54-c60d-11dc"}
+              {"name": "InSv", "$text": "4+", "typeId": "55a7-5b54-c60d-11dc"},
+              {"name": "Base", "$text": "32mm", "typeId": "nr-base-size"}
             ]
           },
           {
@@ -68170,7 +68281,8 @@
               {"name": "W", "$text": "5", "typeId": "750a-a2ec-90d3-21fe"},
               {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
               {"name": "OC", "$text": "1", "typeId": "bef7-942a-1a23-59f8"},
-              {"name": "InSv", "$text": "4+", "typeId": "55a7-5b54-c60d-11dc"}
+              {"name": "InSv", "$text": "4+", "typeId": "55a7-5b54-c60d-11dc"},
+              {"name": "Base", "$text": "40mm", "typeId": "nr-base-size"}
             ]
           },
           {
@@ -68495,7 +68607,8 @@
               {"name": "W", "$text": "4", "typeId": "750a-a2ec-90d3-21fe"},
               {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
               {"name": "OC", "$text": "1", "typeId": "bef7-942a-1a23-59f8"},
-              {"name": "InSv", "$text": "4+", "typeId": "55a7-5b54-c60d-11dc"}
+              {"name": "InSv", "$text": "4+", "typeId": "55a7-5b54-c60d-11dc"},
+              {"name": "Base", "$text": "32mm", "typeId": "nr-base-size"}
             ]
           },
           {
@@ -68926,7 +69039,8 @@
                   {"name": "W", "$text": "6", "typeId": "750a-a2ec-90d3-21fe"},
                   {"name": "LD", "$text": "7+", "typeId": "58d2-b879-49c7-43bc"},
                   {"name": "OC", "$text": "2", "typeId": "bef7-942a-1a23-59f8"},
-                  {"name": "InSv", "$text": "", "typeId": "55a7-5b54-c60d-11dc"}
+                  {"name": "InSv", "$text": "", "typeId": "55a7-5b54-c60d-11dc"},
+                  {"name": "Base", "$text": "120x92mm", "typeId": "nr-base-size"}
                 ]
               }
             ],
@@ -70533,7 +70647,8 @@
               {"name": "W", "$text": "4", "typeId": "750a-a2ec-90d3-21fe"},
               {"name": "LD", "$text": "7+", "typeId": "58d2-b879-49c7-43bc"},
               {"name": "OC", "$text": "1", "typeId": "bef7-942a-1a23-59f8"},
-              {"name": "InSv", "$text": "4+", "typeId": "55a7-5b54-c60d-11dc"}
+              {"name": "InSv", "$text": "4+", "typeId": "55a7-5b54-c60d-11dc"},
+              {"name": "Base", "$text": "~32mm", "typeId": "nr-base-size"}
             ],
             "modifierGroups": [
               {
@@ -71140,7 +71255,8 @@
               {"name": "W", "$text": "5", "typeId": "750a-a2ec-90d3-21fe"},
               {"name": "LD", "$text": "7+", "typeId": "58d2-b879-49c7-43bc"},
               {"name": "OC", "$text": "1", "typeId": "bef7-942a-1a23-59f8"},
-              {"name": "InSv", "$text": "6+", "typeId": "55a7-5b54-c60d-11dc"}
+              {"name": "InSv", "$text": "6+", "typeId": "55a7-5b54-c60d-11dc"},
+              {"name": "Base", "$text": "25mm", "typeId": "nr-base-size"}
             ],
             "modifiers": [
               {
@@ -71651,7 +71767,8 @@
               {"name": "W", "$text": "4", "typeId": "750a-a2ec-90d3-21fe"},
               {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
               {"name": "OC", "$text": "1", "typeId": "bef7-942a-1a23-59f8"},
-              {"name": "InSv", "$text": "4+", "typeId": "55a7-5b54-c60d-11dc"}
+              {"name": "InSv", "$text": "4+", "typeId": "55a7-5b54-c60d-11dc"},
+              {"name": "Base", "$text": "32mm", "typeId": "nr-base-size"}
             ],
             "modifiers": [
               {
@@ -72120,7 +72237,8 @@
               {"name": "W", "$text": "5", "typeId": "750a-a2ec-90d3-21fe"},
               {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
               {"name": "OC", "$text": "2", "typeId": "bef7-942a-1a23-59f8"},
-              {"name": "InSv", "$text": "4+", "typeId": "55a7-5b54-c60d-11dc"}
+              {"name": "InSv", "$text": "4+", "typeId": "55a7-5b54-c60d-11dc"},
+              {"name": "Base", "$text": "60x35.5mm", "typeId": "nr-base-size"}
             ],
             "modifiers": [
               {
@@ -72475,7 +72593,8 @@
               {"name": "W", "$text": "10", "typeId": "750a-a2ec-90d3-21fe"},
               {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
               {"name": "OC", "$text": "3", "typeId": "bef7-942a-1a23-59f8"},
-              {"name": "InSv", "$text": "", "typeId": "55a7-5b54-c60d-11dc"}
+              {"name": "InSv", "$text": "", "typeId": "55a7-5b54-c60d-11dc"},
+              {"name": "Base", "$text": "60mm", "typeId": "nr-base-size"}
             ]
           },
           {
@@ -73640,7 +73759,8 @@
               {"name": "W", "$text": "4", "typeId": "750a-a2ec-90d3-21fe"},
               {"name": "LD", "$text": "7+", "typeId": "58d2-b879-49c7-43bc"},
               {"name": "OC", "$text": "2", "typeId": "bef7-942a-1a23-59f8"},
-              {"name": "InSv", "$text": "", "typeId": "55a7-5b54-c60d-11dc"}
+              {"name": "InSv", "$text": "", "typeId": "55a7-5b54-c60d-11dc"},
+              {"name": "Base", "$text": "75x42mm", "typeId": "nr-base-size"}
             ]
           },
           {
@@ -74063,7 +74183,8 @@
               {"name": "W", "$text": "4", "typeId": "750a-a2ec-90d3-21fe"},
               {"name": "LD", "$text": "7+", "typeId": "58d2-b879-49c7-43bc"},
               {"name": "OC", "$text": "2", "typeId": "bef7-942a-1a23-59f8"},
-              {"name": "InSv", "$text": "", "typeId": "55a7-5b54-c60d-11dc"}
+              {"name": "InSv", "$text": "", "typeId": "55a7-5b54-c60d-11dc"},
+              {"name": "Base", "$text": "75x42mm", "typeId": "nr-base-size"}
             ]
           },
           {
@@ -74560,7 +74681,8 @@
               {"name": "W", "$text": "4", "typeId": "750a-a2ec-90d3-21fe"},
               {"name": "LD", "$text": "6+", "typeId": "58d2-b879-49c7-43bc"},
               {"name": "OC", "$text": "2", "typeId": "bef7-942a-1a23-59f8"},
-              {"name": "InSv", "$text": "", "typeId": "55a7-5b54-c60d-11dc"}
+              {"name": "InSv", "$text": "", "typeId": "55a7-5b54-c60d-11dc"},
+              {"name": "Base", "$text": "75x42mm", "typeId": "nr-base-size"}
             ]
           },
           {
@@ -74663,6 +74785,59 @@
                   }
                 ]
               }
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Blaster",
+        "id": "71d-7841-c039-e4ce",
+        "collective": true,
+        "hidden": false,
+        "import": true,
+        "type": "upgrade",
+        "profiles": [
+          {
+            "name": "Blaster",
+            "id": "cf99-94cc-99a2-7dfb",
+            "hidden": false,
+            "typeId": "f77d-b953-8fa4-b762",
+            "typeName": "Ranged Weapons",
+            "characteristics": [
+              {"name": "Range", "$text": "18\"", "typeId": "9896-9419-16a1-92fc"},
+              {"name": "A", "$text": "1", "typeId": "3bb-c35f-f54-fb08"},
+              {"name": "BS", "$text": "3+", "typeId": "94d-8a98-cf90-183e"},
+              {"name": "S", "$text": "8", "typeId": "2229-f494-25db-c5d3"},
+              {"name": "AP", "$text": "-4", "typeId": "9ead-8a10-520-de15"},
+              {"name": "D", "$text": "D6+1", "typeId": "a354-c1c8-a745-f9e3"},
+              {"name": "Keywords", "$text": "Assault", "typeId": "7f1b-8591-2fcf-d01c"}
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Heat Lance",
+        "id": "6aef-6e34-34ec-25cd",
+        "collective": true,
+        "hidden": false,
+        "import": true,
+        "type": "upgrade",
+        "categoryLinks": [{"name": "Damage Dx Weapon", "id": "d0ba-22fe-f320-d6b6", "hidden": false, "primary": false, "targetId": "4986-bf86-beb4-13ac"}],
+        "profiles": [
+          {
+            "name": "Heat Lance",
+            "id": "535d-b608-3bf-c0ae",
+            "hidden": false,
+            "typeId": "f77d-b953-8fa4-b762",
+            "typeName": "Ranged Weapons",
+            "characteristics": [
+              {"name": "Range", "$text": "18\"", "typeId": "9896-9419-16a1-92fc"},
+              {"name": "A", "$text": "1", "typeId": "3bb-c35f-f54-fb08"},
+              {"name": "BS", "$text": "3+", "typeId": "94d-8a98-cf90-183e"},
+              {"name": "S", "$text": "14", "typeId": "2229-f494-25db-c5d3"},
+              {"name": "AP", "$text": "-4", "typeId": "9ead-8a10-520-de15"},
+              {"name": "D", "$text": "D6", "typeId": "a354-c1c8-a745-f9e3"},
+              {"name": "Keywords", "$text": "Assault, Melta 3", "typeId": "7f1b-8591-2fcf-d01c"}
             ]
           }
         ]

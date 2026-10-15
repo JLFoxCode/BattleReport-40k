@@ -97,7 +97,7 @@ export function revealUnits(sys, r) {
 }
 
 /* ───────── text export ───────── */
-export async function importText(text) {
+export async function importText(text, opts = {}) {
   const report = [];
   const lines = String(text || '').replace(/\r/g, '').split('\n').map(l => l.trim()).filter(Boolean);
   const head = lines.slice(0, 12).join('\n');
@@ -105,7 +105,9 @@ export async function importText(text) {
   const cats = await playableCatalogues();
   const fk = /FACTION KEYWORD:\s*(.+)/i.exec(head);
   const hay = norm(fk ? fk[1] : head);
-  const cat = cats.filter(c => hay.includes(norm(c.label)) || hay.includes(norm(c.name))).sort((a, b) => b.label.length - a.label.length)[0];
+  // the faction named in the list – or, without one (lists from Reddit / chats), the army it is imported from
+  const cat = cats.filter(c => hay.includes(norm(c.label)) || hay.includes(norm(c.name))).sort((a, b) => b.label.length - a.label.length)[0]
+    || (opts.catalogueId ? cats.find(c => c.id === opts.catalogueId) : null);
   if (!cat) throw new Error('Faction not recognised – the export needs the faction (e.g. "+ FACTION KEYWORD: …" or the faction name on top)');
   const sys = await systemFor(cat.id);
   // battle size / points
@@ -204,7 +206,7 @@ function setWargear(sys, r, id, u, report) {
       if (++tries > 12) break;
       const V = E.view(sys, r);
       const w = V.byId.get(id);
-      const holders = [w]; (function f(x) { for (const c of x.ch) { if (c.node && c.node.type === 'model') holders.push(c); } })(w);
+      const holders = [w]; (function f(x) { for (const c of x.ch) { if (!c.node) continue; if (c.node.type === 'model') holders.push(c); else if (c.ch.some(k => k.node && k.node.type === 'model')) f(c); } })(w);   // models also inside a composition entry ("1 Sergeant and 9 Troopers")
       const has = x => { let found = false; (function f(y) { for (const c of y.ch) { if (c.node && c.node.type !== 'model' && norm(c.node.name) === norm(g.name)) found = true; if (c.node && c.node.type !== 'model') f(c); } })(x); return found; };
       // a single model (or the unit itself) counts its weapons ("4x Lascannon" on a vehicle), a stack counts its models
       const mine = x => { const out = []; (function f(y) { for (const c of y.ch) { if (c.node && c.node.type !== 'model' && norm(c.node.name) === norm(g.name)) out.push(c); if (c.node && c.node.type !== 'model') f(c); } })(x); return out; };
