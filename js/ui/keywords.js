@@ -1,8 +1,10 @@
 /* Rules keywords ([PISTOL], [SUSTAINED HITS 1], [ANTI-INFANTRY 4+] …) as tappable tags: a tap opens what the keyword
- * does – the core rule text from the game system (BSData, data/datasheets/core-abilities.json). One document-wide
- * listener (installKeywordInfo, main.js), so the tags work in every view and popup. */
+ * does – the core rule text from the game system (BSData, data/datasheets/core-abilities.json) and the rule sections
+ * it refers to ("hazard rolls (06.03)"). One document-wide listener (installKeywordInfo, main.js), so the tags work in
+ * every view and popup. Section numbers in any keyword text become tappable too (→ tutorial.js openOrig). */
 import { esc, sheet } from './components.js';
 import { loadCoreAbilities } from '../data/datasheets.js';
+import { getSection, CORE_URL } from '../rules-orig.js';
 
 /** Tag of one keyword, shown in brackets: [PISTOL]. */
 export function kwTag(name) {
@@ -15,9 +17,12 @@ export function kwList(list) {
   const arr = Array.isArray(list) ? list : String(list || '').split(/\s*,\s*/);
   return arr.map(x => String(x).trim()).filter(x => x && x !== '-').map(kwTag).join(' ');
 }
-/** Already escaped HTML: every [KEYWORD] becomes a tag. */
+/** A core rules section number ("06.03") as a tappable reference – opens the original section (tutorial.js). */
+const SECTION = /\(((?:0[1-9]|1\d|2\d)\.\d\d(?:\.\d\d)?)\)/g;
+export const refify = html => String(html).replace(SECTION, (m, n) => `(<button type="button" class="kw-ref" data-tut-ref="${n}">${n}</button>)`);
+/** Already escaped HTML: every [KEYWORD] becomes a tag, every section number "(06.03)" a reference. */
 export function kwify(html) {
-  return String(html).replace(/\[([A-Za-z][A-Za-z0-9 :'’+\-\/"]*)\]/g, (m, k) => kwTag(k));
+  return refify(String(html).replace(/\[([A-Za-z][A-Za-z0-9 :'’+\-\/"]*)\]/g, (m, k) => kwTag(k)));
 }
 
 /** Rule text of a keyword: exact name, else without its value ("SUSTAINED HITS 1" → SUSTAINED HITS, "ANTI-INFANTRY 4+" → ANTI). */
@@ -30,15 +35,59 @@ function lookup(core, name) {
 }
 const clean = t => String(t || '').replace(/\^\^/g, '').replace(/\*\*(.+?)\*\*/g, '$1');
 
+/* The sections the keyword texts refer to: their title and the app's short explanation (data/core.js ids), shown
+ * while the original core rules are not on the device. A section missing here still gets its tappable reference. */
+const REFS = {
+  '04.01': ['Select Weapons'],
+  '05.03': ['Save Rolls', 'sho-allocate'],
+  '06.03': ['Hazard Rolls', 'sho-hazard', 'gen-mortal'],
+  '10.05': ['Assault Shooting', 'sho-eligible'],
+  '10.06': ['Close-quarters Shooting', 'sho-eligible', 'sho-monster'],
+  '10.07': ['Indirect Shooting', 'sho-indirect'],
+  '12.04': ['Fight Step', 'fgt-order'],
+  '13.06': ['Terrain and Movement', 'mov-terrain'],
+  '13.08': ['Benefit of Cover', 'sho-cover'],
+  '20.04': ['Ingress Move', 'mov-reserves'],
+  '21.03': ['Flying Models', 'mov-fly']
+};
+let coreRules = null;
+async function shortRules() {
+  if (coreRules) return coreRules;
+  try {
+    const { CORE } = await import('../../data/core.js');
+    coreRules = new Map([...Object.values(CORE.phases).flatMap(p => p.rules), ...(CORE.turnStart || []), ...(CORE.general || [])].map(r => [r.id, r]));
+  } catch { coreRules = new Map(); }
+  return coreRules;
+}
+/** "Referenced rules": the original section when the core rules are on the device, else the app's short explanation. */
+async function refsHtml(text) {
+  const nums = [...new Set([...String(text).matchAll(SECTION)].map(m => m[1]))];
+  if (!nums.length) return '';
+  const short = await shortRules();
+  let anyOrig = false;
+  const parts = nums.map(n => {
+    const orig = getSection(n);
+    const [title, ...ids] = REFS[n] || [];
+    const head = `<h3 class="kw-ref-h"><span class="kw-ref-num">${esc(n)}</span> ${esc(orig ? orig.title : title || 'Core rules')}</h3>`;
+    if (orig) { anyOrig = true; return `<section class="kw-ref-sec">${head}<div class="orig-sec" data-no-i18n lang="en">${refify(orig.html)}</div></section>`; }
+    const rules = ids.map(id => short.get(id)).filter(Boolean);
+    return `<section class="kw-ref-sec">${head}${rules.map(r => `<div class="kw-short"><b>${esc(r.title)}</b><div class="kw-rule" data-no-i18n lang="en">${kwify(esc(r.text))}</div></div>`).join('')}
+      <button type="button" class="tut-ref" data-tut-ref="${esc(n)}">📖 <b>${esc(n)}</b> Original text</button></section>`;
+  });
+  return `<div class="kw-refs"><p class="kw-refs-h">Referenced rules</p>${parts.join('')}
+    <p class="muted xs">${anyOrig ? 'Original text: Warhammer 40,000 Core Rules (Games Workshop), via ' + esc(CORE_URL.replace(/^https:\/\//, '')) : 'Short explanation of this app – the original text is a tap away (download once).'}</p></div>`;
+}
+
 async function openKeyword(name) {
   const core = await loadCoreAbilities();
   const hit = lookup(core, name);
+  const refs = hit ? await refsHtml(clean(hit.text)) : '';
   const up = String(name).toUpperCase();
   const value = hit && hit.key !== up ? up.slice(hit.key.length).replace(/^[\s-]+/, '') : '';
   sheet({
     title: `[${up}]`,
     body: hit
-      ? `${value ? `<p class="muted small">${esc(hit.key)} with the value <b>${esc(value)}</b> – the rule below uses it as “x”.</p>` : ''}<div class="kw-rule">${kwify(esc(clean(hit.text))).replace(/\n/g, '<br>')}</div><p class="muted xs">Core rule (BSData / New Recruit).</p>`
+      ? `${value ? `<p class="muted small">${esc(hit.key)} with the value <b>${esc(value)}</b> – the rule below uses it as “x”.</p>` : ''}<div class="kw-rule">${kwify(esc(clean(hit.text))).replace(/\n/g, '<br>')}</div><p class="muted xs">Core rule (BSData / New Recruit).</p>${refs}`
       : '<p class="muted">No rule text on file for this keyword.</p>',
     cls: 'kw-sheet',
     actions: [{ label: 'Close', kind: 'ghost' }]

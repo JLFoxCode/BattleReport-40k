@@ -411,5 +411,15 @@ label.chip.on { color: var(--bg); }
 .kw-tag:hover, .kw-tag:focus-visible { color: var(--text); }
 .kw-tag + .kw-tag { margin-left: .35em; }
 .kw-rule { font-size: 15px; line-height: 1.5; }
+/* section numbers in keyword texts "(06.03)" open the original section; below the rule: the sections it refers to */
+.kw-ref { all: unset; cursor: pointer; font-weight: 600; color: var(--ok); text-decoration: underline dotted; text-underline-offset: 3px; }
+.kw-ref:hover, .kw-ref:focus-visible { color: var(--text); }
+.kw-refs { margin-top: 14px; padding-top: 10px; border-top: 1px solid var(--line); }
+.kw-refs-h { margin: 0 0 6px; font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.kw-ref-sec { margin-bottom: 12px; }
+.kw-ref-h { margin: 0 0 6px; font-size: 16px; }
+.kw-ref-num { font-variant-numeric: tabular-nums; color: var(--muted); font-weight: 600; margin-right: 4px; }
+.kw-short { margin-bottom: 8px; }
+.kw-short > b { display: block; font-size: 14px; margin-bottom: 2px; }
 /* toast that lists what a button booked automatically (components.autoNote) */
 .toast.auto { white-space: pre-line; border-left-color: var(--warn); font-size: 14px; line-height: 1.4; }
