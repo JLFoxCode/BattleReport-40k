@@ -16,9 +16,10 @@ export function askDataUpdate(info) {
   });
 }
 
-/** Release app: newest GitHub release of the repo in releaseInfo() (tag "v2.0.<versionCode>"; assets: *.apk for Android,
- *  BattleReport40k-Setup-*.exe for Windows). Newer than the installed version → popup → download + installer
- *  (Android: BR.installApk → system installer; Windows: BR.installUpdate → setup, the app restarts). DEV app: skipped,
+/** Release app: newest GitHub release of the repo in releaseInfo() (tag "v2.0.<versionCode>"). Newer than the installed
+ *  version → popup → only the changed web files (partial update, no installer needed); a new native part (shell) → the
+ *  installer of the newest release that has one (assets: *.apk for Android, BattleReport40k-Setup-*.exe for Windows;
+ *  Android: BR.installApk → system installer; Windows: BR.installUpdate → setup, the app restarts). DEV app: skipped,
  *  it updates itself from the PC. Returns true if the user started an app update. */
 let appState = 'unknown';   // last result of the app version check: current | available
 
@@ -72,20 +73,28 @@ async function checkAppUpdate() {
   const platform = window.BR.platform ? window.BR.platform() : 'android';
   const install = window.BR.installUpdate || window.BR.installApk;
   if (!rel.repo || me.dev || !install) return false;
-  const r = await fetch(`https://api.github.com/repos/${rel.repo}/releases/latest`, { cache: 'no-store', headers: { Accept: 'application/vnd.github+json' } });
+  // newest release by version code – web-only releases carry no installer and are not marked "latest" on GitHub
+  // (that stays the last release with installers, the download link for new devices)
+  const r = await fetch(`https://api.github.com/repos/${rel.repo}/releases?per_page=30`, { cache: 'no-store', headers: { Accept: 'application/vnd.github+json' } });
   if (!r.ok) return false;
-  const latest = await r.json();
-  const code = Number(String(latest.tag_name || '').split(/[.\-]/).pop()) || 0;
-  const apk = (latest.assets || []).find(a => (platform === 'windows' ? /setup.*\.exe$/i : /\.apk$/i).test(a.name));
-  if (!apk || !(code > Number(me.versionCode || 0))) { appState = 'current'; return false; }
+  const codeOf = x => Number(String(x.tag_name || '').split(/[.\-]/).pop()) || 0;
+  const list = (await r.json()).filter(x => !x.draft && !x.prerelease).sort((a, b) => codeOf(b) - codeOf(a));
+  const latest = list[0];
+  const code = latest ? codeOf(latest) : 0;
+  if (!(code > Number(me.versionCode || 0))) { appState = 'current'; return false; }
   appState = 'available';
   // Partial update if the native part (shell) of the new version is the one installed: only the changed web files
   try { const done = await partialUpdate(rel.repo, latest, code, me, platform); if (done !== null) return done; }
   catch (e) { console.warn('partial update', e); }   // → full update below
+  // full update: the installer of the newest release that has one (a new shell always comes with its installers)
+  const isInstaller = a => (platform === 'windows' ? /setup.*\.exe$/i : /\.apk$/i).test(a.name);
+  const full = list.find(x => (x.assets || []).some(isInstaller));
+  if (!full || !(codeOf(full) > Number(me.versionCode || 0))) return false;
+  const apk = full.assets.find(isInstaller);
   const ok = await confirmSheet({
     title: 'New app version available',
-    text: `Battle Report 40k ${latest.tag_name}${latest.published_at ? ' from ' + fmt(latest.published_at) : ''} is available (installed: ${me.versionCode}).`
-      + (latest.body ? ' ' + String(latest.body).slice(0, 300) : '') + (platform === 'windows' ? ' The update installs in the background and the app restarts by itself; your games stay on this computer.' : ' Android will ask you to confirm the installation; your games stay on the device.'),
+    text: `Battle Report 40k ${full.tag_name}${full.published_at ? ' from ' + fmt(full.published_at) : ''} is available (installed: ${me.versionCode}).`
+      + (full.body ? ' ' + String(full.body).slice(0, 300) : '') + (platform === 'windows' ? ' The update installs in the background and the app restarts by itself; your games stay on this computer.' : ' Android will ask you to confirm the installation; your games stay on the device.'),
     ok: 'Update now', cancel: 'Later'
   });
   if (!ok) return false;
