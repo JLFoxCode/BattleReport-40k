@@ -372,9 +372,14 @@ function leaderCands(V, w, pack) {
   const sheet = n => sheetOf(pack, n);
   const rule = attachRule(sheet(unitName(V, w)));
   if (!rule) return null;
-  const allowed = rule.names;
-  return V.force.ch.filter(x => x !== w && isUnitSel(x) && !attachRule(sheet(unitName(V, x)))
-    && (!allowed.length || allowed.includes(normName(unitName(V, x))) || allowed.includes(normName((sheet(unitName(V, x)) || {}).name))));
+  const allowed = new Set(rule.names.map(tight));
+  return V.force.ch.filter(x => x !== w && isUnitSel(x) && !attachRule(sheet(unitName(V, x))) && (!allowed.size || canJoin(allowed, unitName(V, x), sheet(unitName(V, x)))));
+}
+/* A LEADER / SUPPORT list names datasheets by their keyword (core rules 19.01): "Acolyte Hybrids" takes both "Acolyte
+   Hybrids with Autopistols" and "… with Hand Flamers" (keyword ACOLYTE HYBRIDS); spaces do not matter ("HANDFLAMERS"). */
+const tight = s => normName(s).replace(/[^a-z0-9]/g, '');
+function canJoin(allowed, name, ds) {
+  return [name, ds && ds.name, ...((ds && ds.keywords) || [])].some(n => n && allowed.has(tight(n)));
 }
 /** Leaders that could lead a unit of the list but lead none. */
 function looseLeaders(V, pack) {
@@ -812,6 +817,8 @@ function block(V, pw, nodes, prefix, depth, compact, caps = []) {
   const specials = [];   // model groups not in the unit yet (e.g. heavy weapons)
   const specialsOn = []; // model groups inside the unit's models that have models – after the standard models
   let html = '';
+  // room left in the enclosing groups ("Support Systems (1-4)"): no '+' beyond it
+  const capRoom = Math.min(Infinity, ...caps.map(c => c.max - c.total));
   const each = pw.kind === 'sel' && pw.node && pw.node.type === 'model' && pw.n > 1 ? pw.n : 0;
   const eachTag = each ? ` <span class="arm-each">each of the ${each}</span>` : '';
   /* Head count: a model can be added while the entry and every enclosing group (e.g. the unit's 10 models AND the
@@ -819,7 +826,7 @@ function block(V, pw, nodes, prefix, depth, compact, caps = []) {
   const roomFor = (tok, lim, sels) => {
     const own = lim.max < 0 ? Infinity : lim.max - sels.reduce((x, c) => x + c.n, 0);
     const room = Math.min(own, ...caps.map(c => c.max - c.total));
-    if (room > 0) return { add: true };
+    if (room > 0) { const src = replaces(tok, lim, sels); return src ? { add: false, swap: src } : { add: true }; }
     if (own <= 0) return { add: false };
     // the model that gives way: never one from a group that still has room (a second special weapon swaps a plain trooper,
     // not the first special weapon); then one of the same category (standard for standard, heavy for heavy), the biggest group
@@ -830,20 +837,49 @@ function block(V, pw, nodes, prefix, depth, compact, caps = []) {
     const src = srcs.find(x => caps.every(c => c.max - c.total > 0 || (x.s.t.startsWith(c.tok + '>') && tok.startsWith(c.tok + '>'))));
     return src ? { add: false, swap: src } : { add: false };
   };
+  /* A special model type replaces a standard one even while the unit has room ("1 Rubric Marine's inferno boltgun can be
+     replaced with 1 soulreaper cannon"): (a) the data lowers another model type's maximum when it comes in (Skitarii
+     Rangers: one galvanic rifle less per special weapon), or (b) it has a maximum of its own below that of a standard
+     model type of the same unit composition group (Intercessor w/ grenade launcher, Scarab Occult heavy weapons). The unit
+     grows with the standard model's '+'. Returns the stack that gives one model, or null. */
+  const replaces = (tok, lim, sels) => {
+    if (!pid) return null;
+    const models = (pw.ch || []).filter(x => x.node && x.node.type === 'model' && !sels.includes(x) && !LEAD_RE.test(x.node.name));
+    if (!models.length) return null;
+    const lims = new Map(models.map(x => [x, E.limits(V, x.node, x, pw)]));
+    const after = new Map();   // limits once the new model is in (Intercessors: min 4 → 3 with a grenade launcher)
+    try {
+      const V2 = E.view(sys, E.addSel(sys, ed.army, pid, tok));
+      const p2 = V2.byId.get(pid);
+      for (const x of models) { const x2 = p2 && V2.byId.get(x.s.id); if (x2) after.set(x, E.limits(V2, x2.node, x2, p2)); }
+    } catch {}
+    const minAfter = x => (after.get(x) || lims.get(x)).min;
+    for (const x of models) {
+      const l = lims.get(x), m2 = (after.get(x) || l).max;
+      if (m2 >= 0 && x.n > m2 && !(l.max >= 0 && x.n > l.max) && x.n - 1 >= minAfter(x)) return x;
+    }
+    if (lim.max < 0 || LEAD_RE.test(lim.name || '')) return null;
+    // the standard model sits in the special one's group or in a group around it – not in a sibling group (Crusader
+    // Squad: a Neophyte is no swap for an Initiate)
+    const par = t => t.split('>').slice(0, -1).join('>');
+    const around = t => !!par(t) && (par(tok) === par(t) || par(tok).startsWith(par(t) + '>'));
+    return models.filter(x => { const l = lims.get(x); return x.n - 1 >= minAfter(x) && x.n > 1 && (l.max < 0 || l.max > lim.max) && around(x.s.t); })
+      .sort((p, q) => q.n - p.n)[0] || null;
+  };
   // the unit's leader model (Sergeant, Superior, Exarch, Nob …) first, then the other models; special weapons follow
   // after them anyway (specialsOn / specials). The data often lists the Sergeant after the troopers' group.
   const isLead = k => !k.group && k.type === 'model' && LEAD_RE.test(k.name);
   const leadGroup = k => k.group && (() => { const ms = sys.children(k).filter(x => x.type === 'model' || x.group); return ms.length > 0 && ms.every(isLead); })();
   nodes = [...nodes].sort((a, b) => ((isLead(b) || leadGroup(b)) - (isLead(a) || leadGroup(a))));
   for (const k of nodes) {
-    if (/^(Crusade|Weapon Modifications|Battle Scars|Battle Honours|Override points limit)/i.test(k.name)) continue;
+    if (/^(Crusade\b|Weapon Modifications|Battle Scars|Battle Honours|Override points limit)/i.test(k.name)) continue;   // not "Crusaders"
     const lim = E.limits(V, k, null, pw);
     const tok = pfx(k.token);
     if (k.group) {
       const inGroup = (pw.ch || []).filter(c => c.s.t.startsWith(tok + '>'));
       if (lim.hidden && !inGroup.length) continue;
       const altOf = new Map();   // option → selection to take back so it comes again
-      const kids = sys.children(k).filter(x => {
+      let kids = sys.children(k).filter(x => {
         if (inGroup.some(c => c.s.t === tok + '>' + x.token || c.s.t.startsWith(tok + '>' + x.token + '>'))) return true;
         // a sub-group whose options are all hidden (another detachment's enhancements) shows nothing: no empty heading
         const anyVisible = (y, d) => !E.limits(V, y, null, pw).hidden && (!y.group || (d < 4 && sys.children(y).some(z => anyVisible(z, d + 1))));
@@ -855,6 +891,23 @@ function block(V, pw, nodes, prefix, depth, compact, caps = []) {
       });
       if (!kids.length) continue;
       const leafs = kids.every(x => !x.group && x.type !== 'model');
+      // wargear the model always has (the option's own min = max, taken): "Equipped with", no checkbox to untick – a
+      // "Wargear" group without limits holding the fixed weapons (Sanguinary Priest, Stonesinger, Exalted Sorcerer …)
+      let shown = inGroup;
+      if (leafs && (lim.max !== 1 || kids.length === 1)) {
+        const must = new Map();
+        for (const x of kids) {
+          const on = inGroup.find(c => c.s.t === tok + '>' + x.token);
+          const l = on ? E.limits(V, x, on, pw) : null;
+          if (l && !altOf.has(x) && l.min > 0 && l.min === l.max) must.set(x, on);
+        }
+        if (must.size) {
+          for (const [x, on] of must) { fixed.push(E.limits(V, x, on, pw).name); fixedFx.push(...effectsOf(x)); html += nested(V, on, depth, compact); }
+          kids = kids.filter(x => !must.has(x));
+          shown = inGroup.filter(c => ![...must.values()].includes(c));
+          if (!kids.length) continue;
+        }
+      }
       const total = inGroup.reduce((x, c) => x + c.n, 0);
       const range = lim.max === 1 ? '' : `<span class="arm-range${lim.max >= 0 && total > lim.max || total < lim.min ? ' bad' : ''}">${total}${lim.max >= 0 ? ' / ' + lim.max : ''}</span>`;
       const multi = leafs && lim.max !== 1 && kids.every(x => E.limits(V, x, null, pw).max === 1);
@@ -868,11 +921,13 @@ function block(V, pw, nodes, prefix, depth, compact, caps = []) {
         html += `<div class="arm-grp">${same && lim.min && !cmp ? '' : `<div class="arm-gh">${headTxt}${cmp}</div>`}<div class="arm-choices">${kids.map((x, xi) => {
           const t = tok + '>' + x.token;
           const on = inGroup.find(c => c.s.t === t);
-          const cost = on ? E.totalCost(V, on) / Math.max(1, on.n) : E.nodeCost(V, x, null, pw);
+          const cost = on ? E.totalCost(V, on) / Math.max(1, on.n) : optCost(V, x, pw, t);
           const dot = weaponish ? `<span class="arm-dot" style="--oc:${optColor(pid, t)}" aria-hidden="true"></span>` : '';
           const back = altOf.get(x);
-          return `<button type="button" class="arm-opt${on ? ' on' : ''}" data-action="arm-op" data-op="${back ? 'rm' : on ? (lim.min && !multi ? 'noop' : 'rm') : multi ? 'add' : 'choose'}" data-p="${esc(pid)}" data-g="${esc(tok)}" data-t="${esc(t)}"${back ? ` data-id="${esc(back.s.id)}"` : on ? ` data-id="${esc(on.s.id)}"` : ''}>${multi ? `<span class="arm-box" aria-hidden="true">${on ? '✓' : ''}</span>` : ''}${dot}${esc(E.limits(V, x, on || null, pw).name)}${cost ? ` <span class="arm-cost">+${cost}</span>` : ''}${(() => { const d = E.nodeCost(V, x, on || null, pw, DP); return d ? ` <span class="arm-cost arm-dpc">${d} DP</span>` : ''; })()}</button>`;
-        }).join('')}</div>${inGroup.map(c => effectHtml(c.node ? effectsOf(c.node) : [])).join('')}${inGroup.map(c => nested(V, c, depth, compact)).join('')}</div>`;
+          // one more of a multi-choice group: not beyond the group's (or an enclosing group's) maximum
+          const full = multi && !on && !back && ((lim.max >= 0 && total >= lim.max) || capRoom <= 0);
+          return `<button type="button" class="arm-opt${on ? ' on' : ''}" data-action="arm-op" data-op="${back ? 'rm' : on ? (lim.min && !multi ? 'noop' : 'rm') : multi ? 'add' : 'choose'}" data-p="${esc(pid)}" data-g="${esc(tok)}" data-t="${esc(t)}"${back ? ` data-id="${esc(back.s.id)}"` : on ? ` data-id="${esc(on.s.id)}"` : ''}${full ? ' disabled' : ''}>${multi ? `<span class="arm-box" aria-hidden="true">${on ? '✓' : ''}</span>` : ''}${dot}${esc(E.limits(V, x, on || null, pw).name)}${cost ? ` <span class="arm-cost">+${cost}</span>` : ''}${(() => { const d = E.nodeCost(V, x, on || null, pw, DP); return d ? ` <span class="arm-cost arm-dpc">${d} DP</span>` : ''; })()}</button>`;
+        }).join('')}</div>${shown.map(c => effectHtml(c.node ? effectsOf(c.node) : [])).join('')}${shown.map(c => nested(V, c, depth, compact)).join('')}</div>`;
       } else {
         const hasModels = kids.some(x => x.type === 'model' || (x.group && sys.children(x).some(y => y.type === 'model')));
         const sub = lim.max >= 0 ? [...caps, { tok, max: lim.max, total, name: lim.name }] : caps;
@@ -894,7 +949,7 @@ function block(V, pw, nodes, prefix, depth, compact, caps = []) {
       for (const c of sels) html += nested(V, c, depth, compact);
       continue;
     }
-    const cost = sels.length ? E.totalCost(V, sels[0]) / Math.max(1, sels[0].n) : E.nodeCost(V, k, null, pw);
+    const cost = sels.length ? E.totalCost(V, sels[0]) / Math.max(1, sels[0].n) : optCost(V, k, pw, tok);
     if (k.type === 'model') {
       const r = roomFor(tok, lim, sels);
       const own = hasChoices(V, k, sels[0] || null, pw);
@@ -922,7 +977,7 @@ function block(V, pw, nodes, prefix, depth, compact, caps = []) {
       stacks.forEach((c, i) => {
         const n = c ? c.n : 0;
         const total = sels.reduce((x, s) => x + s.n, 0);
-        const canAdd = lim.max < 0 || total < lim.max;
+        const canAdd = (lim.max < 0 || total < lim.max) && capRoom > 0;
         html += `<div class="arm-row${c ? ' on' : ''}">
           <span class="arm-row-name">${esc(name)}${cost ? ` <span class="arm-cost">${cost} pts</span>` : ''}${sels.length > 1 ? ` <span class="muted xs">(${i + 1})</span>` : ''}</span>
           <div class="stepper sm">
@@ -934,7 +989,7 @@ function block(V, pw, nodes, prefix, depth, compact, caps = []) {
       });
     } else {
       const c = sels[0];
-      html += `<button type="button" class="arm-check${c ? ' on' : ''}" data-action="arm-op" data-op="${c ? 'rm' : 'add'}" data-p="${esc(pid)}" data-t="${esc(tok)}"${c ? ` data-id="${esc(c.s.id)}"` : ''}>
+      html += `<button type="button" class="arm-check${c ? ' on' : ''}" data-action="arm-op" data-op="${c ? 'rm' : 'add'}" data-p="${esc(pid)}" data-t="${esc(tok)}"${c ? ` data-id="${esc(c.s.id)}"` : capRoom > 0 ? '' : ' disabled'}>
         <span class="arm-box" aria-hidden="true">${c ? '✓' : ''}</span><span>${esc(name)}</span>${cost ? `<span class="arm-cost">+${cost} pts</span>` : ''}</button>${effectHtml(effectsOf(k))}${c ? nested(V, c, depth, compact) : ''}`;
     }
   }
@@ -968,17 +1023,30 @@ function block(V, pw, nodes, prefix, depth, compact, caps = []) {
   html = boxHtml() + html + specialsOn.join('') + specials.join('');
   return (fixed.length ? `<div class="arm-fixed"><span class="arm-fixed-l">${each ? 'Each equipped with' : 'Equipped with'}</span> ${esc(fixed.join(' · '))}${effectHtml(fixedFx)}</div>` : '') + html;
 }
+/** Points of one option not chosen yet, with what it brings along (the weapons inside "2 ectoplasma cannons", a model's
+ *  default wargear): the option is added to a copy of the army and costed there. */
+function optCost(V, x, pw, t) {
+  const own = E.nodeCost(V, x, null, pw);
+  if (!pw || pw.kind !== 'sel' || !ed.sys.children(x).some(k => !/^(Crusade\b|Weapon Modifications|Weapon Upgrades)/i.test(k.name))) return own;
+  try {
+    const r2 = E.addSel(ed.sys, ed.army, pw.s.id, t);
+    const V2 = E.view(ed.sys, r2);
+    const p2 = V2.byId.get(pw.s.id);
+    const w = p2 && p2.ch[p2.ch.length - 1];
+    return w && w.node === x ? E.totalCost(V2, w) / Math.max(1, w.n) : own;
+  } catch { return own; }
+}
 /** Does a model type have choices of its own (weapon groups, optional wargear)? */
 function hasChoices(V, k, c, pw) {
   return ed.sys.children(k).some(x => {
-    if (/^(Crusade|Weapon Modifications)/i.test(x.name)) return false;
+    if (/^(Crusade\b|Weapon Modifications)/i.test(x.name)) return false;
     const l = E.limits(V, x, null, c || pw);
     return !l.hidden && (x.group || l.max !== l.min);
   });
 }
 /** Fixed equipment of a model type (entries it always has). */
 function fixedGear(V, k, c, pw) {
-  return ed.sys.children(k).filter(x => !x.group && !/^(Crusade|Weapon Modifications)/i.test(x.name)).filter(x => { const l = E.limits(V, x, null, c || pw); return !l.hidden && l.min > 0 && l.min === l.max; }).map(x => E.limits(V, x, null, c || pw).name);
+  return ed.sys.children(k).filter(x => !x.group && !/^(Crusade\b|Weapon Modifications)/i.test(x.name)).filter(x => { const l = E.limits(V, x, null, c || pw); return !l.hidden && l.min > 0 && l.min === l.max; }).map(x => E.limits(V, x, null, c || pw).name);
 }
 /** Would option x of group gtok (below selection pid) be available without the group's current choice?
  *  Returns the selection to take back for it (it then comes again by itself – see autoSync), or null. */
@@ -1018,7 +1086,7 @@ function modelTypes(unitNode) {
   const walk = (n, pre, d) => {
     if (d > 3) return;
     for (const k of ed.sys.children(n)) {
-      if (/^(Crusade|Weapon Modifications)/i.test(k.name)) continue;
+      if (/^(Crusade\b|Weapon Modifications)/i.test(k.name)) continue;
       const t = pre ? pre + '>' + k.token : k.token;
       if (k.type === 'model') out.push({ node: k, tok: t });
       else if (k.group) walk(k, t, d + 1);
@@ -1224,17 +1292,15 @@ function openAdd() {
   const rows = roots.map(n => {
     const l = E.limits(V, n, null, V.force);
     if (l.hidden) return null;
-    const have = E.selsOf(V, V.force, n).length;
-    const pts = defaultCost(n);
-    return { n, l, have, pts, cat: sys.categoryNames.get(n.primaryCategory) || 'Other' };
+    return { n, l, ...addInfo(V, n), cat: sys.categoryNames.get(n.primaryCategory) || 'Other' };
   }).filter(Boolean);
   const cats = [...new Set(rows.map(r => r.cat))].sort(byRole);
   rows.sort((a, b) => a.l.name.localeCompare(b.l.name));
   const body = `<div class="arm-add-top"><input type="search" class="arm-search" placeholder="Search units" autocomplete="off">
     <div class="arm-roles">${cats.map(c => `<button type="button" class="chip sm" data-jump="${esc(c)}">${esc(c)}</button>`).join('')}</div></div>
     <div class="arm-addlist">${cats.map(c => `<div class="arm-sec-h" data-role="${esc(c)}">${esc(c)}</div>${rows.filter(r => r.cat === c).map(r => `
-      <button type="button" class="arm-addrow" data-tok="${esc(r.n.token)}" data-name="${esc(r.l.name.toLowerCase())}"${r.l.max >= 0 && r.have >= r.l.max ? ' disabled' : ''}>
-        <span>${esc(r.l.name)}</span><span class="arm-have muted xs" data-max="${r.l.max}">${r.l.max >= 0 ? `${r.have}/${r.l.max}` : r.have ? r.have + '×' : ''}</span><span class="arm-u-pts">${r.pts}</span><span class="arm-plus" aria-hidden="true">+</span></button>`).join('')}`).join('')}</div>`;
+      <button type="button" class="arm-addrow" data-tok="${esc(r.n.token)}" data-name="${esc(r.l.name.toLowerCase())}"${r.max >= 0 && r.have >= r.max ? ' disabled' : ''}>
+        <span>${esc(r.l.name)}</span><span class="arm-have muted xs">${haveTxt(r)}</span><span class="arm-u-pts">${r.pts}</span><span class="arm-plus" aria-hidden="true">+</span></button>`).join('')}`).join('')}</div>`;
   let added = 0;
   sheet({
     title: 'Add units', body, cls: 'arm-add-sheet wide', focus: false,
@@ -1258,12 +1324,17 @@ function openAdd() {
         // add and stay in the list: first all units, then set them up
         apply(r => E.addSel(ed.sys, r, null, b.dataset.tok));
         const V2 = E.view(ed.sys, ed.army);
-        const node = ed.sys.rootNodes(ed.army.catalogueId).find(n => n.token === b.dataset.tok);
-        const have = node ? E.selsOf(V2, V2.force, node).length : 0;
-        const hv = b.querySelector('.arm-have'), max = Number(hv.dataset.max);
-        hv.textContent = max >= 0 ? `${have}/${max}` : `${have}×`;
-        hv.classList.toggle('added', have > 0);
-        if (max >= 0 && have >= max) b.disabled = true;
+        // every row: copies and limits (a shared category limit changes with any unit), the next copy's price on this one
+        const all = ed.sys.rootNodes(ed.army.catalogueId);
+        el.querySelectorAll('.arm-addrow').forEach(x => {
+          const node = all.find(n => n.token === x.dataset.tok);
+          if (!node) return;
+          const info = addInfo(V2, node, x === b);
+          const hv = x.querySelector('.arm-have');
+          hv.textContent = haveTxt(info);
+          if (x === b) { hv.classList.toggle('added', info.have > 0); x.querySelector('.arm-u-pts').textContent = info.pts; }
+          x.disabled = info.max >= 0 && info.have >= info.max;
+        });
         b.classList.remove('flash'); void b.offsetWidth; b.classList.add('flash');
         added++;
         const t = el.querySelector('.sheet-head .title');
@@ -1273,6 +1344,26 @@ function openAdd() {
     actions: [{ label: 'Done', kind: 'primary' }]
   });
 }
+/** A row of the Add units list: copies in the army, how many are allowed (the entry's own limit and the catalogue's
+ *  category limits – one EPIC HERO, three of a datasheet …; -1 = none) and what the NEXT copy costs (the 4th Rhino
+ *  costs more). price = false: keep the price out (only copies and limit). */
+function addInfo(V, n, price = true) {
+  const l = E.limits(V, n, null, V.force);
+  const have = E.selsOf(V, V.force, n).length;
+  const cr = E.categoryRoom(V, n);
+  let max = l.max;
+  if (cr) max = Math.min(max < 0 ? Infinity : max, Math.max(have, have + cr.left));
+  let pts = defaultCost(n);
+  if (price && have) {
+    try {
+      const V2 = E.view(ed.sys, E.addSel(ed.sys, ed.army, null, n.token));
+      const w = V2.force.ch[V2.force.ch.length - 1];
+      if (w && w.node === n) pts = E.totalCost(V2, w);
+    } catch {}
+  }
+  return { have, max: Number.isFinite(max) ? max : -1, pts };
+}
+const haveTxt = r => (r.max >= 0 ? `${r.have}/${r.max}` : r.have ? r.have + '×' : '');
 const costCache = new Map();
 function defaultCost(n) {
   const k = ed.army.catalogueId + '|' + n.token;
@@ -1304,7 +1395,7 @@ function pickEnhancementUpgrades(sys, r) {
             if (d > 3) return;
             for (const k of sys.children(n)) {
               const t = pre ? pre + '>' + k.token : k.token;
-              if (k.group) { if (!/^(Crusade|Weapon Modifications|Boarding)/i.test(k.name)) f(k, t, d + 1); }
+              if (k.group) { if (!/^(Crusade\b|Weapon Modifications|Boarding)/i.test(k.name)) f(k, t, d + 1); }
               else if (k.name.toLowerCase() === want && !E.limits(V, k, null, w).hidden) spots.push({ w, t });
             }
           })(w.node, '', 0);
@@ -1347,10 +1438,22 @@ function autoPick(sys, r) {
   }
   return r;
 }
-function apply(fn) {
+/** Rule problems inside one unit (root selection id) – for the check whether adding something breaks a rule. */
+const unitProbs = (r, uid) => { try { return E.validate(E.view(ed.sys, r), { unit: uid }).map(p => p.msg); } catch { return []; } };
+/** guard: root unit id – an addition that gives that unit more rule problems than before (a 5th support system, a second
+ *  special weapon below 10 models, a homing beacon for every model of a stack …) is not made; the rule is shown instead. */
+function apply(fn, guard = null) {
   let r = fn(ed.army);
   if (!r) return;
   const synced = autoPick(ed.sys, E.autoSync(ed.sys, r));   // wargear tied to other choices follows, unavailable choices go
+  if (guard) {
+    const before = unitProbs(ed.army, guard), after = unitProbs(synced, guard);
+    if (after.length > before.length) {
+      const nw = after.filter(m => !before.includes(m));
+      toast(`Not possible – ${nw[0] || after[after.length - 1]}`, 'warn', 5000);
+      return;
+    }
+  }
   const auto = syncDiff(r, synced);
   r = synced;
   if (auto.length) autoNote('Adjusted to the rules', auto, 'Changed automatically:');
@@ -1369,8 +1472,10 @@ function takeOne(r, fromId) {
 function op(b) {
   const { sys } = ed;
   const d = b.dataset;
+  // additions inside a unit must not break its rules (checked after the change, see apply)
+  const unitOf = id => { const w = id ? rootOf(E.view(sys, ed.army), id) : null; return w ? w.s.id : null; };
   switch (d.op) {
-    case 'add': return apply(r => takeOne(E.addSel(sys, r, d.p || null, d.t), d.from));
+    case 'add': return apply(r => takeOne(E.addSel(sys, r, d.p || null, d.t), d.from), unitOf(d.p));
     case 'rm': return apply(r => E.removeSel(r, d.id));
     case 'choose': return apply(r => E.chooseInGroup(sys, r, d.p || null, d.g, d.t));
     case 'split': return apply(r => E.splitSel(r, d.id));
@@ -1380,7 +1485,7 @@ function op(b) {
       if (!s) return r;
       const n = (Number(s.n) || 0) + Number(d.d);
       return takeOne(n <= 0 ? E.removeSel(r, d.id) : E.setCount(r, d.id, n), d.from);
-    });
+    }, Number(d.d) > 0 ? unitOf(d.id) : null);
     default: return null;
   }
 }
@@ -1434,14 +1539,19 @@ async function onClick(e) {
   if (a === 'arm-problems') {
     const V = E.view(ed.sys, ed.army);
     const probs = problems(V);
+    // the data's notices (BSData "warning": a points-update note, an upgrade to pick …) – shown, but no rule problem
+    let notes = [];
+    try { notes = E.validate(V, { warnings: true }).filter(p => p.warn); } catch {}
     const imp = (ed.army.importNotes || []).length;
+    const item = p => {
+      const u = p.sel ? rootOf(V, p.sel) : null; const nm = u ? E.effective(V, u.node, u, u.parent).name : '';
+      let msg = p.msg; while (nm && msg.startsWith(nm + ': ')) msg = msg.slice(nm.length + 2);   // the unit name only once
+      return `<li>${u ? `<b>${esc(nm)}</b>: ` : ''}${esc(msg)}</li>`;
+    };
     sheet({
       title: probs.length ? `${probs.length} problem${probs.length === 1 ? '' : 's'}` : 'No problems',
-      body: (probs.length ? `<ul class="arm-problist">${probs.map(p => {
-        const u = p.sel ? rootOf(V, p.sel) : null; const nm = u ? E.effective(V, u.node, u, u.parent).name : '';
-        let msg = p.msg; while (nm && msg.startsWith(nm + ': ')) msg = msg.slice(nm.length + 2);   // the unit name only once
-        return `<li>${u ? `<b>${esc(nm)}</b>: ` : ''}${esc(msg)}</li>`;
-      }).join('')}</ul>` : '<p>The list is valid.</p>')
+      body: (probs.length ? `<ul class="arm-problist">${probs.map(item).join('')}</ul>` : '<p>The list is valid.</p>')
+        + (notes.length ? `<div class="arm-notes"><b>Notes from the data</b> <span class="muted xs">no rule problem</span><ul class="arm-problist arm-notelist">${notes.map(item).join('')}</ul></div>` : '')
         + (imp ? `<details class="arm-imp-sec"><summary><b>Import report</b> <span class="badge">${imp}</span> <span class="muted xs">what the import could not take over 1:1</span></summary>${importReportHtml(ed.army)}</details>` : ''),
       actions: [...(imp ? [{ label: 'Hide import report', kind: 'ghost', onClick: () => dismissImport() }] : []), { label: 'Close', kind: 'ghost' }]
     });

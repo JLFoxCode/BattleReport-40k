@@ -78,12 +78,15 @@
 .arm-box { width: 22px; height: 22px; flex: none; border-radius: 6px; border: 2px solid var(--line); display: inline-flex; align-items: center; justify-content: center; font-weight: 800; color: #05210F; }
 .arm-check.on .arm-box { background: var(--ok); border-color: var(--ok); }
 .arm-check:not(.on) { color: var(--muted); }
+.arm-check:disabled { opacity: .45; cursor: not-allowed; }
 .arm-nest { margin: 2px 0 6px 12px; padding-left: 10px; border-left: 2px solid var(--line); }
 .arm-fixed { margin: 4px 0; line-height: 1.35; }
 .arm-usheet .arm-u-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
 .arm-u-total b { font: 700 24px/1 var(--font-title); }
 .arm-problist { padding-left: 18px; }
 .arm-problist li { margin: 6px 0; line-height: 1.35; }
+.arm-notes { margin-top: 14px; padding-top: 10px; border-top: 1px solid var(--line); }
+.arm-notelist li { color: var(--muted); }
 .arm-textout { width: 100%; font: 13px/1.4 ui-monospace, Consolas, monospace; }
 
 /* add-unit sheet */

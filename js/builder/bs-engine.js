@@ -419,17 +419,19 @@ function applyMods(V, node, self, fn, parent = self ? self.parent : null) {
 /** Hidden / name / constraints of a node, evaluated for selection `self` (or a would-be selection under `parent`). */
 export function effective(V, node, self, parent) {
   let hidden = node.hidden, name = node.name;
-  const errors = [];
+  const errors = [], warnings = [];
   const cons = node.constraints.map(c => ({ ...c, value: num(c.value) }));
   const byId = new Map(cons.map(c => [c.id, c]));
   applyMods(V, node, self, (m, times) => {
     if (m.field === 'hidden') { if (m.type === 'set') hidden = m.value === true || m.value === 'true'; }
-    else if (m.field === 'error' || m.field === 'warning') errors.push(String(m.value));
+    else if (m.field === 'error') errors.push(String(m.value));
+    else if (m.field === 'warning') warnings.push(String(m.value));   // a notice (New Recruit shows it yellow) – no rule breach
     else if (m.field === 'name') { if (m.type === 'set') name = String(m.value); else if (m.type === 'append') name = name + ' ' + m.value; }
     else if (byId.has(m.field)) { const c = byId.get(m.field); c.value = modNum(c.value, m, times); }
   }, parent);
   // messages written for New Recruit use {this} for the entry's own name ("Max 1 {this} per 5 models")
-  return { hidden, name, constraints: cons, errors: errors.map(e => e.replace(/\{this\}/g, name)) };
+  const fill = e => e.replace(/\{this\}/g, name);
+  return { hidden, name, constraints: cons, errors: errors.map(fill), warnings: warnings.map(fill) };
 }
 /** Points of a node for one instance (selection or would-be selection). */
 export function nodeCost(V, node, self, parent, type = PTS) {
@@ -473,8 +475,9 @@ function countNode(V, node, c, self, parent) {
 }
 
 // ───────── Validation ─────────
-/** All problems of the roster: [{ sel: selection id | null, msg }]. */
-export function validate(V) {
+/** All problems of the roster: [{ sel: selection id | null, msg }]. opts.warnings: also the data's notices (BSData
+ *  "warning" modifiers – e.g. a points-update note), marked { warn: true }; they are no rule breaches. */
+export function validate(V, opts = {}) {
   const out = [];
   const label = w => (w && w.kind === 'sel' ? effective(V, w.node, w, w.parent).name : 'Army');
   // a constraint scope as words: 'army', or the name of the entry / group it means (never its raw id)
@@ -485,6 +488,7 @@ export function validate(V) {
     const self = node.group ? null : sels[0] || null;
     const eff = effective(V, node, self, parent);
     if (sels.length) for (const m of eff.errors) out.push({ sel: (owner ? owner.s.id : sels[0].s.id) || null, msg: `${owner ? label(owner) + ': ' : ''}${m}` });
+    if (sels.length && opts.warnings) for (const m of eff.warnings) out.push({ sel: (owner ? owner.s.id : sels[0].s.id) || null, msg: `${owner ? label(owner) + ': ' : ''}${m}`, warn: true });
     if (eff.hidden && !sels.length) { if (node.group) for (const k of V.sys.children(node)) checkNode(k, parent, owner, true); return; }   // not available here → its rules do not apply
     if (eff.hidden && sels.length) out.push({ sel: (sels[0].s || {}).id || null, msg: `${eff.name} is not available${owner ? ' for ' + label(owner) : ''}` });
     for (const c of eff.constraints) {
@@ -501,13 +505,16 @@ export function validate(V) {
     }
     if (node.group) for (const k of V.sys.children(node)) checkNode(k, parent, owner, under);
   };
+  // opts.unit: only the rules inside that unit (selection id) – quick check whether a change breaks one; no army-wide limits
+  const only = opts.unit ? V.byId.get(opts.unit) || null : null;
+  const army = !opts.unit;
   // force: root entries (only those used or with a min) + category constraints of the force entry
-  for (const n of V.sys.rootNodes(V.catalogueId)) {
+  for (const n of army ? V.sys.rootNodes(V.catalogueId) : []) {
     const used = selsOf(V, V.force, n).length;
     const hasMin = n.constraints.some(c => c.type === 'min');
     if (used || hasMin) checkNode(n, V.force, null);
   }
-  for (const cl of arr(V.sys.forceEntry && V.sys.forceEntry.categoryLinks)) {
+  for (const cl of army ? arr(V.sys.forceEntry && V.sys.forceEntry.categoryLinks) : []) {
     const node = { modifiers: arr(cl.modifiers), modifierGroups: [], constraints: arr(cl.constraints), name: cl.name, hidden: false };
     const eff = effective(V, node, null, V.force);
     for (const c of eff.constraints) {
@@ -518,7 +525,7 @@ export function validate(V) {
   }
   // limits of the army roster itself (game system): Enhancements per army (2 at Incursion, otherwise 4) … – the points
   // limit and the Detachment Points are checked by the builder (custom limits, DP set by hand)
-  for (const c of rosterLimits(V)) {
+  for (const c of army ? rosterLimits(V) : []) {
     if (c.field === PTS || c.field === DP || !isCostType(V, c.field)) continue;
     if ((c.type === 'max' && c.value < 0) || (c.type === 'min' && c.value <= 0)) continue;
     const v = V.force.ch.reduce((x, w) => x + totalCost(V, w, c.field), 0);
@@ -528,10 +535,7 @@ export function validate(V) {
     if (c.type === 'min' && v < c.value) out.push({ sel: null, msg: msg || `${name}: at least ${c.value} (has ${v})` });
   }
   // limits stored on the catalogues' categories: one EPIC HERO per army, max 3 Soul Grinders, a Warlord, allied points caps …
-  const catEntries = []; const seenCat = new Set();
-  const addCat = c => { if (!c || seenCat.has(c.id)) return; seenCat.add(c.id); for (const ce of arr(c.categoryEntries)) if (arr(ce.constraints).length) catEntries.push(ce); for (const l of arr(c.catalogueLinks)) addCat(V.sys.cats.get(l.targetId)); };
-  addCat(V.sys.cats.get(V.catalogueId)); addCat(V.sys.gst);
-  for (const ce of catEntries) {
+  for (const ce of army ? catLimitEntries(V) : []) {
     const node = { modifiers: arr(ce.modifiers), modifierGroups: arr(ce.modifierGroups), constraints: arr(ce.constraints), name: ce.name, hidden: false };
     const eff = effective(V, node, null, V.force);
     for (const c of eff.constraints) {
@@ -552,13 +556,37 @@ export function validate(V) {
     for (const k of V.sys.children(w.node)) checkNode(k, w, w);
     w.ch.forEach(walk);
   };
-  V.force.ch.forEach(walk);
-  for (const w of V.stale) out.push({ sel: w.parent && w.parent.kind === 'sel' ? w.parent.s.id : null, msg: 'An entry that is no longer in the data (data update) – it is removed when the army is opened' });
+  (army ? V.force.ch : only ? [only] : []).forEach(walk);
+  for (const w of army ? V.stale : []) out.push({ sel: w.parent && w.parent.kind === 'sel' ? w.parent.s.id : null, msg: 'An entry that is no longer in the data (data update) – it is removed when the army is opened' });
   const pts = totalPoints(V);
-  if (num(V.roster.limit) > 0 && pts > num(V.roster.limit)) out.push({ sel: null, msg: `${pts} / ${V.roster.limit} pts – over the points limit` });
+  if (army && num(V.roster.limit) > 0 && pts > num(V.roster.limit)) out.push({ sel: null, msg: `${pts} / ${V.roster.limit} pts – over the points limit` });
   const seen = new Set();
   // an army-wide limit is checked under every unit that has the entry: list it once
   return out.filter(e => { const k = / per army \(has /.test(e.msg) ? e.msg : e.sel + '|' + e.msg; if (seen.has(k)) return false; seen.add(k); return true; });
+}
+/** Category entries with limits of the army's catalogue, the catalogues it links and the game system. */
+function catLimitEntries(V) {
+  const out = []; const seen = new Set();
+  const add = c => { if (!c || seen.has(c.id)) return; seen.add(c.id); for (const ce of arr(c.categoryEntries)) if (arr(ce.constraints).length) out.push(ce); for (const l of arr(c.catalogueLinks)) add(V.sys.cats.get(l.targetId)); };
+  add(V.sys.cats.get(V.catalogueId)); add(V.sys.gst);
+  return out;
+}
+/** How many more selections of root entry `node` the army's category limits allow (a datasheet's own category: one
+ *  EPIC HERO, three of any other datasheet, two at Incursion …): { left, max, name } of the tightest limit, or null. */
+export function categoryRoom(V, node) {
+  const fake = { kind: 'sel', node, parent: V.force, n: 1, ch: [], ids: node.ids, groups: [], s: {} };
+  const cats = categoriesOf(V, fake);
+  let best = null;
+  for (const ce of catLimitEntries(V)) {
+    if (!cats.has(ce.id)) continue;
+    const eff = effective(V, { modifiers: arr(ce.modifiers), modifierGroups: arr(ce.modifierGroups), constraints: arr(ce.constraints), name: ce.name, hidden: false }, null, V.force);
+    for (const c of eff.constraints) {
+      if (c.type !== 'max' || c.value < 0 || c.field !== 'selections' || (c.scope !== 'force' && c.scope !== 'roster')) continue;
+      const v = descendants(V.force, !!c.includeChildSelections).filter(([w]) => categoriesOf(V, w).has(ce.id)).reduce((x, [, m]) => x + m, 0);
+      if (!best || c.value - v < best.left) best = { left: c.value - v, max: c.value, name: ce.name };
+    }
+  }
+  return best;
 }
 /** The army roster's own limits (game system force entry) with their modifiers applied: [{ field, type, value, message }]. */
 export function rosterLimits(V) {
@@ -590,10 +618,20 @@ export function instantiate(sys, V, node, t, parentW, n = 1) {
 }
 /** The default option of a group: its defaultId – or, when the data sets none, the option the group is named after
  *  (group "Laspistol" → Laspistol; BSData names weapon groups after the standard weapon). */
-function isDefault(g, x) {
-  if (g.defaultId) return x.id === g.defaultId || x.linkId === g.defaultId;
+function isDefault(sys, g, x) {
+  if (g.defaultId) {
+    // the default may also name a link to the same item elsewhere (Scout Bike Sergeant: a Bolt pistol link outside the group)
+    const d = sys.idx.get(g.defaultId);
+    const hit = y => y.id === g.defaultId || y.linkId === g.defaultId || !!(d && d.targetId && d.targetId === y.id);
+    if (hit(x)) return true;
+    // an id that is in none of the options (left over in the data – Big Mek "Power Klaw" group): as if none were given
+    if (sys.children(g).some(hit)) return false;
+  }
   return !!g.name && String(x.name).toLowerCase() === String(g.name).toLowerCase();
 }
+/** Default order of a group's options: the default first, the others as BattleScribe lists them (sortIndex, name).
+ *  (The data's own order is no better guide: Captain "Power fist" before the datasheet's master-crafted power weapon.) */
+const byDefault = (sys, g) => (p, q) => (isDefault(sys, g, q.x) ? 1 : 0) - (isDefault(sys, g, p.x) ? 1 : 0);
 /** BSData / New Recruit defaultAmount of an entry: how many are selected when its parent is created – a number, or a
  *  list "1,1" = that many separate selections (two battlesuits that can be equipped differently). null = none given. */
 function defAmounts(x) {
@@ -622,7 +660,7 @@ function fillDefaults(sys, V, node, s, parentW, groups = []) {
     let left = Math.max(0, need - [...share.values()].reduce((a, b) => a + b, 0));
     // the data's default amounts come first (Crisis Fireknife: plasma rifle 1 + missile pod 1 instead of 2 of the first);
     // the group's default entry before the others when they compete for the places (TX42: every option has 1)
-    const order = opts.slice().sort((p, q) => (isDefault(k, q.x) ? 1 : 0) - (isDefault(k, p.x) ? 1 : 0));
+    const order = opts.slice().sort(byDefault(sys, k));
     for (const o of order) {
       const da = defAmounts(o.x);
       if (!da || o.l.max === 0 || left <= 0) continue;
@@ -794,6 +832,18 @@ export function nameSels(sys, roster) {
   (function f(list) { for (const s of list || []) { const w = V.byId.get(s.id); if (w && w.node) s.nm = w.node.name; f(s.ch); } })(r.sel);
   return r;
 }
+/** How many options of group `g` (below selection pid) miss their minimum in roster r. */
+function unmetIn(sys, r, pid, g) {
+  const V = view(sys, r);
+  const w = V.byId.get(pid);
+  if (!w) return Infinity;
+  return sys.children(g.node).filter(x => !x.group).reduce((t, x) => {
+    const l = limits(V, x, null, w);
+    if (l.hidden || l.min <= 0) return t;
+    const have = w.ch.filter(c => c.s.t === g.tok + '>' + x.token).reduce((s, c) => s + c.n, 0);
+    return t + (have < l.min ? 1 : 0);
+  }, 0);
+}
 export function autoSync(sys, roster) {
   let r = roster;
   // selections the data does not know any more (a data update changed their ids): found again by their stored name
@@ -811,10 +861,10 @@ export function autoSync(sys, roster) {
   for (let pass = 0; pass < 12; pass++) {
     const V = view(sys, r);
     let change = null;
-    const visit = (w, nodes, prefix, room = Infinity) => {
+    const visit = (w, nodes, prefix, room = Infinity, excl = null) => {
       for (const k of nodes) {
         if (change) return;
-        if (/^(Crusade|Weapon Modifications|Battle Scars|Battle Honours)/i.test(k.name)) continue;
+        if (/^(Crusade\b|Weapon Modifications|Battle Scars|Battle Honours)/i.test(k.name)) continue;   // not "Crusaders" (Crusader Squad)
         const tok = prefix ? prefix + '>' + k.token : k.token;
         const lim = limits(V, k, null, w);
         if (k.group) {
@@ -824,7 +874,7 @@ export function autoSync(sys, roster) {
           if (lim.min > 0 && !inG.length && gRoom > 0) {
             // options that are allowed right now; one that is mandatory now (min > 0) wins over the default
             const opts = sys.children(k).filter(x => !x.group).map(x => ({ x, l: limits(V, x, null, w) })).filter(o => !o.l.hidden && o.l.max !== 0);
-            const pick = opts.find(o => o.l.min > 0) || opts.find(o => defAmounts(o.x)) || opts.find(o => isDefault(k, o.x)) || (opts.length === 1 ? opts[0] : null);
+            const pick = opts.find(o => o.l.min > 0) || opts.find(o => defAmounts(o.x)) || opts.find(o => isDefault(sys, k, o.x)) || (opts.length === 1 ? opts[0] : null);
             const def = pick ? pick.x : null;
             if (def) { change = { add: { p: w.s.id, t: tok + '>' + def.token, n: def.type === 'model' ? lim.min : 1 } }; return; }
           }
@@ -843,7 +893,7 @@ export function autoSync(sys, roster) {
               .find(c => c.n - (total - lim.max) >= Math.max(0, limits(V, c.node, c, w).min));
             if (big) { change = { set: { id: big.s.id, n: big.n - (total - lim.max) } }; return; }
           }
-          visit(w, sys.children(k), tok, gRoom);
+          visit(w, sys.children(k), tok, gRoom, lim.max === 1 && inG.length ? { node: k, tok, inG } : null);
           continue;
         }
         const sels = w.ch.filter(c => c.s.t === tok);
@@ -854,12 +904,19 @@ export function autoSync(sys, roster) {
         if (k.type === 'model') { if (lim.min > 0 && !sels.length && room >= lim.min) change = { add: { p: w.s.id, t: tok, n: lim.min } }; continue; }
         const have = sels.reduce((x, c) => x + c.n, 0);
         if (lim.min > 0 && have < lim.min && room >= lim.min - have) change = sels.length ? { set: { id: sels[0].s.id, n: sels[0].s.n + lim.min - have } } : { add: { p: w.s.id, t: tok, n: lim.min - have } };
+        // mandatory now, but the exclusive group holds another choice (the Inceptor Sergeant follows the squad to Plasma
+        // Exterminators): swap – if that leaves fewer unmet minimums in the group (no ping-pong when both are required)
+        else if (lim.min > 0 && !have && excl) {
+          const r2 = addSel(sys, excl.inG.reduce((x, c) => removeSel(x, c.s.id), r), w.s.id, tok, lim.min);
+          if (unmetIn(sys, r2, w.s.id, excl) < unmetIn(sys, r, w.s.id, excl)) { change = { swap: r2 }; return; }
+        }
       }
     };
     const walk = w => { if (change || !w.node) return; visit(w, sys.children(w.node), ''); w.ch.forEach(walk); };
     V.force.ch.forEach(walk);
     if (!change) break;
-    if (change.rm) r = removeSel(r, change.rm);
+    if (change.swap) r = change.swap;
+    else if (change.rm) r = removeSel(r, change.rm);
     else if (change.set) r = setCount(r, change.set.id, change.set.n);
     else r = addSel(sys, r, change.add.p, change.add.t, change.add.n);
   }

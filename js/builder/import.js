@@ -57,7 +57,7 @@ function base(sys, cat, limit) {
 function entriesBelow(sys, node, depth = 0, pre = '', group = null, out = []) {
   if (depth > 4) return out;
   for (const k of sys.children(node)) {
-    if (/^(Crusade|Weapon Modifications)/i.test(k.name)) continue;
+    if (/^(Crusade\b|Weapon Modifications)/i.test(k.name)) continue;   // not "Crusaders" (Crusader Squad)
     const tok = pre ? pre + '>' + k.token : k.token;
     if (k.group) entriesBelow(sys, k, depth + 1, tok, { node: k, tok }, out);
     else out.push({ node: k, tok, group });
@@ -110,18 +110,28 @@ export async function importText(text, opts = {}) {
     || (opts.catalogueId ? cats.find(c => c.id === opts.catalogueId) : null);
   if (!cat) throw new Error('Faction not recognised – the export needs the faction (e.g. "+ FACTION KEYWORD: …" or the faction name on top)');
   const sys = await systemFor(cat.id);
-  // battle size / points
-  const sz = /(Incursion|Strike Force|Onslaught)\s*\((\d{3,5})/i.exec(head);
-  const tot = /TOTAL ARMY POINTS:\s*(\d+)/i.exec(head) || /\((\d{3,5}) points?\)/i.exec(lines[0] || '');
-  const limit = sz ? Number(sz[2]) : tot && Number(tot[1]) > 1000 ? 2000 : 1000;
+  // the list's title: a first line with points ("Stormlord Dynasty (1970 Points)") in a list with sections (GW app) or
+  // with 500+ points – no unit, its name becomes the army's name
+  const SECTION = /^(CHARACTERS?|BATTLELINE|OTHER DATASHEETS|DEDICATED TRANSPORTS?|EPIC HEROE?S?|INFANTRY|VEHICLES?|MONSTERS?|ALLIED UNITS)\b/i;
+  const ptsNum = s => Number(String(s).replace(/[,.\s]/g, ''));
+  const tm = /^(?![+&=#])(.+?)\s*[([]\s*(\d[\d,.]*)\s*(?:pts?|points?)\s*[)\]]\s*$/i.exec(lines[0] || '');
+  const title = tm && (lines.some(l => SECTION.test(l)) || ptsNum(tm[2]) >= 500) ? tm[1].trim() : null;
+  // battle size / points: "Strike Force (2,000 Points)", "Battle Size: 2. Strike Force (2000 Point limit)", "Strike
+  // Force 2000", a round number in the first line ("Necrons 2000 - Awakened Dynasty", "Aeldari - Aspect Host - 2000pts"),
+  // else from the list's total
+  const SIZE_PTS = { incursion: 1000, 'strike force': 2000, onslaught: 3000 };
+  const sz = /\b(Incursion|Strike Force|Onslaught)\b\s*[-–:(]?\s*(\d{1,2}[,.]?\d{3})?/i.exec(head);
+  const round = /(?:^|[\s|–-])([123][,.]?000)\s*(?:pts?|points?)?(?=$|[\s|–-])/i.exec(lines[0] || '');
+  const tot = /TOTAL ARMY POINTS:\s*(\d[\d,.]*)/i.exec(head) || (tm ? [tm[0], tm[2]] : null) || /\[\s*(\d[\d,.]*)\s*pts?\s*\]/i.exec(lines[0] || '');
+  const limit = sz ? (sz[2] ? ptsNum(sz[2]) : SIZE_PTS[sz[1].toLowerCase()]) : round ? ptsNum(round[1]) : tot && ptsNum(tot[1]) > 1000 ? 2000 : 1000;
   let r = base(sys, cat, limit);
   // detachment(s): every name of this faction's detachments that appears in the list's head (the lines before the first
   // unit) or in any line mentioning "Detachment" – "+ DETACHMENT: A, B", "Detachment: A", "A Detachment",
   // "Strike Force (2000) – A", "A + B", a line of its own (GW app / New Recruit text) …
   // a unit line: points below 500 ("Beastboss (80 points)", "[25 pts]", "10x …") or a section heading; the list's title
   // and the battle size carry 1000 / 2000 points and belong to the head
-  const isUnitLine = l => {
-    if (/^\+/.test(l)) return false;
+  const isUnitLine = (l, i) => {
+    if (/^\+/.test(l) || (i === 0 && title)) return false;
     if (/^(CHARACTERS?|BATTLELINE|OTHER DATASHEETS|DEDICATED TRANSPORTS?|EPIC HEROE?S?|INFANTRY|VEHICLES?|MONSTERS?|ALLIED UNITS)\b/i.test(l)) return true;
     if (/^\d+\s*x\s/i.test(l) || /^Char\d/i.test(l)) return true;
     const m = /[([]\s*(\d+)\s*(pts?|points?)\s*[)\]]/i.exec(l);
@@ -153,13 +163,14 @@ export async function importText(text, opts = {}) {
   if (!taken.length) report.push('Detachment not recognised – choose it in the army configuration');
   // units
   const roots = sys.rootNodes(cat.id).filter(n => ['unit', 'model'].includes(n.type));
-  const units = parseArmyText(text);
+  const units = parseArmyText(text).filter(u => !(title && norm(u.name) === norm(title)));   // the title is no unit
   // lines that look like a unit with its points ("Overlord (115 pts) - Warlord, …", "10x Dire Avengers - 140",
   // "Autarch (90): …") but became no unit: reported as not imported instead of vanishing silently
   {
     const got = units.map(u => norm(u.name)).filter(Boolean);
     const ptsOf = l => { const m = /[([]\s*(\d+)\s*(?:pts?|points?)\s*[)\]]|[([]\s*(\d+)\s*[)\]]\s*(?::|$)|[-–:]\s*(\d{2,3})\s*(?:pts?|points?)?\s*$/i.exec(l); return m ? Number(m[1] || m[2] || m[3]) : null; };
-    for (const l of lines) {
+    for (const [i, l] of lines.entries()) {
+      if (i === 0 && title) continue;
       if (/^[+&=#•◦○]/.test(l) || !/[a-z]{3}/i.test(l) || /detachment|faction|total|strike force|incursion|onslaught|version/i.test(l)) continue;
       const p = ptsOf(l);
       if (p == null || p >= 500 || got.some(n => norm(l).includes(n))) continue;
@@ -203,9 +214,10 @@ export async function importText(text, opts = {}) {
   }
   r = revealUnits(sys, r);
   r = E.autoSync(sys, r);
-  const pts = E.totalPoints(E.view(sys, r));
-  r.name = `${cat.label} ${pts}`;
-  const notes = importNotes(sys, r, report, made, tot ? Number(tot[1]) : null, units.some(u => u.warlord), taken.map(t => t.o.name));
+  // the list's own title – else faction and detachment (no points in the name: they go stale once the army is edited)
+  const own = title && !/\b(Incursion|Strike Force|Onslaught)\b/i.test(title) && norm(title) !== norm(cat.label) ? title : null;   // not "Necrons - Awakened Dynasty - Strike Force"
+  r.name = own || `${cat.label}${taken.length ? ' – ' + taken.map(t => t.o.name).join(' + ') : ''}`;
+  const notes = importNotes(sys, r, report, made, tot ? ptsNum(tot[1]) : null, units.some(u => u.warlord), taken.map(t => t.o.name));
   r.importNotes = notes;
   return { army: r, sys, report, notes, units: units.length };
 }
@@ -353,11 +365,42 @@ function setWargear(sys, r, id, u, report) {
       } else r = E.addSel(sys, r, h.s.id, c.e.tok);
       matched = true;
     }
-    if (!matched) missing.push(g);
+    if (!matched) {
+      // the weapon is a model type of its own ("20x Gauss Reaper" → "Warrior w/ gauss reaper"): that many models change type
+      const r2 = modelOfWeapon(sys, r, id, g);
+      if (r2) r = r2; else missing.push(g);
+    }
   }
   if (missing.length) r = bundles(sys, r, id, u, missing);
   for (const g of missing) report.push(`${u.name}: wargear not matched: ${g.count > 1 ? g.count + '× ' : ''}${g.name}`);
   return r;
+}
+
+/** A weapon line that names a model type of the unit ("• 20x Gauss Reaper" – BSData: "Warrior w/ gauss reaper"): that many
+ *  models of the other types of its group become this type. The new roster, or null when there is no such model type. */
+function modelOfWeapon(sys, r, id, g) {
+  const V = E.view(sys, r);
+  const w = V.byId.get(id);
+  const t = entriesBelow(sys, w.node).find(x => x.node.type === 'model' && / w /.test(' ' + norm(x.node.name) + ' ') && norm(x.node.name).endsWith(' w ' + norm(g.name)));
+  if (!t) return null;
+  const par = s => s.split('>').slice(0, -1).join('>');
+  const stacks = w.ch.filter(c => c.node && c.node.type === 'model');
+  const have = stacks.filter(c => c.s.t === t.tok).reduce((a, c) => a + c.n, 0);
+  let need = Math.max(1, g.count) - have;
+  if (need <= 0) return r;
+  // models that give way: other types of the same group, not the unit's leader model, biggest first
+  const from = stacks.filter(c => c.s.t !== t.tok && par(c.s.t) === par(t.tok) && E.limits(V, c.node, c, w).max !== 1).sort((p, q) => q.n - p.n);
+  if (!from.length) return null;
+  let moved = 0;
+  for (const c of from) {
+    if (need <= 0) break;
+    const k = Math.min(need, c.n);
+    r = k >= c.n ? E.removeSel(r, c.s.id) : E.setCount(r, c.s.id, c.n - k);
+    need -= k; moved += k;
+  }
+  if (!moved) return null;
+  const cur = E.view(sys, r).byId.get(id).ch.find(c => c.s.t === t.tok);
+  return cur ? E.setCount(r, cur.s.id, cur.n + moved) : E.addSel(sys, r, id, t.tok, moved);
 }
 
 /** Option bundles ("2 Lascannons and 2 Twin Heavy Bolters"): the export lists only the weapons inside. Try the bundles of

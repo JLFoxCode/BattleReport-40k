@@ -176,6 +176,8 @@ export const EXACT = { 'File': 'Datei',
 
 /* numbers with units and other short composites (whole text node; applied before PHRASES) */
 export const PATTERNS = [
+  ['^Not possible – (.+)$', (m, r) => 'Nicht möglich – ' + r],
+  ['^Notes from the data$', () => 'Hinweise aus den Daten'], ['^no rule problem$', () => 'kein Regelproblem'],
   ['^Led by (.+) – a bodyguard unit can only have one Leader unit attached$', (m, a) => 'Angeführt von ' + a + ' – eine Bodyguard-Einheit kann nur eine Leader-Einheit angeschlossen haben'],
   ['^Led by (.+) – at most (\\d+) Leader units can be attached$', (m, a, n) => 'Angeführt von ' + a + ' – höchstens ' + n + ' Leader-Einheiten können angeschlossen werden'],
   ['^Led by (.+) – no more than one of them can be a (.+) unit$', (m, a, k) => 'Angeführt von ' + a + ' – höchstens eine davon darf eine ' + k + '-Einheit sein'],
