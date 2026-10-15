@@ -2,7 +2,7 @@
    one sheet per unit with all its options. */
 .armies { max-width: 760px; margin: 0 auto; padding: 12px 12px calc(32px + var(--sa-bottom)); }
 .arm-head { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 4px 0 14px; }
-.arm-head .title { flex: 1 1 120px; min-width: 0; margin: 0; font-size: 26px; }
+.arm-head .title { flex: 1 1 120px; min-width: 0; margin: 0; font-size: 26px; overflow-wrap: anywhere; }
 .arm-head > .btn { flex: none; white-space: nowrap; }
 /* the actions wrap below the title on narrow phones (long German labels) instead of widening the page */
 .arm-head-act { display: flex; flex-wrap: wrap; gap: 8px; margin-left: auto; justify-content: flex-end; }

@@ -293,7 +293,14 @@ function onChange(e) {
   const el = e.target, f = el.dataset.field;
   if (!f) return;
   const { ctx } = cur;
-  if (f === 'size' || f === 'stratLock') ctx.dispatch({ type: 'opts.set', key: f, value: el.value });
+  if (f === 'size') {
+    // points follow the game size unless set by hand to something else (Incursion 1000 / Strike Force 2000)
+    const defPts = { strike: 2000, incursion: 1000 };
+    const prev = ctx.state.opts.size, pts = Number(ctx.state.opts.points);
+    ctx.dispatch({ type: 'opts.set', key: 'size', value: el.value });
+    if (defPts[el.value] && (!pts || pts === defPts[prev])) ctx.dispatch({ type: 'opts.set', key: 'points', value: defPts[el.value] });
+  }
+  else if (f === 'stratLock') ctx.dispatch({ type: 'opts.set', key: f, value: el.value });
   else if (f === 'autoScore') ctx.dispatch({ type: 'opts.set', key: 'autoScore', value: el.checked });
   else if (f === 'twist') ctx.dispatch({ type: 'mission.set', twist: el.value || null });
   else if (f === 'mirrored') ctx.dispatch({ type: 'mission.set', mirrored: el.value || null });

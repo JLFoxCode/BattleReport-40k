@@ -158,8 +158,8 @@ function deployStage(ctx, ui) {
         <ul class="list dep-list">
           ${item('roles', `<span class="text-p${att}">${esc(pName(s, att))}</span> is the Attacker · <span class="text-p${def}">${esc(pName(s, def))}</span> is the Defender`,
             'The Attacker uses the Attacker deployment zone of the deployment map, the Defender the opposite one.')}
+          ${item('reserves', 'Declare Battle Formations', 'Before deploying, each player secretly notes which Leaders are attached to which units, which units start embarked in TRANSPORTS and which start in Reserves (Strategic Reserves, Deep Strike); then both reveal them.')}
           ${item('alt', 'Deploy alternately', `<span class="text-p${def}">${esc(pName(s, def))}</span> (Defender) deploys first: one unit each, alternating, wholly within your own deployment zone, until all units are deployed or in Reserves. After deploying a TITANIC unit, skip your next deployment. Redeployments afterwards alternate, starting with the Attacker.`)}
-          ${item('reserves', 'Declare Reserves and infiltrators', 'Openly declare Strategic Reserves, Deep Strike and transports to both players.')}
           <li class="dep-item first ${first != null ? 'done' : ''}">
             <span class="ck">${first != null ? '✓' : ''}</span>
             <div class="main">

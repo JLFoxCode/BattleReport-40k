@@ -15,7 +15,7 @@
 .steps { display: flex; gap: 6px; margin: 10px calc(-1 * var(--gap)) 0; padding: 2px var(--gap) 6px; scroll-snap-type: x proximity; }
 .setup .unit-item .sub { overflow-wrap: anywhere; }
 .setup .unit-item .kw { white-space: normal; }
-@media (max-width: 420px) { .steps { margin-left: -10px; margin-right: -10px; padding-left: 10px; padding-right: 10px; } }   /* .wrap padding is 10px there */
+@media (max-width: 420px) { .steps { margin-left: 0; margin-right: 0; padding-left: 2px; padding-right: 2px; } }   /* no bleed on phones: the negative margin scrolled the page sideways by 2 px */
 .step-chip {
   display: inline-flex; align-items: center; gap: 8px; flex: none;
   min-height: var(--touch); padding: 0 12px 0 6px; border-radius: 999px;
