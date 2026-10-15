@@ -2,7 +2,7 @@
  "faction": "adeptus-custodes",
  "name": "Adeptus Custodes",
  "version": {
-  "bsdata": "3988a8bdd210f9d31ea5b6782d0016688ccb6815",
+  "bsdata": "d506fcc0ee4b4babdda03e71dffd4e1e3cf5bcbf",
   "wahapedia": "2026-10-11"
  },
  "sources": {
@@ -816,16 +816,15 @@
      "name": "UNLEASH THE LIONS",
      "cost": 1,
      "costText": "1CP",
-     "detachment": "Lions of the Emperor",
-     "category": "Strategic Ploy",
+     "detachment": "Tharanatoi Hammerblow",
+     "category": "",
      "when": "Your Command phase.",
-     "target": "One ALLARUS CUSTODIANS or AQUILON CUSTODIANS unit from your army that is on the battlefield.",
-     "effect": "That unit is split into separate units, each containing one model. These new units each have a Starting Strength of 1.",
+     "target": "One friendly ALLARUS CUSTODIANS/AQUILON CUSTODIANS unit that is on the battlefield.",
+     "effect": "Your unit is split into separate units, each containing one model. These new units each have a starting strength of 1.",
      "restrictions": "",
-     "text": "WHEN: Your Command phase.\n\nTARGET: One ALLARUS CUSTODIANS or AQUILON CUSTODIANS unit from your army that is on the battlefield.\n\nEFFECT: That unit is split into separate units, each containing one model. These new units each have a Starting Strength of 1.",
-     "flavour": "Heroic bands of Terminator-armoured Custodians engage entire armies in unrelenting battle.",
-     "src": "wahapedia",
-     "fallback": true
+     "text": "WHEN: Your Command phase.\n\nTARGET: One friendly ALLARUS CUSTODIANS/AQUILON CUSTODIANS unit that is on the battlefield.\n\nEFFECT: Your unit is split into separate units, each containing one model. These new units each have a starting strength of 1.",
+     "flavour": "Heroic bands of Terminator‑armoured Custodians engage entire armies in unrelenting battle.",
+     "src": "wahapedia"
     },
     "Electroexorcist Saturation": {
      "name": "ELECTROEXORCIST SATURATION",
@@ -955,16 +954,15 @@
      "name": "FLAWLESS CONSTRUCTION",
      "cost": 1,
      "costText": "1CP",
-     "detachment": "Solar Spearhead",
-     "category": "Battle Tactic",
-     "when": "Your opponent’s Shooting phase or the Fight phase, just after an enemy unit has selected its targets.",
-     "target": "One ADEPTUS CUSTODES VEHICLE unit from your army that was selected as the target of one or more of the attacking unit’s attacks.",
-     "effect": "Until the end of the phase, each time an attack targets a model in your unit, if the Strength characteristic of that attack is greater than the Toughness characteristic of your unit, subtract 1 from the Wound roll.",
+     "detachment": "Might of the Moritoi",
+     "category": "",
+     "when": "Your opponent’s Shooting phase or the Fight phase, when an enemy unit targets a friendly ADEPTUS CUSTODES WALKER unit.",
+     "target": "That ADEPTUS CUSTODES WALKER unit.",
+     "effect": "Attacks that target your unit with a S greater than your unit’s T have -1 to wound rolls.",
      "restrictions": "",
-     "text": "WHEN: Your opponent’s Shooting phase or the Fight phase, just after an enemy unit has selected its targets.\n\nTARGET: One ADEPTUS CUSTODES VEHICLE unit from your army that was selected as the target of one or more of the attacking unit’s attacks.\n\nEFFECT: Until the end of the phase, each time an attack targets a model in your unit, if the Strength characteristic of that attack is greater than the Toughness characteristic of your unit, subtract 1 from the Wound roll.",
-     "flavour": "The vehicles of the Adeptus Custodes are the finest examples of their kind. Their expertly wrought armoured forms contain ancient and esoteric technology, including auto-repair subroutines and reactive field generators.",
-     "src": "wahapedia",
-     "fallback": true
+     "text": "WHEN: Your opponent’s Shooting phase or the Fight phase, when an enemy unit targets a friendly ADEPTUS CUSTODES WALKER unit.\n\nTARGET: That ADEPTUS CUSTODES WALKER unit.\n\nEFFECT: Attacks that target your unit with a S greater than your unit’s T have -1 to wound rolls.",
+     "flavour": "Adeptus Custodes Dreadnoughts possess expertly wrought armoured forms that contain ancient and esoteric technology, including auto‑repair subroutines and reactive field generators.",
+     "src": "wahapedia"
     },
     "Unstoppable Advance": {
      "name": "UNSTOPPABLE ADVANCE",

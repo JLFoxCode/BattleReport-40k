@@ -11,7 +11,7 @@ import { FACTIONS } from '../../data/factions/index.js';
 import { esc, btn } from './components.js';
 import { datasheetCard } from './datasheet.js';
 import { loadDatasheets } from '../data/datasheets.js';
-import { loadMissionsOrig, loadOrig, origStratagem, origPrimary, origSecondary, origTwist } from '../data/orig.js';
+import { loadMissionsOrig, loadOrig, origStratagem, origPrimary, origSecondary, origTwist, normKey, normKeyBase } from '../data/orig.js';
 
 const TYPE_LABEL = {
   core: 'Core rule', step: 'Phase step', glossary: 'Glossary',
@@ -59,7 +59,10 @@ function mk(e) {
 }
 function stratMeta(s) {
   const ph = Array.isArray(s.ph) ? s.ph : ['any'];
-  const phases = ph.includes('any') ? 'Any phase' : ph.map(p => { const x = WH.PHASES.find(y => y.id === p); return x ? x.full : p; }).join(', ');
+  const full = p => { const x = WH.PHASES.find(y => y.id === p); return x ? x.full : p; };
+  // owner per phase when the WHEN mixes them: "Shooting phase (Your turn), Fight phase (Either turn)"
+  if (s.phw && !ph.includes('any')) return `${s.cost || 0} CP · ${ph.map(p => `${full(p)} (${WH.WHOSE_LABELS[s.phw[p]] || 'Either turn'})`).join(', ')}`;
+  const phases = ph.includes('any') ? 'Any phase' : ph.map(full).join(', ');
   return `${s.cost || 0} CP · ${phases} · ${WH.WHOSE_LABELS[s.whose] || 'Either turn'}`;
 }
 function staticIndex() {
@@ -90,8 +93,9 @@ function ruleEntries(facId, d) {
   const f = FACTIONS.find(x => x.id === facId);
   const fname = f ? f.name : facId;
   const out = [];
-  (d.armyRules || []).forEach((r, i) => out.push(mk({ id: `army:${facId}:${i}`, type: 'armyrule', title: `${r.name} – army rule`, text: r.text || '', sub: fname, fac: facId, rules: [r] })));
-  (d.detachments || []).forEach((det, i) => out.push(mk({ id: `det:${facId}:${i}`, type: 'detrule', title: `${det.name} – detachment rule`, text: (det.rules || []).map(r => r.name + ': ' + (r.text || '')).join(' '),
+  const plain = t => String(t || '').replace(/\^\^|\*\*/g, '');   // snippet / search text without BSData markup (full view: mdBold)
+  (d.armyRules || []).forEach((r, i) => out.push(mk({ id: `army:${facId}:${i}`, type: 'armyrule', title: `${r.name} – army rule`, text: plain(r.text), sub: fname, fac: facId, rules: [r] })));
+  (d.detachments || []).forEach((det, i) => out.push(mk({ id: `det:${facId}:${i}`, type: 'detrule', title: `${det.name} – detachment rule`, text: (det.rules || []).map(r => r.name + ': ' + plain(r.text)).join(' '),
     extra: (det.enhancements || []).map(e => e.name + ' ' + (e.text || '')).join(' '), sub: `${fname} · ${det.name}${det.dp != null ? ` · ${det.dp} DP` : ''}`, fac: facId, det: det.name, rules: det.rules || [], enh: det.enhancements || [] })));
   return out;
 }
@@ -195,9 +199,18 @@ function stratBody(s, toks, pre = '') {
   const row = (k, v) => v ? `<div class="rb-strat-row"><b>${k}:</b> <span class="rb-text">${hl(v, toks)}</span></div>` : '';
   return `${pre}${row('WHEN', s.when)}${row('TARGET', s.target)}${row('EFFECT', s.effect)}${row('RESTRICTIONS', s.restr || s.restrictions)}`;
 }
+/** VP value of a condition: a number, or { F, T } = Fixed / Tactical (secondary missions). */
+const vpText = v => (v && typeof v === 'object' ? `${v.F} VP Fixed / ${v.T} VP Tactical` : `${v} VP`);
+const MODE_LABEL = { F: 'Fixed only', T: 'Tactical only' };
 function condList(conds) {
   if (!conds || !conds.length) return '';
-  return `<ul class="rb-conds">${conds.map(c => `<li><b class="rb-vp">${c.sub ? '+' : ''}${esc(c.vp)} VP${c.k === 'per' ? ' each' : ''}${c.max ? ` (max ${esc(c.max)})` : ''}</b> ${esc(c.t)}<div class="xs muted">${esc(WH.TIMING_LABELS[c.w] || c.w)} · rounds ${esc(c.r ? c.r.join('–') : '1–5')}</div></li>`).join('')}</ul>`;
+  return `<ul class="rb-conds">${conds.map(c => {
+    // staged conditions ("choice"): one VP value per option
+    const vp = c.k === 'choice' ? 'VP' : `${c.sub ? '+' : ''}${vpText(c.vp)}${c.k === 'per' ? ' each' : ''}${c.max ? ` (max ${c.max})` : ''}`;
+    const opts = c.k === 'choice' && Array.isArray(c.opts) ? `<ul class="rb-opts">${c.opts.map(o => `<li><b class="rb-vp">${esc(vpText(o.vp))}</b> ${esc(o.t)}</li>`).join('')}</ul>` : '';
+    const when = [WH.TIMING_LABELS[c.w] || c.w, c.w === 'end' ? '' : `rounds ${c.r ? c.r.join('–') : '1–5'}`, MODE_LABEL[c.mode] || ''].filter(Boolean).join(' · ');
+    return `<li><b class="rb-vp">${esc(vp)}</b> ${esc(c.t)}${opts}<div class="xs muted">${esc(when)}</div></li>`;
+  }).join('')}</ul>`;
 }
 function typeBadge(e) {
   const t = MISSION_TYPES[e.type] ? 'mission' : e.type;
@@ -342,26 +355,31 @@ function browseHtml() {
 
 function factionPage(f) {
   const E = staticIndex();
-  const army = ALL.get(`army:${f.id}`);
   const res = f.resource;
   const rem = Array.isArray(f.reminders) ? f.reminders : [];
+  ensureDs(f.id);   // army/detachment rules come from the faction's BSData file (ruleEntries: army:<fac>:<i>, det:<fac>:<i>)
   const ds = S.ds.get(f.id);
   const showUnits = S.unitsShown.has(f.id);
   const loading = S.dsLoading.has(f.id);
+  const ruleList = ds ? ds.entries.filter(e => e.type === 'armyrule' || e.type === 'detrule') : [];
+  const armies = ruleList.filter(e => e.type === 'armyrule');
+  // BSData detachment by name: exact, else without a bracket suffix ("Blade of Ultramar (Ultramarines)")
+  const detRule = d => ruleList.find(e => e.type === 'detrule' && normKey(e.det) === normKey(d.name)) || ruleList.find(e => e.type === 'detrule' && normKeyBase(e.det) === normKeyBase(d.name));
+  const none = what => `<p class="muted small">${ds ? `No ${what} on file.` : 'Loading rules …'}</p>`;
   const remLabel = r => ({ roundStart: 'Start of battle round', turnStart: 'Start of turn', always: 'Always' }[r.phase] || (WH.PHASES.find(p => p.id === r.phase) || {}).full || r.phase) + (r.whose && r.whose !== 'either' ? ` · ${WH.WHOSE_LABELS[r.whose] || r.whose}` : '');
   return `<div class="rb-facpage">
     <div class="rb-fachead">${btn({ label: '‹ Factions', kind: 'ghost', small: true, data: { rb: 'back' } })}<h2 class="title rb-factitle">${esc(f.name)}</h2>${f.group ? `<span class="badge">${esc(f.group)}</span>` : ''}</div>
-    ${army ? `<div class="rb-blk"><div class="rb-blk-t">Army rule</div>${rowHtml(army, [], { noType: true, noSub: true })}</div>` : '<p class="muted small">No army rule on file.</p>'}
+    ${armies.length ? `<div class="rb-blk"><div class="rb-blk-t">Army rule</div>${armies.map(a => rowHtml(a, [], { noType: true, noSub: true })).join('')}</div>` : none('army rule')}
     ${res ? `<div class="rb-blk"><div class="rb-blk-t">Resource</div><div class="card flat rb-res"><b>${esc(res.name)}</b>${res.max != null ? ` <span class="muted small">(max ${esc(res.max)})</span>` : ''}${res.text ? `<div class="small rb-text">${esc(res.text)}</div>` : ''}</div></div>` : ''}
     ${rem.length ? `<div class="rb-blk"><div class="rb-blk-t">Reminders</div><ul class="rb-rem">${rem.map(r => `<li><span class="rb-rem-ph">${esc(remLabel(r))}</span><div class="rb-text">${esc(r.text)}</div></li>`).join('')}</ul></div>` : ''}
     <div class="rb-blk"><div class="rb-blk-t">Detachments <span class="rb-count">${f.detachments.length}</span></div>
       ${f.detachments.map(d => {
         const open = S.dets.has(d.id);
-        const rule = ALL.get(`det:${d.id}`);
+        const rule = detRule(d);
         const strats = E.filter(e => e.type === 'strat' && e.fac === f.id && e.det === d.name);
         return `<section class="rb-sec lvl2${open ? ' open' : ''}">
           <button class="rb-sec-h" type="button" data-rb="det" data-det="${esc(d.id)}" aria-expanded="${open ? 'true' : 'false'}"><span class="rb-sec-t">${esc(d.name)}</span><span class="rb-count">${d.dp ? `${esc(d.dp)} DP · ` : ''}${strats.length} strat${strats.length === 1 ? '' : 's'}</span><span class="rb-caret" aria-hidden="true">${open ? '▴' : '▾'}</span></button>
-          ${open ? `<div class="rb-sec-b">${rule ? rowHtml(rule, [], { noSub: true }) : '<p class="muted small">No detachment rule on file.</p>'}${strats.length ? rows(strats, [], { noSub: true }) : ''}</div>` : ''}
+          ${open ? `<div class="rb-sec-b">${rule ? rowHtml(rule, [], { noSub: true }) : ds && d.rule ? `<div class="rb-orig-rule"><div class="rb-text" data-no-i18n lang="en">${esc(d.rule).replace(/\n/g, '<br>')}</div></div>` : none('detachment rule')}${strats.length ? rows(strats, [], { noSub: true }) : ''}</div>` : ''}
         </section>`;
       }).join('')}
     </div>

@@ -4,14 +4,14 @@
 import { WH } from '../../data/rules.js';
 import { esc, btn, chip } from './components.js';
 import {
-  pName, phaseOf, stepper, stratCard, armyOf, myUnits,
+  pName, phaseOf, stepper, stratCard, stratWhose, matchUnitAny, armyOf, myUnits,
   detailsRule, detailsOpen, enhancementOf, leaderBuffs, origData, origMod, ensureOrig, cleanOrig, resShort, stratPhaseId, phasePill, turnBadge,
   effectItems, resourceFor, thresholdActive, thresholdDerive, choicePicked, toggleOn, counterNow, effectsOf, optionCost
 } from './player-common.js';
 import { DS, ensureDatasheets } from './player-common.js';
 import { ruleBoxes, roleSections, roleOf as bookRole } from './army-book.js';
 import { datasheetCard, datasheetMissing, datasheetGroupCard, memberWargearAbilities, abilityVisible } from './datasheet.js';
-import { matchUnit, normName } from '../data/datasheets.js';
+import { normName } from '../data/datasheets.js';
 
 export const TABS = [['army', 'Army'], ['strats', 'Stratagems'], ['units', 'Army list']];
 const OWN_PHASES = ['command', 'movement', 'shooting', 'charge', 'fight', 'end'];
@@ -280,7 +280,7 @@ export function abilityTracker(ctx) {
   units.forEach(u => {
     const n = (nth.get(u.name) || 0) + 1; nth.set(u.name, n);
     const label = counts.get(u.name) > 1 ? `${u.name} (${n})` : u.name;
-    const ds = data.units.length ? matchUnit(data.units, u.name) : null;
+    const ds = matchUnitAny(data, u.name, ctx.rerender);
     if (ds) {
       const ab = ds.abilities || {};
       [].concat(ab.unit || [], memberWargearAbilities(ds, u)).filter(a => abilityVisible(a, myDetNames(ctx), (u.enhancements || []).map(normName))).forEach(a => add(`unit:${u.id}:${keyOf(a.name)}`, a.name, a.text, label, 'unit'));
@@ -344,14 +344,15 @@ export function stratSections() {
 
 function stratsOf(list, sec) {
   if (sec.side === 'any') return list.filter(s => (s.ph || ['any']).includes('any'));
-  return list.filter(s => (s.ph || []).includes(sec.phase) && (s.whose === 'either' || s.whose === sec.side));
+  return list.filter(s => (s.ph || []).includes(sec.phase) && [sec.side, 'either'].includes(stratWhose(s, sec.phase)));
 }
 
 /** Stratagems usable in the current turn (own/opponent) – for the "Usable this turn" tile. */
 export function usableThisTurn(ctx) {
   const now = nowOf(ctx);
   if (!now.battle) return [];
-  return (ctx.derived.stratagems[ctx.me] || []).filter(s => s.available && (s.whose === 'either' || s.whose === now.side));
+  const fitsSide = s => (s.phw ? Object.values(s.phw) : [s.whose || 'either']).some(w => w === 'either' || w === now.side);
+  return (ctx.derived.stratagems[ctx.me] || []).filter(s => s.available && fitsSide(s));
 }
 
 export function renderStrats(ctx, ui) {
@@ -445,12 +446,13 @@ export function resolveLeaders(unitsIn) {
 /** Normalised names of the player's detachments (for detachment-bound abilities, see abilityVisible). */
 function myDetNames(ctx) { return armyOf(ctx, ctx.me).detachments.map(d => normName(d.name)); }
 
-/** Units a leader may be attached to: from the datasheet's Leader text ("… attached to the following units: A, B"). */
+/** Units a leader (or SUPPORT unit, ds.support) may be attached to: canLead, else the datasheet's Leader text ("… attached to
+ *  the following units: A, B"); both lists together when a unit has both. */
 export function leaderTargets(ds) {
-  const l = ds && ds.leader;
-  if (!l) return null;
-  const names = (l.canLead || []).length ? l.canLead : String(l.text || '').replace(/^[^:]*:/, '').split(/,|\band\b|\n|•/).map(x => x.replace(/[*^.]/g, '').trim()).filter(Boolean);
-  return names.map(normName);
+  const ls = [ds && ds.leader, ds && ds.support].filter(Boolean);
+  if (!ls.length) return null;
+  const names = ls.flatMap(l => ((l.canLead || []).length ? l.canLead : String(l.text || '').replace(/^[^:]*:/, '').split(/,|\band\b|\n|•/).map(x => x.replace(/[*^.]/g, '').trim()).filter(Boolean)));
+  return [...new Set(names.map(normName))];
 }
 /** Leaders of the list that could lead one of its units but lead none yet. */
 function unattachedLeaders(units, sheets, links) {
@@ -479,7 +481,7 @@ function unitEnhancements(ctx, u) {
 
 /** Buffs the leader unit `leader` grants to its bodyguard (datasheet abilities + enhancements). */
 export function buffsOf(ctx, data, leader) {
-  const ds = data.units.length ? matchUnit(data.units, leader.name) : null;
+  const ds = matchUnitAny(data, leader.name, ctx.rerender);
   return leaderBuffs(ds, unitEnhancements(ctx, leader), leader, myDetNames(ctx));
 }
 /** Buffs of a leader unit by id (for the info sheet). */
@@ -511,7 +513,7 @@ export function renderUnitList(ctx, ui) {
   if (fac && !origData(fac)) ensureOrig(fac, ctx.rerender);   // army / detachment rules + enhancement texts
   const links = resolveLeaders(units);
   const q = String(ui.search || '').trim().toLowerCase();
-  const sheets = new Map(units.map(u => [u.id, data.units.length ? matchUnit(data.units, u.name) : null]));
+  const sheets = new Map(units.map(u => [u.id, matchUnitAny(data, u.name, ctx.rerender)]));
   // Leader + led unit = one card: every leader whose target is in the list (with datasheets on both sides) joins it
   const leadersOf = new Map();
   for (const u of units) {

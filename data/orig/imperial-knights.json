@@ -2,7 +2,7 @@
  "faction": "imperial-knights",
  "name": "Imperial Knights",
  "version": {
-  "bsdata": "3988a8bdd210f9d31ea5b6782d0016688ccb6815",
+  "bsdata": "d506fcc0ee4b4babdda03e71dffd4e1e3cf5bcbf",
   "wahapedia": "2026-10-11"
  },
  "sources": {
@@ -81,18 +81,17 @@
     },
     "Full Tilt": {
      "name": "FULL TILT",
-     "cost": 2,
-     "costText": "2CP",
-     "detachment": "Valourstrike Lance",
-     "category": "Battle Tactic",
+     "cost": 1,
+     "costText": "1CP",
+     "detachment": "Freeblade Company",
+     "category": "Wargear",
      "when": "Your Movement phase.",
-     "target": "One IMPERIAL KNIGHTS unit from your army that has not been selected to move this phase.",
-     "effect": "Until the end of the phase, add 2\" to the Move characteristic of your models and add 2 to Advance rolls made for those model’s units.",
+     "target": "One IMPERIAL KNIGHTS unit from your army.",
+     "effect": "Until the end of the phase, if your unit Advances, do not make an Advance roll for it. Instead, until the end of the phase, add 6\" to the Move characteristic of models in your unit, or 9\" instead if your unit is an ARMIGER or DESTRIER unit.",
      "restrictions": "",
-     "text": "WHEN: Your Movement phase.\n\nTARGET: One IMPERIAL KNIGHTS unit from your army that has not been selected to move this phase.\n\nEFFECT: Until the end of the phase, add 2\" to the Move characteristic of your models and add 2 to Advance rolls made for those model’s units.",
-     "flavour": "With their fellows' oaths ringing through the vox-net and the rush of battle coursing through their veins, Noble pilots pour power into their steeds' motive actuators and thunder onwards.",
-     "src": "wahapedia",
-     "fallback": true
+     "text": "WHEN: Your Movement phase.\n\nTARGET: One IMPERIAL KNIGHTS unit from your army.\n\nEFFECT: Until the end of the phase, if your unit Advances, do not make an Advance roll for it. Instead, until the end of the phase, add 6\" to the Move characteristic of models in your unit, or 9\" instead if your unit is an ARMIGER or DESTRIER unit.",
+     "flavour": "With the enemy before them, their Knight’s machine spirit snarling, and the rush of battle coursing through their veins, this scion pours power into their motive actuators and thunders forward.",
+     "src": "wahapedia"
     },
     "Point-Blank Barrage": {
      "name": "POINT‑BLANK BARRAGE",

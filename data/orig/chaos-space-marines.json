@@ -2,7 +2,7 @@
  "faction": "chaos-space-marines",
  "name": "Chaos Space Marines",
  "version": {
-  "bsdata": "3988a8bdd210f9d31ea5b6782d0016688ccb6815",
+  "bsdata": "d506fcc0ee4b4babdda03e71dffd4e1e3cf5bcbf",
   "wahapedia": "2026-10-11"
  },
  "sources": {
@@ -879,16 +879,15 @@
      "name": "RELENTLESS TERROR",
      "cost": 1,
      "costText": "1CP",
-     "detachment": "Dread Talons",
-     "category": "Strategic Ploy",
+     "detachment": "Nightmare Hunt",
+     "category": "",
      "when": "Your Movement phase, just after a HERETIC ASTARTES INFANTRY unit from your army Falls Back.",
-     "target": "That HERETIC ASTARTES INFANTRY unit.",
-     "effect": "Until the end of the turn, your unit is eligible to declare a charge in a turn in which it Fell Back.",
+     "target": "That HERETIC ASTARTES unit.",
+     "effect": "Until the end of the turn, your unit is eligible to shoot and declare a charge in a turn in which it Fell Back.",
      "restrictions": "",
-     "text": "WHEN: Your Movement phase, just after a HERETIC ASTARTES INFANTRY unit from your army Falls Back.\n\nTARGET: That HERETIC ASTARTES INFANTRY unit.\n\nEFFECT: Until the end of the turn, your unit is eligible to declare a charge in a turn in which it Fell Back.",
+     "text": "WHEN: Your Movement phase, just after a HERETIC ASTARTES INFANTRY unit from your army Falls Back.\n\nTARGET: That HERETIC ASTARTES unit.\n\nEFFECT: Until the end of the turn, your unit is eligible to shoot and declare a charge in a turn in which it Fell Back.",
      "flavour": "These warriors strike in screaming waves, each charge as brutal as the last.",
-     "src": "wahapedia",
-     "fallback": true
+     "src": "wahapedia"
     },
     "Horrific Incursion": {
      "name": "HORRIFIC INCURSION",
@@ -1949,16 +1948,15 @@
      "name": "UNDYING HATRED",
      "cost": 1,
      "costText": "1CP",
-     "detachment": "Renegade Warband",
-     "category": "Strategic Ploy",
-     "when": "Fight phase, just after an enemy unit has selected its targets.",
-     "target": "One HERETIC ASTARTES unit from your army that was selected as the target of one or more of the attacking unit’s attacks.",
-     "effect": "Until the end of the phase, each time a model in your unit is destroyed, if that model has not fought this phase, roll one D6: on a 4+, do not remove the destroyed model from play; it can fight after the attacking unit has finished making its attacks, and is then removed from play.",
+     "detachment": "Devotees of Destruction",
+     "category": "",
+     "when": "Your opponent’s Shooting phase, when an enemy unit targets a friendly HAVOCS/OBLITERATORS unit.",
+     "target": "That HAVOCS/OBLITERATORS unit.",
+     "effect": "Attacks that target your unit with a S greater than your unit’s T have -1 to wound rolls.",
      "restrictions": "",
-     "text": "WHEN: Fight phase, just after an enemy unit has selected its targets.\n\nTARGET: One HERETIC ASTARTES unit from your army that was selected as the target of one or more of the attacking unit’s attacks.\n\nEFFECT: Until the end of the phase, each time a model in your unit is destroyed, if that model has not fought this phase, roll one D6: on a 4+, do not remove the destroyed model from play; it can fight after the attacking unit has finished making its attacks, and is then removed from play.",
-     "flavour": "Freed from the Emperor’s yoke, these warriors are motivated only by bitter hatred, channelling their ire into every brutal strike: even their final one.",
-     "src": "wahapedia",
-     "fallback": true
+     "text": "WHEN: Your opponent’s Shooting phase, when an enemy unit targets a friendly HAVOCS/OBLITERATORS unit.\n\nTARGET: That HAVOCS/OBLITERATORS unit.\n\nEFFECT: Attacks that target your unit with a S greater than your unit’s T have -1 to wound rolls.",
+     "flavour": "Gripped by a maniacal need to annihilate their hated enemies, these killers will not easily succumb to the clutches of death.",
+     "src": "wahapedia"
     }
    },
    "enhancements": [

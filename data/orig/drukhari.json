@@ -2,7 +2,7 @@
  "faction": "drukhari",
  "name": "Drukhari",
  "version": {
-  "bsdata": "3988a8bdd210f9d31ea5b6782d0016688ccb6815",
+  "bsdata": "d506fcc0ee4b4babdda03e71dffd4e1e3cf5bcbf",
   "wahapedia": "2026-10-11"
  },
  "sources": {
@@ -898,6 +898,20 @@
      "restrictions": "",
      "text": "WHEN: Your Movement phase, when a friendly WYCH CULT unit is selected to make an advance/fall-back move.\n\nTARGET: That WYCH CULT unit.\n\nEFFECT: That move does not prevent your unit from being eligible to start an action.",
      "flavour": "Gauche are the gladiators who kill too relentlessly. Preparing the stage with a variety of torments in order to build the tension for a delightful crescendo is the mark of a true artist.",
+     "src": "wahapedia"
+    },
+    "Acrobatic Display": {
+     "name": "ACROBATIC DISPLAY",
+     "cost": 1,
+     "costText": "1CP",
+     "detachment": "Exhibition of Slaughter",
+     "category": "",
+     "when": "Your opponent’s Shooting phase, when an enemy unit targets a friendly WYCH CULT unit.",
+     "target": "That WYCH CULT unit.",
+     "effect": "Your unit has 5+ InSv.",
+     "restrictions": "",
+     "text": "WHEN: Your opponent’s Shooting phase, when an enemy unit targets a friendly WYCH CULT unit.\n\nTARGET: That WYCH CULT unit.\n\nEFFECT: Your unit has 5+ InSv.",
+     "flavour": "Moving so quickly they seem to blur, the Wyches evade incoming fire with contemptuous elegance.",
      "src": "wahapedia"
     }
    },

@@ -2,7 +2,7 @@
  "faction": "chaos-daemons",
  "name": "Chaos Daemons",
  "version": {
-  "bsdata": "3988a8bdd210f9d31ea5b6782d0016688ccb6815",
+  "bsdata": "d506fcc0ee4b4babdda03e71dffd4e1e3cf5bcbf",
   "wahapedia": "2026-10-11"
  },
  "sources": {
@@ -1204,16 +1204,15 @@
      "name": "INSUBSTANTIAL ENTITIES",
      "cost": 1,
      "costText": "1CP",
-     "detachment": "Daemonic Incursion",
+     "detachment": "Infernal Onslaught",
      "category": "Strategic Ploy",
      "when": "Your Movement phase.",
-     "target": "One LEGIONES DAEMONICA unit from your army that has not been selected to move this phase.",
+     "target": "One KHORNE LEGIONES DAEMONICA unit from your army that has not been selected to move this phase.",
      "effect": "The next time your unit is selected to move this phase, models in that unit can move through Walls and closed Hatchways as if they were not there, but when doing so, no model can move more than 6\".",
      "restrictions": "You can only use this Stratagem once.",
-     "text": "WHEN: Your Movement phase.\n\nTARGET: One LEGIONES DAEMONICA unit from your army that has not been selected to move this phase.\n\nEFFECT: The next time your unit is selected to move this phase, models in that unit can move through Walls and closed Hatchways as if they were not there, but when doing so, no model can move more than 6\".\n\nRESTRICTIONS: You can only use this Stratagem once.",
+     "text": "WHEN: Your Movement phase.\n\nTARGET: One KHORNE LEGIONES DAEMONICA unit from your army that has not been selected to move this phase.\n\nEFFECT: The next time your unit is selected to move this phase, models in that unit can move through Walls and closed Hatchways as if they were not there, but when doing so, no model can move more than 6\".\n\nRESTRICTIONS: You can only use this Stratagem once.",
      "flavour": "Physical barriers are no obstacle to creatures that can will their desires into being with but a twist of their supernatural powers.",
-     "src": "wahapedia",
-     "fallback": true
+     "src": "wahapedia"
     },
     "Swift as Murder": {
      "name": "SWIFT AS MURDER",
@@ -1309,16 +1308,15 @@
      "name": "INSUBSTANTIAL ENTITIES",
      "cost": 1,
      "costText": "1CP",
-     "detachment": "Daemonic Incursion",
+     "detachment": "Rotten and Rusted",
      "category": "Strategic Ploy",
      "when": "Your Movement phase.",
-     "target": "One LEGIONES DAEMONICA unit from your army that has not been selected to move this phase.",
+     "target": "One NURGLE LEGIONES DAEMONICA unit from your army that has not been selected to move this phase.",
      "effect": "The next time your unit is selected to move this phase, models in that unit can move through Walls and closed Hatchways as if they were not there, but when doing so, no model can move more than 6\".",
      "restrictions": "You can only use this Stratagem once.",
-     "text": "WHEN: Your Movement phase.\n\nTARGET: One LEGIONES DAEMONICA unit from your army that has not been selected to move this phase.\n\nEFFECT: The next time your unit is selected to move this phase, models in that unit can move through Walls and closed Hatchways as if they were not there, but when doing so, no model can move more than 6\".\n\nRESTRICTIONS: You can only use this Stratagem once.",
+     "text": "WHEN: Your Movement phase.\n\nTARGET: One NURGLE LEGIONES DAEMONICA unit from your army that has not been selected to move this phase.\n\nEFFECT: The next time your unit is selected to move this phase, models in that unit can move through Walls and closed Hatchways as if they were not there, but when doing so, no model can move more than 6\".\n\nRESTRICTIONS: You can only use this Stratagem once.",
      "flavour": "Physical barriers are no obstacle to creatures that can will their desires into being with but a twist of their supernatural powers.",
-     "src": "wahapedia",
-     "fallback": true
+     "src": "wahapedia"
     }
    },
    "enhancements": [
@@ -1400,16 +1398,15 @@
      "name": "INSUBSTANTIAL ENTITIES",
      "cost": 1,
      "costText": "1CP",
-     "detachment": "Daemonic Incursion",
+     "detachment": "Dread Carnival",
      "category": "Strategic Ploy",
      "when": "Your Movement phase.",
-     "target": "One LEGIONES DAEMONICA unit from your army that has not been selected to move this phase.",
+     "target": "One SLAANESH LEGIONES DAEMONICA unit from your army that has not been selected to move this phase.",
      "effect": "The next time your unit is selected to move this phase, models in that unit can move through Walls and closed Hatchways as if they were not there, but when doing so, no model can move more than 6\".",
      "restrictions": "You can only use this Stratagem once.",
-     "text": "WHEN: Your Movement phase.\n\nTARGET: One LEGIONES DAEMONICA unit from your army that has not been selected to move this phase.\n\nEFFECT: The next time your unit is selected to move this phase, models in that unit can move through Walls and closed Hatchways as if they were not there, but when doing so, no model can move more than 6\".\n\nRESTRICTIONS: You can only use this Stratagem once.",
+     "text": "WHEN: Your Movement phase.\n\nTARGET: One SLAANESH LEGIONES DAEMONICA unit from your army that has not been selected to move this phase.\n\nEFFECT: The next time your unit is selected to move this phase, models in that unit can move through Walls and closed Hatchways as if they were not there, but when doing so, no model can move more than 6\".\n\nRESTRICTIONS: You can only use this Stratagem once.",
      "flavour": "Physical barriers are no obstacle to creatures that can will their desires into being with but a twist of their supernatural powers.",
-     "src": "wahapedia",
-     "fallback": true
+     "src": "wahapedia"
     }
    },
    "enhancements": [
@@ -1491,16 +1488,15 @@
      "name": "INSUBSTANTIAL ENTITIES",
      "cost": 1,
      "costText": "1CP",
-     "detachment": "Daemonic Incursion",
+     "detachment": "Pandaemoniac Inferno",
      "category": "Strategic Ploy",
      "when": "Your Movement phase.",
-     "target": "One LEGIONES DAEMONICA unit from your army that has not been selected to move this phase.",
+     "target": "One TZEENTCH LEGIONES DAEMONICA unit from your army that has not been selected to move this phase.",
      "effect": "The next time your unit is selected to move this phase, models in that unit can move through Walls and closed Hatchways as if they were not there, but when doing so, no model can move more than 6\".",
      "restrictions": "You can only use this Stratagem once.",
-     "text": "WHEN: Your Movement phase.\n\nTARGET: One LEGIONES DAEMONICA unit from your army that has not been selected to move this phase.\n\nEFFECT: The next time your unit is selected to move this phase, models in that unit can move through Walls and closed Hatchways as if they were not there, but when doing so, no model can move more than 6\".\n\nRESTRICTIONS: You can only use this Stratagem once.",
+     "text": "WHEN: Your Movement phase.\n\nTARGET: One TZEENTCH LEGIONES DAEMONICA unit from your army that has not been selected to move this phase.\n\nEFFECT: The next time your unit is selected to move this phase, models in that unit can move through Walls and closed Hatchways as if they were not there, but when doing so, no model can move more than 6\".\n\nRESTRICTIONS: You can only use this Stratagem once.",
      "flavour": "Physical barriers are no obstacle to creatures that can will their desires into being with but a twist of their supernatural powers.",
-     "src": "wahapedia",
-     "fallback": true
+     "src": "wahapedia"
     }
    },
    "enhancements": [

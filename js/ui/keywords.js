@@ -25,12 +25,25 @@ export function kwify(html) {
   return refify(String(html).replace(/\[([A-Za-z][A-Za-z0-9 :'’+\-\/"]*)\]/g, (m, k) => kwTag(k)));
 }
 
-/** Rule text of a keyword: exact name, else without its value ("SUSTAINED HITS 1" → SUSTAINED HITS, "ANTI-INFANTRY 4+" → ANTI). */
+/** Rule text of a keyword: exact name, else without its value ("SUSTAINED HITS 1" → SUSTAINED HITS, "ANTI-INFANTRY 4+" → ANTI).
+ *  A keyword restriction ("LETHAL HITS: NON-MONSTER/VEHICLE", 24.01), a datasheet condition ("FIGHTS FIRST*") and a bracket note
+ *  ("DEADLY DEMISE D6+3 (SZAREKH MODEL ONLY)") are split off first: → { key, text, restr, star, note } | null.
+ *  Only values (numbers, dice, "+") are dropped – a different word is a different ability ([PSYCHIC ASSASSIN] ≠ [PSYCHIC]). */
 function lookup(core, name) {
   if (!core) return null;
-  const up = String(name).toUpperCase().replace(/\s+/g, ' ').trim();
-  const tries = [up, up.replace(/\s+[D\d+"*-]+$/, ''), up.replace(/\s+\S+$/, ''), up.split('-')[0], up.split(' ')[0]];
-  for (const t of tries) if (t && core[t]) return { key: t, text: core[t] };
+  let up = String(name).toUpperCase().replace(/\s+/g, ' ').trim();
+  const exact = core[up] ? { key: up, text: core[up] } : null;
+  if (exact) return exact;
+  let note = '';
+  up = up.replace(/\s*\(([^)]*)\)\s*$/, (m, x) => { note = x; return ''; });
+  let restr = '';
+  const rm = /^([^:]+?)\s*:\s*(.+)$/.exec(up);
+  if (rm) { up = rm[1]; restr = rm[2]; }
+  const star = /\*$/.test(up) && !core[up];
+  if (star) up = up.replace(/\s*\*+$/, '');
+  const base = up.replace(/(?:\s+[D\d+"*-]+)+$/, '');
+  const tries = [up, up.replace(/ /g, '-'), up.replace(/-/g, ' '), base, base.replace(/ /g, '-'), /^ANTI-/.test(up) ? 'ANTI' : ''];
+  for (const t of tries) if (t && core[t]) return { key: t, text: core[t], restr, star, note };
   return null;
 }
 const clean = t => String(t || '').replace(/\^\^/g, '').replace(/\*\*(.+?)\*\*/g, '$1');
@@ -83,12 +96,20 @@ async function openKeyword(name) {
   const hit = lookup(core, name);
   const refs = hit ? await refsHtml(clean(hit.text)) : '';
   const up = String(name).toUpperCase();
-  const value = hit && hit.key !== up ? up.slice(hit.key.length).replace(/^[\s-]+/, '') : '';
+  // value = what follows the rule name, without restriction / asterisk / note ("SUSTAINED HITS 2: NON-MONSTER/VEHICLE" → 2)
+  const bare = up.replace(/\s*\([^)]*\)\s*$/, '').replace(/\s*:.*$/, '').replace(/\s*\*+$/, '');
+  const value = hit && hit.key !== bare && bare.replace(/-/g, ' ').startsWith(hit.key.replace(/-/g, ' ')) ? bare.slice(hit.key.length).replace(/^[\s-]+/, '') : '';
+  const extra = hit ? [
+    value ? `${esc(hit.key)} with the value <b>${esc(value)}</b> – the rule below uses it as “x”.` : '',
+    hit.restr ? `Only against a target with one or more of the keywords after the colon (24.01): <b data-no-i18n>${esc(hit.restr)}</b> – a NON- keyword means a target without it.` : '',
+    hit.star ? 'The asterisk (*) means the datasheet limits this ability – see the unit\'s abilities for the condition.' : '',
+    hit.note ? `Datasheet note: <b data-no-i18n>${esc(hit.note)}</b>.` : ''
+  ].filter(Boolean) : [];
   sheet({
     title: `[${up}]`,
     body: hit
-      ? `${value ? `<p class="muted small">${esc(hit.key)} with the value <b>${esc(value)}</b> – the rule below uses it as “x”.</p>` : ''}<div class="kw-rule">${kwify(esc(clean(hit.text))).replace(/\n/g, '<br>')}</div><p class="muted xs">Core rule (BSData / New Recruit).</p>${refs}`
-      : '<p class="muted">No rule text on file for this keyword.</p>',
+      ? `${extra.map(x => `<p class="muted small">${refify(x)}</p>`).join('')}<div class="kw-rule" data-no-i18n lang="en">${kwify(esc(clean(hit.text))).replace(/\n/g, '<br>')}</div><p class="muted xs">Core rule (BSData / New Recruit).</p>${refs}`
+      : '<p class="muted">No core rule with this name – if it is an ability of a datasheet, its text is in the unit\'s abilities.</p>',
     cls: 'kw-sheet',
     actions: [{ label: 'Close', kind: 'ghost' }]
   });

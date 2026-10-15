@@ -3,7 +3,7 @@
 import { WH } from '../../data/rules.js';
 import { esc, badge } from './components.js';
 import { kwify } from './keywords.js';
-import { loadDatasheets, matchUnit, normName } from '../data/datasheets.js';
+import { loadDatasheets, matchUnit, normName, ALLY_PACKS } from '../data/datasheets.js';
 import { memberWargearAbilities, abilityVisible } from './datasheet.js';
 
 // ---------------------------------------------------------------- Kernregeln (data/core.js) – optional, wird nachgeladen
@@ -127,8 +127,25 @@ export function unitDatasheet(ctx, unit, p = ctx.me) {
   const data = DS.cache.get(fac);
   if (!data) { ensureDatasheets(fac, ctx.rerender); return null; }
   const key = `${fac}|${String(unit.name || '')}`;
-  if (!DS.byUnit.has(key)) DS.byUnit.set(key, data.units && data.units.length ? matchUnit(data.units, unit.name) || null : null);
+  if (!DS.byUnit.has(key)) {
+    const hit = matchUnitAny(data, unit.name, ctx.rerender);
+    if (!hit && !ALLY_PACKS.every(id => DS.cache.has(id))) return null;   // allied packs still loading – ask again later
+    DS.byUnit.set(key, hit);
+  }
   return DS.byUnit.get(key);
+}
+/** Datasheet of a list unit by its exact name: the army's own pack, else an allied pack (ALLY_PACKS: Imperial Agents / Knights,
+ *  Chaos Daemons / Knights – loaded on demand, null until then). */
+export function matchUnitAny(data, name, rerender) {
+  const own = data && data.units && data.units.length ? matchUnit(data.units, name) : null;
+  if (own) return own;
+  for (const id of ALLY_PACKS) {
+    const d = DS.cache.get(id);
+    if (!d) { ensureDatasheets(id, rerender); continue; }
+    const hit = d.units && d.units.length ? matchUnit(d.units, name) : null;
+    if (hit) return hit;
+  }
+  return null;
 }
 
 /** Einheiten des Spielers, deren Keywords/Name zu den Chips passen (eckige Fähigkeiten zählen nicht).
@@ -136,14 +153,15 @@ export function unitDatasheet(ctx, unit, p = ctx.me) {
  * aus Text importierte Listen tragen selbst nur CHARACTER/BATTLELINE. Ganzer Chip zuerst, dann wortweise. */
 export function affectedUnits(units, kws, ctx = null) {
   const plain = kws.filter(k => !/^[[!]/.test(k));
-  const excl = kws.filter(k => k.startsWith('!')).map(k => k.slice(1));
-  if (!plain.length) return []; // e.g. Fire Overwatch: any unit – no list
+  // exclusions: "!TITANIC", conditional "!VEHICLE (unless CHARACTER/WALKER)"
+  const excl = kws.filter(k => k.startsWith('!')).map(k => { const m = /^!(.+?)(?: \(unless (.+)\))?$/.exec(k); return { kw: m[1], unless: m[2] ? m[2].split('/') : [] }; });
+  if (!plain.length && !excl.some(x => x.unless.length)) return []; // e.g. Fire Overwatch: any unit – no list
   return units.filter(u => {
     const ds = ctx ? unitDatasheet(ctx, u) : null;
     const ks = [].concat(u.keywords || [], (ds && ds.keywords) || [], (ds && ds.factionKeywords) || []).map(k => String(k).toUpperCase().replace(/\s+/g, ' ').trim());
     const name = String(u.name || '').toUpperCase();
     const has = k => ks.includes(k) || k.split(' ').every(w => ks.includes(w)) || (name && name.includes(k));
-    return plain.some(has) && !excl.some(has);
+    return (!plain.length || plain.some(has)) && !excl.some(x => has(x.kw) && !x.unless.some(has));
   });
 }
 
@@ -282,11 +300,12 @@ export function turnBadge(whose) {
 }
 
 /* ───────── Keyword line: [INFANTRY] [CHARACTER] – weapon-ability tags ([LETHAL HITS]) stay as they are ───────── */
-/** Keywords from the "(excluding … units)" clauses of TARGET – units with these keywords can NOT be targeted. */
+/** Keywords from the "(excluding … units)" clauses of TARGET and WHEN ("when a friendly ORKS VEHICLE unit (excluding WALKER
+ *  units) …") – units with these keywords can NOT be targeted. */
 export function stratExcluded(s) {
   const out = [];
   const EX = /excluding ([^)]*?)(?:\)|$|\.(?:\s|$)|;)/gi;
-  const target = String(s.target || '');
+  const target = String(s.target || '') + '\n' + String(s.when || '');
   const rest = target.replace(EX, ' '); // keyword also required elsewhere in TARGET (e.g. Shield of Honour) → not an exclusion
   for (const m of target.matchAll(EX)) {
     for (const k of m[1].match(KW_RE) || []) {
@@ -296,15 +315,60 @@ export function stratExcluded(s) {
   }
   return out;
 }
-/** Keyword chips of a stratagem: target keywords, then excluded ones as "!KEYWORD" (rendered "NOT …", used as exclusion). */
+/** Conditional exclusions of TARGET: "A VEHICLE unit can only be selected if it is a CHARACTER or WALKER unit" / "You can only
+ *  select a VEHICLE unit if it is a CHARACTER/WALKER unit" (Heroic Intervention) → [{ kw: 'VEHICLE', unless: ['CHARACTER', 'WALKER'] }]. */
+export function stratConditional(s) {
+  const K = String.raw`[A-Z][A-Z'’\- ]*?`;
+  const RES = [new RegExp(String.raw`\bAn? (${K}) unit can only be selected if it is an? (${K}(?:\s*(?:\/|\bor\b)\s*${K})*) unit`, 'g'),
+    new RegExp(String.raw`\bcan only select an? (${K}) unit if it is an? (${K}(?:\s*(?:\/|\bor\b)\s*${K})*) unit`, 'g')];
+  const t = String(s.target || '');
+  return RES.flatMap(re => [...t.matchAll(re)].map(m => ({ kw: m[1].trim(), unless: m[2].split(/\s*(?:\/|\bor\b)\s*/).map(x => x.trim()).filter(Boolean) })));
+}
+/** Keyword chips of a stratagem: target keywords, then excluded ones as "!KEYWORD" (rendered "NOT …", used as exclusion) and
+ *  conditional ones as "!VEHICLE (unless CHARACTER/WALKER)". */
 export function stratKwList(s) {
   const base = Array.isArray(s.kw) && s.kw.length ? s.kw.map(k => String(k).toUpperCase().trim()).filter(Boolean) : stratKeywords(s);
   const excl = stratExcluded(s);
-  return [...base.filter(k => !excl.includes(k)), ...excl.map(k => '!' + k)];
+  const cond = stratConditional(s);
+  const condKws = cond.flatMap(c => [c.kw, ...c.unless]);
+  return [...base.filter(k => !excl.includes(k) && !condKws.includes(k)), ...excl.map(k => '!' + k), ...cond.map(c => `!${c.kw} (unless ${c.unless.join('/')})`)];
 }
 export function kwLine(kws) {
   if (!kws || !kws.length) return '';
   return `<div class="kws">${kws.map(k => k.startsWith('!') ? `<span class="kw not">NOT ${esc(k.slice(1))}</span>` : /^\[.*\]$/.test(k) ?`<span class="kw ab">${esc(k)}</span>` : `<span class="kw">[${esc(k)}]</span>`).join(' ')}</div>`;
+}
+
+/** Owner of a stratagem in one of its phases: phw (per phase, from a WHEN that mixes owners – "Your Shooting phase or the
+ *  Fight phase" → shooting: own, fight: either) wins over the overall whose. */
+export function stratWhose(s, phase) {
+  return (s && s.phw && phase && s.phw[phase]) || (s && s.whose) || 'either';
+}
+/** Phase a use is booked under (once per phase, one stratagem per unit and phase): the tracked phase; untracked phases →
+ *  the phase the player uses it in (its section), else its only phase / 'any' (as engine/stratagems.js useKeyPhase). */
+export function stratUseKey(s, state, phase) {
+  if (state.opts && state.opts.phases === 'manual') return state.phase;
+  const ph = Array.isArray(s.ph) && s.ph.length ? s.ph : ['any'];
+  if (phase && PHASE_IDS.includes(phase) && phase !== 'any' && (ph.includes(phase) || ph.includes('any'))) return phase;
+  return ph.includes('any') ? 'any' : ph[0];
+}
+/** The stratagem as used in one phase (section): whose of that phase, use phase, and availability re-checked for that phase's
+ *  once-per-phase lock (derive() checks it without knowing the phase). */
+export function stratIn(s, ctx, phase) {
+  const { state, me } = ctx;
+  const key = stratUseKey(s, state, phase);
+  const whose = stratWhose(s, phase);
+  const out = Object.assign({}, s, { whose, usePhase: key });
+  // not this player's turn for that phase ("Your Shooting phase or the Fight phase" in the opponent's Shooting phase)
+  if (whose !== 'either' && whose !== (state.turn === me ? 'own' : 'opp')) Object.assign(out, { fits: false, available: false, reason: whose === 'own' ? 'Only in your own turn' : 'Only in your opponent\'s turn' });
+  const lockPhase = !(state.opts && state.opts.stratLock === 'round');
+  if (!lockPhase || state.stage !== 'battle' || out.fits === false) return out;
+  const usedHere = (state.stratUses || []).some(u => u.player === me && u.stratId === s.id && u.round === state.round && u.turn === state.turn && u.phase === key);
+  if (usedHere && s.available) Object.assign(out, { available: false, reason: 'Already used this phase' });
+  else if (!usedHere && !s.available && s.reason === 'Already used this phase') {
+    const cp = (state.players[me] || {}).cp || 0, c = Number(s.cost) || 0;
+    Object.assign(out, cp < c ? { reason: 'Not enough CP (' + cp + '/' + c + ')' } : { available: true, reason: '' });
+  }
+  return out;
 }
 
 /** Use state of a stratagem for the player: { use, used, fits, cpOnly, dim, inBattle }. */
@@ -312,7 +376,8 @@ export function stratUseState(s, ctx) {
   const { state, me } = ctx;
   const uses = (state.stratUses || []).filter(u => u.player === me && u.stratId === s.id);
   const lockRound = state.opts && state.opts.stratLock === 'round';
-  const use = [...uses].reverse().find(u => u.round === state.round && (lockRound || (u.turn === state.turn && u.phase === state.phase))) || null;
+  const key = s.usePhase || stratUseKey(s, state, null);
+  const use = [...uses].reverse().find(u => u.round === state.round && (lockRound || (u.turn === state.turn && u.phase === key))) || null;
   const inBattle = state.stage === 'battle';
   const fits = inBattle && !!s.fits;
   const used = fits && !!use;
@@ -386,14 +451,15 @@ export function stratOrigBlock(s, ctx) {
  * Compact: name + (i), CP badge, phase pill, source, one-line summary, keyword line, "Use" / "Used · Undo".
  * Everything else (original text, use controls) lives in the popup (strat.open).
  */
-export function stratCard(s, ctx, ui, opts = {}) {
+export function stratCard(s0, ctx, ui, opts = {}) {
   const { state, me } = ctx;
   const pl = state.players[me] || {};
   const cp = pl.cp || 0;
-  const phase = stratPhaseId(s, opts.phase, state.phase);
+  const phase = stratPhaseId(s0, opts.phase, state.phase);
+  const s = stratIn(s0, ctx, phase);
   const { use, used, fits, cpOnly, dim, inBattle } = stratUseState(s, ctx);
   const kws = stratKwList(s);
-  const open = `data-action="strat.open" data-strat="${esc(s.id)}"`;
+  const open = `data-action="strat.open" data-strat="${esc(s.id)}"${opts.phase ? ` data-phase="${esc(phase)}"` : ''}`;
   // Verbatim original WHEN/EFFECT, no summaries (avoids errors); TARGET is covered by the keyword chips.
   const o = origForStrat(s, ctx) || { when: s.when, effect: s.effect || s.t };
   const addons = stratAddonsOf(ctx, s);

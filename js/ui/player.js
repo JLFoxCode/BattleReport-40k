@@ -138,7 +138,7 @@ H.tab = (el, ctx, ui) => { ui.tab = el.dataset.tab; uiSave(ui); ctx.rerender(); 
 H.sfilter = (el, ctx, ui) => { ui.sfilter = el.dataset.filter; uiSave(ui); ctx.rerender(); };
 H['more.open'] = (el, ctx, ui) => S.openMoreSheet(ctx, ui);
 
-H['strat.open'] = (el, ctx, ui) => S.openStratSheet(ctx, ui, el.dataset.strat);
+H['strat.open'] = (el, ctx, ui) => S.openStratSheet(ctx, ui, el.dataset.strat, el.dataset.phase);
 H['strat.undo'] = async (el, ctx, ui) => {
   const use = (ctx.state.stratUses || []).find(u => u.id === el.dataset.use);
   const r = await ctx.dispatch({ type: 'strat.undo', player: ctx.me, useId: el.dataset.use });

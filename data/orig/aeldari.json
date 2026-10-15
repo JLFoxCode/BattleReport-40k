@@ -2,7 +2,7 @@
  "faction": "aeldari",
  "name": "Aeldari",
  "version": {
-  "bsdata": "3988a8bdd210f9d31ea5b6782d0016688ccb6815",
+  "bsdata": "d506fcc0ee4b4babdda03e71dffd4e1e3cf5bcbf",
   "wahapedia": "2026-10-11"
  },
  "sources": {
@@ -110,6 +110,20 @@
      "restrictions": "",
      "text": "WHEN: Your opponent’s Movement phase, just after an enemy unit (excluding MONSTERS and VEHICLES) is selected to Fall Back.\n\nTARGET: One ASPECT WARRIORS or AVATAR OF KHAINE unit from your army that is within Engagement Range of that enemy unit.\n\nEFFECT: All models in that enemy unit must take a Desperate Escape test. When doing so, if that enemy unit is Battle-shocked, subtract 1 from each of those tests.",
      "flavour": "Embodying the rage of Khaine himself, these warriors press home their attack and strike down those cowards who seek to flee their fury.",
+     "src": "wahapedia"
+    },
+    "Skyborne Sanctuary": {
+     "name": "SKYBORNE SANCTUARY",
+     "cost": 1,
+     "costText": "1CP",
+     "detachment": "Aspect Host",
+     "category": "Strategic Ploy",
+     "when": "End of the Fight phase.",
+     "target": "One unengaged ASURYANI unit from your army that was eligible to fight this phase and one friendly TRANSPORT it is able to embark within.",
+     "effect": "If your ASURYANI unit is wholly within 6” of that TRANSPORT, it can embark within it.",
+     "restrictions": "",
+     "text": "WHEN: End of the Fight phase.\n\nTARGET: One unengaged ASURYANI unit from your army that was eligible to fight this phase and one friendly TRANSPORT it is able to embark within.\n\nEFFECT: If your ASURYANI unit is wholly within 6” of that TRANSPORT, it can embark within it.",
+     "flavour": "The Aeldari excel in striking swiftly then leaping back into the safety of their skimming transports.",
      "src": "wahapedia"
     }
    },
@@ -1406,6 +1420,34 @@
      "text": "WHEN: Your opponent’s Movement phase, when an enemy unit ends a move within 8\" of a friendly unengaged HARLEQUINS INFANTRY unit.\n\nTARGET: That HARLEQUINS INFANTRY unit.\n\nEFFECT: Your unit can make a normal move of up to D3+3\".",
      "flavour": "Advancing foes assured of cutting the Harlequins down are often left thwarted with naught but a swirl of holofield shards where their prey once stood.",
      "src": "wahapedia"
+    },
+    "Heroes’ Fall": {
+     "name": "HEROES’ FALL",
+     "cost": 1,
+     "costText": "1CP",
+     "detachment": "Fateful Performance",
+     "category": "",
+     "when": "Fight phase, when an enemy unit targets a friendly HARLEQUINS unit.",
+     "target": "That HARLEQUINS unit.",
+     "effect": "When a model in your unit is destroyed, if your unit has not been selected to fight this phase, roll one D6:\n\n- On a 4+, do not remove that model from the battlefield. When your unit has fought, or at the end of the phase (whichever comes first), that model is removed from the battlefield.",
+     "restrictions": "",
+     "text": "WHEN: Fight phase, when an enemy unit targets a friendly HARLEQUINS unit.\n\nTARGET: That HARLEQUINS unit.\n\nEFFECT: When a model in your unit is destroyed, if your unit has not been selected to fight this phase, roll one D6:\n\n- On a 4+, do not remove that model from the battlefield. When your unit has fought, or at the end of the phase (whichever comes first), that model is removed from the battlefield.",
+     "flavour": "Though they may be slain, this step of the saedath calls on the players to act out the demise of tragic heroes who take their enemies with them to death.",
+     "src": "wahapedia"
+    },
+    "Exit the Stage": {
+     "name": "EXIT THE STAGE",
+     "cost": 1,
+     "costText": "1CP",
+     "detachment": "Fateful Performance",
+     "category": "",
+     "when": "End of your opponent’s Fight phase.",
+     "target": "One friendly unengaged HARLEQUINS unit.",
+     "effect": "Place your unit in strategic reserves",
+     "restrictions": "",
+     "text": "WHEN: End of your opponent’s Fight phase.\n\nTARGET: One friendly unengaged HARLEQUINS unit.\n\nEFFECT: Place your unit in strategic reserves",
+     "flavour": "Players know when to fade back from the stage of war, ready to strike again when their moment comes.",
+     "src": "wahapedia"
     }
    },
    "enhancements": [
@@ -1468,6 +1510,20 @@
      "restrictions": "",
      "text": "WHEN: Your Movement phase, when a friendly AELDARI VEHICLE unit makes a fall-back move.\n\nTARGET: That AELDARI VEHICLE unit.\n\nEFFECT: That move does not prevent your unit from being eligible to shoot.",
      "flavour": "The result of exquisite and ingenious Aeldari engineering, vectored engines enable grav vehicles to evade their enemies while maintaining accurate fire.",
+     "src": "wahapedia"
+    },
+    "Soulsight": {
+     "name": "SOULSIGHT",
+     "cost": 1,
+     "costText": "1CP",
+     "detachment": "Armoured Warhost",
+     "category": "",
+     "when": "Your Shooting phase, when a friendly AELDARI VEHICLE unit is selected to shoot.",
+     "target": "That AELDARI VEHICLE unit.",
+     "effect": "Your unit’s attacks can re-roll:\n\n- One hit roll.\n\n- One wound roll.\n\n- One damage roll.",
+     "restrictions": "",
+     "text": "WHEN: Your Shooting phase, when a friendly AELDARI VEHICLE unit is selected to shoot.\n\nTARGET: That AELDARI VEHICLE unit.\n\nEFFECT: Your unit’s attacks can re-roll:\n\n- One hit roll.\n\n- One wound roll.\n\n- One damage roll.",
+     "flavour": "Spirit stones containing the souls of gifted seers have been embedded into this vehicle’s targeting matrices. The essences within lend guidance even in death.",
      "src": "wahapedia"
     }
    },
@@ -1786,6 +1842,20 @@
      "text": "WHEN: Your opponent’s Movement phase, just after an enemy unit opens a Hatchway.\n\nTARGET: One DIRE AVENGERS or GUARDIANS unit from your army that has not fired Overwatch this phase and is wholly on the opposite side of that Hatchway from that enemy unit.\n\nEFFECT: If that enemy unit is within 9\" of and visible to your unit, roll one D6: on a 2-5, that enemy unit suffers 1 mortal wound; on a 6, that enemy unit suffers 2 mortal wounds. If that enemy unit suffers one or more mortal wounds in this way, your unit can then make a Normal move of up to D6”.\n\nRESTRICTIONS: Until the end of the turn, your unit cannot fire Overwatch.",
      "flavour": "Reacting with a speed most mortal beings could not dream of, the Aeldari engulf emerging foes in a sudden hail of gunfire.",
      "src": "wahapedia"
+    },
+    "Void Ghosts": {
+     "name": "VOID GHOSTS",
+     "cost": 1,
+     "costText": "1CP",
+     "detachment": "Protector Host",
+     "category": "Battle Tactic",
+     "when": "Your opponent's Shooting phase or the Fight phase, just after an enemy unit has selected its targets.",
+     "target": "One AELDARI unit from your army that was selected as the target of one or more of the attacking unit’s attacks.",
+     "effect": "Until the end of the phase, each time an attack targets your unit, subtract 1 from the Hit roll.",
+     "restrictions": "",
+     "text": "WHEN: Your opponent's Shooting phase or the Fight phase, just after an enemy unit has selected its targets.\n\nTARGET: One AELDARI unit from your army that was selected as the target of one or more of the attacking unit’s attacks.\n\nEFFECT: Until the end of the phase, each time an attack targets your unit, subtract 1 from the Hit roll.",
+     "flavour": "Exploiting the fluctuating gravity of voidship fighting and flowing with the nigh-imperceptible movements of the vessel around them, the Aeldari acrobatically evade the blasts and blades of their foes.",
+     "src": "wahapedia"
     }
    },
    "enhancements": [
@@ -1951,6 +2021,20 @@
      "restrictions": "",
      "text": "WHEN: Your Movement phase.\n\nTARGET: One AELDARI unit from your army that has not been selected to move this phase.\n\nEFFECT: Until the end of the phase, Desperate Escape tests taken for models in your unit are automatically passed, and each time your unit makes a Normal, Advance or Fall Back move, models in your unit can move through other models as if they were not there.",
      "flavour": "Reacting with a speed most mortal beings could not dream of, the Aeldari engulf emerging foes in a sudden hail of gunfire.",
+     "src": "wahapedia"
+    },
+    "Void Ghosts": {
+     "name": "VOID GHOSTS",
+     "cost": 1,
+     "costText": "1CP",
+     "detachment": "Star-dancer Masque",
+     "category": "Battle Tactic",
+     "when": "Your opponent's Shooting phase or the Fight phase, just after an enemy unit has selected its targets.",
+     "target": "One AELDARI unit from your army that was selected as the target of one or more of the attacking unit’s attacks.",
+     "effect": "Until the end of the phase, each time an attack targets your unit, subtract 1 from the Hit roll.",
+     "restrictions": "",
+     "text": "WHEN: Your opponent's Shooting phase or the Fight phase, just after an enemy unit has selected its targets.\n\nTARGET: One AELDARI unit from your army that was selected as the target of one or more of the attacking unit’s attacks.\n\nEFFECT: Until the end of the phase, each time an attack targets your unit, subtract 1 from the Hit roll.",
+     "flavour": "Exploiting the fluctuating gravity of voidship fighting and flowing with the nigh-imperceptible movements of the vessel around them, the Aeldari acrobatically evade the blasts and blades of their foes.",
      "src": "wahapedia"
     }
    },

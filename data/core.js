@@ -464,7 +464,7 @@ export const CORE = {
         },
         {
           id: 'end-scoring', title: 'Mission scoring',
-          text: 'At the end of each player\'s turn, each player scores, starting with the player whose turn it is: "end of your turn" conditions for the active player, "end of your opponent\'s turn" / "end of a turn" conditions for the other. Limits: Primary Missions 45 VP (up to 15 VP per battle round), Secondary Missions 45 VP (up to 15 VP per battle round, and up to 20 VP per Fixed Secondary Mission card); 90 VP in total.',
+          text: 'At the end of each player\'s turn, each player scores, starting with the player whose turn it is: "end of your turn" conditions for the active player, "end of your opponent\'s turn" / "end of a turn" conditions for the other. Limits: Primary Missions 45 VP (up to 15 VP per battle round), Secondary Missions 45 VP (up to 15 VP per battle round, and up to 20 VP per Fixed Secondary Mission card); plus 10 VP for a Battle Ready army – 100 VP in total.',
           tags: ['MISSION', 'VP']
         },
         {
@@ -512,7 +512,7 @@ export const CORE = {
     },
     {
       id: 'ts-first', title: 'First battle round',
-      text: 'In the first battle round no reinforcements arrive with ingress moves (Rapid Ingress is not allowed either), and for the Hidden rule the previous turn counts as "no ranged attacks made". Units can embark once the first battle round has started. Most Primary Missions only score from the second battle round.'
+      text: 'In the first battle round no reinforcements arrive with ingress moves (Rapid Ingress is not allowed either), and for the Hidden rule the previous turn counts as "no ranged attacks made". Units can embark once the first battle round has started. Primary Missions already score in the first battle round; only their conditions scored at the end of your Command phase start in the second battle round (the scoring line on the tablet shows the rounds of each condition).'
     },
     {
       id: 'ts-resources', title: 'Resources and counters',
@@ -714,7 +714,7 @@ export const CORE = {
     },
     {
       id: 'gen-vp', title: 'Victory Points',
-      text: 'Primary Missions: up to 15 VP per battle round, 45 VP per battle. Secondary Missions: up to 15 VP per battle round, 45 VP per battle, and up to 20 VP per Fixed Secondary Mission card. 90 VP in total. VP scored at the end of the battle are not subject to the 15 VP per round limit.',
+      text: 'Primary Missions: up to 15 VP per battle round, 45 VP per battle. Secondary Missions: up to 15 VP per battle round, 45 VP per battle, and up to 20 VP per Fixed Secondary Mission card. Battle Ready army: 10 VP. 100 VP in total. VP scored at the end of the battle are not subject to the 15 VP per round limit.',
       tags: ['MISSION', 'VP']
     },
     {

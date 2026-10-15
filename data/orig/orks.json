@@ -2,7 +2,7 @@
  "faction": "orks",
  "name": "Orks",
  "version": {
-  "bsdata": "3988a8bdd210f9d31ea5b6782d0016688ccb6815",
+  "bsdata": "d506fcc0ee4b4babdda03e71dffd4e1e3cf5bcbf",
   "wahapedia": "2026-10-11"
  },
  "sources": {
@@ -1268,7 +1268,7 @@
      "name": "PILE THROUGH",
      "cost": 1,
      "costText": "1CP",
-     "detachment": "Ramship Raiders",
+     "detachment": "Kaptin Killers",
      "category": "Strategic Ploy",
      "when": "Your Movement phase, just after an ORKS unit from your army opens a Hatchway.",
      "target": "That ORKS unit.",
@@ -1276,8 +1276,7 @@
      "restrictions": "",
      "text": "WHEN: Your Movement phase, just after an ORKS unit from your army opens a Hatchway.\n\nTARGET: That ORKS unit.\n\nEFFECT: Until the end of the turn, your unit has the Fights First ability.",
      "flavour": "Orks react to the sudden availability of a good scrap with immediate and enthusiastic aggression.",
-     "src": "wahapedia",
-     "fallback": true
+     "src": "wahapedia"
     },
     "Pit Fighter": {
      "name": "PIT FIGHTER",

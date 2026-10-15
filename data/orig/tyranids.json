@@ -2,7 +2,7 @@
  "faction": "tyranids",
  "name": "Tyranids",
  "version": {
-  "bsdata": "3988a8bdd210f9d31ea5b6782d0016688ccb6815",
+  "bsdata": "d506fcc0ee4b4babdda03e71dffd4e1e3cf5bcbf",
   "wahapedia": "2026-10-11"
  },
  "sources": {
@@ -27,7 +27,7 @@
    "name": "Subterranean Assault",
    "source": {
     "rule": "bsdata",
-    "enhancements": "mixed",
+    "enhancements": "bsdata",
     "stratagems": "wahapedia"
    },
    "rule": [
@@ -130,8 +130,8 @@
     {
      "name": "- Synaptic Strategy",
      "cost": 15,
-     "text": "TYRANIDS model only. Once per battle, you can target the bearer’s unit with the Rapid Ingress stratagem for 0CP, and can do so even if you have already targeted a different unit with that Stratagem this phase.",
-     "src": "wahapedia"
+     "text": "**^^Tyranids^^** model only. Once per battle, you can target the bearer’s unit with the Rapid Ingress stratagem for 0CP, and can do so even if you have already targeted a different unit with that Stratagem this phase.",
+     "src": "bsdata"
     },
     {
      "name": "- Tremor Senses",

@@ -2,7 +2,7 @@
  "faction": "leagues-of-votann",
  "name": "Leagues of Votann",
  "version": {
-  "bsdata": "3988a8bdd210f9d31ea5b6782d0016688ccb6815",
+  "bsdata": "d506fcc0ee4b4babdda03e71dffd4e1e3cf5bcbf",
   "wahapedia": "2026-10-11"
  },
  "sources": {
@@ -1075,7 +1075,8 @@
    "name": "Hearthguard Covenant",
    "source": {
     "rule": "bsdata",
-    "enhancements": "bsdata"
+    "enhancements": "bsdata",
+    "stratagems": "wahapedia"
    },
    "rule": [
     {
@@ -1088,46 +1089,43 @@
      "name": "BRËKKEKNOTS",
      "cost": 1,
      "costText": "1CP",
-     "detachment": "Hearthband",
-     "category": "Battle Tactic",
-     "when": "Your opponent’s Shooting phase or the Fight phase, just after an enemy unit has selected its targets.",
-     "target": "One KÂHL, ÛTHAR THE DESTINED or EINHYR HEARTHGUARD unit from your army that was selected as the target of one or more of the attacking unit’s attacks.",
-     "effect": "Until the end of the phase, models in your unit have a 4+ invulnerable save.",
+     "detachment": "Hearthguard Covenant",
+     "category": "",
+     "when": "Your opponent’s Shooting phase or the Fight phase, when an enemy unit targets a friendly EINHYR HEARTHGUARD unit.",
+     "target": "That EINHYR HEARTHGUARD unit.",
+     "effect": "Your unit has 4+ InSv.",
      "restrictions": "",
-     "text": "WHEN: Your opponent’s Shooting phase or the Fight phase, just after an enemy unit has selected its targets.\n\nTARGET: One KÂHL, ÛTHAR THE DESTINED or EINHYR HEARTHGUARD unit from your army that was selected as the target of one or more of the attacking unit’s attacks.\n\nEFFECT: Until the end of the phase, models in your unit have a 4+ invulnerable save.",
-     "flavour": "These micro shield generators, worked into warrior jewellery or armour crests, trigger on command to provide short-lived boosted protection.",
-     "src": "wahapedia",
-     "fallback": true
+     "text": "WHEN: Your opponent’s Shooting phase or the Fight phase, when an enemy unit targets a friendly EINHYR HEARTHGUARD unit.\n\nTARGET: That EINHYR HEARTHGUARD unit.\n\nEFFECT: Your unit has 4+ InSv.",
+     "flavour": "These micro shield generators, worked into warrior jewellery or armour crests, trigger on command to provide short‑lived boosted protection.",
+     "src": "wahapedia"
     },
     "Fury of the Hearth": {
      "name": "FURY OF THE HEARTH",
      "cost": 1,
      "costText": "1CP",
-     "detachment": "Hearthband",
-     "category": "Battle Tactic",
-     "when": "Your Shooting phase.",
-     "target": "One EINHYR HEARTHGUARD unit from your army that has not been selected to shoot this phase.",
-     "effect": "Until the end of the phase, improve the Strength characteristic of ranged weapons equipped by models in your unit by 1. If you spend 1YP, until the end of the phase, ranged weapons equipped by models in that unit have the [SUSTAINED HITS 1] ability as well.",
+     "detachment": "Hearthguard Covenant",
+     "category": "",
+     "when": "Your Shooting phase, when a friendly EINHYR HEARTHGUARD unit is selected to shoot.",
+     "target": "That EINHYR HEARTHGUARD unit.",
+     "effect": "Your unit’s ranged attacks have:\n\n- +1 S.\n\n- If you spend 1 YP, [SUSTAINED HITS 1].",
      "restrictions": "",
-     "text": "WHEN: Your Shooting phase.\n\nTARGET: One EINHYR HEARTHGUARD unit from your army that has not been selected to shoot this phase.\n\nEFFECT: Until the end of the phase, improve the Strength characteristic of ranged weapons equipped by models in your unit by 1. If you spend 1YP, until the end of the phase, ranged weapons equipped by models in that unit have the [SUSTAINED HITS 1] ability as well.",
+     "text": "WHEN: Your Shooting phase, when a friendly EINHYR HEARTHGUARD unit is selected to shoot.\n\nTARGET: That EINHYR HEARTHGUARD unit.\n\nEFFECT: Your unit’s ranged attacks have:\n\n- +1 S.\n\n- If you spend 1 YP, [SUSTAINED HITS 1].",
      "flavour": "As though they unleash the raging flames of their kindred’s hearth upon the enemy, the Einhyr all but drown their enemies in fire.",
-     "src": "wahapedia",
-     "fallback": true
+     "src": "wahapedia"
     },
     "Materialisation Matrices": {
      "name": "MATERIALISATION MATRICES",
      "cost": 1,
      "costText": "1CP",
-     "detachment": "Hearthband",
-     "category": "Strategic Ploy",
-     "when": "The Reinforcements step of your Movement phase.",
-     "target": "One LEAGUES OF VOTANN unit from your army that is in Reserves and has the Deep Strike ability.",
-     "effect": "Until the end of the phase, when your unit is set up on the battlefield using the Deep Strike ability, it can be set up anywhere on the battlefield that is more than 6\" horizontally away from all enemy units.",
-     "restrictions": "Until the end of the turn, your unit is not eligible to declare a charge.",
-     "text": "WHEN: The Reinforcements step of your Movement phase.\n\nTARGET: One LEAGUES OF VOTANN unit from your army that is in Reserves and has the Deep Strike ability.\n\nEFFECT: Until the end of the phase, when your unit is set up on the battlefield using the Deep Strike ability, it can be set up anywhere on the battlefield that is more than 6\" horizontally away from all enemy units.\n\nRESTRICTIONS: Until the end of the turn, your unit is not eligible to declare a charge.",
+     "detachment": "Hearthguard Covenant",
+     "category": "",
+     "when": "Your Movement phase, when a friendly EINHYR HEARTHGUARD unit with Deep Strike is selected to make an ingress move.",
+     "target": "That EINHYR HEARTHGUARD unit.",
+     "effect": "- Your unit can be set up anywhere on the battlefield that is more than 6\" horizontally from all enemy units, even if that is within your opponent’s deployment zone.\n\n- Your unit is not eligible to declare a charge until the end of the turn.",
+     "restrictions": "",
+     "text": "WHEN: Your Movement phase, when a friendly EINHYR HEARTHGUARD unit with Deep Strike is selected to make an ingress move.\n\nTARGET: That EINHYR HEARTHGUARD unit.\n\nEFFECT:\n\n- Your unit can be set up anywhere on the battlefield that is more than 6\" horizontally from all enemy units, even if that is within your opponent’s deployment zone.\n\n- Your unit is not eligible to declare a charge until the end of the turn.",
      "flavour": "Built to a superior standard using secrets imparted by the Votann, the teleporters employed by this Hearthband can stabilise rematerialisation fields remarkably close to the foe.",
-     "src": "wahapedia",
-     "fallback": true
+     "src": "wahapedia"
     }
    },
    "enhancements": [

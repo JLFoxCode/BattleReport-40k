@@ -2,7 +2,7 @@
  "faction": "grey-knights",
  "name": "Grey Knights",
  "version": {
-  "bsdata": "3988a8bdd210f9d31ea5b6782d0016688ccb6815",
+  "bsdata": "d506fcc0ee4b4babdda03e71dffd4e1e3cf5bcbf",
   "wahapedia": "2026-10-11"
  },
  "sources": {
@@ -1111,16 +1111,15 @@
      "name": "ARMOURED AEGIS",
      "cost": 1,
      "costText": "1CP",
-     "detachment": "Sanctic Spearhead",
-     "category": "Strategic Ploy",
-     "when": "Your Command phase.",
-     "target": "One GREY KNIGHTS PSYKER VEHICLE unit from your army.",
-     "effect": "One model in your unit regains up to 3 lost wounds.",
+     "detachment": "Baneslayer Strike",
+     "category": "Epic Deed",
+     "when": "Your opponent’s Shooting phase or the Fight phase, just after an enemy unit has selected its targets.",
+     "target": "One GREY KNIGHTS CHARACTER model from your army that was selected as the target of one or more of the attacking unit’s attacks.",
+     "effect": "Until the end of the phase, your model has the Feel No Pain 4+ ability.",
      "restrictions": "",
-     "text": "WHEN: Your Command phase.\n\nTARGET: One GREY KNIGHTS PSYKER VEHICLE unit from your army.\n\nEFFECT: One model in your unit regains up to 3 lost wounds.",
-     "flavour": "Where purely physical defences may waver or break, sorcerous warding and empyric shields can take the strain their place.",
-     "src": "wahapedia",
-     "fallback": true
+     "text": "WHEN: Your opponent’s Shooting phase or the Fight phase, just after an enemy unit has selected its targets.\n\nTARGET: One GREY KNIGHTS CHARACTER model from your army that was selected as the target of one or more of the attacking unit’s attacks.\n\nEFFECT: Until the end of the phase, your model has the Feel No Pain 4+ ability.",
+     "flavour": "This warrior stands indomitable, a shining tower of strength amidst a maelstrom of foes.",
+     "src": "wahapedia"
     },
     "Sanctic Circle": {
      "name": "SANCTIC CIRCLE",

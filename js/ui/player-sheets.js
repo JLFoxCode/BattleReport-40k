@@ -3,7 +3,7 @@
 import { WH } from '../../data/rules.js';
 import { esc, sheet, toast, chip, btn, autoNote } from './components.js';
 import {
-  stepper, cpBadge, affectedUnits, myUnits, pName, cleanOrig, stratPhaseId, phasePill, turnBadge, stratSrc, stratKwList, kwLine,
+  stepper, cpBadge, affectedUnits, myUnits, pName, cleanOrig, stratPhaseId, stratIn, phasePill, turnBadge, stratSrc, stratKwList, kwLine,
   stratOrigBlock, stratUseState, stratAddonsOf, resourceFor, resShort, fxItem, armyOf, origData, origMod, ensureOrig, enhancementOf
 } from './player-common.js';
 import { buffsOfId, abilityTracker, abilityByKey, abilityUseOf, entryLabel, phaseUsesOf, PHASE_CHOICES } from './player-tabs.js';
@@ -17,8 +17,8 @@ const CP_MORE_RE = /\b(?:twice|two times|three times|double)\b[^.]*?\bStratagem[
 export function cpReductions(ctx, strat = null) {
   const norm = x => String(x || '').toLowerCase().replace(/[^a-z0-9]+/g, '');
   return abilityTracker(ctx).filter(e => CP_RED_RE.test(e.text) && CP_HOW_RE.test(e.text) && !CP_GAIN_RE.test(e.text) && !CP_MORE_RE.test(e.text)).filter(e => {
-    // "… with the Command Re-roll Stratagem …": only for that Stratagem
-    const only = /\bthe ([A-Z][A-Za-z’'\- ]*?) Stratagem\b/.exec(e.text);
+    // "… with the Command Re-roll Stratagem …" / "… with the Rapid Ingress stratagem …" (Teleport Homer): only for that Stratagem
+    const only = /\bthe ([A-Z][A-Za-z’'\- ]*?) [Ss]tratagem\b/.exec(e.text);
     return !strat || !only || norm(only[1]) === norm(strat.name);
   }).map(e => {
     const t = e.text;
@@ -33,25 +33,29 @@ export function cpReductions(ctx, strat = null) {
 }
 
 /** Stratagem popup: name, cost, phase + turn, source, summary, verbatim original text, keywords – and the Use controls at the bottom. */
-export function openStratSheet(ctx, ui, stratId) {
+export function openStratSheet(ctx, ui, stratId, secPhase) {
   const c0 = ui.ctx || ctx;
   const { state, me, derived } = c0;
-  const s = (derived.stratagems[me] || []).find(x => x.id === stratId);
-  if (!s) { toast('Stratagem not found', 'bad'); return; }
+  const s0 = (derived.stratagems[me] || []).find(x => x.id === stratId);
+  if (!s0) { toast('Stratagem not found', 'bad'); return; }
+  // as used in the phase of the section it was opened from (owner and once-per-phase lock of that phase)
+  const phase = stratPhaseId(s0, secPhase, state.phase);
+  const s = stratIn(s0, c0, phase);
   const pl = state.players[me];
   const printed = Number(s.cost) || 0;
   let cost = printed;
   let red = null;   // chosen CP reduction (tracker entry) or null
   const maxCost = Math.max(cost, 3, pl.cp || 0);
   const cp = pl.cp || 0;
-  const phase = stratPhaseId(s, null, state.phase);
-  const { use, used, fits, cpOnly, inBattle } = stratUseState(s, c0);
+  const st = stratUseState(s, c0);
+  const { use, used, fits, inBattle } = st;
   const units = myUnits(state, me);
   const kws = stratKwList(s);
   const hits = new Set(affectedUnits(units, kws, c0).map(u => u.id));
   const sorted = units.slice().sort((a, b) => (hits.has(b.id) ? 1 : 0) - (hits.has(a.id) ? 1 : 0));
   const unitOpts = sorted.map(u => `<option value="${esc(u.id)}"${u.status === 'shocked' ? ' disabled' : ''}>${esc(u.name)} (${u.models})${hits.has(u.id) ? ' ✓' : ''}${u.status === 'shocked' ? ' – Battle-shocked' : ''}</option>`).join('');
   const reds = fits && !used ? cpReductions(c0, s) : [];
+  const cpOnly = st.cpOnly && reds.length > 0;   // short of CP: usable only when a reduction applies to this Stratagem
   // Stratagem add-ons bought with an army resource (data/effects stratAddons, e.g. +1 YP: [SUSTAINED HITS 1])
   const addons = stratAddonsOf(c0, s).map(a => Object.assign({}, a, { res: resourceFor(state, me, a.resource) }));
   const picks = new Map();   // add-on id → amount spent
@@ -115,7 +119,15 @@ export function openStratSheet(ctx, ui, stratId) {
       <p class="muted xs">A unit can only be targeted by one Stratagem per phase; Battle-shocked units cannot be targeted by your own Stratagems.</p></div>`;
   else if (blocked) useHtml = `<div class="strat-use"><p class="strat-reason xs text-warn">Not available: ${esc(blocked)}</p></div>`;
   else useHtml = `<div class="strat-use"><p class="muted xs">${inBattle ? 'Not usable in the current phase / turn.' : 'Usable during the battle.'}</p></div>`;
+  // "Any phase" stratagems while the phases are not tracked: the player says which phase it is used in, so the once-per-phase
+  // lock (and one stratagem per unit and phase) applies to that phase instead of the whole turn
+  const tracked = state.opts && state.opts.phases === 'manual';
+  const anyPh = (Array.isArray(s0.ph) && s0.ph.length ? s0.ph : ['any']).includes('any');
+  const phaseRow = inBattle && !tracked && anyPh && s.fits !== false ? `<div class="strat-use-phase"><div class="label">Used in</div><div class="chips">
+      ${['any', 'command', 'movement', 'shooting', 'charge', 'fight'].map(id => chip({ label: id === 'any' ? 'Not specified' : WH.PHASES.find(p => p.id === id).name, on: s.usePhase === id, action: 'strat.phase', data: { phase: id }, cls: 'sm' })).join('')}
+    </div><p class="muted xs">Each Stratagem once per phase – pick the phase to use it again later in this turn.</p></div>` : '';
   const actions = [{ label: used ? 'Close' : 'Cancel', kind: 'ghost' }];
+  let closeSelf = null;
   if (used) actions.push({
     label: 'Undo', kind: 'primary',
     onClick: (closeFn) => {
@@ -144,7 +156,8 @@ export function openStratSheet(ctx, ui, stratId) {
             else auto.push(`${red.pay.n} ${red.pay.res} for ${red.name} NOT booked – no such resource, correct it by hand`);
           }
         }
-        const r = await c.dispatch({ type: 'strat.use', player: me, stratId: s.id, cost, unitId: unitId || undefined });
+        // phase = the phase it is used in (booking key for once per phase / one stratagem per unit and phase)
+        const r = await c.dispatch({ type: 'strat.use', player: me, stratId: s.id, cost, unitId: unitId || undefined, phase: s.usePhase !== 'any' ? s.usePhase : undefined });
         if (!r) return;
         const chosen = addons.filter(a => picks.has(a.id) && a.res && addonCost(a) > 0);
         const spent = [];
@@ -164,7 +177,7 @@ export function openStratSheet(ctx, ui, stratId) {
       return false;   // the sheet closes itself after a successful booking
     }
   });
-  return sheet({
+  return (closeSelf = sheet({
     title: s.name,
     cls: 'p' + me + ' strat-sheet ph-' + phase,
     body: `<div class="strat-sheet-head">
@@ -177,9 +190,17 @@ export function openStratSheet(ctx, ui, stratId) {
       ${kwLine(kws)}
       
       ${addons.length && !canUse ? `<div class="strat-addons-info">${addonRow()}</div>` : ''}
-      ${useHtml}`,
+      ${phaseRow}${useHtml}`,
     actions,
     onOpen: (el) => {
+      if (phaseRow) el.addEventListener('click', e => {
+        const pc = e.target.closest('[data-action="strat.phase"]');
+        if (!pc) return;
+        e.preventDefault(); e.stopPropagation();
+        if (pc.dataset.phase === s.usePhase) return;
+        if (closeSelf) closeSelf();
+        openStratSheet(ctx, ui, stratId, pc.dataset.phase);   // re-evaluated for that phase (use state, lock)
+      });
       if (!canUse) return;
       syncUse(el);
       el.addEventListener('click', e => {
@@ -222,7 +243,7 @@ export function openStratSheet(ctx, ui, stratId) {
         render(el);
       });
     }
-  });
+  }));
 }
 
 /** Verbatim text of a once-per-X tracker entry. */

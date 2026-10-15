@@ -215,6 +215,8 @@
 .strat-use { margin-top: 14px; padding-top: 10px; border-top: 1px dashed var(--line); }
 .strat-use > .label { margin-top: 0; }
 .strat-use.used { display: flex; align-items: center; gap: 8px; }
+.strat-use-phase { margin-top: 14px; }
+.strat-use-phase > .label { margin-top: 0; }
 /* Stratagem add-ons bought with an army resource */
 .addon-badge { color: var(--pc, var(--ok)); border-color: color-mix(in srgb, var(--pc, var(--ok)) 55%, transparent); }
 .addons { display: flex; flex-direction: column; gap: 6px; margin-bottom: 4px; }
