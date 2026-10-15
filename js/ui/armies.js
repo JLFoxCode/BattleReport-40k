@@ -43,7 +43,11 @@ const ed = { id: null, army: null, sys: null, loading: false, error: null, openU
 
 export function render(root, ctx) {
   lastRoot = root; lastCtx = ctx;
-  if (!root.__armiesBound) { root.__armiesBound = true; root.addEventListener('click', onClick); bindLongPress(root); }
+  if (!root.__armiesBound) {
+    root.__armiesBound = true; root.addEventListener('click', onClick); bindLongPress(root);
+    // the chosen detachments' boxes (rule · enhancements · stratagems) stay open across re-renders
+    root.addEventListener('toggle', e => { const d = e.target; if (d.matches && d.matches('details[data-det]')) { ed.detOpen = ed.detOpen || new Set(); if (d.open) ed.detOpen.add(d.dataset.det); else ed.detOpen.delete(d.dataset.det); } }, true);
+  }
   const [id0, mode] = typeof ctx.me === 'string' && ctx.me ? ctx.me.split('/') : [null, null];
   const id = id0 || null;
   ed.mode = mode || null;
@@ -407,9 +411,10 @@ function configHtml(V, list, byUnit) {
     ${items.map(w => {
       const probs = byUnit.get(w.s.id) || [];
       return `<div class="arm-cfg${probs.length ? ' has-prob' : ''}"><div class="arm-cfg-h">${esc(E.effective(V, w.node, w, w.parent).name)}${probs.length ? `<button type="button" class="arm-tri" data-action="arm-probs" data-ids="${esc(w.s.id)}" aria-label="Show problems" title="Show problems">⚠</button>` : ''}</div>
-        ${/^Detachments?$/.test(w.node.name) ? dpRow(V) + `<div class="arm-det-cmp"><button type="button" class="arm-cmp" data-action="arm-detcmp" data-id="${esc(w.s.id)}">Compare detachments</button></div>` : ''}
+        ${/^Detachments?$/.test(w.node.name) ? dpRow(V) + `<div class="arm-det-cmp"><button type="button" class="arm-cmp" data-action="arm-detcmp" data-id="${esc(w.s.id)}">All detachments: rules, enhancements, stratagems</button></div>` : ''}
         ${/^Code Chivalric$/i.test(w.node.name) ? '<div class="muted xs arm-cfg-note">The Oath (one Deed and one Quality) is chosen or rolled at the start of the battle – in the game under “Active effects”.</div>' : ''}
         ${optionsHtml(V, w, true)}
+        ${/^Detachments?$/.test(w.node.name) ? chosenDetsHtml(V, w) : ''}
         </div>`;
     }).join('')}
     ${showHideHtml(V)}
@@ -469,6 +474,41 @@ function armyRulesHtml() {
 }
 
 /* ───────── Detachments side by side: rule, enhancements and stratagems of each one (tap = take / drop) ───────── */
+/** Rule, enhancements and stratagems of a detachment (original texts: Wahapedia; BSData / New Recruit as fallback). */
+function detParts(name, orig, pack) {
+  const od = orig ? origDetachment(orig, name) : null;
+  const bsd = pack && pack.detachments ? pack.detachments.find(d => normName(d.name) === normName(name)) : null;
+  const r = orig ? origDetachmentRule(orig, name) : [];
+  const e = orig ? origEnhancements(orig, name) : [];
+  return {
+    rules: r.length ? r : ((od && od.rule) || (bsd && bsd.rules) || []),
+    enh: e.length ? e : ((bsd && bsd.enhancements) || []),
+    strats: od && od.stratagems ? Object.values(od.stratagems) : []
+  };
+}
+const richText = t => kwify(esc(String(t || '').replace(/\^\^/g, '').replace(/\*\*/g, ''))).replace(/\n/g, '<br>');
+function stratItem(st) {
+  return `<div class="det-item det-strat"><div><b>${esc(st.name)}</b> <span class="badge num cp">${esc(st.costText || (st.cost + 'CP'))}</span>${st.category ? ` <span class="muted xs">${esc(st.category)}</span>` : ''}</div>
+    ${st.when ? `<div><b class="xs">WHEN</b> ${richText(st.when)}</div>` : ''}${st.target ? `<div><b class="xs">TARGET</b> ${richText(st.target)}</div>` : ''}${st.effect ? `<div><b class="xs">EFFECT</b> ${richText(st.effect)}</div>` : ''}${st.restrictions ? `<div><b class="xs">RESTRICTIONS</b> ${richText(st.restrictions)}</div>` : ''}</div>`;
+}
+/** The three parts as collapsible sections – the names visible while closed. */
+function detPartsHtml(p) {
+  const sec = (title, list, body) => list.length ? `<details class="det-sec"><summary><b>${esc(title)} (${list.length})</b> <span class="det-names">${esc(list.map(x => x.name).join(' · '))}</span></summary>${body}</details>` : '';
+  return (p.rules.map(r => `<div class="det-rule"><b>${esc(r.name)}:</b> ${richText(r.text)}</div>`).join('') || '<p class="muted xs">Rule not in the data.</p>')
+    + sec('Enhancements', p.enh, p.enh.map(e => `<div class="det-item"><b>${esc(e.name)}${e.cost ? ` (${esc(e.cost)} pts)` : ''}:</b> ${richText(e.text)}</div>`).join(''))
+    + (p.strats.length ? sec('Stratagems', p.strats, p.strats.map(stratItem).join('')) : '<p class="muted xs">Stratagems: not in the data for this detachment.</p>');
+}
+const detOrig = new Map();   // faction → original texts (or 'loading')
+/** Under the detachment choice: what the chosen detachment(s) unlock. */
+function chosenDetsHtml(V, w) {
+  const fid = ed.army.faction;
+  let orig = fid ? detOrig.get(fid) : null;
+  if (fid && orig === undefined) { detOrig.set(fid, 'loading'); loadOrig(fid).then(o => detOrig.set(fid, o || null)).catch(() => detOrig.set(fid, null)).then(rerender); }
+  if (orig === 'loading') orig = null;
+  const chosen = w.ch.filter(c => c.node).map(c => E.effective(V, c.node, c, w).name);
+  if (!chosen.length) return '<p class="muted xs arm-det-none">Choose a detachment – its rule, enhancements and stratagems then show here.</p>';
+  return `<div class="arm-det-chosen">${chosen.map(name => `<details class="arm-det-box"${(ed.detOpen || new Set()).has(name) ? ' open' : ''} data-det="${esc(name)}"><summary><span class="arm-sec-h">${esc(name)}</span> <span class="muted xs">rule · enhancements · stratagems</span></summary><div class="det-body">${detPartsHtml(detParts(name, orig, dsPack()))}</div></details>`).join('')}</div>`;
+}
 async function openDetCompare(detSelId) {
   const fid = ed.army.faction;
   let orig = null;
@@ -488,18 +528,11 @@ async function openDetCompare(detSelId) {
       const on = w.ch.find(c => c.s.t === t);
       const name = E.limits(V, x, on || null, w).name;
       const dp = E.nodeCost(V, x, on || null, w, DP);
-      const od = orig ? origDetachment(orig, name) : null;
-      const bsd = pack && pack.detachments ? pack.detachments.find(d => normName(d.name) === normName(name)) : null;
-      const rules = (orig ? origDetachmentRule(orig, name) : []).length ? origDetachmentRule(orig, name) : ((od && od.rule) || (bsd && bsd.rules) || []);
-      const enh = (orig ? origEnhancements(orig, name) : []).length ? origEnhancements(orig, name) : ((bsd && bsd.enhancements) || []);
-      const strats = od && od.stratagems ? Object.values(od.stratagems) : [];
+      const parts = detParts(name, orig, pack);
       return `<div class="cmp-opt det-opt${on ? ' on' : ''}" style="--oc:${optColor('det', t)}">
         <div class="cmp-opt-h" role="button" tabindex="0" data-dtok="${esc(t)}"><span class="arm-dot" aria-hidden="true"></span><b>${esc(name)}</b> <span class="arm-cost arm-dpc">${dp} DP</span>${on ? ' <span class="badge ok">chosen</span>' : '<span class="cmp-pick">Tap to take</span>'}</div>
         <div class="det-body">
-          ${rules.map(r => `<div class="det-rule"><b>${esc(r.name)}:</b> ${rich(r.text)}</div>`).join('') || '<p class="muted xs">Rule not in the data.</p>'}
-          ${enh.length ? `<details class="det-sec"><summary>Enhancements (${enh.length})</summary>${enh.map(e => `<div class="det-item"><b>${esc(e.name)}${e.cost ? ` (${esc(e.cost)} pts)` : ''}:</b> ${rich(e.text)}</div>`).join('')}</details>` : ''}
-          ${strats.length ? `<details class="det-sec"><summary>Stratagems (${strats.length})</summary>${strats.map(st => `<div class="det-item det-strat"><div><b>${esc(st.name)}</b> <span class="badge num cp">${esc(st.costText || (st.cost + 'CP'))}</span>${st.category ? ` <span class="muted xs">${esc(st.category)}</span>` : ''}</div>
-            ${st.when ? `<div><b class="xs">WHEN</b> ${rich(st.when)}</div>` : ''}${st.target ? `<div><b class="xs">TARGET</b> ${rich(st.target)}</div>` : ''}${st.effect ? `<div><b class="xs">EFFECT</b> ${rich(st.effect)}</div>` : ''}${st.restrictions ? `<div><b class="xs">RESTRICTIONS</b> ${rich(st.restrictions)}</div>` : ''}</div>`).join('')}</details>` : '<p class="muted xs">Stratagems: not in the data for this detachment.</p>'}
+          ${detPartsHtml(parts)}
         </div></div>`;
     }).join('');
   };
@@ -721,7 +754,7 @@ function block(V, pw, nodes, prefix, depth, compact, caps = []) {
       const multi = leafs && lim.max !== 1 && kids.every(x => E.limits(V, x, null, pw).max === 1);
       if (leafs && (lim.max === 1 || multi)) {
         const same = depth === 0 && pw.node && lim.name === pw.node.name;   // "Detachment" inside "Detachment": one heading is enough
-        const weaponish = kids.length > 1 && kids.some(x => weaponsOf(x).length || effectsOf(x).length);
+        const weaponish = kids.length > 1 && !/^Detachments?$/i.test(lim.name) && kids.some(x => weaponsOf(x).length || effectsOf(x).length);
         const cmp = weaponish ? `<button type="button" class="arm-cmp" data-action="arm-cmp" data-p="${esc(pid)}" data-g="${esc(tok)}">Compare</button>` : '';
         // several of the group, but each option only once ("up to two drones, but no duplicates")
         const noDup = multi && lim.max > 1 ? ` <span class="muted xs">· up to ${lim.max}, max 1 of each</span>` : '';

@@ -287,3 +287,14 @@
 .imp-warn .imp-h, .imp-rule .imp-h { color: var(--warn); }
 .imp-info .imp-h { color: var(--muted); }
 .imp-grp .arm-problist { margin: 4px 0 0; }
+
+/* chosen detachments in the configuration: rule · enhancements · stratagems */
+.arm-det-chosen { margin-top: 10px; display: grid; gap: 6px; }
+.arm-det-box { border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--sunk); }
+.arm-det-box > summary { cursor: pointer; padding: 8px 10px; list-style: none; }
+.arm-det-box > summary::-webkit-details-marker { display: none; }
+.arm-det-box > summary::after { content: ' ▾'; color: var(--muted); }
+.arm-det-box[open] > summary::after { content: ' ▴'; }
+.arm-det-box .det-body { padding: 0 10px 10px; }
+.det-sec > summary .det-names { display: block; font-size: .78rem; color: var(--warn); font-weight: 400; margin-top: 2px; }
+.arm-det-none { margin-top: 8px; }
