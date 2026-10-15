@@ -11,7 +11,8 @@
 // detachments [{name,dp,rules:[{name,text}],enhancements:[{name,cost,text}]}], units.
 
 import { FACTIONS as DEFAULT_FACTIONS } from '../../data/factions/index.js';
-import { BSystem, view as bsView, categoriesOfSel } from '../builder/bs-engine.js';
+import { CORE as CORE_RULES } from '../../data/core.js';
+import { BSystem, view as bsView, categoriesOfSel, addSel, autoSync, setCount, chooseInGroup, limits, selsOf, totalCost } from '../builder/bs-engine.js';
 
 
 // ───────── Mapping: unsere Fraktions-IDs → BSData-Katalogdatei + akzeptierte "Faction: X"-Keywords ─────────
@@ -26,7 +27,8 @@ export const MAP = [
   ['black-templars', 'Imperium - Black Templars.json', ['Adeptus Astartes', 'Black Templars']],
   ['blood-angels', 'Imperium - Blood Angels.json', ['Adeptus Astartes', 'Blood Angels']],
   ['chaos-daemons', 'Chaos - Chaos Daemons.json', ['Legiones Daemonica']],
-  ['chaos-knights', 'Chaos - Chaos Knights.json', ['Chaos Knights']],
+  // + the allied Titans (Library - Titans, imported by many armies; found through the ally packs chaos-knights / imperial-knights)
+  ['chaos-knights', 'Chaos - Chaos Knights.json', ['Chaos Knights', 'Titanicus Traitoris']],
   ['chaos-space-marines', 'Chaos - Chaos Space Marines.json', ['Heretic Astartes']],
   ['dark-angels', 'Imperium - Dark Angels.json', ['Adeptus Astartes', 'Dark Angels']],
   ['death-guard', 'Chaos - Death Guard.json', ['Death Guard', 'Plague Legions']],
@@ -36,7 +38,7 @@ export const MAP = [
   ['genestealer-cults', 'Genestealer Cults.json', ['Genestealer Cults', 'Tyranids']],
   ['grey-knights', 'Imperium - Grey Knights.json', ['Grey Knights']],
   ['imperial-agents', 'Imperium - Agents of the Imperium.json', ['Agents of the Imperium']],
-  ['imperial-knights', 'Imperium - Imperial Knights.json', ['Imperial Knights']],
+  ['imperial-knights', 'Imperium - Imperial Knights.json', ['Imperial Knights', 'Adeptus Titanicus']],
   ['leagues-of-votann', 'Leagues of Votann.json', ['Leagues of Votann']],
   ['necrons', 'Necrons.json', ['Necrons']],
   ['orks', 'Orks.json', ['Orks']],
@@ -121,6 +123,10 @@ export function convertAll(catalogues, opts = {}) {
   const resolve = l => (l && l.targetId ? idx.get(l.targetId) : null);
   // BSData helper category (hidden categoryEntry that no modifier unhides: Leader, Support, Non-Kroot, AC Walker …) – no keyword
   const helperCat = id => { const c = id ? idx.get(id) : null; return !!c && c.hidden === true && !(c.modifiers || []).some(m => m.field === 'hidden'); };
+  const CAT_IDS = new Set(); for (const c of cats.values()) for (const ce of c.categoryEntries || []) CAT_IDS.add(ce.id);
+  // unit-type keywords: a model type with another one than the unit's main models is a companion (Sir Hekhtur, INFANTRY,
+  // with the Canis Rex knight, VEHICLE) – its keywords are listed per model (modelKeywords), not as the unit's
+  const TYPE_KW = /^(INFANTRY|VEHICLE|MONSTER|MOUNTED|BEAST|SWARM)$/;
   const isLegendsName = n => /\[legends\]/i.test(n || '');
   const groupName = n => cleanName(n).replace(/^\d+\s*[-–]\s*\d+\s+/, '').replace(/^\d+\s+/, '');
   const cleanName = n => S(n).replace(/\s*\[Legends\]\s*/ig, ' ').replace(/\s+/g, ' ').trim();
@@ -167,7 +173,10 @@ export function convertAll(catalogues, opts = {}) {
       if (!t || l.hidden === true) continue;
       if (t.type !== 'unit' && t.type !== 'model') continue;
       // profiles on the root link count for the unit (Sicarian Infiltrators 'Voices in the Code')
-      out.push({ ...t, name: l.name || t.name, categoryLinks: [...(t.categoryLinks || []), ...(l.categoryLinks || [])], ...((l.profiles || []).length ? { profiles: [...(t.profiles || []), ...l.profiles] } : {}), __link: l, ...(imported ? { __imported: cat } : {}) });
+      // … and so do rules on it: the faction rule a catalogue gives the units it links (CSM 'Dark Pacts' on Chaos Lords
+      // linked from a library, Chaos Daemons 'Disciples of Be'lakor', Agents 'Assigned Agents', World Eaters 'Blessings of Khorne')
+      out.push({ ...t, name: l.name || t.name, categoryLinks: [...(t.categoryLinks || []), ...(l.categoryLinks || [])], ...((l.profiles || []).length ? { profiles: [...(t.profiles || []), ...l.profiles] } : {}),
+        ...((l.infoLinks || []).length ? { infoLinks: [...(t.infoLinks || []), ...l.infoLinks] } : {}), ...((l.rules || []).length ? { rules: [...(t.rules || []), ...l.rules] } : {}), __link: l, ...(imported ? { __imported: cat } : {}) });
     }
     for (const cl of cat.catalogueLinks || []) if (cl.importRootEntries) rootEntries(cats.get(cl.targetId), seen, out, true);
     return out;
@@ -190,7 +199,15 @@ export function convertAll(catalogues, opts = {}) {
   const fidOfFile = new Map(MAP.map(([id, file]) => [file, id]));
   const ownCats = fid => {
     const main = [...byFile.entries()].find(([f]) => fidOfFile.get(f) === fid)?.[1];
-    const factionOfCat = c => { const seen = new Set(); const walk = x => { if (!x || seen.has(x.id)) return null; seen.add(x.id); const f = fidOfFile.get(x.__file); if (f) return f; for (const l of x.catalogueLinks || []) { const r = walk(cats.get(l.targetId)); if (r) return r; } return null; }; return walk(c); };
+    // the faction a catalogue belongs to: a listed supplement (Imperial Fists → Space Marines), else the first faction
+    // catalogue it links – allied packs (Agents, Knights, Daemons) only if nothing else (Imperial Fists also link the
+    // Agents of the Imperium; their units belong to Space Marines, not to the Agents file)
+    const ALLY_FIDS = new Set(['imperial-agents', 'imperial-knights', 'chaos-daemons', 'chaos-knights']);
+    const factionOfCat = c => {
+      for (const [sf, list] of Object.entries(SUPPLEMENTS)) if (list.includes(c.__file)) return sf;
+      const find = allies => { const seen = new Set(); const walk = x => { if (!x || seen.has(x.id)) return null; seen.add(x.id); const f = fidOfFile.get(x.__file); if (f && (allies || !ALLY_FIDS.has(f))) return f; if (f) return null; for (const l of x.catalogueLinks || []) { const r = walk(cats.get(l.targetId)); if (r) return r; } return null; }; return walk(c); };
+      return find(false) || find(true);
+    };
     const extra = [...byFile.values()].filter(c => c !== gst && c !== main && !c.library && !/Unaligned|Titanicus|Library/i.test(S(c.name)) && !fidOfFile.has(c.__file) && factionOfCat(c) === fid)
       .sort((a, b) => (a.__file < b.__file ? -1 : a.__file > b.__file ? 1 : 0));
     return main ? [main, ...extra] : extra;
@@ -294,6 +311,7 @@ export function convertAll(catalogues, opts = {}) {
 
   // ───────── Einheit konvertieren ─────────
   const unresolved = [];
+  const RULE_CAT = new Map();   // faction rule (upper-case name) → catalogue that defines it
   function convertUnit(root, factionId, acceptedKw, catNames = null) {
     const u = {
       id: slug(root.name), name: cleanName(root.name), points: [], composition: '', models: [], profiles: [], keywords: [], factionKeywords: [],
@@ -309,14 +327,35 @@ export function convertAll(catalogues, opts = {}) {
     // profiles only on a Daemon Prince) is evaluated against them; only plain condition lists of ancestor instanceOf checks
     let anc = new Set();
     let optWg = null;  // nearest optional (min 0) upgrade above: { name, hasAbility }
+    let curWg = null;  // nearest upgrade above (optional or not): { name, hasAbility }
+    let comp = null;   // name of the companion model being walked (see companions)
+    let optHidden = false;   // inside an option that may be hidden for the unit on its own
     // default state of the unit on its own: entries inside it with their minimum count (everything else counts 0)
     const inUnit = new Map();
-    (function pre(n, d) {
+    const catAny = new Set((root.categoryLinks || []).map(c => c.targetId));   // categories anywhere in the unit (no Crusade …)
+    const mTypes = [];   // model entries: { id, name, kws (keywords of the model entry), max }
+    (function pre(n, d, gmax, on) {
       if (!n || d > 8) return;
-      for (const g of n.selectionEntryGroups || []) pre(g, d + 1);
-      for (const e of n.selectionEntries || []) { if (!inUnit.has(e.id)) { inUnit.set(e.id, selConstraints(e).min || 0); pre(e, d + 1); } }
-      for (const l of n.entryLinks || []) { const t = resolve(l); if (t && !inUnit.has(t.id)) { const mn = selConstraints({ constraints: [...(t.constraints || []), ...(l.constraints || [])] }).min || 0; inUnit.set(t.id, mn); inUnit.set(l.id, mn); pre(t, d + 1); } }
-    })(root, 0);
+      const live = x => on && x.hidden !== true && !SKIP_RE.test(S(x.name));   // on: not inside a hidden/Crusade subtree
+      for (const g of n.selectionEntryGroups || []) { const c = selConstraints(g); pre(g, d + 1, c.max != null ? c.max : gmax, live(g)); }
+      const model = (e, cls, c) => {
+        for (const cl of cls) if (cl && cl.targetId) catAny.add(cl.targetId);
+        if (e.type !== 'model' || mTypes.some(m => m.id === e.id)) return;
+        const kws = cls.filter(cl => cl && cl.hidden !== true && cl.name && !helperCat(cl.targetId) && !/^Faction:/i.test(cl.name) && !/\bLoadout$|\bHeavy Weapon$|^Unit Champion$/i.test(S(cl.name))).map(cl => up(cleanName(cl.name)));
+        mTypes.push({ id: e.id, name: cleanName(e.name), kws, max: c.max != null ? c.max : (gmax != null ? gmax : (c.min != null ? c.min : 1)) });
+      };
+      for (const e of n.selectionEntries || []) { if (!inUnit.has(e.id)) { inUnit.set(e.id, selConstraints(e).min || 0); if (live(e)) model(e, e.categoryLinks || [], selConstraints(e)); pre(e, d + 1, null, live(e)); } }
+      for (const l of n.entryLinks || []) { const t = resolve(l); if (t && !inUnit.has(t.id)) { const c = selConstraints({ constraints: [...(t.constraints || []), ...(l.constraints || [])] }); const mn = c.min || 0; inUnit.set(t.id, mn); inUnit.set(l.id, mn); const lv = l.hidden !== true && live({ ...t, name: l.name || t.name }); if (lv) model({ ...t, name: l.name || t.name }, [...(t.categoryLinks || []), ...(l.categoryLinks || [])], c); pre(t, d + 1, null, lv); } }
+    })(root, 0, null, true);
+    // companion models (see TYPE_KW): main = the model named like the unit, else the most numerous model type(s)
+    const companions = new Set();
+    {
+      const named = mTypes.filter(m => up(m.name) === up(cleanName(root.name)));
+      const mx = Math.max(0, ...mTypes.map(m => m.max));
+      const main = named.length ? named : mTypes.filter(m => m.max === mx);
+      const mainTypes = new Set([...(root.categoryLinks || []).map(c => up(cleanName(c.name))), ...main.flatMap(m => m.kws)].filter(k => TYPE_KW.test(k)));
+      if (mainTypes.size) for (const m of mTypes) if (!main.includes(m) && m.kws.some(k => TYPE_KW.test(k) && !mainTypes.has(k))) companions.add(m.id);
+    }
     const dCond = c => {
       const v = Number(c.value);
       if (/instanceOf/i.test(c.type)) {
@@ -325,7 +364,12 @@ export function convertAll(catalogues, opts = {}) {
         return null;
       }
       if (NOT_SELECTED_FORCES.has(c.childId)) { const r = cmp(0, c.type, v); return r === undefined ? null : r; }
-      if ((c.field !== 'selections' && c.field !== 'associations') || !c.childId || DET_NAME.has(c.childId)) return null;   // associations: led by …
+      // associations (led by / attached to …): the unit on its own is attached to nothing – Command Squads' FEEL NO PAIN
+      // only with an Ogryn Bodyguard, Necron Warriors' only led by a Technomancer, Wyches' FIGHTS FIRST only with Lelith
+      if (c.field === 'associations') { const r = cmp(0, c.type, v); return r === undefined ? null : r; }
+      // a category that nothing in the unit carries (outside Crusade): none of it in the unit (Space Wolves 'Lone Wolf')
+      if (c.field === 'selections' && CAT_IDS.has(c.childId) && !catAny.has(c.childId) && ['self', 'parent', 'unit', 'root-entry', 'model-or-unit'].includes(c.scope)) { const r = cmp(0, c.type, v); return r === undefined ? null : r; }
+      if (c.field !== 'selections' || !c.childId || DET_NAME.has(c.childId)) return null;
       const t = idx.get(c.childId);
       if (!t || !t.type || !['unit', 'model', 'upgrade'].includes(t.type)) return null;   // categories, 'model', unknown → undecidable
       const r = cmp(inUnit.get(c.childId) || 0, c.type, v);
@@ -390,7 +434,10 @@ export function convertAll(catalogues, opts = {}) {
       const k = kind + '|' + name + '|' + dets.join(',');
       if (seenA.has(k)) return; seenA.add(k);
       // nur mit bestimmtem Detachment sichtbar → als eigene Fähigkeit mit "detachment"-Markierung (UI filtert)
-      if (dets.length) { noteTag(name, dets); (kind === 'wargear' ? u.abilities.wargear : u.abilities.unit).push({ name, text, detachment: detTag(dets) }); return; }
+      // wargear ability named other than its wargear (Daemon Prince: 'Seductive Gambit' only with the Slaanesh allegiance):
+      // `wargear` names the option it comes with
+      const wgTag = kind === 'wargear' && curWg && up(curWg.name) !== up(name) ? { wargear: curWg.name } : {};
+      if (dets.length) { noteTag(name, dets); (kind === 'wargear' ? u.abilities.wargear : u.abilities.unit).push({ name, text, detachment: detTag(dets), ...wgTag }); return; }
       let m;
       // LEADER → u.leader, SUPPORT (11th ed., core rules 24.22: a support unit leads a bodyguard unit like a leader,
       // one leader + one support per bodyguard) → u.support; both { canLead: [bodyguard names], text }.
@@ -401,11 +448,15 @@ export function convertAll(catalogues, opts = {}) {
         const canLead = attachTargets(text);
         const prev = u[att];
         u[att] = prev ? { canLead: [...new Set([...prev.canLead, ...canLead])], text: prev.text + '\n' + text } : { canLead: [...new Set(canLead)], text };
+        // "… even if a PRIMUS, MAGUS, or ACOLYTE ICONWARD model has already been attached to it": who may lead the
+        // bodyguard as well (alsoWith: names/keywords, one per entry)
+        const ev = /even if (?:an? |one )?([^.\n]+?)(?: (?:models?|units?))? (?:has|have) already been attached/i.exec(S(text).replace(/\*\*|\^\^|\*/g, '').replace(/[ \t ]+/g, ' '));
+        if (ev) { const w = ev[1].split(/,\s*(?:or\s+|and\s+)?|\s+or\s+|\s+and\s+/).map(x => cleanName(x)).filter(Boolean); if (w.length) u[att].alsoWith = [...new Set([...(u[att].alsoWith || []), ...w])]; }
         if (att === 'leader') return;
       }
       if ((m = /^Invulnerable Save\s*\((\d\+\*?)\)/i.exec(name))) { if (!u.abilities.invul) u.abilities.invul = m[1]; if (!text) return; }
       if (/^Damaged\b/i.test(name)) { u.abilities.damaged = text ? name + ': ' + text : name; return; }
-      (kind === 'wargear' ? u.abilities.wargear : u.abilities.unit).push({ name, text });
+      (kind === 'wargear' ? u.abilities.wargear : u.abilities.unit).push({ name, text, ...wgTag });
     };
     const addRule = (link, target) => {
       let name = linkName(link, target);
@@ -420,9 +471,13 @@ export function convertAll(catalogues, opts = {}) {
       // rule that only comes with optional wargear (Impulsor: Orbital Comms Array → Scouts 6", Reiver: Grav-chute → Deep
       // Strike): not the unit's own core ability; the wargear's ability text says it – without one, a wargear ability
       if (optWg) {
-        if (!optWg.hasAbility) { const k = 'wargear|' + optWg.name + '|' + up(name); if (!seenA.has(k)) { seenA.add(k); u.abilities.wargear.push({ name: optWg.name + ': ' + cleanName(name), text: S(target.description), ...(gstRuleIds.has(target.id) ? { core: true } : {}) }); } }
+        if (!optWg.hasAbility) { const k = 'wargear|' + optWg.name + '|' + up(name); if (!seenA.has(k)) { seenA.add(k); u.abilities.wargear.push({ name: optWg.name + ': ' + cleanName(name), text: S(target.description), wargear: optWg.name, ...(gstRuleIds.has(target.id) ? { core: true } : {}) }); } }
         return;
       }
+      // rule linked from (mandatory) wargear that has an ability text of its own: that text says when it applies (Collar of
+      // Khorne: Feel No Pain 3+ only against Psychic Attacks, Alchemyk Counteragents: 6+ only against mortal wounds) – the
+      // wargear ability is listed, the rule is no unconditional core ability of the unit
+      if (curWg && curWg.hasAbility) return;
       // conditionally hidden: evaluated for the unit on its own (no leader/enhancement/optional wargear, no Crusade/Boarding
       // Actions) – hidden then → not the unit's own ability (Skitarii FEEL NO PAIN 5+ only led by a Dominus, T'au DEEP STRIKE
       // only in Boarding Actions); visible then → its own; undecidable → marked with *
@@ -437,10 +492,11 @@ export function convertAll(catalogues, opts = {}) {
       if (gstRuleIds.has(target.id) || /^(Deep Strike|Deadly Demise|Feel No Pain|Scouts|Stealth|Fights First|Lone Operative|Infiltrators|Leader|Damaged|Firing Deck|Hover|Super-Heavy Walker|Psychic|Fortification)\b/i.test(name)) {
         if (/^Damaged\b/i.test(name)) { u.abilities.damaged = u.abilities.damaged || name.replace(/\*$/, ''); return; }
         if (/^Invulnerable Save\s*\((\d\+\*?)\)/i.test(name)) { u.abilities.invul = u.abilities.invul || /\((\d\+\*?)\)/.exec(name)[1]; return; }
-        const k = up(name); if (!seenCore.has(k)) { seenCore.add(k); u.abilities.core.push(k); }
+        // a companion model's rule (Sir Hekhtur's LONE OPERATIVE with Canis Rex) is marked like BSData marks model-only rules
+        const k = up(name) + (comp ? ' (' + up(comp) + ' MODEL ONLY)' : ''); if (!seenCore.has(k)) { seenCore.add(k); u.abilities.core.push(k); }
       } else {
         const k = up(name);
-        if (!u.abilities.faction.includes(k)) { u.abilities.faction.push(k); factionRules[k] = S(target.description); }
+        if (!u.abilities.faction.includes(k)) { u.abilities.faction.push(k); factionRules[k] = S(target.description); RULE_CAT.set(k, catOf(target)); }
       }
     };
     const handleProfile = (p, kind, link) => {
@@ -458,20 +514,35 @@ export function convertAll(catalogues, opts = {}) {
     };
     // Rekursiver Durchlauf; kind = 'unit' (Einheit/Modell) | 'wargear' (Upgrade)
     function walk(node, kind, depth, modelCtx, seen) {
-      if (!node || (node.hidden === true && depth > 0) || depth > 12) return;
+      // hidden by default: only walked when a detachment shows it (Pantheon of Woe's Necrodermal Bindings on the C'tan
+      // Shards) – then tagged with that detachment
+      if (!node || (node.hidden === true && depth > 0 && !gating(node, node.__linkObj).dets.length) || depth > 12) return;
       if (seen.has(node)) return; seen.add(node);
       const name = S(node.name);
       if (depth > 0 && SKIP_RE.test(name)) return;
       if (depth > 0 && (ancHidden(node) || (node.__linkObj && ancHidden(node.__linkObj)))) return;
       const isModel = node.type === 'model' || (depth === 0 && node.type === 'unit');
       const k = node.type === 'upgrade' ? 'wargear' : (node.type ? 'unit' : kind);
-      const savedInh = inh, savedAnc = anc, savedOpt = optWg, savedPm = pmods;
+      const savedInh = inh, savedAnc = anc, savedOpt = optWg, savedPm = pmods, savedWg = curWg, savedComp = comp, savedOH = optHidden;
+      // groups above that may be hidden for the unit on its own (Crusade "Specialisms" …)
+      if (depth > 0 && !node.type && (node.modifiers || []).some(m => m.field === 'hidden' && m.type === 'set' && (m.value === true || m.value === 'true') && dGroup({ type: 'and', conditions: m.conditions, conditionGroups: m.conditionGroups }) !== false)) optHidden = true;
       anc = new Set([...anc, ...ancIds(node)]);
       { const pm = [...profModsOf(node), ...profModsOf(node.__linkObj)]; if (pm.length) pmods = [...pmods, ...pm]; }
-      if (depth > 0 && node.type === 'upgrade' && !(selConstraints(node).min >= 1)) {
+      if (depth > 0 && node.type === 'upgrade') {
         const hasAbility = (node.profiles || []).some(p => p.typeName === 'Abilities') || (node.infoLinks || []).some(l => l.type === 'profile' && (resolve(l) || {}).typeName === 'Abilities');
-        optWg = { name: cleanName(name), hasAbility };
+        curWg = { name: cleanName(name), hasAbility };
+        if (!(selConstraints(node).min >= 1)) {
+          // offered to the unit on its own? (not a Crusade specialism or a detachment upgrade such as Steel Hammer's Character Upgrade)
+          const hidMay = o => (o && o.modifiers || []).some(m => m.field === 'hidden' && m.type === 'set' && (m.value === true || m.value === 'true') && dGroup({ type: 'and', conditions: m.conditions, conditionGroups: m.conditionGroups }) !== false);
+          if (hidMay(node) || hidMay(node.__linkObj)) optHidden = true;
+          optWg = curWg;
+          // an option that adds keywords to the unit (Daemon Prince allegiance KHORNE …, CSM Mark of Chaos): which ones
+          const add = (node.modifiers || []).filter(m => m.field === 'category' && m.type === 'add' && !m.conditions && !m.conditionGroups && ['root-entry', 'unit', 'parent', undefined].includes(m.scope) && !helperCat(m.value))
+            .map(m => idx.get(m.value)).filter(c => c && c.name && !/^Faction:/i.test(c.name)).map(c => up(cleanName(c.name)));
+          if (add.length && !optHidden) { u.keywordOptions = u.keywordOptions || []; if (!u.keywordOptions.some(o => o.option === curWg.name)) u.keywordOptions.push({ option: curWg.name, keywords: [...new Set(add)] }); }
+        }
       }
+      if (node.type === 'model' && companions.has(node.id)) comp = cleanName(name);
       if (depth > 0) inh = gateOf(null, node, node.__linkObj);
       // "C'tan Powers" (Tesseract Vault): a ranged-weapon profile type of its own (Range/A/BS/S/AP/D/Keywords)
       for (const p0 of node.profiles || []) { const p = p0.typeName === "C'tan Powers" ? { ...p0, typeName: 'Ranged Weapons' } : p0; if (handleProfile(p, k) !== false && modelCtx && (p.typeName === 'Ranged Weapons' || p.typeName === 'Melee Weapons')) modelCtx.weapons.add(parseWeapon(p).name); }
@@ -492,7 +563,8 @@ export function convertAll(catalogues, opts = {}) {
         ctx = { name: cleanName(name), min: c.min, max: c.max, weapons: new Set() };
         u.models.push(ctx);
         // model-level keywords (OFFICER of a Command Squad's commander, CHARACTER of Saint Celestine, a faction keyword on the models)
-        for (const cl of [...(node.categoryLinks || []), ...((node.__linkObj && node.__linkObj.categoryLinks) || [])]) if (cl && cl.hidden !== true && cl.name && !helperCat(cl.targetId) && !/\bLoadout$|\bHeavy Weapon$|^Unit Champion$/i.test(S(cl.name))) modelCats.push(cl.name);   // not BSData helper categories
+        modelCats.push({ id: node.id, name: cleanName(name), cats: [...(node.categoryLinks || []), ...((node.__linkObj && node.__linkObj.categoryLinks) || [])]
+          .filter(cl => cl && cl.hidden !== true && cl.name && !helperCat(cl.targetId) && !/\bLoadout$|\bHeavy Weapon$|^Unit Champion$/i.test(S(cl.name))).map(cl => cl.name) });   // not BSData helper categories
       }
       const gr = !node.type ? (() => { const c = selConstraints(node); return c.min != null || c.max != null ? c : node.__groupRange; })() : null;
       const children = [];
@@ -510,21 +582,43 @@ export function convertAll(catalogues, opts = {}) {
         u.models.push(ctx0);
         for (const w of [...u.ranged, ...u.melee]) ctx0.weapons.add(w.name);
       }
-      inh = savedInh; anc = savedAnc; optWg = savedOpt; pmods = savedPm;
+      inh = savedInh; anc = savedAnc; optWg = savedOpt; pmods = savedPm; curWg = savedWg; comp = savedComp; optHidden = savedOH;
     }
     walk(root, 'unit', 0, null, new Set());
+    // a SUPPORT unit whose attach text BSData still names 'Leader' (GSC Biophagus, Clamavus, Locus, Nexos): the core
+    // ability decides – it attaches as a support unit
+    if (u.leader && !u.support && u.abilities.core.some(c => /^SUPPORT\b/.test(c)) && !u.abilities.core.some(c => /^LEADER\b/.test(c))) {
+      u.support = u.leader; u.leader = null;
+      u.abilities.unit.push({ name: 'Support', text: u.support.text });
+    }
     const wCanon = new Map(); for (const w of [...u.ranged, ...u.melee]) if (!wCanon.has(w.name.toLowerCase())) wCanon.set(w.name.toLowerCase(), w.name);
     const wName = n => (u.ranged.some(w => w.name === n) || u.melee.some(w => w.name === n) ? n : wCanon.get(String(n).toLowerCase()) || n);
     u.models = u.models.map(m => ({ name: m.name, min: m.min != null ? m.min : (m.max != null ? 0 : 1), max: m.max != null ? m.max : (m.min != null ? m.min : 1), weapons: [...new Set([...m.weapons].map(wName))] }));
 
     // Keywords – as the army builder's engine evaluates them for this catalogue (category modifiers included, e.g. an
     // INFANTRY correction or RAVENWING inside Dark Angels); without the engine the raw category links
-    for (const c of [...(catNames ? catNames.map(name => ({ name })) : (root.categoryLinks || []).filter(cl => !helperCat(cl.targetId))), ...modelCats.map(name => ({ name }))]) {
-      const n = cleanName(c.name);
-      if (!n || /^(Configuration|Unit|Warlord|Legends)$/i.test(n) || /^Allies:/i.test(n)) continue;   // "Allies: …" marks what may be allied in, no keyword
+    // Model-level keywords count for the unit (OFFICER of a Command Squad's commander, PSYKER of an Aspiring Sorcerer),
+    // except those of a companion model (Sir Hekhtur's INFANTRY with Canis Rex); keywords that not every model type of the
+    // unit has are also listed per model in u.modelKeywords (Wahapedia "SZAREKH MODEL: CHARACTER; THE SILENT KING").
+    const kwOf = n => { n = cleanName(n); if (!n || /^(Configuration|Unit|Warlord|Legends)$/i.test(n) || /^Allies:/i.test(n)) return null; return n; };   // "Allies: …" marks what may be allied in, no keyword
+    for (const c of [...(catNames ? catNames.map(name => ({ name })) : (root.categoryLinks || []).filter(cl => !helperCat(cl.targetId))), ...modelCats.flatMap(mc => mc.cats.filter(n => !companions.has(mc.id) || /^Faction:/i.test(n)).map(name => ({ name })))]) {
+      const n = kwOf(c.name);
+      if (!n) continue;
       const m = /^Faction:\s*(.+)$/i.exec(n);
       if (m) { const f = up(m[1]); if (!u.factionKeywords.includes(f)) u.factionKeywords.push(f); }
       else { const kw = up(n); if (!u.keywords.includes(kw)) u.keywords.push(kw); }
+    }
+    {
+      const unitKw = new Set((catNames || (root.categoryLinks || []).filter(cl => !helperCat(cl.targetId)).map(c => c.name)).map(kwOf).filter(Boolean).map(up));
+      const per = new Map();
+      for (const mc of modelCats) { if (!per.has(mc.name)) per.set(mc.name, new Set()); for (const n of mc.cats) { const k = kwOf(n); if (k && !/^Faction:/i.test(k)) per.get(mc.name).add(up(k)); } }
+      if (per.size > 1) {
+        const sets = [...per.values()];
+        const common = new Set([...sets[0]].filter(k => sets.every(s => s.has(k))));
+        const mk = {};
+        for (const [nm, s] of per) { const x = [...s].filter(k => !common.has(k) && !unitKw.has(k)); if (x.length) mk[nm] = x; }
+        if (Object.keys(mk).length) u.modelKeywords = mk;
+      }
     }
     if (isLegendsName(root.name) || root.hidden === true || (root.categoryLinks || []).some(c => /legends/i.test(c.name))) u.legends = true;
 
@@ -589,8 +683,6 @@ export function convertAll(catalogues, opts = {}) {
   const DP_ID = '82ae-1066-5107-6ae0';
   const ENH_ID = 'f759-1bc4-cb3a-f0d2';
   const NOT_SELECTED_FORCES = new Set(['cac3-71d1-ea4b-795d', 'ff7b-8f73-1756-650a', '1d6e-2579-8e7f-1ed4']); // Crusade Force/Army, Boarding Actions
-  // BSData verlinkt "Templar Vows" auch an allgemeine Space-Marines-Einheiten (Katalog-Infolink); Armeeregel nur der Black Templars
-  const ARMY_RULE_ONLY = { 'TEMPLAR VOWS': ['black-templars'] };
   // Supplement-Kataloge ohne eigene App-Fraktion: deren Detachments werden der Basisfraktion zugeschlagen (Feld "supplement")
   const SUPPLEMENTS = { 'space-marines': ['Imperium - Imperial Fists.json', 'Imperium - Iron Hands.json', 'Imperium - Raven Guard.json', 'Imperium - Salamanders.json', 'Imperium - Ultramarines.json', 'Imperium - White Scars.json'] };
   const ALL_DET = new Set();  // alle Detachment-IDs + -Namen aller Kataloge (Enhancements fremder Fraktionen erkennen)
@@ -644,15 +736,24 @@ export function convertAll(catalogues, opts = {}) {
     for (const cl of cat.catalogueLinks || []) reachableCats(cats.get(cl.targetId), seen);
     return seen;
   }
-  const textOfProfile = p => /Abilities$/.test(p.typeName || '') ? S(char(p, 'Description') || char(p, 'Descriptions')) : (p.characteristics || []).map(c => S(c.$text)).filter(Boolean).join('\n');
+  // weapon profile as one line (an enhancement that is a weapon: TL-4Ø9, Da Gobshot Thunderbuss, Imperium's Sword):
+  // "Da Gobshot Thunderbuss – 24", A 6, BS 4+, S 7, AP -2, D 2 [LETHAL HITS: non-MONSTER/VEHICLE] [RAPID FIRE 6]"
+  const isWeaponP = p => p.typeName === 'Ranged Weapons' || p.typeName === 'Melee Weapons' || p.typeName === "C'tan Powers";
+  const weaponLine = p => {
+    const w = parseWeapon(p.typeName === "C'tan Powers" ? { ...p, typeName: 'Ranged Weapons' } : p);
+    return w.name + (w.profile ? ' (' + w.profile + ')' : '') + ' – ' + [w.range || 'Melee', 'A ' + w.A, w.BS != null ? 'BS ' + w.BS : 'WS ' + w.WS, 'S ' + w.S, 'AP ' + w.AP, 'D ' + w.D].join(', ') + w.abilities.map(a => ' [' + a + ']').join('');
+  };
+  const textOfProfile = p => /Abilities$/.test(p.typeName || '') ? S(char(p, 'Description') || char(p, 'Descriptions')) : isWeaponP(p) ? weaponLine(p) : (p.characteristics || []).map(c => S(c.$text)).filter(Boolean).join('\n');
   // Regeltexte eines Eintrags (rules, Profile, infoLinks auf Regeln/Profile/InfoGroups, infoGroups) – nur sichtbare
   function rulesOf(node, ctx, where) {
     const out = [], seen = new Set();
     // core: Verweis auf eine Kern-/Waffenregel des Game Systems (z. B. Stealth, Lethal Hits), die die Regel verleiht
-    const add = (name, text, core) => { name = cleanName(name); text = S(text); if (!name && !text) return; const k = name + '|' + text.replace(/[\^*]/g, '').replace(/\s+/g, ' '); if (seen.has(k)) return; seen.add(k); out.push(core ? { name, text, core: true } : { name, text }); };
+    // weapon: the parsed weapon of a weapon profile (enhancement weapons for the bearer's datasheet); not part of `rules`
+    const add = (name, text, core, weapon) => { name = cleanName(name); text = S(text); if (!name && !text) return; const k = name + '|' + text.replace(/[\^*]/g, '').replace(/\s+/g, ' '); if (seen.has(k)) return; seen.add(k); const r = core ? { name, text, core: true } : { name, text }; if (weapon) Object.defineProperty(r, 'weapon', { value: weapon, enumerable: false }); out.push(r); };
+    const wOf = p => (isWeaponP(p) ? parseWeapon(p.typeName === "C'tan Powers" ? { ...p, typeName: 'Ranged Weapons' } : p) : null);
     const fromGroup = g => {
       for (const r of g.rules || []) if (!isHidden(r, ctx)) add(r.name, r.description);
-      for (const p of g.profiles || []) if (!isHidden(p, ctx)) add(p.name, textOfProfile(p));
+      for (const p of g.profiles || []) if (!isHidden(p, ctx)) add(p.name, textOfProfile(p), false, wOf(p));
     };
     fromGroup(node);
     for (const l of node.infoLinks || []) {
@@ -661,7 +762,7 @@ export function convertAll(catalogues, opts = {}) {
       if (!t) { unresolved.push(where + ': infoLink "' + (l.name || l.targetId) + '" in "' + node.name + '" nicht auflösbar'); continue; }
       const core = catOf(t) === gst;
       if (l.type === 'rule') add(linkName(l, t), t.description, core);
-      else if (l.type === 'profile') add(linkName(l, t), textOfProfile(t), core);
+      else if (l.type === 'profile') add(linkName(l, t), textOfProfile(t), core, wOf(t));
       else if (l.type === 'infoGroup') fromGroup(t);
     }
     for (const g of node.infoGroups || []) if (!isHidden(g, ctx)) fromGroup(g);
@@ -725,27 +826,97 @@ export function convertAll(catalogues, opts = {}) {
     if (o.type === 'upgrade' && (o.costs || []).some(c => c.typeId === DP_ID)) { ALL_DET.add(o.id); ALL_DET.add(S(o.name)); }
     if (/^Detachments?$/i.test(S(o.name)) && !o.type) for (const e of [...(o.selectionEntries || []), ...(o.entryLinks || [])]) { ALL_DET.add(e.targetId || e.id); ALL_DET.add(S(e.name)); }
   }
-  function buildArmyData(fid, cat, kws, ruleUse, unitCount, factionRules, extraCats = []) {
+  // enhancement id → bodyguard units it lets its bearer lead: the leaders' "Leading" associations (New Recruit) allow a
+  // unit when an and-group holds "unit instanceOf X" + "enhancement selected" (Ork Kill Kommanda → Kommandos)
+  // category → detachments that give it to units (Death Guard "Contagion Engines" adds CONTAGION ENGINE): enhancements
+  // offered only below such a category belong to that detachment
+  const CAT_DET = new Map();
+  for (const o of idx.values()) {
+    const mods = [...((o && o.modifiers) || []), ...((o && o.modifierGroups) || []).flatMap(g => (g.modifiers || []).map(m => ({ ...m, conditions: [...(m.conditions || []), ...(g.conditions || [])], conditionGroups: [...(m.conditionGroups || []), ...(g.conditionGroups || [])] })))];
+    for (const m of mods) {
+      if (m.field !== 'category' || m.type !== 'add' || !CAT_IDS.has(m.value)) continue;
+      const ids = []; JSON.stringify([m.conditions || [], m.conditionGroups || []]).replace(/"childId":"([^"]+)"/g, (_, id) => { if (DET_NAME.has(id)) ids.push(id); return ''; });
+      for (const d of ids) { if (!CAT_DET.has(m.value)) CAT_DET.set(m.value, new Set()); CAT_DET.get(m.value).add(d); }
+    }
+  }
+  const ENH_LEADS = new Map();
+  for (const o of idx.values()) {
+    for (const a of (o && o.associations) || []) {
+      if (!/^Leading$/i.test(S(a.name))) continue;
+      (function grp(g) {
+        const cs = g.conditions || [];
+        const enh = cs.filter(c => c.type === 'atLeast' && (costOf(idx.get(c.childId) || {}, ENH_ID) || 0) > 0).map(c => c.childId);
+        const units = cs.filter(c => c.type === 'instanceOf' && c.childId).map(c => cleanName((idx.get(c.childId) || {}).name || c.childName)).filter(Boolean);
+        if (g.type !== 'or' && enh.length && units.length) for (const e of enh) { if (!ENH_LEADS.has(e)) ENH_LEADS.set(e, new Set()); for (const n of units) ENH_LEADS.get(e).add(n); }
+        for (const h of g.conditionGroups || []) grp(h);
+      })({ type: 'or', conditionGroups: a.conditionGroups || [], conditions: [] });
+    }
+  }
+  function buildArmyData(fid, cat, kws, ruleUse, unitsOfArmy, factionRules, extraCats = []) {
     const ctx0 = { cat, det: null, detIds: null };
     // Armeeregeln: Fraktionsregeln der Einheiten + Regeln/Regel-Infolinks auf Ebene des eigenen Katalogs.
     // Behalten: Text "If your Army Faction is <Hauptfraktion>" bzw. ohne diese Klausel bei ≥ 40 % der Einheiten (oder Katalogebene).
     const norm = s => up(S(s).replace(/[\^*]/g, '')).replace(/[’`]/g, "'").trim();
     const primary = norm(kws[0]);
+    // Candidates: the faction rules the faction's own units link (ruleUse), the rules on the catalogue itself and on the
+    // libraries it imports (Aeldari Library: "Corsairs and Travelling Players … If your Army Faction is DRUKHARI"), and
+    // rules the datasheets refer to by name ("Lancer's Duty (Bondsman)" → Bondsman).
+    // Kept: a text "If your Army Faction is (not) X" only for X = the faction; without it, a rule of the faction's units
+    // unless another faction's catalogue defines it (Transhuman Strategist, Librarius, Curse of the Wulfen, Kill Team),
+    // a catalogue rule of the faction's own catalogues.
+    const ownSet = new Set([cat, ...extraCats, ...[...byFile.values()].filter(c => c.library && S(c.name).startsWith(S(cat.name)))]);
+    const fidOfCatObj = c => (c ? fidOfFile.get(c.__file) || null : null);
     const cand = new Map();
-    for (const [k, n] of ruleUse) cand.set(k, { key: k, text: factionRules[k] || '', n });
-    for (const r of cat.rules || []) if (!isHidden(r, ctx0)) cand.set(up(r.name), { key: up(r.name), text: S(r.description), n: Infinity, display: cleanName(r.name) });
+    for (const [k, n] of ruleUse) cand.set(k, { key: k, text: factionRules[k] || '', n, src: RULE_CAT.get(k) || null });
+    const reachC = new Set(); for (const c of ownSet) for (const id of reachableCats(c)) reachC.add(id);
+    for (const cid of reachC) {
+      const c = cats.get(cid); if (!c || c === gst) continue;
+      for (const r of c.rules || []) if (!isHidden(r, ctx0) && (ownSet.has(c) || /Army Faction is/i.test(S(r.description)))) if (!cand.has(up(r.name))) cand.set(up(r.name), { key: up(r.name), text: S(r.description), n: Infinity, display: cleanName(r.name), src: c, cat: true });
+    }
     for (const l of cat.infoLinks || []) {
       if (l.type !== 'rule' || isHidden(l, ctx0)) continue;
       const t = resolve(l); if (!t) continue;
       const nm = linkName(l, t); const k = up(nm);
-      cand.set(k, { key: k, text: S(t.description), n: Math.max(Infinity, cand.get(k)?.n || 0), display: cleanName(nm) });
+      cand.set(k, { key: k, text: S(t.description), n: Math.max(Infinity, cand.get(k)?.n || 0), display: cleanName(nm), src: catOf(t), cat: true });
+    }
+    {
+      const abNames = new Set(); for (const u of unitsOfArmy) for (const a of [...(u.abilities.unit || []), ...(u.abilities.wargear || [])]) for (const m of S(a.name).matchAll(/\(([^()]+)\)/g)) abNames.add(up(m[1]));
+      for (const c of ownSet) for (const r of c.sharedRules || []) if (abNames.has(up(r.name)) && !cand.has(up(r.name))) cand.set(up(r.name), { key: up(r.name), text: S(r.description), n: Infinity, display: cleanName(r.name), src: c, cat: true });
     }
     const armyRules = [];
     for (const c of [...cand.values()].sort((a, b) => b.n - a.n)) {
-      if (ARMY_RULE_ONLY[c.key] && !ARMY_RULE_ONLY[c.key].includes(fid)) continue;
-      const m = /Army Faction is\s+([^,.]+)/i.exec(c.text);
-      const keep = m ? norm(m[1]) === primary : c.n >= Math.max(1, unitCount * 0.4);
+      const m = /Army Faction is\s+(?:not\s+)?([^,.]+)/i.exec(c.text);
+      const other = c.src && !ownSet.has(c.src) && fidOfCatObj(c.src) && fidOfCatObj(c.src) !== fid;
+      const keep = m ? norm(m[1]) === primary : !other && (c.n >= 1);
       if (keep) armyRules.push({ name: c.display || displayName(c.key, cat), text: c.text });
+    }
+    // tables BSData keeps as entries of their own: the Code Chivalric selection (Deed / Quality profiles), the Thousand
+    // Sons "Rituals reference" (Destiny's Ruin, Temporal Surge, Doombolt, Twist of Fate) → appended to the army rule
+    for (const ar of armyRules) {
+      const words = up(ar.name);
+      const hits = [];
+      for (const cid of reachC) {
+        const c = cats.get(cid); if (!c || c === gst) continue;
+        for (const e of [...(c.selectionEntries || []), ...(c.sharedSelectionEntries || [])]) {
+          if (e.type !== 'upgrade' || hits.includes(e)) continue;
+          const ref = /^(.+?)\s+reference$/i.exec(S(e.name));
+          const stem = ref ? up(ref[1]).replace(/S$/, '') : null;
+          if (up(e.name) === words || (stem && stem.length > 3 && up(ar.text).includes(stem))) hits.push(e);
+        }
+      }
+      const lines = [];
+      for (const e of hits) for (const x of [e, ...(e.selectionEntries || [])]) {
+        const ps = (x.profiles || []).filter(p => p.hidden !== true && !isWeaponP(p) && p.typeName !== 'Unit');
+        const d6 = p => { const v = char(p, 'D6'); const m = /\d+/.exec(v); return m ? Number(m[0]) : 99; };
+        for (const p of ps.slice().sort((a, b) => d6(a) - d6(b))) {
+          const main = char(p, 'Description') || char(p, 'Effect') || '';
+          const extra = (p.characteristics || []).filter(k => !['Description', 'Effect'].includes(k.name) && S(k.$text)).map(k => k.name + ' ' + S(k.$text));
+          // "Deed (D6 1 or 2) – We vow to lay low the tyrant...", "Destiny's Ruin (Psychic) (Warp Charge 5)"
+          const head = up(p.typeName) === up(x.name) ? S(p.typeName) + (extra.length ? ' (' + extra.join(', ') + ')' : '') + ' – ' + cleanName(p.name) : cleanName(p.name) + (extra.length ? ' (' + extra.join(', ') + ')' : '');
+          lines.push('**' + head + ':** ' + S(main));
+        }
+      }
+      if (lines.length) ar.text = ar.text + '\n\n' + lines.join('\n\n');
     }
     // Detachments + Regeln (Hauptkatalog, danach Supplement-Kataloge, z. B. Space-Marines-Chapter ohne eigene Fraktion)
     const recs = [], seenDet = new Set(), dangling = [];
@@ -773,11 +944,17 @@ export function convertAll(catalogues, opts = {}) {
       (function walk(o) {
         if (!o || typeof o !== 'object') return;
         if (Array.isArray(o)) { o.forEach(walk); return; }
-        if (o.type === 'upgrade' && typeof o.id === 'string' && (costOf(o, ENH_ID) || 0) > 0) {
+        // an enhancement: an upgrade with "Enhancements" cost, or with points in a group "Enhancements" (Agents of the
+        // Imperium, Sororitas Hagiomnifex carry no Enhancements cost) – or a link to one that carries the costs itself
+        // (Venator Omni-Auspex in "Phobos Shadow Force Enhancements")
+        const lnk = o.targetId && o.type === 'selectionEntry' && (costOf(o, ENH_ID) || 0) > 0 && typeof o.id === 'string' ? resolve(o) : null;
+        const enhUp = x => x && x.type === 'upgrade' && typeof x.id === 'string' && ((costOf(x, ENH_ID) || 0) > 0 || (costOf(x, PTS_ID) != null && chain(x).slice(1).some(g => !g.type && /^Enhancements$/i.test(S(g.name)))));
+        if (lnk || enhUp(o)) {
           if (enhSeen.has(o.id)) return; enhSeen.add(o.id);
-          const ch = chain(o);
+          const ch = lnk ? chain(o) : chain(o);
+          if (lnk) { o = { ...lnk, id: o.id, name: o.name || lnk.name, costs: o.costs, modifiers: [...(lnk.modifiers || []), ...(o.modifiers || [])], modifierGroups: [...(lnk.modifierGroups || []), ...(o.modifierGroups || [])] }; ch[0] = o; }
           const refs = new Set();
-          for (const x of ch) for (const r of condRefs(x)) { if (detIds.has(r)) refs.add(r); else if (detByName.has(nkey(r))) refs.add(detByName.get(nkey(r)).id); }
+          for (const x of ch) for (const r of condRefs(x)) { if (detIds.has(r)) refs.add(r); else if (detByName.has(nkey(r))) refs.add(detByName.get(nkey(r)).id); else for (const d of CAT_DET.get(r) || []) if (detIds.has(d)) refs.add(d); }
           if (!refs.size && !ch.some(x => condRefs(x).some(r => ALL_DET.has(r)))) {
             for (const x of ch.slice(1)) { const m = /^(.+?)\s+Enhancements?$/i.exec(S(x.name)); const d = m && detByName.get(nkey(m[1])); if (d) { refs.add(d.id); break; } }
           }
@@ -795,9 +972,15 @@ export function convertAll(catalogues, opts = {}) {
             if (ch.some(x => isHidden(x, ctx))) continue;
             if (d.enhancements.some(e => e.name === name)) continue;
             const rs = rulesOf(o, ctx, fid);
-            const text = rs.filter(r => !r.core).map(r => (r.name && r.name !== name ? '**' + r.name + ':** ' : '') + r.text).join('\n\n');
+            const text = rs.filter(r => !r.core).map(r => (r.name && r.name !== name && !r.weapon ? '**' + r.name + ':** ' : '') + r.text).join('\n\n');
             const core = rs.filter(r => r.core).map(r => up(r.name));
-            d.enhancements.push(core.length ? { name, cost: costOf(o, PTS_ID), text, core } : { name, cost: costOf(o, PTS_ID), text });
+            const rec = core.length ? { name, cost: costOf(o, PTS_ID), text, core } : { name, cost: costOf(o, PTS_ID), text };
+            // a weapon the bearer gets (its datasheet can list it) and extra bodyguard units the bearer may lead (BSData
+            // 'Leading' association conditions: Kill Kommanda → KOMMANDOS, Kaptin's Hat → FLASH GITZ)
+            const ws = rs.filter(r => r.weapon).map(r => r.weapon);
+            if (ws.length) rec.weapons = ws;
+            if (ENH_LEADS.has(o.id)) rec.leads = [...ENH_LEADS.get(o.id)];
+            d.enhancements.push(rec);
           }
           return;
         }
@@ -815,15 +998,152 @@ export function convertAll(catalogues, opts = {}) {
   let SYS = null;
   try { SYS = new BSystem(files.map(f => { const j = byName.get(f); return typeof j === 'string' ? JSON.parse(j) : j; }).filter(Boolean)); }
   catch (e) { warn('Keywords: engine not available (' + e.message + ') – raw category links used'); }
+  // the root node of an entry – through the same link when there are several (Library - Titans links each titan twice:
+  // as Titanicus Traitoris and as Adeptus Titanicus, with different faction keywords)
+  const rootNode = (catId, e) => { const ns = SYS.rootNodes(catId); return (e.__link && ns.find(x => x.id === e.id && x.linkId === e.__link.id)) || ns.find(x => x.id === e.id); };
   const engineKeywords = (catId, e) => {
     if (!SYS) return null;
     try {
-      const n = SYS.rootNodes(catId).find(x => x.id === e.id);
+      const n = rootNode(catId, e);
       if (!n) return null;
       const V = bsView(SYS, { id: 'kw', catalogueId: catId, limit: 0, sel: [{ id: 'kw1', t: n.token, n: 1, ch: [] }] });
       const w = V.force.ch[0];
       return w ? [...categoriesOfSel(V, w)].filter(id => !helperCat(id)).map(id => SYS.categoryNames.get(id)).filter(Boolean) : null;
     } catch { return null; }
+  };
+
+  // ───────── Unit sizes, points and composition via the builder engine ─────────
+  // The unit as the builder creates it (mandatory models and wargear, defaults), then grown one model at a time as far
+  // as the data allows (no error for the unit that the smallest unit does not have): model count and points per size
+  // (so every BSData cost modifier counts – modifier groups, repeats, conditions on option groups …), the composition of
+  // the smallest and of the largest unit.
+  const engineSizes = (catId, e) => {
+    if (!SYS) return null;
+    try {
+      const n = rootNode(catId, e);
+      if (!n) return null;
+      const measure = (r, at = 0) => {
+        const V = bsView(SYS, r); const w = V.force.ch[at];
+        if (!w || !w.node) return null;
+        const models = [], packs = [];   // packs: other selections with models inside ("1 Shock Trooper Sergeant and 9 Shock Troopers" ×2 = 20 models)
+        (function f(x, mult) { let any = false; for (const c of x.ch) { const k = mult * c.n; if (c.node && c.node.type === 'model') { models.push({ c, k }); any = true; } if (f(c, k)) { any = true; if (c.node && c.node.type !== 'model') packs.push({ c, k }); } } return any; })(w, 1);
+        const cnt = models.reduce((s, m) => s + m.k, 0) + (w.node.type === 'model' ? 1 : 0);
+        // points of the unit, its models and model packs – without wargear, which has costs of its own (a Leman Russ's
+        // lascannon +5, a Ravager's dark lances): the datasheet's points as BSData prices the unit
+        const own = c => totalCost(V, c) / Math.max(1, c.n) - (c.ch || []).reduce((s, k) => s + totalCost(V, k), 0);
+        const pk = new Set(packs.map(p => p.c));
+        let pts = own(w);
+        (function f(x, mult) { for (const c of x.ch) if (c.node && (c.node.type === 'model' || pk.has(c))) { pts += mult * c.n * own(c); f(c, mult * c.n); } })(w, 1);
+        return { r, V, w, models, packs, cnt, pts: Math.round(pts * 100) / 100, errs: unitErrs(V, w) };
+      };
+      const sum = (V, p, node) => selsOf(V, p, node).reduce((s, x) => s + x.n, 0);
+      // the unit's own option limits (min/max per parent, hidden), as validate() checks them below a unit – without the
+      // army-wide checks (no constraint on a unit or model entry counts models through a childId)
+      const unitErrs = (V, w) => {
+        const errs = new Set();
+        (function chk(sel) {
+          (function visit(nodes) {
+            for (const k of nodes) {
+              if (SKIP_RE.test(S(k.name))) continue;
+              const sl = selsOf(V, sel, k), have = sl.reduce((s, x) => s + x.n, 0);
+              const l = limits(V, k, k.group ? null : sl[0] || null, sel);
+              if (have && l.hidden) errs.add('hidden ' + k.token);
+              if (l.max >= 0 && have > l.max) errs.add('max ' + k.token);
+              if (!l.hidden && l.min > have) errs.add('min ' + k.token);
+              if (k.group && !l.hidden) visit(V.sys.children(k));
+            }
+          })(V.sys.children(sel.node));
+          for (const c of sel.ch) if (c.node) chk(c);
+        })(w);
+        return errs;
+      };
+      const m0 = measure(autoSync(SYS, addSel(SYS, { id: 'sz', catalogueId: catId, limit: 0, sel: [] }, null, n.token, 1)));
+      if (!m0) return null;
+      const states = [m0];
+      let cur = m0;
+      for (let step = 0; step < 40; step++) {
+        let next = null;
+        // models first, the biggest stack first (9 Boyz before their Nob), then the order of the data; then the packs
+        const bySize = l => l.slice().sort((a, b) => b.c.n - a.c.n);
+        for (const { c } of [...bySize(cur.models), ...bySize(cur.packs)]) {
+          const p = c.parent, l = limits(cur.V, c.node, c, p);
+          if (l.max >= 0 && sum(cur.V, p, c.node) >= l.max) continue;
+          if (c.groups.some(g => { const lg = limits(cur.V, g, null, p); return lg.max >= 0 && sum(cur.V, p, g) >= lg.max; })) continue;
+          const m = measure(autoSync(SYS, setCount(cur.r, c.s.id, c.n + 1)));
+          if (!m || m.cnt <= cur.cnt || [...m.errs].some(x => !m0.errs.has(x))) continue;
+          next = m; break;
+        }
+        const ok = m => m && m.cnt > cur.cnt && ![...m.errs].some(x => !m0.errs.has(x));
+        // … then an optional model not taken yet (Broadside Shas'ui 0-2 next to the Shas'vre)
+        if (!next) {
+          const sels = [cur.w]; (function f(x) { for (const c of x.ch) if (c.node && c.node.type !== 'model') { sels.push(c); f(c); } })(cur.w);
+          outer: for (const s of sels) {
+            const opts = [];
+            (function visit(nodes, prefix, d) {
+              for (const k of nodes) {
+                if (d > 4 || SKIP_RE.test(S(k.name))) continue;
+                const l = limits(cur.V, k, null, s);
+                if (l.hidden || l.max === 0) continue;
+                const tok = prefix ? prefix + '>' + k.token : k.token;
+                if (k.group) { if (l.max < 0 || sum(cur.V, s, k) < l.max) visit(SYS.children(k), tok, d + 1); }
+                else if (k.type === 'model' && !sum(cur.V, s, k)) opts.push(tok);
+              }
+            })(SYS.children(s.node), '', 0);
+            for (const tok of opts) { const m = measure(autoSync(SYS, addSel(SYS, cur.r, s.s.id, tok, 1))); if (ok(m)) { next = m; break outer; } }
+          }
+        }
+        // … then a bigger alternative of an exclusive choice ("1 Shock Trooper Sergeant and 9 Shock Troopers" → "2 … and
+        // 18 …", Kill Team "5 models" → "10 models"): the smallest step up
+        if (!next) {
+          for (const { c } of [...cur.packs, ...cur.models]) {
+            const g = c.groups[c.groups.length - 1], p = c.parent;
+            if (!g || limits(cur.V, g, null, p).max !== 1) continue;
+            const gTok = c.s.t.split('>').slice(0, -1).join('>');
+            for (const alt of SYS.children(g)) {
+              if (alt.group || alt === c.node) continue;
+              const l = limits(cur.V, alt, null, p); if (l.hidden || l.max === 0) continue;
+              const m = measure(autoSync(SYS, chooseInGroup(SYS, cur.r, p.s.id, gTok, gTok + '>' + alt.token)));
+              if (ok(m) && (!next || m.cnt < next.cnt)) next = m;
+            }
+            if (next) break;
+          }
+        }
+        if (!next) break;
+        states.push(cur = next);
+      }
+      // points of the k-th copy of the unit in one army (BSData: "2nd+ / 3rd+ unit" costs), same size and loadout
+      const reId = (s, k) => ({ ...s, id: s.id + '_' + k, ch: (s.ch || []).map(c => reId(c, k)) });
+      states.copyPts = (st, k) => { const m = measure({ ...st.r, sel: Array.from({ length: k }, (_, i) => reId(st.r.sel[0], i)) }, k - 1); return m ? m.pts : null; };
+      return states;
+    } catch { return null; }
+  };
+  // points brackets (a run of sizes with the same points → its largest size, as New Recruit: 10 → 85, 20 → 170),
+  // modelsRange, composition ("a-b label": the model's option group named like "4-9 Flesh Hounds", else the model)
+  const applySizes = (u, states) => {
+    const last = states[states.length - 1];
+    if (!states[0].cnt) return;
+    u.modelsRange = [states[0].cnt, last.cnt];
+    const pts = new Map(); for (const s of states) if (!pts.has(s.cnt)) pts.set(s.cnt, s.pts);
+    const out = [];
+    for (const [k, p] of [...pts].sort((a, b) => a[0] - b[0])) { if (out.length && out[out.length - 1].pts === p) out[out.length - 1].models = k; else out.push({ models: k, pts: p }); }
+    if (out.some(p => p.pts > 0) || !u.points.length) u.points = out;
+    // more expensive further copies (Night Spinner 165, 3rd+ 195): pointsTiers [{ copy: 3, points: [{models, pts}] }] –
+    // the first copy whose points differ from the copy before (copies 2–4 checked)
+    if (states.copyPts && out.some(p => p.pts > 0)) {
+      const st = new Map(); for (const s of states) st.set(s.cnt, s);
+      let prev = out.map(p => p.pts);
+      for (let k = 2; k <= 4; k++) {
+        const pk = out.map(p => states.copyPts(st.get(p.models), k));
+        if (pk.some(x => x == null)) break;
+        if (pk.some((x, i) => x !== prev[i])) { (u.pointsTiers = u.pointsTiers || []).push({ copy: k, points: out.map((p, i) => ({ models: p.models, pts: pk[i] })) }); prev = pk; }
+      }
+    }
+    if (states[0].w.node.type === 'model' && !states[0].models.length) return;   // single model: '1 <name>' as before
+    const label = c => { for (let i = c.groups.length - 1; i >= 0; i--) { const g = c.groups[i]; const k = selConstraints({ constraints: g.constraints }); if ((k.min != null || k.max != null) && !/^(Unit Composition|Core|Either:?|Models?)$/i.test(groupName(g.name))) return groupName(g.name); } return cleanName(c.node.name); };
+    const tally = s => { const t = new Map(); for (const { c, k } of s.models) t.set(label(c), (t.get(label(c)) || 0) + k); return t; };
+    const lo = tally(states[0]), hi = tally(last);
+    const parts = [...new Set([...lo.keys(), ...hi.keys()])].map(l => { const a = lo.get(l) || 0, b = hi.get(l) || 0; return (a === b ? a : Math.min(a, b) + '-' + Math.max(a, b)) + ' ' + l; });
+    if (parts.length) u.composition = parts.join(', ');
   };
 
   // ───────── Fraktionen ─────────
@@ -853,9 +1173,13 @@ export function convertAll(catalogues, opts = {}) {
       if (seenIds.has(e.id)) continue; seenIds.add(e.id);
       const { unit, factionRules: fr } = convertUnit(e, fid, accept, engineKeywords(oc.id, e));
       if (unit.legends && !KEEP_LEGENDS) continue;
+      { const sz = engineSizes(oc.id, e); if (sz) { applySizes(unit, sz); if (opts.onSizes) opts.onSizes(fid, unit.name, sz.map(s => [s.cnt, s.pts])); } }
       if (oc !== cat) unit.catalogue = S(oc.name);
       Object.assign(factionRules, fr);
-      for (const k of unit.abilities.faction) ruleUse.set(k, (ruleUse.get(k) || 0) + 1);
+      // army rule candidates: counted on the faction's own units (its first faction keyword, not Legends) – a Legends
+      // Heresy tank or an allied Harlequin does not make its rule an army rule of this faction
+      // (a rule the faction's own catalogue defines counts on any of its units: Agents 'Kill Team', only on Legends kill teams)
+      for (const k of unit.abilities.faction) if ((!unit.legends && unit.factionKeywords.includes(up(kws[0]))) || [cat, ...(SUPPLEMENTS[fid] || []).map(f => byFile.get(f))].includes(RULE_CAT.get(k))) ruleUse.set(k, (ruleUse.get(k) || 0) + 1);
       units.push(unit);
     }
     // doppelte IDs eindeutig machen (Legends-Einheiten zuletzt, damit reguläre Einheiten ihre ID behalten)
@@ -863,7 +1187,7 @@ export function convertAll(catalogues, opts = {}) {
     for (const un of [...units.filter(x => !x.legends), ...units.filter(x => x.legends)]) { const n = (ids.get(un.id) || 0) + 1; ids.set(un.id, n); if (n > 1) un.id = un.id + '-' + n; }
     units.sort((a, b) => a.name.localeCompare(b.name, 'en') || (a.legends ? 1 : 0) - (b.legends ? 1 : 0));
     const name = FACTIONS.find(f => f.id === fid)?.name || fid;
-    const army = buildArmyData(fid, cat, kws, ruleUse, units.length, factionRules, (SUPPLEMENTS[fid] || []).map(f => byFile.get(f)).filter(Boolean));
+    const army = buildArmyData(fid, cat, kws, ruleUse, units, factionRules, (SUPPLEMENTS[fid] || []).map(f => byFile.get(f)).filter(Boolean));
     armyReport.push({ fid, name, ...army });
     // Abilities gated on a selection that is not a detachment but an ENHANCEMENT (e.g. Aeldari "Runes of Warding" →
     // Feel No Pain 4+ for the led unit): move the tag to `enhancement` so the app shows them when the bearer is there.
@@ -887,6 +1211,17 @@ export function convertAll(catalogues, opts = {}) {
     totalBytes += json.length; total += units.length;
     index.factions.push({ id: fid, name, units: units.length, file: fid + '.json' });
     log(fid.padEnd(22) + String(units.length).padStart(4) + ' Einheiten ' + String(army.detachments.length).padStart(3) + ' Det. ' + String(army.detachments.reduce((n, d) => n + d.enhancements.length, 0)).padStart(3) + ' Enh.  ' + (json.length / 1024).toFixed(0).padStart(5) + ' KB  ← ' + file);
+  }
+  // A faction rule that is a detachment's rule (BSData still links the 10th-edition army rule TEMPLAR VOWS to every Space
+  // Marines datasheet; in 11th it is the rule of the Vow-Sworn Crusaders detachment): no army rule, no datasheet FACTION
+  // ability of any faction
+  {
+    const detRules = new Set(armyReport.flatMap(r => r.detachments.flatMap(d => d.rules.filter(x => !x.core).map(x => up(x.name)))));
+    for (const r of armyReport) { for (let i = r.armyRules.length - 1; i >= 0; i--) if (detRules.has(up(r.armyRules[i].name))) r.armyRules.splice(i, 1); }
+    for (const f of Object.values(files_)) {
+      for (const u of f.units || []) u.abilities.faction = u.abilities.faction.filter(k => !detRules.has(k));
+      for (const k of Object.keys(f.factionRules || {})) if (detRules.has(k)) delete f.factionRules[k];
+    }
   }
   files_['index.json'] = index;
 
@@ -947,6 +1282,19 @@ export function convertAll(catalogues, opts = {}) {
   const core = {};
   for (const r of gst.sharedRules || []) { const k = up(r.name); if (!core[k]) core[k] = S(r.description); }
   for (const p of gst.sharedProfiles || []) if (p.typeName === 'Abilities') { const k = up(p.name); if (!core[k]) core[k] = char(p, 'Description'); }
+  // Where the game system file still has an older wording, the 11th-edition core rule text wins: the rulebook glossary
+  // entries quoted word for word (data/core.js, `orig: true`) – e.g. 24.08 DEADLY DEMISE "Each time a model with this
+  // ability is destroyed" (BSData: "a model in this unit", plus a 10th-edition example). Markup and examples alone are
+  // no difference; cross-references ("See [CLOSE-QUARTERS].") never replace a full text.
+  {
+    const plain = s => S(s).replace(/\*\*|\*|\^\^/g, '').replace(/[’‘]/g, "'").replace(/\s+/g, ' ').replace(/\s*Example:.*$/s, '').replace(/\s*Designer.s Note:.*$/s, '').replace(/:\s*-\s*/g, ': ').trim().toLowerCase();
+    for (const g of (CORE_RULES && CORE_RULES.glossary) || []) {
+      if (!g || !g.orig || !g.text || /^.{0,80}\bSee \[/.test(g.text) && g.text.length < 160) continue;
+      const k = up(g.term).replace(/^ANTI-X Y\+$/, 'ANTI').replace(/\s+(X\+?|X")$/, '');
+      if (!core[k] || plain(core[k]) === plain(g.text)) continue;
+      core[k] = S(g.text);
+    }
+  }
   files_['core-abilities.json'] = core;
   // Catalogue index for the army builder (js/builder): which repo file holds which catalogue and what it links
   files_['bs-catalogues.json'] = [...byFile.entries()].map(([file, r]) => ({ id: r.id, file, name: S(r.name), gameSystem: r === gst, library: !!r.library,

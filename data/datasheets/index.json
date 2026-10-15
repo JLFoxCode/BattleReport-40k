@@ -53,7 +53,7 @@
   {
    "id": "chaos-knights",
    "name": "Chaos Knights",
-   "units": 37,
+   "units": 41,
    "file": "chaos-knights.json"
   },
   {
@@ -107,13 +107,13 @@
   {
    "id": "imperial-agents",
    "name": "Imperial Agents",
-   "units": 52,
+   "units": 49,
    "file": "imperial-agents.json"
   },
   {
    "id": "imperial-knights",
    "name": "Imperial Knights",
-   "units": 27,
+   "units": 31,
    "file": "imperial-knights.json"
   },
   {
@@ -137,7 +137,7 @@
   {
    "id": "space-marines",
    "name": "Space Marines",
-   "units": 173,
+   "units": 175,
    "file": "space-marines.json"
   },
   {
