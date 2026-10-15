@@ -115,15 +115,19 @@ export async function startGameServer(opts = {}) {
     return state;
   }
 
-  async function persist(game) {
-    try {
-      await fsp.mkdir(GAMES_DIR, { recursive: true });
-      const tmp = path.join(GAMES_DIR, game.code + '.json.tmp');
-      await fsp.writeFile(tmp, JSON.stringify({ code: game.code, actions: game.actions }));
-      await fsp.rename(tmp, path.join(GAMES_DIR, game.code + '.json'));
-    } catch (e) {
-      log.error('Persist failed for', game.code, e);
-    }
+  // one write per game at a time: two devices acting at once must not race on the same .tmp file
+  function persist(game) {
+    game.persisting = (game.persisting || Promise.resolve()).then(async () => {
+      try {
+        await fsp.mkdir(GAMES_DIR, { recursive: true });
+        const tmp = path.join(GAMES_DIR, game.code + '.json.tmp');
+        await fsp.writeFile(tmp, JSON.stringify({ code: game.code, actions: game.actions }));
+        await fsp.rename(tmp, path.join(GAMES_DIR, game.code + '.json'));
+      } catch (e) {
+        log.error('Persist failed for', game.code, e);
+      }
+    });
+    return game.persisting;
   }
 
   async function loadGames() {
@@ -355,7 +359,10 @@ export async function startGameServer(opts = {}) {
       if (!sub) {
         if (m === 'GET') return sendJson(res, 200, getGame(code).state);
         if (m === 'DELETE') {
+          // only the device hosting the game (its own app/browser = loopback) may delete it – not a guest phone on the Wi-Fi
+          if (!isLoopback(req)) throw httpError(403, 'Only the device hosting the game can delete it');
           const g = getGame(code);
+          sseSend(g, 'signal', { type: 'game.deleted', code, ts: Date.now() });
           for (const c of g.clients) { try { c.end(); } catch {} }
           if (g.closeTimer) { clearTimeout(g.closeTimer); g.closeTimer = null; }
           games.delete(code);
@@ -386,6 +393,14 @@ export async function startGameServer(opts = {}) {
       if (sub === 'undo' && m === 'POST') {
         const g = getGame(code);
         if (g.actions.length <= 1) return sendJson(res, 400, { error: 'Nothing to undo' });
+        // A player's phone ({ by: 0 | 1 }) only undoes its own last action; the scoreboard / setup (no player) undoes any
+        const body = await readJson(req);
+        const by = body && (body.by === 0 || body.by === 1) ? body.by : null;
+        const last = g.actions[g.actions.length - 1];
+        if (by != null && last.by !== by) {
+          const entry = (g.state.log || []).slice().reverse().find(l => l.type === last.type);
+          return sendJson(res, 409, { error: 'The last action was not made on this phone' + (entry ? ' (“' + entry.text + '”)' : '') + ' – it can only be undone there or on the scoreboard.' });
+        }
         const actions = g.actions.slice(0, -1);
         let state;
         try { state = replay(code, actions); }
@@ -699,3 +714,8 @@ async function readJson(req) {
 }
 
 function httpError(status, message) { return Object.assign(new Error(message), { status }); }
+/** Request from this machine itself (the hosting device's own app / browser), not from another device on the network. */
+function isLoopback(req) {
+  const a = String((req.socket && req.socket.remoteAddress) || '');
+  return /^(::1|127\.\d+\.\d+\.\d+|::ffff:127\.\d+\.\d+\.\d+)$/.test(a);
+}

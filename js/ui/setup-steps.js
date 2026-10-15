@@ -3,8 +3,9 @@
  * All texts English, card names/keywords 1:1 as printed by GW in uppercase. */
 import { esc, btn, chip, badge, sheet, confirmSheet, toast, playerLabel } from './components.js';
 import { mapThumb } from './map.js';
-import { radiusFor } from '../../engine/reduce.js';
+import { radiusFor, parseArmyText } from '../../engine/reduce.js';
 import { loadOrig, origArmyRules, origDetachmentRule } from '../data/orig.js';
+import { loadDatasheets, matchUnit, normName, ALLY_PACKS } from '../data/datasheets.js';
 import { armyChoices, armyForGame } from './armies.js';
 
 /* Army rule + detachment rules: BSData (New Recruit) only – one source for everything about the army. */
@@ -20,13 +21,15 @@ export const DP_LIMIT = { strike: 3, incursion: 2 };
 export const SIZE_LABEL = { strike: 'Strike Force', incursion: 'Incursion' };
 const RESERVE_LABEL = { none: 'Deploy on the battlefield', strategic: 'Strategic Reserves', deepstrike: 'Deep Strike', transport: 'Embarked in a transport' };
 
-// Incursion with a 3-DP detachment: 3 (as in the data's army roster and the engine)
+// Incursion with a 3-DP detachment as the only detachment: 3 (core 25.04; as in the data's army roster and the engine)
 export const dpLimit = (state, fac, dets) => {
   if (state.opts.dp != null) return Number(state.opts.dp);
   const base = DP_LIMIT[state.opts.size] || 3;
-  const big = fac && (dets || []).some(id => Number(((fac.detachments || []).find(d => d.id === id) || {}).dp) >= 3);
+  const big = fac && (dets || []).length === 1 && Number(((fac.detachments || []).find(d => d.id === dets[0]) || {}).dp) >= 3;
   return state.opts.size === 'incursion' && big ? Math.max(3, base) : base;
 };
+// Boarding Actions detachments belong to Boarding Actions battles only (hidden in BSData) – not offered for Incursion / Strike Force
+const isBoarding = d => /\(Boarding Actions\)\s*$/i.test(d.name || '');
 export const dpOf = (fac, ids) => (ids || []).reduce((s, id) => { const d = fac && fac.detachments.find(x => x.id === id); return s + (d ? Number(d.dp) || 0 : 0); }, 0);
 const facOf = (ctx, p) => { const id = ctx.state.players[p].faction; return id ? ctx.data.FACTIONS.find(f => f.id === id) || null : null; };
 const norm = s => String(s || '').toLowerCase().replace(/[^a-z0-9äöüß]+/g, '');
@@ -55,11 +58,13 @@ export function armyStep(ctx, ui, p) {
       <span class="dp-meter ${kind}">DP ${dp}/${limit}</span>
     </div>
     <p class="muted small">${esc(SIZE_LABEL[state.opts.size] || state.opts.size)}: up to ${limit} Detachment Points. Several Detachments are allowed as long as the DP total fits.</p>
-    <div class="det-list">${fac.detachments.map(d => detCard(d, p, pl.detachments.includes(d.id), dp, limit, bsOf(ctx, fac.id))).join('')}</div>`;
+    <div class="det-list">${fac.detachments.filter(d => !isBoarding(d) || pl.detachments.includes(d.id)).map(d => {
+      const on = pl.detachments.includes(d.id), list = pl.detachments.concat(d.id);
+      return detCard(d, p, on, !on && dpOf(fac, list) > dpLimit(state, fac, list), bsOf(ctx, fac.id));
+    }).join('')}</div>`;
 }
 
-function detCard(d, p, on, dp, limit, bs) {
-  const wouldExceed = !on && dp + (Number(d.dp) || 0) > limit;
+function detCard(d, p, on, wouldExceed, bs) {
   const n = (d.strats || []).length;
   return `
     <div class="card det-card ${on ? 'on' : ''} ${wouldExceed ? 'disabled' : ''}" data-action="det" data-p="${p}" data-id="${esc(d.id)}" role="checkbox" aria-checked="${on}" tabindex="0">
@@ -235,7 +240,7 @@ export function openImportSheet(ctx, p) {
         if (!text.trim()) { toast('No text pasted', 'warn'); return false; }
         close();
         const before = ctx.state.players[p].units.length;
-        const st = await ctx.dispatch({ type: 'army.import', player: p, text });
+        const st = await ctx.dispatch({ type: 'army.import', player: p, text, keywords: await importEntries(ctx.state.players[p].faction, text) });
         if (st && st.players) {
           const n = st.players[p].units.length - before;
           toast(n > 0 ? `${n} unit${n === 1 ? '' : 's'} imported` : 'No units recognised – check the format', n > 0 ? 'ok' : 'warn');
@@ -253,8 +258,18 @@ async function importSavedArmy(ctx, p, id) {
   if (st0.stage !== 'battle' && st0.stage !== 'over' && a.faction) {
     const fac = (ctx.data.FACTIONS || []).find(f => f.id === a.faction);
     const norm = s => String(s || '').normalize('NFD').replace(/\p{M}/gu, '').toLowerCase().replace(/[^a-z0-9]+/g, '');
-    const dets = fac ? a.detachments.map(n => (fac.detachments || []).find(d => norm(d.name) === norm(n))).filter(Boolean).map(d => d.id) : [];
-    st0 = (await ctx.dispatch({ type: 'player.army', player: p, faction: a.faction, detachments: dets })) || st0;
+    // "Blade of Ultramar" (list) = "Blade of Ultramar (Ultramarines)" (game data): exact name first, then without the suffix
+    const bare = s => norm(String(s || '').replace(/\s*\([^)]*\)\s*$/, ''));
+    const all = fac ? fac.detachments || [] : [];
+    const dets = a.detachments.map(n => all.find(d => norm(d.name) === norm(n)) || all.find(d => !isBoarding(d) && bare(d.name) === bare(n))).filter(Boolean).map(d => d.id);
+    st0 = (await ctx.dispatch({ type: 'player.army', player: p, faction: a.faction, detachments: [...new Set(dets)] })) || st0;
+    // the list's Force Disposition (chosen in My armies) is this player's Disposition for the mission
+    const fd = /^\+\s*FORCE DISPOSITION:\s*(.+?)\s*$/im.exec(a.text || '');
+    const disp = fd && (ctx.data.WH.DISPOSITIONS || []).find(d => norm(d.name) === norm(fd[1].replace(/^\d+\.\s*/, '')));
+    if (disp && st0.stage === 'setup' && st0.mission.dispositions[p] !== disp.id) {
+      const dd = [null, null]; dd[p] = disp.id;
+      st0 = (await ctx.dispatch({ type: 'mission.set', dispositions: dd })) || st0;
+    }
   }
   const pl = st0.players[p];
   if (pl.units.length && !(await confirmSheet({ title: 'Replace units?', text: `${pl.units.length} unit(s) are already in the list. Remove them and take “${a.name}”?`, ok: 'Replace', cancel: 'Add to them' }))) {
@@ -262,8 +277,59 @@ async function importSavedArmy(ctx, p, id) {
   } else if (pl.units.length && st0.stage !== 'battle' && st0.stage !== 'over') {
     for (const u of pl.units.slice()) await ctx.dispatch({ type: 'unit.remove', player: p, unitId: u.id });
   }
-  const st = await ctx.dispatch({ type: 'army.import', player: p, text: a.text, keywords: a.keywords });
+  const st = await ctx.dispatch({ type: 'army.import', player: p, text: a.text, keywords: await importEntries(a.faction, a.text, a.keywords) });
   if (st && st.players) toast(`“${a.name}” taken into the game`, 'ok');
+}
+
+const statNum = v => { const m = /\d+(?:\.\d+)?/.exec(String(v == null ? '' : v)); return m ? Number(m[0]) : 0; };
+/** OC / M / W of a list unit from its datasheet: the profile of its most numerous model type (else the first profile). */
+function datasheetStats(ds, lu) {
+  const P = Array.isArray(ds && ds.profiles) ? ds.profiles : [];
+  if (!P.length) return {};
+  let pr = P[0];
+  for (const l of (lu.modelLines || []).slice().sort((x, y) => y.count - x.count)) {
+    const hit = P.find(x => normName(x.name) === normName(l.name));
+    if (hit) { pr = hit; break; }
+  }
+  return { oc: statNum(pr.OC), move: statNum(pr.M), wounds: Math.max(1, statNum(pr.W)) };
+}
+/** army.import entries, one per unit of the list (in list order): the unit's datasheet values OC / M / W and – for a
+ *  pasted list – its datasheet keywords; `given` = the army builder's entries (keywords, profile changes) for the list. */
+export async function importEntries(factionId, text, given) {
+  const units = parseArmyText(text);
+  const data = factionId ? await loadDatasheets(factionId) : null;
+  let allies = null;   // allied packs (Imperial Agents / Knights, Chaos Daemons / Knights) – loaded only when needed
+  const find = async name => {
+    const own = data && Array.isArray(data.units) ? matchUnit(data.units, name) : null;
+    if (own || !factionId) return own;
+    if (!allies) allies = (await Promise.all(ALLY_PACKS.filter(id => id !== factionId).map(id => loadDatasheets(id)))).filter(Boolean);
+    for (const d of allies) { const hit = matchUnit(d.units, name); if (hit) return hit; }
+    return null;
+  };
+  const key = s => String(s || '').normalize('NFD').replace(/\p{M}/gu, '').toLowerCase().replace(/[^a-z0-9]+/g, '');
+  let at = 0;
+  const out = [];
+  for (const lu of units) {
+    const j = Array.isArray(given) ? given.findIndex((k, i) => i >= at && k && key(k.name) === key(lu.name)) : -1;
+    if (j >= 0) at = j + 1;
+    const e = Object.assign({ name: lu.name }, j >= 0 ? given[j] : null);
+    const ds = await find(lu.name);
+    if (ds) {
+      Object.assign(e, datasheetStats(ds, lu));
+      if (j < 0) e.keywords = (ds.keywords || []).slice();
+      if (ds.support) e.support = true;   // SUPPORT unit: may join a bodyguard unit next to its leader (core 24.22)
+    }
+    out.push(e);
+  }
+  return out;
+}
+
+/** Force Dispositions available to a player's army (mission deck: "available to them (as determined when mustering
+ *  armies)"): the union of its detachments' `dispositions` (ids) – null when the data does not say (all offered). */
+function dispAllowed(ctx, p) {
+  const fac = facOf(ctx, p), pl = ctx.state.players[p];
+  const ds = fac ? (fac.detachments || []).filter(d => pl.detachments.includes(d.id) && Array.isArray(d.dispositions) && d.dispositions.length) : [];
+  return ds.length ? new Set(ds.flatMap(d => d.dispositions)) : null;
 }
 
 /* ═══════════════ Schritt 4: Mission ═══════════════ */
@@ -291,7 +357,7 @@ export function missionStep(ctx, ui) {
     <div class="setup-cols tab${ui.tab} always">${[0, 1].map(p => `
       <div class="pcol p${p}" data-p="${p}">
         <div class="pcol-head"><span class="dot"></span>${esc(playerLabel(state, p))}</div>
-        <div class="chips disp-chips">${WH.DISPOSITIONS.map(d => chip({ html: `<b>${esc(d.name)}</b>`, cls: `p${p} disp`, on: m.dispositions[p] === d.id, action: 'disp', data: { p, id: d.id } })).join('')}</div>
+        <div class="chips disp-chips">${WH.DISPOSITIONS.filter(d => { const ok = dispAllowed(ctx, p); return !ok || ok.has(d.id) || m.dispositions[p] === d.id; }).map(d => chip({ html: `<b>${esc(d.name)}</b>`, cls: `p${p} disp`, on: m.dispositions[p] === d.id, action: 'disp', data: { p, id: d.id } })).join('')}</div>
         ${primaryCard(WH, m.primary[p], p)}
       </div>`).join('')}</div>
 

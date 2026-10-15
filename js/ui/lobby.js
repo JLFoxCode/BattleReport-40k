@@ -15,6 +15,9 @@ let lastRoot = null;
 let lastCtx = null;
 let refreshTimer = null;
 
+// The page comes from this device's own server (app / desktop = 127.0.0.1): only then are the listed games this device's
+// games, and only then may they be deleted (a guest phone sees the host's games and must not delete them)
+const onHost = () => /^(localhost|127\.\d+\.\d+\.\d+|\[::1\])$/i.test(location.hostname);
 const STAGE_LABEL = { setup: 'Setup', deploy: 'Deployment', battle: 'Battle', over: 'Finished' };
 const STAGE_KIND = { setup: 'muted', deploy: 'warn', battle: 'ok', over: '' };
 
@@ -120,7 +123,7 @@ function pageHtml(page) {
       ${window.BR ? '' : `<p class="muted hint">Battle Report 40k is an app for <b>Android</b> and <b>Windows</b>: <a class="apk" href="https://github.com/JLFoxCode/BattleReport-40k/releases/latest" target="_blank" rel="noopener">download the latest release</a>. Devices without the app (e.g. iPhone) can still join a game by scanning its QR code.</p>${devServerHtml()}`}
     </section>
     <section class="games">
-      <div class="title">Games on this device</div>
+      <div class="title">${onHost() ? 'Games on this device' : 'Games on the host device'}</div>
       ${renderList(host)}
     </section>
   </div>`;
@@ -241,7 +244,7 @@ function roleLabel(last) {
 function renderList(host) {
   if (loadErr) return `<div class="card bad"><p>Could not load the list: ${esc(loadErr)}</p></div>`;
   if (games === null) return `<div class="card muted">Loading …</div>`;
-  if (!games.length) return `<div class="card muted empty">No games on this device yet.</div>`;
+  if (!games.length) return `<div class="card muted empty">${onHost() ? 'No games on this device yet.' : 'No games on the host device yet.'}</div>`;
   return `<div class="grid game-grid">${games.map(g => `
     <article class="card game" data-code="${esc(g.code)}">
       <div class="row between game-head">
@@ -259,7 +262,7 @@ function renderList(host) {
       </div>
       <div class="row between game-foot">
         <span class="muted tiny">http://${esc(host)}/#/g/${esc(g.code)}/table</span>
-        ${btn({ label: 'Delete', kind: 'danger', small: true, action: 'delete' })}
+        ${onHost() ? btn({ label: 'Delete', kind: 'danger', small: true, action: 'delete' }) : ''}
       </div>
     </article>`).join('')}</div>`;
 }

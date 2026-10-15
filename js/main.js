@@ -312,7 +312,7 @@ async function undo() {
   if (store.spectator) { toast('Spectator – view only', 'warn', 1800); return null; }
   if (!net) return null;
   try {
-    const s = await net.undo();
+    const s = await net.undo(store.view === 'player' ? store.me : undefined);
     toast('Last action undone', 'ok', 1500);
     return s;
   } catch (e) {

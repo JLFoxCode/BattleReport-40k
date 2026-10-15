@@ -39,7 +39,7 @@ function coreEntries(re) {
   return all.filter(g => re.test(g.title + ' ' + (g.tags || []).join(' ') + ' ' + g.id));
 }
 function coreList(entries) {
-  return entries.length ? `<dl class="info-dl">${entries.map(g => `<dt>${esc(g.title)}</dt><dd>${esc(g.text)}</dd>`).join('')}</dl>` : '';
+  return entries.length ? `<dl class="info-dl" data-no-i18n>${entries.map(g => `<dt>${esc(g.title)}</dt><dd>${esc(g.text)}</dd>`).join('')}</dl>` : '';
 }
 function infoBtn(action, data, title = 'Info') {
   return btn({ icon: 'i', kind: 'ghost', cls: 'info', action, data, title });
@@ -518,7 +518,8 @@ function overStage(ctx, ui) {
       <div class="scoreboard">${[0, 1].map(p => `
         <div class="card p${p} ${winner === p ? 'winner' : ''}">
           <div class="kpi lg p${p}"><span class="kpi-value">${esc(vp[p].total)}</span><span class="kpi-label">${esc(pName(s, p))}</span></div>
-          <div class="sb-split muted small">Primary ${esc(vp[p].primary)} · Secondary ${esc(vp[p].secondary)}${vp[p].bonus ? ' · Modifier ' + esc(vp[p].bonus) : ''}</div>
+          <div class="sb-split muted small">Primary ${esc(vp[p].primary)} · Secondary ${esc(vp[p].secondary)}${(() => { const br = (s.scores || []).filter(x => x.player === p && x.src === 'bonus' && x.card === 'battle-ready').reduce((a, x) => a + x.vp, 0); const mod = vp[p].bonus - br;
+            return (br ? ' · Battle Ready ' + esc(br) : '') + (mod ? ' · Modifier ' + esc(mod) : ''); })()}</div>
         </div>`).join('')}</div>
       <div class="card pad0 mt">
         <table class="rtable">
@@ -569,7 +570,7 @@ function secCardHtml(s, p, card, o) {
   return `<div class="card sec-full">
     <div class="card-head"><div class="title">${esc(def.name)}</div>${def.fixed ? badge('Fixed-eligible', '') : ''}</div>
     ${origBlock(o && (o.text || o), 'Original card text')}
-    ${!o ? `<ul class="info-conds">${conds}</ul>` : ''}
+    ${!o ? `<ul class="info-conds" data-no-i18n>${conds}</ul>` : ''}
     ${def.note ? `<p class="small"><b>Action:</b> ${esc(def.note)}</p>` : ''}
     ${def.drawn ? `<p class="small text-warn"><b>When drawn:</b> ${esc(def.drawn.text)}${canReturnCard(s, p, card) ? ' ' + btn({ label: 'Return to deck & redraw', kind: 'ghost', small: true, action: 'sec-return', data: { p, card } }) : ''}</p>` : ''}
   </div>`;
@@ -652,7 +653,7 @@ function openScoreSheet() {
     const c = condOf(it);
     const already = c ? Number(c.scoredThisTurn) || 0 : 0;
     // No automation: the players select what was achieved; VP follow from the card
-    const unit = c && c.vp != null ? Number(c.vp) : (it.vp != null && it.k !== 'per' ? Number(it.vp) : 0);
+    const unit = c && c.vp != null ? Number(c.vp) : it.unit != null ? Number(it.unit) : (it.vp != null && it.k !== 'per' ? Number(it.vp) : 0);
     // Pre-select what was already booked on the score page this turn – the popup shows the total, only the difference is booked
     return Object.assign({}, it, { vp: already, suggest: already, already, auto: false, unit, n: unit > 0 ? Math.round(already / unit) : 0, opts: c && c.opts ? c.opts : null, max: c && c.max != null ? Number(c.max) : (it.max != null ? Number(it.max) : null) });
   });
@@ -791,10 +792,10 @@ async function openInfoSheet(p, src, card) {
     cls: 'p' + p,
     body: `
       ${origBlock(o && (o.text || o), 'Original card text')}
-      ${def.desc ? `<p>${esc(def.desc)}</p>` : ''}
+      ${def.desc ? `<p data-no-i18n>${esc(def.desc)}</p>` : ''}
       ${def.note ? `<p class="small"><b>Note:</b> ${esc(def.note)}</p>` : ''}
       ${def.drawn ? `<p class="small text-warn"><b>When drawn:</b> ${esc(def.drawn.text)}</p>` : ''}
-      <ul class="info-conds">${(def.c || []).map(c => `<li class="${c.sub ? 'sub' : ''}"><span class="vp">${c.k === 'choice' ? esc((c.opts || []).map(o => vpT(o.vp)).join('/')) : esc(vpT(c.vp))} VP${c.k === 'per' ? ' each' : ''}${c.max != null ? ', max. ' + esc(c.max) : ''}</span><span>${esc(c.t)}${c.opts ? ' – ' + esc(c.opts.map(o => `${o.t} (${vpT(o.vp)} VP)`).join(' · ')) : ''}<span class="muted xs"> · ${esc(WH.TIMING_LABELS[c.w] || c.w)}${c.r && (c.r[0] !== 1 || c.r[1] !== 5) ? ` · R${c.r[0]}–${c.r[1]}` : ''}</span></span></li>`).join('')}</ul>
+      <ul class="info-conds" data-no-i18n>${(def.c || []).map(c => `<li class="${c.sub ? 'sub' : ''}"><span class="vp">${c.k === 'choice' ? esc((c.opts || []).map(o => vpT(o.vp)).join('/')) : esc(vpT(c.vp))} VP${c.k === 'per' ? ' each' : ''}${c.max != null ? ', max. ' + esc(c.max) : ''}</span><span>${esc(c.t)}${c.opts ? ' – ' + esc(c.opts.map(o => `${o.t} (${vpT(o.vp)} VP)`).join(' · ')) : ''}<span class="muted xs"> · ${esc(WH.TIMING_LABELS[c.w] || c.w)}${c.r && (c.r[0] !== 1 || c.r[1] !== 5) ? ` · R${c.r[0]}–${c.r[1]}` : ''}</span></span></li>`).join('')}</ul>
       ${def.trk && def.trk.length ? `<p class="xs muted">Counters for this mission: ${esc(def.trk.map(t => t.label).join(', '))} – not tracked automatically here, book the points as agreed.</p>` : ''}`,
     actions: [{ label: 'Close', kind: 'ghost' }]
   });
@@ -816,7 +817,7 @@ async function openCondInfo(p, src, card, ci) {
     <p><b>${esc(c.t)}</b></p>
     <p class="small">${c.k === 'choice' ? esc((c.opts || []).map(x => `${x.t}: ${vpT(x.vp)} VP`).join(' · ')) : `${esc(vpT(c.vp))} VP${c.k === 'per' ? ' each' : ''}${c.max != null ? `, max. ${esc(c.max)} VP` : ''}`}
       · Timing: ${esc(WH.TIMING_LABELS[c.w] || c.w)}${c.r && (c.r[0] !== 1 || c.r[1] !== 5) ? ` · Round ${esc(c.r[0])}–${esc(c.r[1])}` : ''}</p>
-    ${def.desc ? `<p class="small muted">${esc(def.desc)}</p>` : ''}
+    ${def.desc ? `<p class="small muted" data-no-i18n>${esc(def.desc)}</p>` : ''}
     ${def.note ? `<p class="small"><b>Note:</b> ${esc(def.note)}</p>` : ''}
     ${origBlock(o && (o.text || o), 'Original card text')}
     ${o ? '' : '<p class="xs muted">Original text not available yet.</p>'}`, 'p' + p);
@@ -850,7 +851,7 @@ async function openCapsInfo() {
   const mo = await origMissions();
   const g = mo && mo.general ? Object.entries(mo.general).filter(([k]) => /victory|points|limit|score|scoring/i.test(k)) : [];
   openTextSheet('Limits', `
-    <p class="small">Primary Mission: max. 15 VP per battle round and 45 VP per battle. Secondary Missions: max. 15 VP per battle round and 45 VP per battle, with Fixed Missions max. 20 VP per card. Total max. 90 VP. The tablet caps automatically.</p>
+    <p class="small">Primary Mission: max. 15 VP per battle round and 45 VP per battle. Secondary Missions: max. 15 VP per battle round and 45 VP per battle, with Fixed Missions max. 20 VP per card. Battle Ready army: 10 VP at the end of the battle. Total max. 100 VP. The tablet caps automatically.</p>
     ${g.map(([k, v]) => origBlock(v, 'Original text: ' + k)).join('')}`);
 }
 async function openResInfo(p, i) {
@@ -887,7 +888,7 @@ function openChoiceSheet(p, src, card, ci) {
   sheet({
     title: name || 'Scoring',
     cls: 'p' + p,
-    body: `<p class="small">${esc(c.text)}</p>
+    body: `<p class="small" data-no-i18n>${esc(c.text)}</p>
       <div class="col choice-list">
         <button type="button" class="btn ${booked === 0 ? 'primary' : 'ghost'} cta" data-choice="0">None (0 VP)</button>
         ${(c.opts || []).map(o => `<button type="button" class="btn ${booked === o.vp ? 'primary' : 'ghost'} cta" data-choice="${esc(o.vp)}">${esc(o.t)} (${esc(o.vp)} VP)</button>`).join('')}
@@ -948,11 +949,12 @@ function openDiscardSheet(p, card) {
   const s = ctx.state;
   const sec = s.players[p].secondaries;
   const name = (WH.SECONDARY[card] || { name: card }).name;
-  const canRedraw = !sec.redrawUsed && (s.players[p].cp || 0) >= 1;
+  const ownCmd = s.stage === 'battle' && s.turn === p && s.phase === 'command';
+  const canRedraw = !sec.redrawUsed && (s.players[p].cp || 0) >= 1 && ownCmd;
   sheet({
     title: `Discard "${name}"`,
     cls: 'p' + p,
-    body: `<p class="small muted">Discard at end of turn: in your own turn, once per turn, +1 CP. Discard and redraw: 1 CP, once per battle (${sec.redrawUsed ? 'already used' : 'still available'}).</p>
+    body: `<p class="small muted">Discard at end of turn: in your own turn, once per turn, +1 CP at the end of the turn. Discard and redraw: 1 CP, once per battle, at the end of your Command phase (${sec.redrawUsed ? 'already used' : ownCmd ? 'still available' : 'not now'}).</p>
       <div class="col">
         <button type="button" class="btn cta" data-reason="end">Discard (end of turn)${s.turn === p && sec.cpDiscardTurn !== s.round + ':' + s.turn ? ' · +1 CP' : ''}</button>
         <button type="button" class="btn cta ghost" data-reason="redraw" ${canRedraw ? '' : 'disabled'}>Discard and redraw (1 CP)</button>

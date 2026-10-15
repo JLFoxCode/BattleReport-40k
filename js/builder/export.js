@@ -11,12 +11,14 @@ const isEnh = w => w.groups.some(g => ENH_GROUP.test(g.name));
 const models = w => w.ch.reduce((x, c) => x + (c.node && c.node.type === 'model' ? c.n : 0) + (c.node && c.node.type === 'upgrade' ? models(c) * c.n : 0), 0);
 
 /** Wargear of a selection: its upgrade children (no enhancements / Warlord), counts per one instance. */
-function gearOf(V, w) {
+function gearOf(V, w, mult = 1) {
   const out = [];
   for (const c of w.ch) {
     if (!c.node || c.node.type === 'model' || isEnh(c) || /^Warlord$/i.test(c.node.name)) continue;
     if (c.ch.some(k => k.node && k.node.type === 'model')) continue;   // size options ("5 models") hold the models
-    out.push({ name: nameOf(V, c), n: c.n });
+    // a bundle ("Axe and flail") holds the weapons: list those, so the game's datasheet finds them
+    if (c.ch.some(k => k.node && k.node.type === 'upgrade')) { out.push(...gearOf(V, c, c.n * mult)); continue; }
+    out.push({ name: nameOf(V, c), n: c.n * mult });
   }
   return out;
 }
@@ -54,6 +56,12 @@ export function summarize(sys, roster) {
       gear: gearOf(V, w), stacks: stacks.map(([m, k]) => ({ name: nameOf(V, m), n: k, gear: gearOf(V, m) }))
     });
   }
+  // which instance is led: "[n]" = n-th unit of that name in the list (two same-named bodyguard units stay apart)
+  for (const w of V.force.ch) {
+    const u = w.s && w.s.lead ? units.find(x => x.id === w.s.id) : null;
+    const t = u ? units.find(x => x.id === w.s.lead) : null;
+    if (t) { const same = units.filter(x => x.name === t.name); u.leadsNth = same.length > 1 ? same.indexOf(t) + 1 : 0; }
+  }
   const size = (cfg('Battle Size')[0] || '').replace(/^\d+\.\s*/, '').replace(/\s*\(.*$/, '');
   return { detachments: cfg('Detachment'), disposition: cfg('Force Disposition')[0] || null, size, units, points: units.reduce((x, u) => x + u.pts, 0) };
 }
@@ -65,6 +73,7 @@ export function armyText(sys, roster, meta = {}) {
   L.push('+++++++++++++++++++++++++++++++++++++++++++++++');
   if (meta.faction) L.push('+ FACTION KEYWORD: ' + meta.faction);
   if (s.detachments.length) L.push('+ DETACHMENT: ' + s.detachments.join(', '));
+  if (s.disposition) L.push('+ FORCE DISPOSITION: ' + s.disposition);
   L.push('+ TOTAL ARMY POINTS: ' + s.points + 'pts');
   L.push('+++++++++++++++++++++++++++++++++++++++++++++++');
   let ci = 0;
@@ -83,7 +92,7 @@ export function armyText(sys, roster, meta = {}) {
       }
     }
     for (const e of u.enhancements) L.push(`Enhancement: ${e.name} (+${e.pts} pts)`);
-    if (u.leads) L.push(`Leading ${u.leads}`);
+    if (u.leads) L.push(`Leading ${u.leads}${u.leadsNth ? '[' + u.leadsNth + ']' : ''}`);
   }
   L.push('Created with Battle Report 40k');
   return L.join('\n') + '\n';

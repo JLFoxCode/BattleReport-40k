@@ -8,6 +8,7 @@
  *              'turn' = end of your turn
  *              'any'  = end of a turn (either player's turn)
  *              'opp'  = end of your opponent's turn / end of the fifth battle round
+ *              'oppt' = end of your opponent's turn only (no "or the end of the fifth battle round" clause)
  *              'end'  = end of the battle (not subject to the 15 VP per round limit)
  *  r   [from, to] battle rounds
  *  k   'bool' | 'per' | 'choice'
@@ -305,7 +306,7 @@ const SECONDARY = {
     name: 'Display of Might',
     c: [
       { w: 'turn', r: ALL, k: 'bool', vp: 2, t: 'More friendly units than enemy units (excluding AIRCRAFT and battle-shocked units) wholly within No Man\'s Land' },
-      { w: 'opp', r: ALL, k: 'bool', vp: 5, t: 'End of your opponent\'s turn: more friendly units than enemy units (excluding AIRCRAFT and battle-shocked units) wholly within No Man\'s Land' }
+      { w: 'oppt', r: ALL, k: 'bool', vp: 5, t: 'End of your opponent\'s turn: more friendly units than enemy units (excluding AIRCRAFT and battle-shocked units) wholly within No Man\'s Land' }
     ]
   },
   outflank: {
@@ -713,7 +714,7 @@ const STRAT_LOCK = {
 };
 
 // Display labels
-const TIMING_LABELS = { cmd: 'End of your Command phase', cmd5: 'End of your Command phase (round 5: end of your turn)', turn: 'End of your turn', any: 'End of any turn', opp: 'End of opponent\'s turn / end of round 5', end: 'End of the battle' };
+const TIMING_LABELS = { cmd: 'End of your Command phase', cmd5: 'End of your Command phase (round 5: end of your turn)', turn: 'End of your turn', any: 'End of any turn', opp: 'End of opponent\'s turn / end of round 5', oppt: 'End of opponent\'s turn', end: 'End of the battle' };
 const WHOSE_LABELS = { own: 'Your turn', opp: "Opponent's turn", either: 'Either turn' };
 const TIMING_WORDS = { start: 'Start', end: 'End', during: 'During', any: '' };
 

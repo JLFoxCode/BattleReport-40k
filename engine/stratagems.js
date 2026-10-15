@@ -28,14 +28,20 @@ export function usesOf(state, p, stratId) {
 
 /** Phases are not tracked by the players (opts.phases !== 'manual'): a stratagem is booked under its own phase. */
 export function phasesTracked(state) { return !!(state && state.opts && state.opts.phases === 'manual'); }
-export function useKeyPhase(state, strat) {
+// `phase`: the phase the player used it in (phone, phases untracked) – booked there when the stratagem allows it
+export function useKeyPhase(state, strat, phase) {
   if (phasesTracked(state)) return state.phase;
   const ph = Array.isArray(strat && strat.ph) ? strat.ph : ['any'];
+  if (phase && PHASE_IDS.includes(phase) && (ph.includes(phase) || ph.includes('any'))) return phase;
   return ph.includes('any') ? 'any' : ph[0];
 }
+const PHASE_IDS = WH.PHASES.map(x => x.id);
+/** Whose turn a stratagem is for in a phase: per-phase owner (phw) or the stratagem's own. */
+export const whoseIn = (s, ph) => (s && s.phw && ph && s.phw[ph]) || (s && s.whose) || 'either';
+const whoseOk = (whose, own) => whose === 'either' || (whose === 'own' && own) || (whose === 'opp' && !own);
 
-export function usedThisPhase(state, p, stratId, strat) {
-  const key = strat ? useKeyPhase(state, strat) : state.phase;
+export function usedThisPhase(state, p, stratId, strat, phase) {
+  const key = strat ? useKeyPhase(state, strat, phase) : state.phase;
   return usesOf(state, p, stratId).filter(u => u.round === state.round && u.turn === state.turn && u.phase === key).length;
 }
 
@@ -48,13 +54,14 @@ export function fitsPhase(state, p, strat) {
   const ph = Array.isArray(strat.ph) && strat.ph.length ? strat.ph : ['any'];
   const phaseOk = !phasesTracked(state) || ph.includes('any') || ph.includes(state.phase);
   const own = state.turn === p;
-  const whose = strat.whose || 'either';
-  const whoseOk = whose === 'either' || (whose === 'own' && own) || (whose === 'opp' && !own);
-  return phaseOk && whoseOk;
+  // phases untracked + owners per phase: fits when any phase's owner matches the turn side
+  const sideOk = phasesTracked(state) ? whoseOk(whoseIn(strat, state.phase), own)
+    : strat.phw ? Object.values(strat.phw).some(w => whoseOk(w, own)) : whoseOk(whoseIn(strat, null), own);
+  return phaseOk && sideOk;
 }
 
 /** Verfügbarkeitsprüfung → { ok, reason, cost }. cost optional (Popup-Kosten, auch 0). */
-export function stratCheck(state, p, strat, cost, unitId) {
+export function stratCheck(state, p, strat, cost, unitId, phase) {
   const c = cost == null ? Number(strat.cost) || 0 : Number(cost);
   const res = r => ({ ok: false, reason: r, cost: c });
   if (!strat) return res('Unknown Stratagem');
@@ -67,15 +74,20 @@ export function stratCheck(state, p, strat, cost, unitId) {
     return res('Only in: ' + names.join(', '));
   }
   const own = state.turn === p;
-  const whose = strat.whose || 'either';
-  if (whose === 'own' && !own) return res('Only in your own turn');
-  if (whose === 'opp' && own) return res('Only in your opponent\'s turn');
+  if (!phasesTracked(state) && !phase && strat.phw) {
+    // no phase known: available when the owner of any of its phases matches the turn side
+    if (!Object.values(strat.phw).some(w => whoseOk(w, own))) return res(own ? 'Only in your opponent\'s turn' : 'Only in your own turn');
+  } else {
+    const whose = whoseIn(strat, phasesTracked(state) ? state.phase : phase);
+    if (whose === 'own' && !own) return res('Only in your own turn');
+    if (whose === 'opp' && own) return res('Only in your opponent\'s turn');
+  }
   if (strat.notRound1 && state.round === 1) return res('Not in battle round 1');
   if (strat.once && usesOf(state, p, strat.id).length > 0) return res('Once per battle – already used');
   const lock = (state.opts && state.opts.stratLock) || 'phase';
   if (lock === 'round') {
     if (usedThisRound(state, p, strat.id) > 0) return res('Already used this battle round (house rule)');
-  } else if (usedThisPhase(state, p, strat.id, strat) > 0) return res('Already used this phase');
+  } else if (usedThisPhase(state, p, strat.id, strat, phase) > 0) return res('Already used this phase');
   if (c < 0) return res('Invalid cost');
   if ((pl.cp || 0) < c) return res('Not enough CP (' + (pl.cp || 0) + '/' + c + ')');
   if (unitId) {
@@ -84,7 +96,7 @@ export function stratCheck(state, p, strat, cost, unitId) {
     if (!unit) return res('Unit not found');
     if (owner === p && unit.status === 'shocked') return res('Battle-shocked units cannot be targeted by your own Stratagems');
     if (unit.status === 'destroyed') return res('Unit is destroyed');
-    const targeted = (state.stratUses || []).some(u => u.player === p && u.unitId === unitId && u.round === state.round && u.turn === state.turn && u.phase === useKeyPhase(state, strat));
+    const targeted = (state.stratUses || []).some(u => u.player === p && u.unitId === unitId && u.round === state.round && u.turn === state.turn && u.phase === useKeyPhase(state, strat, phase));
     if (targeted) return res('This unit was already targeted by a Stratagem this phase');
   }
   return { ok: true, reason: '', cost: c };

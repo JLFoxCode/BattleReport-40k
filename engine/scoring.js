@@ -3,7 +3,9 @@
  * (active, control, counts, territory, zones, nml). */
 import { WH } from '../data/rules.js';
 
-export const CAPS = { primaryRound: 15, primaryBattle: 45, secRound: 15, secBattle: 45, fixedCard: 20, total: 90 };
+// Mission Deck 'Determine Victor': Primary 45 + Secondary 45 + Battle Ready army 10 = 100 VP
+export const CAPS = { primaryRound: 15, primaryBattle: 45, secRound: 15, secBattle: 45, fixedCard: 20, battleReady: 10, total: 100 };
+export const BATTLE_READY = { card: 'battle-ready', name: 'Battle Ready', text: 'Each player scores 10VP if their army is painted to a Battle Ready standard.' };
 export const WHEN_MOMENTS = ['cmd', 'turn', 'end'];
 
 /** Fortlaufende Zugnummer (1 = erster Zug der Runde 1); 0 vor Schlachtbeginn. */
@@ -40,6 +42,7 @@ export function condMatches(c, state, p, when) {
     case 'turn': return when === 'turn' && isActive;
     case 'any': return when === 'turn';
     case 'opp': return when === 'turn' && (!isActive || (round === 5 && state.turn !== first));
+    case 'oppt': return when === 'turn' && !isActive;
     case 'end': return when === 'end';
     default: return false;
   }
@@ -201,6 +204,10 @@ export function checkpointItems(state, base, p, when) {
       items.push({ src: entry.src, card: entry.card, name: entry.def.name, ci: c.ci, vp: open, suggest: open, already, auto: !!c.auto, text: c.text, k: c.k, count: c.count, choice: c.choice, max: c.max, sub: c.sub });
     }
   }
+  // end of the battle: 10 VP for a Battle Ready army (the players decide – never suggested)
+  if (when === 'end' && !(state.scores || []).some(s => s.player === p && s.src === 'bonus' && s.card === BATTLE_READY.card)) {
+    items.push({ src: 'bonus', card: BATTLE_READY.card, name: BATTLE_READY.name, ci: null, vp: 0, suggest: 0, already: 0, auto: false, text: BATTLE_READY.text, unit: CAPS.battleReady, max: CAPS.battleReady });
+  }
   return items;
 }
 
@@ -238,6 +245,9 @@ export function applyCaps(state, p, entry) {
       const used = u.card(entry.card);
       if (used + vp > CAPS.fixedCard) { vp = Math.max(0, CAPS.fixedCard - used); reasons.push('Fixed Mission card max. ' + CAPS.fixedCard + ' VP'); }
     }
+  } else if (entry.src === 'bonus' && entry.card === BATTLE_READY.card) {
+    const used = (state.scores || []).filter(s => s.player === p && s.src === 'bonus' && s.card === BATTLE_READY.card).reduce((a, s) => a + s.vp, 0);
+    if (used + vp > CAPS.battleReady) { vp = Math.max(0, CAPS.battleReady - used); reasons.push('Battle Ready max. ' + CAPS.battleReady + ' VP'); }
   }
   return { vp, clamped: vp !== orig, reason: reasons.join(', ') };
 }

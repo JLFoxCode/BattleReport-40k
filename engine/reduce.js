@@ -30,6 +30,8 @@ const dpLimitOf = s => (s.opts.dp != null ? num(s.opts.dp, 3) : DP_LIMIT[s.opts.
 const STATUSES = ['ok', 'shocked', 'destroyed'];
 const RESERVES = ['none', 'strategic', 'deepstrike', 'transport'];
 const SIZES = ['strike', 'incursion'];
+// points limit by game size (core 25.03) – switching the size moves a default limit along
+const SIZE_POINTS = { strike: 2000, incursion: 1000 };
 const LOCKS = ['phase', 'round'];
 
 const fail = msg => { throw new Error(msg); };
@@ -233,7 +235,7 @@ function addScore(s, action, { player, src, card, ci, vp, when, auto }) {
       v = capped.vp;
     }
   }
-  const cardName = src === 'primary' ? ((WH.PRIMARY[card] || {}).name || card) : src === 'secondary' ? ((WH.SECONDARY[card] || {}).name || card) : (card === 'modifier' ? 'Modifier' : 'Bonus');
+  const cardName = src === 'primary' ? ((WH.PRIMARY[card] || {}).name || card) : src === 'secondary' ? ((WH.SECONDARY[card] || {}).name || card) : (card === 'modifier' ? 'Modifier' : card === 'battle-ready' ? 'Battle Ready' : 'Bonus');
   const entry = { id: nid(s, 's'), player: p, round: s.round, turn: s.turn, when: when || 'manual', src, card: card || null, ci: ci == null ? null : ci, vp: v, auto: !!auto };
   if (v !== 0) s.scores.push(entry);
   recalcVp(s);
@@ -277,7 +279,8 @@ const CHAR_RE = /^Char\d+\s*:\s*/i;
 const UNIT_SUFFIX_RE = /^(.*?[\)\]])\s*(?:\[\s*\+?\d+\s*(?:pts?|points?|punkte|pkt)\.?\s*\])?\s*(?::\s*(.+))?$/i;
 const ENH_RE = /^(?:[•\-\*◦○]\s*)?Enhancements?\s*:\s*(.+?)\s*(?:[\(\[]\s*\+?\s*\d[\d ,.]*\s*(?:pts?|points?|punkte|pkt|p)\.?\s*[\)\]])?\s*$/i;
 const WARLORD_RE = /^(?:[•\-\*◦○]\s*)?Warlord\s*$/i;
-const LEAD_RE = /^(?:[•\-\*◦○]\s*)?(Leading|Attached to)\s+(.+?)\s*(?:\[\d+\])?\s*$/i;
+// "[n]" = the n-th unit of that name in the list (two same-named bodyguard units stay apart)
+const LEAD_RE = /^(?:[•\-\*◦○]\s*)?(Leading|Attached to)\s+(.+?)\s*(?:\[(\d+)\])?\s*$/i;
 // New Recruit "ATTACHED UNITS" block: "Attached unit 1" = one group; in it the leader(s) ("• Attached as: Leader (Character)")
 // and the led unit ("• Attached as: Bodyguard")
 const ATTACHED_HDR_RE = /^ATTACHED UNITS?\s*:?\s*$/i;
@@ -333,7 +336,7 @@ export function parseArmyText(text) {
     if (em) { if (cur) cur.enhancements.push(em[1].trim()); continue; }
     if (WARLORD_RE.test(t)) { if (cur) cur.warlord = true; continue; }
     const lm = LEAD_RE.exec(t);
-    if (lm) { if (cur) cur[/^lead/i.test(lm[1]) ? 'leading' : 'attachedTo'] = lm[2].trim(); continue; }
+    if (lm) { if (cur) { const k = /^lead/i.test(lm[1]) ? 'leading' : 'attachedTo'; cur[k] = lm[2].trim(); cur[k + 'Nth'] = lm[3] ? num(lm[3], 0) : 0; } continue; }
     const noChar = t.replace(CHAR_RE, '');
     const sm = UNIT_SUFFIX_RE.exec(noChar);
     const um = UNIT_RE.exec(sm ? sm[1] : noChar);
@@ -410,6 +413,7 @@ export function parseArmyText(text) {
     return {
       name: u.name, models, modelsStart: models, points: u.points, oc: 1, move: 6, wounds: 1, keywords: kw, character: isChar, r: radiusFor(models),
       wargear: mergeGear(gear), enhancements: [...new Set(u.enhancements)], warlord: !!u.warlord, leading: u.leading, attachedTo: u.attachedTo,
+      leadingNth: u.leadingNth || 0, attachedToNth: u.attachedToNth || 0,
       attachGroup: u.attachGroup || 0, attachRole: u.attachRole || null,
       modelLines: u.items.filter(i => i.count > 0 && i.name).map(i => ({ count: i.count, name: i.name }))   // army builder import: model types
     };
@@ -436,6 +440,7 @@ H['opts.set'] = (s, a) => {
   if (k === 'phases' && !['off', 'manual'].includes(v)) fail('Invalid phases option');
   if (k === 'dp' && v != null) { v = Math.floor(num(v, NaN)); if (!(v >= 0 && v <= 9)) fail('Invalid Detachment Points'); }
   if (k === 'points') { v = Math.floor(num(v, NaN)); if (!Number.isFinite(v) || v <= 0) fail('Invalid points value'); }
+  if (k === 'size' && v !== s.opts.size && s.opts.points === SIZE_POINTS[s.opts.size]) s.opts.points = SIZE_POINTS[v];
   s.opts[k] = v;
   log(s, a, 'Option ' + k + ' = ' + String(v));
 };
@@ -460,8 +465,8 @@ H['player.army'] = (s, a) => {
   const dets = Array.isArray(a.detachments) ? a.detachments.filter(Boolean) : [];
   const defs = dets.map(id => { const d = fac ? detachmentById(fac.id, id) : null; if (!d) fail('Unknown Detachment: ' + id); return d; });
   const dp = defs.reduce((x, d) => x + num(d.dp, 0), 0);
-  // Incursion: a 3-DP detachment may be taken (the limit becomes 3) – as in the data's army roster
-  const limit = s.opts.dp == null && s.opts.size === 'incursion' && defs.some(d => num(d.dp, 0) >= 3) ? Math.max(3, dpLimitOf(s)) : dpLimitOf(s);
+  // Incursion: a 3-DP detachment may be taken as the only detachment (core 25.04: the limit becomes 3)
+  const limit = s.opts.dp == null && s.opts.size === 'incursion' && defs.length === 1 && num(defs[0].dp, 0) >= 3 ? Math.max(3, dpLimitOf(s)) : dpLimitOf(s);
   if (dp > limit) fail('Too many Detachment Points: ' + dp + ' > ' + limit);
   pl.faction = fac ? fac.id : null;
   pl.detachments = defs.map(d => d.id);
@@ -512,9 +517,10 @@ H['army.import'] = (s, a) => {
   // Also allowed after the setup (player phone "Add army list") – the list only feeds datasheets and "Affects"
   if (s.stage === 'over') fail('The battle is over');
   const parsed = parseArmyText(a.text);
-  // from the army builder: the units' keywords as the data has them for this list (in list order, matched by name)
+  const nm = x => String(x || '').normalize('NFD').replace(/\p{M}/gu, '').toLowerCase().replace(/[^a-z0-9]+/g, '');
+  // from the army builder / the datasheets (resolved by the importing device): the units' keywords and their datasheet
+  // values OC / M / W (in list order, matched by name)
   if (Array.isArray(a.keywords)) {
-    const nm = x => String(x || '').normalize('NFD').replace(/\p{M}/gu, '').toLowerCase().replace(/[^a-z0-9]+/g, '');
     let at = 0;
     for (const u of parsed) {
       const i = a.keywords.findIndex((k, j) => j >= at && k && nm(k.name) === nm(u.name));
@@ -523,6 +529,8 @@ H['army.import'] = (s, a) => {
       const kw = (Array.isArray(a.keywords[i].keywords) ? a.keywords[i].keywords : []).filter(k => typeof k === 'string' && k.length < 60).slice(0, 40);
       u.keywords = [...new Set([...(u.keywords || []), ...kw.map(k => k.toUpperCase())])];
       if (u.keywords.includes('CHARACTER')) u.character = true;
+      for (const k of ['oc', 'move', 'wounds']) { const v = a.keywords[i][k]; if (typeof v === 'number' && Number.isFinite(v) && v >= 0 && v < 100) u[k] = v; }
+      u.support = a.keywords[i].support === true;
       // profile changes of the list (enhancements, wargear: S / A / AP / D, InSv …) for the datasheets – plain data, size-capped
       const mods = a.keywords[i].mods;
       if (mods && typeof mods === 'object' && JSON.stringify(mods).length < 20000) u.mods = JSON.parse(JSON.stringify(mods));
@@ -536,6 +544,19 @@ H['army.import'] = (s, a) => {
     if (bi < 0) continue;
     parsed.forEach((u, i) => { if (u.attachGroup === g && u.attachRole === 'leader') { added[i].leading = added[bi].id; added[i].attachedTo = null; } });
   }
+  // "Leading X[n]": the n-th unit named X of this list; without [n] the first one no other leader of the list leads yet
+  // (each bodyguard unit has one leader unit, plus one SUPPORT unit – core 24.22) – linked by unit id, so same-named
+  // bodyguard units stay apart
+  const ledBy = new Set();
+  const order = parsed.map((u, i) => i).sort((x, y) => (parsed[y].leadingNth ? 1 : 0) - (parsed[x].leadingNth ? 1 : 0));
+  order.forEach(i => {
+    const u = parsed[i];
+    if (!u.leading || u.attachGroup) return;
+    const same = added.filter(x => x !== added[i] && nm(x.name) === nm(u.leading));
+    const role = (u.support ? 's:' : 'l:');
+    const t = u.leadingNth ? same[u.leadingNth - 1] : (same.find(x => !ledBy.has(role + x.id)) || same[0]);
+    if (t) { added[i].leading = t.id; ledBy.add(role + t.id); }
+  });
   const pts = added.reduce((x, u) => x + u.points, 0);
   log(s, a, pl.name + ': ' + added.length + ' unit(s) imported (' + pts + ' points)' + (added.length ? '' : ' – no units recognized'), a.player, { units: added.map(u => u.id) });
 };
@@ -742,6 +763,9 @@ H['phase.next'] = (s, a) => {
       finishBattle(s, a);
       return;
     }
+    // end of the turn: the 1CP for discarding Tactical cards in this turn
+    const asec = s.players[active].secondaries;
+    if (asec.cpDiscardDue === s.round + ':' + s.turn) { s.players[active].cp += 1; asec.cpDiscardDue = null; log(s, a, pName(s, active) + ': +1 CP for discarding at the end of the turn (now ' + s.players[active].cp + ')', active); }
     // Zugwechsel
     const nextTurn = other;
     if (s.turn !== first) s.round += 1;
@@ -792,10 +816,11 @@ H['strat.use'] = (s, a) => {
   const pl = pIdx(s, a.player);
   const strat = stratById(s, a.player, a.stratId);
   if (!strat) fail('Unknown Stratagem');
-  const chk = stratCheck(s, a.player, strat, a.cost == null ? null : num(a.cost, NaN), a.unitId || null);
+  const phase = typeof a.phase === 'string' ? a.phase : null;   // the phone's phase (phases not tracked)
+  const chk = stratCheck(s, a.player, strat, a.cost == null ? null : num(a.cost, NaN), a.unitId || null, phase);
   if (!chk.ok) fail(chk.reason);
   pl.cp -= chk.cost;
-  const use = { id: nid(s, 'x'), player: a.player, stratId: strat.id, stratName: strat.name, round: s.round, turn: s.turn, phase: useKeyPhase(s, strat), cost: chk.cost, unitId: a.unitId || null };
+  const use = { id: nid(s, 'x'), player: a.player, stratId: strat.id, stratName: strat.name, round: s.round, turn: s.turn, phase: useKeyPhase(s, strat, phase), cost: chk.cost, unitId: a.unitId || null };
   s.stratUses.push(use);
   let uName = '';
   if (a.unitId) { const owner = s.players.find(q => q.units.some(u => u.id === a.unitId)); const u = owner && owner.units.find(x => x.id === a.unitId); if (u) uName = ' on “' + u.name + '”'; }
@@ -855,6 +880,8 @@ H['sec.discard'] = (s, a) => {
   }
   if (reason === 'redraw') {
     if (sec.redrawUsed) fail('Redraw has already been used once this battle');
+    // Mission Deck: "(Once per battle) At the end of your Command phase, you can spend 1CP to discard … and draw one new"
+    if (s.stage !== 'battle' || s.turn !== a.player || s.phase !== 'command') fail('Discard and redraw only at the end of your Command phase');
     if (pl.cp < 1) fail('Not enough CP (1 needed)');
     pl.cp -= 1;
     sec.redrawUsed = true;
@@ -867,7 +894,12 @@ H['sec.discard'] = (s, a) => {
   const tkey = s.round + ':' + s.turn;
   let cpTxt = '';
   if (s.turn !== a.player) cpTxt = ' (no CP – not your turn)';
-  else if (sec.cpDiscardTurn !== tkey) { sec.cpDiscardTurn = tkey; pl.cp += 1; cpTxt = ' (+1 CP, now ' + pl.cp + ')'; }
+  else if (sec.cpDiscardTurn !== tkey) {
+    sec.cpDiscardTurn = tkey;
+    // the 1CP is gained at the end of your turn (Mission Deck) – not spendable in the same turn
+    if (s.phase === 'end') { pl.cp += 1; cpTxt = ' (+1 CP, now ' + pl.cp + ')'; }
+    else { sec.cpDiscardDue = tkey; cpTxt = ' (+1 CP at the end of the turn)'; }
+  }
   log(s, a, pl.name + ': “' + name + '” discarded at end of turn' + cpTxt, a.player, { card: a.card, reason });
 };
 

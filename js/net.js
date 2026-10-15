@@ -167,8 +167,9 @@ export function createNet(code, opts = {}) {
       if (r && r.state) pushState(r.state);
       return r ? r.state : null;
     },
-    async undo() {
-      const r = await request('POST', `${base}/undo`);
+    async undo(by) {
+      // by = the player whose phone asks: the server only undoes that player's own last action (the scoreboard sends none)
+      const r = await request('POST', `${base}/undo`, typeof by === 'number' ? { by } : undefined);
       if (r && r.state) pushState(r.state);
       return r ? r.state : null;
     },
