@@ -14,6 +14,7 @@ import { leaderTargets } from './player-tabs.js';
 import { loadOrig, origDetachment, origDetachmentRule, origEnhancements } from '../data/orig.js';
 import { kwList, kwify } from './keywords.js';
 import { ruleBoxes, roleSections, roleOf } from './army-book.js';
+import { profileChanges } from '../builder/profiles.js';
 
 const dsCache = new Map();   // faction id → datasheet package (or 'loading')
 
@@ -722,7 +723,9 @@ function block(V, pw, nodes, prefix, depth, compact, caps = []) {
         const same = depth === 0 && pw.node && lim.name === pw.node.name;   // "Detachment" inside "Detachment": one heading is enough
         const weaponish = kids.length > 1 && kids.some(x => weaponsOf(x).length || effectsOf(x).length);
         const cmp = weaponish ? `<button type="button" class="arm-cmp" data-action="arm-cmp" data-p="${esc(pid)}" data-g="${esc(tok)}">Compare</button>` : '';
-        const headTxt = `${same ? '' : esc(lim.name)}${lim.min ? '' : ' <span class="muted xs">optional</span>'}${eachTag}`;
+        // several of the group, but each option only once ("up to two drones, but no duplicates")
+        const noDup = multi && lim.max > 1 ? ` <span class="muted xs">· up to ${lim.max}, max 1 of each</span>` : '';
+        const headTxt = `${same ? '' : esc(lim.name)}${lim.min ? '' : ' <span class="muted xs">optional</span>'}${noDup}${eachTag}`;
         html += `<div class="arm-grp">${same && lim.min && !cmp ? '' : `<div class="arm-gh">${headTxt}${cmp}</div>`}<div class="arm-choices">${kids.map((x, xi) => {
           const t = tok + '>' + x.token;
           const on = inGroup.find(c => c.s.t === t);
@@ -977,11 +980,15 @@ function dsHtml(V, w, play = false) {
   const ds = matchUnit(pack.units || [], name);
   if (!ds) return '';
   const dets = summarize(ed.sys, ed.army).detachments.map(normName);
+  // the attached unit as one group (leaders + bodyguard): "group" profile modifiers reach all of them
+  const groupOf = x => { const body = x.s.lead ? V.byId.get(x.s.lead) : x; return body ? [body, ...V.force.ch.filter(y => y.s.lead === body.s.id)] : [x]; };
   const member = x => {
     const u = summarize(ed.sys, { ...ed.army, sel: [x.s] }).units[0];
     if (!u) return null;
     const wargear = [...u.gear.map(g => ({ name: g.name, count: g.n })), ...u.stacks.flatMap(m => m.gear.map(g => ({ name: g.name, count: g.n * m.n })))];
-    return { id: x.s.id, name: u.name, models: u.models, points: u.pts, wargear, warlord: u.warlord, enhancements: u.enhancements.map(e => e.name) };
+    let mods = null;
+    try { mods = profileChanges(V, x, groupOf(x)); } catch (e) { console.warn('profiles', e); }
+    return { id: x.s.id, name: u.name, models: u.models, points: u.pts, wargear, warlord: u.warlord, enhancements: u.enhancements.map(e => e.name), mods };
   };
   const u = member(w);
   // leaders attached to this unit: one group datasheet, every leader's buffs in its own colour
@@ -1134,7 +1141,40 @@ function defaultCost(n) {
 
 /* ───────── Changes ───────── */
 /** Configuration choices with exactly one possible option (e.g. the Force Disposition of a detachment) are taken. */
+/** An enhancement that changes one weapon ("Plasma Accelerator Rifle") needs its upgrade on that weapon ("… upgrade") –
+ *  set by itself when exactly one weapon of the unit can take it; otherwise the player chooses (the data warns). */
+function pickEnhancementUpgrades(sys, r) {
+  for (let i = 0; i < 6; i++) {
+    const V = E.view(sys, r);
+    let added = false;
+    for (const u of V.force.ch.filter(isUnitSel)) {
+      const all = (function f(x, o = []) { for (const c of x.ch) { o.push(c); f(c, o); } return o; })(u);
+      const enh = all.filter(c => c.node && c.groups.some(g => /Enhancement/i.test(g.name)) && !/upgrade$/i.test(c.node.name)).map(c => c.node.name);
+      for (const en of enh) {
+        const want = (en + ' upgrade').toLowerCase();
+        if (all.some(c => c.node && c.node.name.toLowerCase() === want)) continue;
+        const spots = [];
+        for (const w of [u, ...all]) {
+          if (!w.node) continue;
+          (function f(n, pre, d) {
+            if (d > 3) return;
+            for (const k of sys.children(n)) {
+              const t = pre ? pre + '>' + k.token : k.token;
+              if (k.group) { if (!/^(Crusade|Weapon Modifications|Boarding)/i.test(k.name)) f(k, t, d + 1); }
+              else if (k.name.toLowerCase() === want && !E.limits(V, k, null, w).hidden) spots.push({ w, t });
+            }
+          })(w.node, '', 0);
+        }
+        if (spots.length === 1) { r = E.addSel(sys, r, spots[0].w.s.id, spots[0].t); added = true; break; }
+      }
+      if (added) break;
+    }
+    if (!added) break;
+  }
+  return r;
+}
 function autoPick(sys, r) {
+  r = pickEnhancementUpgrades(sys, r);
   // a configuration choice that is no longer available (e.g. the Force Disposition after a detachment change) is removed
   for (let i = 0; i < 8; i++) {
     const V = E.view(sys, r);
@@ -1294,7 +1334,7 @@ export async function armyForGame(id) {
   const sys = await systemFor(a.catalogueId);
   const s = summarize(sys, a);
   return { text: armyText(sys, a, { faction: a.catalogueLabel }), faction: a.faction, detachments: s.detachments, name: a.name, limit: a.limit,
-    keywords: s.units.map(u => ({ name: u.name, keywords: u.keywords, factionKeywords: u.factionKeywords })) };
+    keywords: s.units.map(u => ({ name: u.name, keywords: u.keywords, factionKeywords: u.factionKeywords, mods: u.mods })) };
 }
 
 /** What autoSync / autoPick changed: ['Hesyr: Concussion gauntlet removed', …] */

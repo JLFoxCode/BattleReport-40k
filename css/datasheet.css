@@ -93,3 +93,11 @@
 .book-rules .ds-card > summary::after, .book-units .ds-card > summary::after { content: '▾'; position: absolute; right: 12px; top: 50%; transform: translateY(-50%); font-size: 1.1rem; color: var(--muted); pointer-events: none; }
 .book-rules .ds-card[open] > summary::after, .book-units .ds-card[open] > summary::after { content: '▴'; top: 22px; }
 .book-units .ds-card > summary .ds-head { padding-right: 30px; }
+
+/* profile changes from enhancements / wargear / abilities (js/builder/profiles.js) */
+.ds-weapons td.ds-mod, .ds-stat.ds-mod .ds-stat-v { color: var(--ok); font-weight: 800; }
+.ds-stat.ds-mod { border-color: var(--ok); }
+.ds-weapons td.ds-mod { text-decoration: underline dotted; text-underline-offset: 3px; }
+.ds-mod-src { display: inline-block; margin: 2px 4px 0 0; padding: 0 6px; border-radius: 999px; font-size: .7rem; font-weight: 700; color: var(--ok); background: var(--ok-soft); }
+.ds-mod-notes { margin: -2px 0 6px; }
+.ds-mod-kw .kw-tag, .ds-mod-kw { color: var(--ok); }

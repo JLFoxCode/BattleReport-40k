@@ -152,7 +152,9 @@ function normalizeUnit(s, raw, p, keepId) {
     warlord: !!u.warlord,
     // Leader attachment from the list import (names as written in the export; resolved to units by the UI)
     leading: u.leading ? String(u.leading) : null,
-    attachedTo: u.attachedTo ? String(u.attachedTo) : null
+    attachedTo: u.attachedTo ? String(u.attachedTo) : null,
+    // profile changes from the army builder (enhancements, wargear) – shown on the datasheets
+    mods: u.mods && typeof u.mods === 'object' ? u.mods : null
   };
 }
 
@@ -521,6 +523,9 @@ H['army.import'] = (s, a) => {
       const kw = (Array.isArray(a.keywords[i].keywords) ? a.keywords[i].keywords : []).filter(k => typeof k === 'string' && k.length < 60).slice(0, 40);
       u.keywords = [...new Set([...(u.keywords || []), ...kw.map(k => k.toUpperCase())])];
       if (u.keywords.includes('CHARACTER')) u.character = true;
+      // profile changes of the list (enhancements, wargear: S / A / AP / D, InSv …) for the datasheets – plain data, size-capped
+      const mods = a.keywords[i].mods;
+      if (mods && typeof mods === 'object' && JSON.stringify(mods).length < 20000) u.mods = JSON.parse(JSON.stringify(mods));
     }
   }
   const added = parsed.map(u => { const n = normalizeUnit(s, u, a.player); pl.units.push(n); return n; });

@@ -193,7 +193,8 @@ Object.assign(PHRASES, {
   'Each time': 'Jedes Mal', 'not attached': 'nicht angeschlossen', 'Tap to take one more': 'Tippen für noch eins', 'Tap to add one more': 'Tippen für noch eins',
   'One leader is': 'Ein Leader ist', 'leaders are': 'Leaders sind', 'not attached to a unit yet:': 'noch keiner Einheit angeschlossen:', '1 leader is': '1 Leader ist'
 });
-PATTERNS.push(['^\\+ Add (.+?)\\s*$', (m, n) => '+ ' + n + ' hinzufügen'], ['^replaces one (.+)$', (m, n) => 'ersetzt: ' + n]);
+PATTERNS.push(['^\\+ Add (.+?)\\s*$', (m, n) => '+ ' + n + ' hinzufügen'], ['^replaces one (.+)$', (m, n) => 'ersetzt: ' + n],
+  ['^· up to (\\d+), max 1 of each$', (m, n) => '· bis zu ' + n + ', je höchstens 1']);
 PATTERNS.push(
   ['^Draw (\\d+) cards?$', (m, n) => n + ' Karten ziehen'], ['^Opponent: (.+) – active effects$', (m, n) => 'Gegner: ' + n + ' – aktive Effekte'],
   ['(?<![A-Za-z])Round (\\d+)(?![/\\d])', (m, n) => 'Runde ' + n], ['(?<![A-Za-z])(\\d+) points(?![A-Za-z])', (m, n) => n + ' Punkte'],

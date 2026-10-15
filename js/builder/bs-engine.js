@@ -263,9 +263,15 @@ function scopeObj(V, scope, self, parent) {
     case 'primary-catalogue': return { kind: 'catalogue', ids: new Set([V.catalogueId]) };
     case 'root-entry': { let x = sel; while (x && x.parent && x.parent.kind === 'sel') x = x.parent; return x && x.kind === 'sel' ? x : V.force; }
     case 'ancestor': return parent || V.force;
+    case 'model-or-unit': {   // the nearest model or unit (New Recruit)
+      let x = sel; while (x && x.kind === 'sel' && !(x.node && (x.node.type === 'model' || x.node.type === 'unit'))) x = x.parent;
+      return x && x.kind === 'sel' ? x : null;
+    }
     case 'unit': case 'unit-self': case 'model': case 'upgrade': {
       const ty = scope === 'unit-self' ? 'unit' : scope;
-      let x = sel; while (x && x.kind === 'sel' && !(x.node && x.node.type === ty)) x = x.parent;
+      // "upgrade": the upgrade the entry sits in (a weapon upgrade's conditions are about its weapon, not itself)
+      let x = scope === 'upgrade' && self ? self.parent : sel;
+      while (x && x.kind === 'sel' && !(x.node && x.node.type === ty)) x = x.parent;
       return x && x.kind === 'sel' ? x : null;
     }
     default: {
@@ -672,6 +678,9 @@ export function splitSel(roster, id) {
 }
 
 export { PTS, DP, findSel };
+/** For js/builder/profiles.js: the modifiers of a selection whose conditions hold, and whether a selection matches an id/category. */
+export const applyModsOf = (V, w, fn) => applyMods(V, w.node, w, fn);
+export const matchesSel = (V, w, id) => matches(V, w, id);
 
 /* Keeps a roster consistent with the data after a change (as New Recruit does):
  *  - a selection that is no longer available (hidden or max 0 by its modifiers, e.g. the Hesyr's gauntlet once he takes a hammer,

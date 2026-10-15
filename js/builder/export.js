@@ -1,6 +1,7 @@
 /* Army list → New Recruit text (WTC layout, the format engine/reduce.js parseArmyText reads) + the game's faction /
  * detachment choice. Used to take a saved list into a game and to copy it as text. */
 import { view, totalCost, effective, categoriesOfSel } from './bs-engine.js';
+import { profileChanges } from './profiles.js';
 
 const CONFIG = /^(Battle Size|Detachment|Force Disposition|Show\/Hide Options|Show Legends|Order of Battle|Show Unaligned|Show Crucible)/i;
 const ENH_GROUP = /Enhancement/i;
@@ -46,6 +47,8 @@ export function summarize(sys, roster) {
     const n = w.node.type === 'model' ? w.n : Math.max(1, stacks.reduce((x, [, k]) => x + k, 0));
     units.push({
       id: w.s.id, name: nameOf(V, w), pts: totalCost(V, w), leads: w.s.lead && V.byId.get(w.s.lead) ? nameOf(V, V.byId.get(w.s.lead)) : null, models: n, character: kw.includes('CHARACTER'), keywords: [...new Set(kw)], factionKeywords: [...new Set(fkw)],
+      // profile changes (enhancements, wargear) for the datasheets in the game – the attached unit evaluated as one
+      mods: (() => { try { const body = w.s.lead ? V.byId.get(w.s.lead) : w; return profileChanges(V, w, body ? [body, ...V.force.ch.filter(y => y.s.lead === body.s.id)] : [w]); } catch { return null; } })(),
       warlord: w.ch.some(c => c.node && /^Warlord$/i.test(c.node.name)),
       enhancements: w.ch.filter(isEnh).map(c => ({ name: nameOf(V, c), pts: totalCost(V, c) })),
       gear: gearOf(V, w), stacks: stacks.map(([m, k]) => ({ name: nameOf(V, m), n: k, gear: gearOf(V, m) }))
