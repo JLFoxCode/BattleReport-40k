@@ -9,7 +9,7 @@
  */
 export const CORE_URL = 'https://wahapedia.ru/wh40k11ed/the-rules/core-rules/';
 const KEY = 'br40k.coreOrig';
-const V = 1;
+const V = 2;   // 2: dice values of the hit/wound/save tables kept (05.01 …) – older copies are downloaded again
 
 let cache = null;
 export function originals() {
@@ -109,6 +109,9 @@ export function parseCoreRules(pageHtml) {
       if (/^H[1-4]$/.test(tag)) { heading(c); continue; }
       // rule boxes (NORMAL MOVE 09.05, NORMAL FIGHT 12.05, [BLAST] 24.05 …): name + number in one element, kept as printed
       if ((c.classList.contains('str11Name') || c.classList.contains('abName')) && c.querySelector('.h_number')) { boxHeading(c); continue; }
+      // dice faces are empty elements drawn by CSS (<div class="cruD6">): keep their value as a number ("Unmodified 6 CRITICAL HIT", "2+")
+      const die = /(?:^|\s)cruD([1-6])(?:\s|$)/.exec(c.className || '');
+      if (die) { para += ` <b>${die[1]}</b>`; continue; }
       if (tag === 'UL' || tag === 'OL') { closeList(); list = []; walk(c); closeList(); continue; }
       if (tag === 'LI') { flush(); walk(c); flush(); continue; }
       if (tag === 'B' || tag === 'STRONG') { para += '<b>'; walk(c); para += '</b>'; continue; }
@@ -119,5 +122,5 @@ export function parseCoreRules(pageHtml) {
     }
   })(root);
   closeList();
-  return sections.map(s => ({ num: s.num, title: s.title, level: s.level, html: s.parts.join('').replace(/<b>\s*<\/b>|<i>\s*<\/i>/g, '') }));
+  return sections.map(s => ({ num: s.num, title: s.title, level: s.level, html: s.parts.join('').replace(/<b>\s*<\/b>|<i>\s*<\/i>/g, '').replace(/<b>([1-6])<\/b>\s*<b>\+<\/b>/g, '<b>$1+</b>') }));
 }

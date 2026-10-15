@@ -10,6 +10,8 @@ import { WH } from '../../data/rules.js';
 import { FACTIONS } from '../../data/factions/index.js';
 import { esc, btn } from './components.js';
 import { TERMS, EXACT_TERMS } from '../i18n-de.js';
+import { tr } from '../i18n.js';
+import { kwify } from './keywords.js';
 import { datasheetCard } from './datasheet.js';
 import { loadDatasheets } from '../data/datasheets.js';
 import { loadMissionsOrig, loadOrig, origStratagem, origPrimary, origSecondary, origTwist, normKey, normKeyBase } from '../data/orig.js';
@@ -226,9 +228,10 @@ function condList(conds) {
   return `<ul class="rb-conds">${conds.map(c => {
     // staged conditions ("choice"): one VP value per option
     const vp = c.k === 'choice' ? 'VP' : `${c.sub ? '+' : ''}${vpText(c.vp)}${c.k === 'per' ? ' each' : ''}${c.max ? ` (max ${c.max})` : ''}`;
-    const opts = c.k === 'choice' && Array.isArray(c.opts) ? `<ul class="rb-opts">${c.opts.map(o => `<li><b class="rb-vp">${esc(vpText(o.vp))}</b> ${esc(o.t)}</li>`).join('')}</ul>` : '';
+    // the condition texts are mission (rules) text – .rb-ct stays English in the German UI, VP / timing are interface
+    const opts = c.k === 'choice' && Array.isArray(c.opts) ? `<ul class="rb-opts">${c.opts.map(o => `<li><b class="rb-vp">${esc(vpText(o.vp))}</b> <span class="rb-ct">${esc(o.t)}</span></li>`).join('')}</ul>` : '';
     const when = [WH.TIMING_LABELS[c.w] || c.w, c.w === 'end' ? '' : `rounds ${c.r ? c.r.join('–') : '1–5'}`, MODE_LABEL[c.mode] || ''].filter(Boolean).join(' · ');
-    return `<li><b class="rb-vp">${esc(vp)}</b> ${esc(c.t)}${opts}<div class="xs muted">${esc(when)}</div></li>`;
+    return `<li><b class="rb-vp">${esc(vp)}</b> <span class="rb-ct">${esc(c.t)}</span>${opts}<div class="xs muted">${esc(when)}</div></li>`;
   }).join('')}</ul>`;
 }
 function typeBadge(e) {
@@ -241,11 +244,12 @@ function tagChips(tags) {
 
 /** Full (expanded) content of an entry incl. original text where available. */
 function fullHtml(e, toks) {
-  const text = `<div class="rb-text">${hl(e.text, toks)}</div>`;
+  // [KEYWORDS] and section numbers in the app's rule texts are tappable (keyword popup / original section)
+  const text = `<div class="rb-text">${kwify(hl(e.text, toks))}</div>`;
   switch (e.type) {
     case 'core': return text + tagChips(e.tags);
     case 'step': return text;
-    case 'glossary': return e.verbatim ? origBlock(hl(e.text, toks), 'Original text (verbatim)') : text;
+    case 'glossary': return e.verbatim ? origBlock(kwify(hl(e.text, toks)), 'Original text (verbatim)') : text;
     case 'sequence': return origBlock(hl(e.text, toks), 'Original text (verbatim)');
     case 'primary': case 'secondary': case 'twist': {
       ensureMissions();
@@ -282,7 +286,8 @@ function fullHtml(e, toks) {
 
 function rowHtml(e, toks, opts = {}) {
   const open = S.open.has(e.id);
-  const sub = opts.noSub ? '' : (e.sub ? `<div class="rb-sub">${hl(e.sub, toks)}</div>` : '');
+  // faction entries name factions / detachments (stay English); the other subtitles are interface (phase, "Primary mission")
+  const sub = opts.noSub ? '' : (e.sub ? `<div class="rb-sub"${e.fac ? ' data-no-i18n' : ''}>${hl(e.sub, toks)}</div>` : '');
   return `<div class="rb-row${open ? ' open' : ''}" data-rb="toggle" data-id="${esc(e.id)}" role="button" tabindex="0" aria-expanded="${open ? 'true' : 'false'}">
     <div class="rb-row-head">${opts.noType ? '' : typeBadge(e)}<span class="rb-title">${hl(e.title, toks)}</span><span class="rb-caret" aria-hidden="true">${open ? '▴' : '▾'}</span></div>
     ${sub}
@@ -298,12 +303,12 @@ function unitChips() {
   return `<div class="rb-chips">
     <label class="rb-chips-label" for="rb-fac">Search units of:</label>
     <select id="rb-fac" data-rb="facsel" aria-label="Load datasheets of a faction">
-      <option value="">– choose faction –</option>
-      <option value="__all"${FACTIONS.every(f => S.ds.has(f.id)) ? ' disabled' : ''}>All factions (every datasheet)</option>
+      <option value="">${esc(tr('– choose faction –'))}</option>
+      <option value="__all"${FACTIONS.every(f => S.ds.has(f.id)) ? ' disabled' : ''}>${esc(tr('All factions (every datasheet)'))}</option>
       ${FACTIONS.map(f => `<option value="${esc(f.id)}"${S.ds.has(f.id) ? ' disabled' : ''}>${esc(f.name)}${S.ds.has(f.id) ? ' ✓' : ''}</option>`).join('')}
     </select>
-    ${loaded.map(f => `<span class="chip sm on">${esc(f.name)} · ${S.ds.get(f.id).units.length}</span>`).join('')}
-    ${loading.map(f => `<span class="chip sm">${esc(f.name)} …</span>`).join('')}
+    ${loaded.map(f => `<span class="chip sm on" data-no-i18n>${esc(f.name)} · ${S.ds.get(f.id).units.length}</span>`).join('')}
+    ${loading.map(f => `<span class="chip sm" data-no-i18n>${esc(f.name)} …</span>`).join('')}
   </div>`;
 }
 
@@ -361,7 +366,7 @@ function browseHtml() {
     ].join('');
   };
 
-  const facInner = () => `<div class="rb-faclist">${FACTIONS.map(f => `<button class="rb-fac" type="button" data-rb="faction" data-fac="${esc(f.id)}"><span class="rb-fac-name">${esc(f.name)}</span><span class="rb-fac-meta">${f.group ? esc(f.group) + ' · ' : ''}${f.detachments.length} detachment${f.detachments.length === 1 ? '' : 's'}${S.ds.has(f.id) ? ' · units loaded' : ''}</span><span class="rb-caret">›</span></button>`).join('')}</div>`;
+  const facInner = () => `<div class="rb-faclist">${FACTIONS.map(f => `<button class="rb-fac" type="button" data-rb="faction" data-fac="${esc(f.id)}"><span class="rb-fac-name" data-no-i18n>${esc(f.name)}</span><span class="rb-fac-meta">${f.group ? esc(f.group) + ' · ' : ''}${f.detachments.length} detachment${f.detachments.length === 1 ? '' : 's'}${S.ds.has(f.id) ? ' · units loaded' : ''}</span><span class="rb-caret">›</span></button>`).join('')}</div>`;
 
   return [
     section('core', 'Core rules by phase', coreCount, coreInner),
@@ -387,9 +392,9 @@ function factionPage(f) {
   const none = what => `<p class="muted small">${ds ? `No ${what} on file.` : 'Loading rules …'}</p>`;
   const remLabel = r => ({ roundStart: 'Start of battle round', turnStart: 'Start of turn', always: 'Always' }[r.phase] || (WH.PHASES.find(p => p.id === r.phase) || {}).full || r.phase) + (r.whose && r.whose !== 'either' ? ` · ${WH.WHOSE_LABELS[r.whose] || r.whose}` : '');
   return `<div class="rb-facpage">
-    <div class="rb-fachead">${btn({ label: '‹ Factions', kind: 'ghost', small: true, data: { rb: 'back' } })}<h2 class="title rb-factitle">${esc(f.name)}</h2>${f.group ? `<span class="badge">${esc(f.group)}</span>` : ''}</div>
+    <div class="rb-fachead">${btn({ label: '‹ Factions', kind: 'ghost', small: true, data: { rb: 'back' } })}<h2 class="title rb-factitle" data-no-i18n>${esc(f.name)}</h2>${f.group ? `<span class="badge">${esc(f.group)}</span>` : ''}</div>
     ${armies.length ? `<div class="rb-blk"><div class="rb-blk-t">Army rule</div>${armies.map(a => rowHtml(a, [], { noType: true, noSub: true })).join('')}</div>` : none('army rule')}
-    ${res ? `<div class="rb-blk"><div class="rb-blk-t">Resource</div><div class="card flat rb-res"><b>${esc(res.name)}</b>${res.max != null ? ` <span class="muted small">(max ${esc(res.max)})</span>` : ''}${res.text ? `<div class="small rb-text">${esc(res.text)}</div>` : ''}</div></div>` : ''}
+    ${res ? `<div class="rb-blk"><div class="rb-blk-t">Resource</div><div class="card flat rb-res" data-no-i18n><b>${esc(res.name)}</b>${res.max != null ? ` <span class="muted small">(max ${esc(res.max)})</span>` : ''}${res.text ? `<div class="small rb-text">${esc(res.text)}</div>` : ''}</div></div>` : ''}
     ${rem.length ? `<div class="rb-blk"><div class="rb-blk-t">Reminders</div><ul class="rb-rem">${rem.map(r => `<li><span class="rb-rem-ph">${esc(remLabel(r))}</span><div class="rb-text">${esc(r.text)}</div></li>`).join('')}</ul></div>` : ''}
     <div class="rb-blk"><div class="rb-blk-t">Detachments <span class="rb-count">${f.detachments.length}</span></div>
       ${f.detachments.map(d => {
@@ -397,7 +402,7 @@ function factionPage(f) {
         const rule = detRule(d);
         const strats = E.filter(e => e.type === 'strat' && e.fac === f.id && e.det === d.name);
         return `<section class="rb-sec lvl2${open ? ' open' : ''}">
-          <button class="rb-sec-h" type="button" data-rb="det" data-det="${esc(d.id)}" aria-expanded="${open ? 'true' : 'false'}"><span class="rb-sec-t">${esc(d.name)}</span><span class="rb-count">${d.dp ? `${esc(d.dp)} DP · ` : ''}${strats.length} strat${strats.length === 1 ? '' : 's'}</span><span class="rb-caret" aria-hidden="true">${open ? '▴' : '▾'}</span></button>
+          <button class="rb-sec-h" type="button" data-rb="det" data-det="${esc(d.id)}" aria-expanded="${open ? 'true' : 'false'}"><span class="rb-sec-t" data-no-i18n>${esc(d.name)}</span><span class="rb-count">${d.dp ? `${esc(d.dp)} DP · ` : ''}${strats.length} ${strats.length === 1 ? 'Stratagem' : 'Stratagems'}</span><span class="rb-caret" aria-hidden="true">${open ? '▴' : '▾'}</span></button>
           ${open ? `<div class="rb-sec-b">${rule ? rowHtml(rule, [], { noSub: true }) : ds && d.rule ? `<div class="rb-orig-rule"><div class="rb-text" data-no-i18n lang="en">${esc(d.rule).replace(/\n/g, '<br>')}</div></div>` : none('detachment rule')}${strats.length ? rows(strats, [], { noSub: true }) : ''}</div>` : ''}
         </section>`;
       }).join('')}

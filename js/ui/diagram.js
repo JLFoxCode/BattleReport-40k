@@ -24,8 +24,9 @@
  *          (e.g. the re-rolled dice); dice values may be strings like '2→5' for a re-roll (shown as 5, marked)
  *   table: { type: 'table', head: ['', 'T 3', …], rows: [['S 4', '3+', …], …], hl: [[row, col], …], caption }
  *   sheet: { type: 'sheet', name, stats: [['M','6"'], ['T','4'], …], weapons: [{ name, range, A, skill, S, AP, D, abilities }],
- *            keywords, callouts: [{ n: 1, text }], marks: { 'T': 1, 'w0.S': 2 } , caption }
- *          a mock datasheet; marks puts the callout number next to a stat (stat name) or a weapon field (w<index>.<field>)
+ *            abilities: ['DEEP STRIKE', …], keywords, callouts: [{ n: 1, text }], marks: { 'T': 1, 'w0.S': 2 } , caption }
+ *          a mock datasheet; marks puts the callout number next to a stat (stat name), a weapon field (w<index>.<field>),
+ *          an ability (ab<index>), 'name', 'weapon' or 'keywords' – every callout should have its mark on the sheet
  *   compare: { type: 'compare', items: [<diagram>, <diagram>], labels: [{ text, kind: 'ok'|'bad' }] , caption }
  *          two (or three) pictures side by side / stacked on phones, each with a ✓ / ✕ heading
  * Distances in the rules are measured between the closest points of the bases – place models accordingly
@@ -69,7 +70,9 @@ export function diagramSvg(d, lang = 'en') {
   const id = 'dg' + (++uid);
   const W = d.w * S + PAD * 2, H = d.h * S + PAD * 2;
   const out = [];
-  out.push(`<svg class="dg" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${esc(tr(d, 'caption') || 'Rules diagram')}">`);
+  // --dgk: label scale for phones (css/tutorial.css) – a wide board is shrunk more, so its labels grow in board units
+  const k = Math.min(1.8, Math.max(1, W / 300)).toFixed(2);
+  out.push(`<svg class="dg" viewBox="0 0 ${W} ${H}" style="--dgk:${k}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${esc(tr(d, 'caption') || 'Rules diagram')}">`);
   const markers = Object.entries(ARROW).map(([k, a]) => `<marker id="${id}-${k}" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="${a.c}"/></marker>`).join('');
   out.push(`<defs>${markers}<pattern id="${id}-hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="6" stroke="rgba(255,255,255,.12)" stroke-width="2"/></pattern></defs>`);
   out.push(`<rect x="${PAD}" y="${PAD}" width="${L(d.w)}" height="${L(d.h)}" rx="4" class="dg-board"/>`);
@@ -184,7 +187,8 @@ function htmlDiagram(d, tr, lang) {
     const W = ['range', 'A', 'skill', 'S', 'AP', 'D'];
     body = `<div class="dg-sheet"><div class="dg-sheet-name">${esc(d.name || '')}${mk('name')}</div>
       <div class="dg-sheet-stats">${(d.stats || []).map(([k, v]) => `<div><small>${esc(k)}${mk(k)}</small><b>${esc(v)}</b></div>`).join('')}</div>
-      ${(d.weapons || []).length ? `<table class="dg-sheet-w"><thead><tr><th>${esc(tr(d, 'weaponHead') || 'Weapon')}${mk('weapon')}</th><th>Range</th><th>A</th><th>${esc(d.skillHead || 'BS')}</th><th>S</th><th>AP</th><th>D</th></tr></thead><tbody>${d.weapons.map((w, wi) => `<tr><td>${esc(w.name)}${mk('w' + wi + '.name')}${w.abilities ? `<div class="dg-sheet-ab">${esc(w.abilities)}${mk('w' + wi + '.abilities')}</div>` : ''}</td>${W.map(k => `<td>${esc(w[k] == null ? '' : w[k])}${mk('w' + wi + '.' + k)}</td>`).join('')}</tr>`).join('')}</tbody></table>` : ''}
+      ${(d.weapons || []).length ? `<div class="dg-sheet-wwrap"><table class="dg-sheet-w"><thead><tr><th>${esc(tr(d, 'weaponHead') || 'Weapon')}${mk('weapon')}</th><th>Range</th><th>A</th><th>${esc(d.skillHead || 'BS')}</th><th>S</th><th>AP</th><th>D</th></tr></thead><tbody>${d.weapons.map((w, wi) => `<tr><td>${esc(w.name)}${mk('w' + wi + '.name')}${w.abilities ? `<div class="dg-sheet-ab">${esc(w.abilities)}${mk('w' + wi + '.abilities')}</div>` : ''}</td>${W.map(k => `<td>${esc(w[k] == null ? '' : w[k])}${mk('w' + wi + '.' + k)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>` : ''}
+      ${(d.abilities || []).length ? `<div class="dg-sheet-abl"><small>ABILITIES</small>${d.abilities.map((a, i) => `<span>${esc(a)}${mk('ab' + i)}</span>`).join('')}</div>` : ''}
       ${d.keywords ? `<div class="dg-sheet-kw">KEYWORDS: ${esc(d.keywords)}${mk('keywords')}</div>` : ''}</div>
       ${(d.callouts || []).length ? `<ol class="dg-callouts">${d.callouts.map(c => `<li><i class="dg-co">${esc(c.n)}</i>${esc(tr(c, 'text'))}</li>`).join('')}</ol>` : ''}`;
   } else if (d.type === 'compare') {

@@ -41,7 +41,7 @@
 .tut-tips .h { font-weight: 700; font-size: .85rem; color: var(--warn); margin-bottom: 4px; }
 .tut-tips ul { margin: 0; padding-left: 1.1em; line-height: 1.45; font-size: .93rem; }
 .tut-refs { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
-.tut-ref { all: unset; cursor: pointer; font-size: .8rem; padding: 4px 9px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); }
+.tut-ref { all: unset; cursor: pointer; font-size: .8rem; padding: 7px 11px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); }
 .tut-ref:hover, .tut-ref:focus-visible { color: var(--text); border-color: var(--muted); }
 .tut-ref b { color: var(--text); font-weight: 600; }
 .tut-nav { display: flex; gap: 8px; align-items: center; justify-content: space-between; margin-top: 12px; position: sticky; bottom: 0; padding: 8px 0 calc(8px + var(--sa-bottom)); background: linear-gradient(to top, var(--bg) 70%, transparent); }
@@ -59,7 +59,9 @@
 
 /* in-game guide */
 .guide-card { border-left: 3px solid var(--warn); }
-.guide-card .tile-title { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.guide-card .tile-title { display: flex; justify-content: space-between; align-items: center; gap: 8px; min-height: 32px; cursor: pointer; }
+.guide-phases { display: flex; flex-wrap: wrap; gap: 5px; margin: 6px 0 4px; }
+.guide-phases .chip { min-height: 32px; }
 .guide-list { margin: 4px 0 0; padding-left: 1.2em; line-height: 1.45; font-size: .93rem; }
 .guide-list li { margin-bottom: 5px; }
 .guide-list li .tut-ref { margin-left: 4px; padding: 1px 7px; font-size: .72rem; }
@@ -81,7 +83,7 @@
 .dg-dice-n { font-size: .82rem; color: var(--muted); }
 .dg-dice-set { display: flex; flex-wrap: wrap; gap: 5px; }
 .dg-die-wrap { position: relative; display: inline-flex; flex-direction: column; align-items: center; }
-.dg-die-wrap small { font-size: .65rem; color: var(--warn); line-height: 1; margin-top: 1px; }
+.dg-die-wrap small { font-size: .75rem; color: var(--warn); line-height: 1; margin-top: 1px; }
 .dg-die { width: 30px; height: 30px; }
 .dg-die rect { fill: var(--panel2); stroke: var(--muted); stroke-width: 4; }
 .dg-die circle { fill: var(--text); }
@@ -101,8 +103,13 @@
 .dg-sheet-stats > div { display: grid; text-align: center; flex: 1 0 30px; max-width: 48px; border: 1px solid var(--line); border-radius: 6px; padding: 2px 2px; }
 .dg-sheet-stats small { color: var(--muted); font-size: .7rem; font-weight: 700; }
 .dg-sheet-stats b { font-size: 1rem; }
+.dg-sheet-wwrap { overflow-x: auto; }
 .dg-sheet-w { width: 100%; border-collapse: collapse; }
-.dg-sheet-w th, .dg-sheet-w td { padding: 4px 5px; border-top: 1px solid var(--line); text-align: center; white-space: nowrap; }
+.dg-sheet-w th, .dg-sheet-w td { padding: 4px 3px; border-top: 1px solid var(--line); text-align: center; white-space: nowrap; }
+/* callout numbers in the value cells sit under the value – side by side they would push the D column out on phones */
+.dg-sheet-w td:not(:first-child) .dg-co, .dg-sheet-w th:not(:first-child) .dg-co { display: grid; margin: 2px auto 0; }
+.dg-sheet-abl { display: flex; flex-wrap: wrap; align-items: center; gap: 3px 12px; padding: 6px 10px; border-top: 1px solid var(--line); font-size: .78rem; font-weight: 700; }
+.dg-sheet-abl small { flex-basis: 100%; color: var(--muted); font-size: .7rem; }
 .dg-sheet-w th:first-child, .dg-sheet-w td:first-child { text-align: left; white-space: normal; }
 .dg-sheet-w th { color: var(--muted); font-size: .72rem; }
 .dg-sheet-ab { font-size: .72rem; color: var(--warn); font-weight: 700; }
@@ -120,9 +127,18 @@
 
 /* phones: a long left-to-right sequence would wrap with an arrow dangling at the line end – stack it instead */
 @media (max-width: 560px) {
+  /* board labels stay readable when a wide board is shrunk to the phone width (--dgk from js/ui/diagram.js) */
+  .dg-note, .dg-tag { font-size: calc(13px * var(--dgk, 1)); }
+  .dg-terrain-l { font-size: calc(12px * var(--dgk, 1)); }
+  .dg-zone-l { font-size: calc(11px * var(--dgk, 1)); }
+  /* compared pictures one below the other, each at full width */
+  .dg-compare { grid-template-columns: 1fr; }
   .dg-flow.right.many { flex-direction: column; align-items: stretch; }
   .dg-flow.right.many .dg-flow-box { text-align: left; border-top-width: 1px; border-left-width: 4px; border-left-color: var(--k); border-top-color: var(--line); min-width: 0; }
   .dg-flow.right.many .dg-flow-box b, .dg-flow.right.many .dg-flow-box span { display: inline; }
   .dg-flow.right.many .dg-flow-box b + span::before { content: ' – '; }
+  .tut-nav .btn { white-space: nowrap; }
+  .tut-dots { min-width: 0; }
+  .tut-dots i { width: 6px; height: 6px; }
   .dg-flow.right.many .dg-flow-arrow { margin: 2px 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 7px solid var(--muted); border-bottom: 0; }
 }

@@ -285,3 +285,42 @@ PATTERNS.push(
   ['^(.+): at most (\\d+)(.*) per army \\(has (\\d+)\\)$', (m, a, n, w, v) => a + ': höchstens ' + n + w + ' pro Armee (vorhanden: ' + v + ')'],
   ['^(.+) needs at least (\\d+)(.*) \\(has (\\d+)\\)$', (m, a, n, w, v) => a + ' braucht mindestens ' + n + w + ' (vorhanden: ' + v + ')']
 );
+
+/* Rulebook chrome (the entries themselves – rule texts, names, keywords – stay English, see SKIP in js/i18n.js) */
+Object.assign(PHRASES, {
+  'Core rule': 'Grundregel', 'Core rules': 'Grundregeln', 'Phase step': 'Phasenschritt', 'Phase steps': 'Phasenschritte', 'Glossary': 'Glossar',
+  'Core stratagem': 'Kern-Stratagem', 'Core stratagems': 'Kern-Stratagems', 'Detachment rule': 'Detachment-Regel', 'Detachment rules': 'Detachment-Regeln',
+  'Text export from New Recruit (choose file or paste text). Units, number of models and wargear are recognised and linked to the datasheets.': 'Textexport aus New Recruit (Datei wählen oder Text einfügen). Einheiten, Modellanzahl und Ausrüstung werden erkannt und mit den Datenblättern verknüpft.',
+  'Search units of:': 'Einheiten suchen von:', '– choose faction –': '– Fraktion wählen –',
+  'All factions (every datasheet)': 'Alle Fraktionen (alle Datenblätter)', 'Load datasheets of a faction': 'Datenblätter einer Fraktion laden',
+  'Core rules by phase': 'Grundregeln nach Phase', 'Start of turn / battle round': 'Zugbeginn / Beginn der Schlachtrunde',
+  'Glossary (A–Z)': 'Glossar (A–Z)', 'Primary missions': 'Primärmissionen', 'Secondary missions': 'Sekundärmissionen', 'Secondary mission': 'Sekundärmission',
+  'Mission sequence': 'Missionsablauf', '‹ Factions': '‹ Fraktionen', 'No army rule on file.': 'Keine Armeeregel vorhanden.', 'No detachment rule on file.': 'Keine Detachment-Regel vorhanden.',
+  'Loading units …': 'Einheiten werden geladen …', 'Loading …': 'Wird geladen …', 'units loaded': 'Einheiten geladen',
+  'Start of battle round': 'Beginn der Schlachtrunde', 'Start of turn': 'Zugbeginn', 'Search the rulebook': 'Regelwerk durchsuchen',
+  'No datasheets available for this faction.': 'Für diese Fraktion sind keine Datenblätter vorhanden.', 'Either turn': 'Beide Züge',
+  'not in the first battle round': 'nicht in der ersten Schlachtrunde', 'Mission sequence not available (data/orig/missions.json).': 'Missionsablauf nicht verfügbar (data/orig/missions.json).',
+  'Fixed only': 'nur Fest', 'Tactical only': 'nur Taktisch', 'Units are only searched for loaded factions – pick one above.': 'Einheiten werden nur in geladenen Fraktionen gesucht – oben eine wählen.',
+  'datasheets – tap to expand.': 'Datenblätter – zum Aufklappen antippen.', 'VP each': 'VP je',
+  // tablet scoring rows
+  'due now': 'jetzt fällig', 'Booked': 'Gebucht', 'Choose': 'Wählen', 'Wording of this condition': 'Wortlaut dieser Bedingung',
+  'End of Command phase': 'Ende der Command phase', 'End of battle': 'Schlachtende',
+  'Primary Mission: max. 15 VP per battle round and 45 VP per battle. Secondary Missions: max. 15 VP per battle round and 45 VP per battle, with Fixed Missions max. 20 VP per card. Battle Ready army: 10 VP at the end of the battle. Total max. 100 VP. The tablet caps automatically.':
+    'Primary Mission: max. 15 VP pro Battle round und 45 VP pro Schlacht. Secondary Missions: max. 15 VP pro Battle round und 45 VP pro Schlacht, bei Fixed Missions max. 20 VP pro Karte. Battle-Ready-Armee: 10 VP am Ende der Schlacht. Insgesamt max. 100 VP. Das Tablet begrenzt automatisch.'
+});
+/* single words: only as the whole text (inside names such as "Fixed Missions" or "Replace bolt pistol" they stay English) */
+delete PHRASES['Replace'];
+Object.assign(EXACT, {
+  'Missions': 'Missionen', 'Units': 'Einheiten', 'Reference': 'Nachschlagen', 'Twists': 'Twists', 'Factions': 'Fraktionen', 'Reminders': 'Erinnerungen',
+  'Detachments': 'Detachments', 'Always': 'Immer', 'Replace': 'Ersetzen', 'Battle size': 'Spielgröße', 'BATTLE SIZE': 'SPIELGRÖSSE'
+});
+PATTERNS.push(
+  ['^No match for “(.+)”\\.', (m, q) => 'Kein Treffer für „' + q + '“.'],
+  ['^(\\d+) results?$', (m, n) => n + (n === '1' ? ' Treffer' : ' Treffer')],
+  ['^(\\d+) results? · showing the first (\\d+) – refine your search$', (m, n, k) => n + ' Treffer · die ersten ' + k + ' werden gezeigt – Suche verfeinern'],
+  ['^Units \\((\\d+)\\)$', (m, n) => 'Einheiten (' + n + ')'],
+  ['(?<![A-Za-z])rounds (\\d)', (m, n) => 'Runden ' + n],
+  ['^booked (\\d+) VP$', (m, n) => 'gebucht: ' + n + ' VP'],
+  // "Round 2 · opponent's turn" (active effects) – before the general "<name>'s turn" template
+  ['^Round (\\d+) · opponent\'s turn$', (m, n) => 'Runde ' + n + ' · Zug des Gegners'], ['^Round (\\d+) · your turn$', (m, n) => 'Runde ' + n + ' · dein Zug']
+);

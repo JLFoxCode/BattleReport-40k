@@ -103,7 +103,7 @@ export const CORE = {
       rules: [
         {
           id: 'mov-types', title: 'Move types',
-          text: 'Each unit is selected to move once per phase: Remain Stationary (no models are moved), Normal Move (up to M"), Advance Move (roll one D6, up to M + result), Fall-back Move (up to M", only if the unit is engaged). Normal and Advance Moves require the unit to be unengaged; after any of these moves the unit must be unengaged. A unit cannot make more than one Normal Move in a phase.',
+          text: 'Each unit is selected to move once per phase and makes one of six move types (or one presented elsewhere): Remain Stationary (no models are moved), Normal Move (up to M"), Advance Move (roll one D6, up to M + result), Fall-back Move (up to M", only if the unit is engaged), Disembark Move (a unit embarked within a TRANSPORT, see Disembarking) or Ingress Move (a unit in strategic reserves, see Reinforcements). Normal and Advance Moves require the unit to be unengaged (being engaged solely with AIRCRAFT does not prevent them); after any of these moves the unit must be unengaged. A unit cannot make more than one Normal Move in a phase.',
           tags: ['MOVEMENT']
         },
         {
@@ -148,7 +148,7 @@ export const CORE = {
         },
         {
           id: 'mov-monster', title: 'Moving MONSTERS and VEHICLES',
-          text: 'Each time a unit makes a normal or advance move, MONSTER/VEHICLE models in it can be moved through friendly and enemy models (excluding other MONSTER/VEHICLE models). Dense terrain features can only be moved through horizontally where they are 2" or less in height; SUPER-HEAVY WALKER units up to 4" (and can gain MOBILE for a move at the risk of battle-shock on a 1).',
+          text: 'Each time a unit makes a normal or advance move, MONSTER/VEHICLE models in it can be moved through friendly and enemy models (excluding other MONSTER/VEHICLE models). Dense terrain features can only be moved through horizontally where they are 2" or less in height. SUPER-HEAVY WALKER (normal, advance or fall-back move): can move through MONSTER/VEHICLE models (not TITANIC) and through terrain sections 4" or less in height, and can gain MOBILE for the move at the risk of battle-shock on a 1.',
           tags: ['MONSTER', 'VEHICLE'], ed: 11
         },
         {
@@ -173,7 +173,7 @@ export const CORE = {
         },
         {
           id: 'mov-disembark', title: 'Disembarking: three modes',
-          text: 'A unit can disembark in your Movement phase if it did not embark this phase and the TRANSPORT has not made an advance or fall-back move this phase. Rapid Disembark (TRANSPORT made a normal or ingress move this phase): set up wholly within 3", not eligible to declare a charge this turn. Tactical Disembark (TRANSPORT remained stationary or has not yet been selected to move): within 3", then the unit is selected to make a normal or advance move. Combat Disembark (otherwise): within 6", hazard roll for each model, models can be set up engaged with enemy units the TRANSPORT is engaged with, the unit is battle-shocked and cannot declare a charge this turn.',
+          text: 'A unit can disembark in your Movement phase if it did not embark this phase and the TRANSPORT has not made an advance or fall-back move this phase. Rapid Disembark (TRANSPORT made a normal or ingress move this phase): set up wholly within 3", not eligible to declare a charge this turn; after an ingress move of the TRANSPORT the models follow the same set-up rules it had to follow (e.g. more than 8" from all enemy units, not in the opponent\'s deployment zone before the third battle round). Tactical Disembark (TRANSPORT remained stationary or has not yet been selected to move, and the unit can be set up wholly within 3" as described in Set Up, i.e. unengaged): then the unit is selected to make a normal or advance move. Combat Disembark (otherwise, e.g. the TRANSPORT is engaged and there is no room to set up unengaged): within 6", hazard roll for each model, models can be set up engaged with enemy units the TRANSPORT is engaged with, the unit is battle-shocked and cannot declare a charge this turn.',
           tags: ['TRANSPORT'], ed: 11
         },
         {
@@ -278,7 +278,7 @@ export const CORE = {
         },
         {
           id: 'sho-lone', title: 'Lone Operative',
-          text: 'Unless part of an attached unit, a Lone Operative unit is not visible to enemy models unless they are within 12", and cannot be targeted by [INDIRECT FIRE] weapons unless the attacking model is within 12" (Lone Operative X": X" instead). If an attached unit below starting strength only contains Lone Operative models, the ability becomes active again. Detection range and Lone Operative cannot be better than 9" or worse than 30".',
+          text: 'Unless part of an attached unit, a Lone Operative unit is not visible to enemy models unless they are within 12", and cannot be targeted by [INDIRECT FIRE] weapons unless the attacking model is within 12" (Lone Operative X": X" instead). Detection range and Lone Operative cannot be better than 9" or worse than 30".',
           tags: ['LONE OPERATIVE', 'CHARACTER']
         },
         {
@@ -333,7 +333,7 @@ export const CORE = {
         },
         {
           id: 'chg-terrain', title: 'Terrain during a charge',
-          text: 'The normal terrain rules apply to charge moves: dense terrain can only be moved through horizontally by INFANTRY/BEASTS/SWARM/MOBILE models, vertical distance counts, FLYING units can take to the skies (-2"). A charge can therefore fail because of a detour even if the straight-line distance would suffice.',
+          text: 'The normal terrain rules apply to charge moves: INFANTRY/BEASTS/SWARM/MOBILE models move horizontally through dense terrain, other models only through sections 2" or less in height (otherwise they must climb), vertical distance counts, FLYING units can take to the skies (-2"). A charge can therefore fail because of a detour even if the straight-line distance would suffice.',
           tags: ['CHARGE', 'TERRAIN']
         },
         {
@@ -373,12 +373,12 @@ export const CORE = {
         'Resolve Remaining Combats: alternate selecting all other eligible units.',
         'Each unit: select weapons, select targets, resolve attacks (hit → wound → save → damage).',
         'Consolidate (up to 3"): player whose turn it is first; mode Ongoing, Engaging or Objective.',
-        'The phase ends when all eligible units have fought or both players pass.'
+        'The Fight step ends when all eligible units have been selected to fight (no unit is eligible any more).'
       ],
       rules: [
         {
           id: 'fgt-eligible', title: 'Who fights?',
-          text: 'A unit is eligible to fight if it has not already been selected to fight this phase and is engaged (or was engaged at the start of the Fight step) or made a charge move this turn. Units that become engaged during the phase (e.g. through an enemy engaging consolidation) also become eligible. You must fight with all units that can; a player whose eligible units are all more than 5" from every enemy unit can pass instead.',
+          text: 'A unit is eligible to fight if it has not already been selected to fight this phase and is engaged (or was engaged at the start of the Fight step) or made a charge move this turn. Units that become engaged during the phase (e.g. through an enemy engaging consolidation) also become eligible. You must fight with all units that can (pile-in and consolidation moves are optional).',
           tags: ['FIGHT'], ed: 11
         },
         {
@@ -408,7 +408,7 @@ export const CORE = {
         },
         {
           id: 'fgt-consolidate', title: 'Consolidation move',
-          text: 'In the Consolidate step, each unit that was eligible to fight this phase can make one consolidation move of up to 3" (player whose turn it is first). Ongoing Consolidation (engaged units, mandatory): models in base contact do not move, each moved model ends closer to the closest selected enemy unit and still engaged with the units it was engaged with. Engaging Consolidation (unengaged, enemy within 3"): must end engaged with the selected enemy units; those not yet selected to fight become eligible and are selected to fight by your opponent. Objective Consolidation (otherwise, objective within 3"): end within range of that objective, unengaged.',
+          text: 'In the Consolidate step, each unit that was eligible to fight this phase can make one consolidation move of up to 3" (player whose turn it is first). Ongoing Consolidation (engaged units, mandatory): models in base contact do not move, each moved model ends closer to the closest selected enemy unit and still engaged with the units it was engaged with; enemy units engaged with it that have not fought this phase are then selected to fight by your opponent. Engaging Consolidation (unengaged, enemy within 3"): must end engaged with the selected enemy units; those not yet selected to fight become eligible and are selected to fight by your opponent. Objective Consolidation (otherwise, objective within 3"): end within range of that objective, unengaged.',
           tags: ['CONSOLIDATE'], ed: 11
         },
         {
@@ -428,7 +428,7 @@ export const CORE = {
         },
         {
           id: 'fgt-end', title: 'End of the phase',
-          text: 'The Fight step ends when no units are eligible to fight, when both players pass in succession, or when one player passes and their opponent has no remaining eligible units. Effects given in this phase without a stated duration end with the phase.',
+          text: 'The Fight step ends when no units are eligible to fight. Effects given in this phase without a stated duration end with the phase.',
           tags: ['FIGHT']
         }
       ]
@@ -512,7 +512,7 @@ export const CORE = {
     },
     {
       id: 'ts-first', title: 'First battle round',
-      text: 'In the first battle round no reinforcements arrive with ingress moves (Rapid Ingress is not allowed either), and for the Hidden rule the previous turn counts as "no ranged attacks made". Units can embark once the first battle round has started. Primary Missions already score in the first battle round; only their conditions scored at the end of your Command phase start in the second battle round (the scoring line on the tablet shows the rounds of each condition).'
+      text: 'In the first battle round no reinforcements arrive with ingress moves (Rapid Ingress is not allowed either), and during the first turn of the battle, for the Hidden rule, the previous turn counts as "no ranged attacks made" (in the second turn, turn 1 counts normally). Units can embark once the first battle round has started. Primary Missions already score in the first battle round; only their conditions scored at the end of your Command phase start in the second battle round (the scoring line on the tablet shows the rounds of each condition).'
     },
     {
       id: 'ts-resources', title: 'Resources and counters',
@@ -544,7 +544,7 @@ export const CORE = {
     },
     {
       id: 'gen-leader-dead', title: 'Bodyguard destroyed',
-      text: 'If all bodyguard models are destroyed, the remaining leader/support models stay a single unit; leader units keep benefiting from their own "while leading" abilities. Rules triggered when a unit is destroyed only trigger when the last model that started the battle in the attached unit is destroyed. Lone Operative becomes active again. If the leader is destroyed, the unit loses its abilities (until it is revived).',
+      text: 'If all bodyguard models are destroyed, the remaining leader/support models stay a single unit; leader units keep benefiting from their own "while leading" abilities. Rules triggered when a unit is destroyed only trigger when the last model that started the battle in the attached unit is destroyed. If the leader is destroyed, the unit loses its abilities (until it is revived).',
       tags: ['LEADER', 'CHARACTER'], ed: 11
     },
     {
@@ -569,7 +569,7 @@ export const CORE = {
     },
     {
       id: 'gen-terrain-cat', title: 'Terrain categories',
-      text: 'Dense: buildings, ruins, armoured containers, woods – obscuring, Solid, only INFANTRY/BEASTS/SWARM/MOBILE can move horizontally through them. Light: barricades, low walls, statuary – obscuring, all models can move through them. Exposed: craters, razorwire, scattered debris – can be traversed without hindrance. The category itself does not give the benefit of cover: a unit has it if every model is INFANTRY/BEASTS/SWARM within a terrain area (any category) or is not fully visible due to terrain. Terrain features 3" or more in height grant Plunging Fire.',
+      text: 'Dense: buildings, ruins, armoured containers, woods – obscuring, Solid, INFANTRY/BEASTS/SWARM/MOBILE can move horizontally through them, other models only through sections 2" or less in height (otherwise they must climb). Light: barricades, low walls, statuary – obscuring, all models can move through them. Exposed: craters, razorwire, scattered debris – can be traversed without hindrance. The category itself does not give the benefit of cover: a unit has it if every model is INFANTRY/BEASTS/SWARM within a terrain area (any category) or is not fully visible due to terrain. Terrain features 3" or more in height grant Plunging Fire.',
       tags: ['TERRAIN'], ed: 11
     },
     {
@@ -614,7 +614,7 @@ export const CORE = {
     },
     {
       id: 'gen-scouts', title: 'Scouts and Infiltrators',
-      text: 'Scouts X": in the Resolve Pre-battle Abilities step, if every model has the ability, a unit wholly within your deployment zone can make a scout move of up to X" and must end more than 8" horizontally from all enemy units; alternatively a unit in strategic reserves can be set up wholly within your deployment zone. Infiltrators: during deployment, if every model has the ability, set up anywhere more than 8" horizontally from your opponent\'s deployment zone and all enemy units.',
+      text: 'Scouts X": in the Resolve Pre-battle Abilities step, if every model has the ability, a unit wholly within your deployment zone can make a scout move of up to X" and must end more than 8" horizontally from all enemy units; alternatively a unit in strategic reserves can be set up wholly within your deployment zone; a DEDICATED TRANSPORT wholly within your deployment zone whose embarked models all have Scouts can make the scout move. Infiltrators: during deployment, if every model has the ability, set up anywhere more than 8" horizontally from your opponent\'s deployment zone and all enemy units.',
       tags: ['SCOUTS', 'INFILTRATORS'], ed: 11
     },
     {
@@ -634,7 +634,7 @@ export const CORE = {
     },
     {
       id: 'gen-monster', title: 'MONSTERS and VEHICLES',
-      text: 'Move through other models during normal/advance moves (not through MONSTER/VEHICLE models). Can shoot while engaged (close-quarters shooting) with -1 to hit, except [CLOSE-QUARTERS] weapons against a unit they are engaged with; [BLAST] never against engaged targets. Shooting at an engaged MONSTER/VEHICLE: -1 to hit (except [CLOSE-QUARTERS] weapons of an engaged unit), no [BLAST]. Hazard rolls cost them 3 mortal wounds instead of 1. FRAME models without a base are measured to the closest point of the model.',
+      text: 'Move through other models during normal/advance moves (not through MONSTER/VEHICLE models). Can shoot while engaged (close-quarters shooting) with -1 to hit, except [CLOSE-QUARTERS] weapons against a unit they are engaged with; [BLAST] never against engaged targets. Shooting at an engaged MONSTER/VEHICLE: -1 to hit (except [CLOSE-QUARTERS] weapons of an engaged unit), no [BLAST]. Hazard rolls cost them 3 mortal wounds instead of 1. FRAME models are measured to and from the closest point on the model, even if they have a base.',
       tags: ['MONSTER', 'VEHICLE', 'FRAME'], ed: 11
     },
     {
@@ -699,7 +699,7 @@ export const CORE = {
     },
     {
       id: 'gen-stationary', title: 'Remain Stationary',
-      text: 'No models are moved (either in straight lines or rotated). Units that remain stationary do not trigger any rules that are triggered when a unit starts or ends a move. [HEAVY] (+1 to hit if unengaged, not set up this turn and no model moved more than 3") and the improved indirect shooting (1–3 fails instead of 1–5) depend on it.',
+      text: 'No models are moved (either in straight lines or rotated). Units that remain stationary do not trigger any rules that are triggered when a unit starts or ends a move. The improved indirect shooting (1–3 fails instead of 1–5) depends on it; [HEAVY] (+1 to hit) only needs that no model in the unit moved more than 3" this turn (your Shooting phase, unengaged, not set up this turn).',
       tags: ['REMAIN STATIONARY', 'HEAVY'], ed: 11
     },
     {
@@ -750,7 +750,7 @@ export const CORE = {
     { term: 'ASSAULT', text: 'Units containing one or more models with an [ASSAULT] weapon can shoot using assault shooting (10.05).', orig: true },
     { term: 'HEAVY', text: 'In your Shooting phase, each time an attack is made with a [HEAVY] weapon, add 1 to the hit roll if all of the following apply to the attacking unit: - That unit is unengaged. - That unit was not set up on the battlefield this turn. - No model in that unit has moved more than 3" this turn.', orig: true },
     { term: 'RAPID FIRE X', text: 'This ability always takes the form [RAPID FIRE X]. Each time you gather attack dice for a [RAPID FIRE] weapon, add X additional attack dice if the target unit was within half range of that weapon in the Select Targets step.', orig: true },
-    { term: 'PISTOL', text: '[PISTOL] and [CLOSE-QUARTERS] are identical for all rules purposes. Units containing one or more models with a [CLOSE-QUARTERS] weapon can shoot using close-quarters shooting (10.06). When using another shooting type, for each model in that unit (excluding MONSTER/VEHICLE models), you can only select one of the following to make attacks with: - One or more of its [CLOSE-QUARTERS] weapons. - One or more of its other ranged weapons.', orig: true },
+    { term: 'PISTOL', text: '[PISTOL] and [CLOSE-QUARTERS] are identical for all rules purposes. See [CLOSE-QUARTERS].', orig: true },
     { term: 'CLOSE-QUARTERS', text: 'Units containing one or more models with a [CLOSE-QUARTERS] weapon can shoot using close-quarters shooting (10.06). When using another shooting type, for each model in that unit (excluding MONSTER/VEHICLE models), you can only select one of the following to make attacks with: - One or more of its [CLOSE-QUARTERS] weapons. - One or more of its other ranged weapons.', orig: true },
     { term: 'TORRENT', text: 'Each time an attack is made with a [TORRENT] weapon, that attack automatically hits the target.', orig: true },
     { term: 'BLAST', text: 'Each time you gather attack dice for a [BLAST] weapon, add one additional attack dice for every five models that were in the target unit in the Select Targets step (rounding down). If this ability takes the form [BLAST X], each time you gather attack dice for such a weapon, add X additional attack dice for every five models that were in the target unit in the Select Targets step (rounding down) instead.', orig: true },
@@ -769,7 +769,7 @@ export const CORE = {
     { term: 'EXTRA ATTACKS', text: 'Each time a unit containing one or more models with an [EXTRA ATTACKS] weapon fights, those models will make attacks with those weapons in addition to any others. In the Select Weapons step (04.01), for each of those models, you must select: - All of that model’s [EXTRA ATTACKS] weapons. - One of that model’s other melee weapons, if possible.', orig: true },
     { term: 'PSYCHIC', text: 'Each time an attack is made with a [PSYCHIC] weapon, you can ignore any or all modifiers to that attack’s BS or WS characteristic and any or all modifiers to the hit roll. Attacks made with [PSYCHIC] weapons are known as psychic attacks (this can be important for the triggering of other rules).', orig: true },
     { term: 'ONE SHOT', text: 'Each weapon with this ability can only be selected to make attacks with once per battle. If a destroyed model is returned to a unit, all of its [ONE SHOT] weapons that have already been selected to make attacks with during the battle cannot be selected to make attacks with again. If a new unit is added to an army, all [ONE SHOT] weapons in that unit can be selected to make attacks with once per battle.', orig: true },
-    { term: 'SNAP SHOOTING', text: 'Shooting type used by Fire Overwatch. While shooting: You can only target one visible enemy unit within 24" of your unit (and only if it is an eligible target). Each attack only hits on an unmodified hit roll of 6 (irrespective of the attacking weapon’s BS characteristic or any modifiers). Those hits are not critical hits. You cannot re-roll hit rolls. After shooting: Until the end of the phase, your unit is not eligible to start an action.', orig: true },
+    { term: 'SNAP SHOOTING', text: 'While shooting: You can only target one visible enemy unit within 24" of your unit (and only if it is an eligible target). Each attack only hits on an unmodified hit roll of 6 (irrespective of the attacking weapon’s BS characteristic or any modifiers). Those hits are not critical hits. You cannot re-roll hit rolls. After shooting: Until the end of the phase, your unit is not eligible to start an action.', orig: true },
 
     // Characteristics
     { term: 'M', text: 'Move: the speed at which a model traverses the battlefield – the maximum distance in inches for a normal or fall-back move (advance: + D6"). A model with M "–" can be set up but otherwise cannot be moved.' },
@@ -820,9 +820,9 @@ export const CORE = {
     { term: 'TOWERING', text: 'Keyword for very tall models: Plunging Fire applies against targets on ground level within 12".' },
     { term: 'FLY', text: 'Can take to the skies when making a normal, advance, fall-back or charge move: subtract 2" from the maximum distance, ignore all vertical distance, move through all types of model and all categories of terrain feature.' },
     { term: 'HOVER', text: 'Each time this unit takes to the skies (21.03), do not subtract 2" from the maximum distance.', orig: true },
-    { term: 'FRAME', text: 'Model without a base (many MONSTERS/VEHICLES): measure to and from the closest point on that model; rotate it around its central axis.' },
+    { term: 'FRAME', text: 'Keyword of models without a base (many MONSTERS/VEHICLES) and some other large models: measure to and from the closest point on the model, not necessarily its base; a FRAME model without a base rotates around its central axis.' },
     { term: 'FEEL NO PAIN X+', text: 'This ability always takes the form Feel No Pain X+. Each time a model with this ability would lose a wound, roll one D6: on an X+, that wound is not lost.', orig: true },
-    { term: 'DAMAGED X', text: 'This ability always takes the form Damaged X. While a model\'s remaining wounds are equal to or less than X, that model is damaged: - While a model is damaged, that model\'s attacks have -1 to hit rolls.', orig: true },
+    { term: 'DAMAGED X', text: 'This ability always takes the form Damaged X. While a model\'s remaining wounds are equal to or less than X, that model is damaged: while damaged, that model’s attacks have -1 to hit rolls.', orig: true },
     { term: 'SURGE MOVE', text: 'Out-of-sequence move towards the closest enemy unit (the surge target); only if the unit is not battle-shocked, unengaged and has not moved this phase. Must end engaged with the surge target if possible, and cannot move again this phase.' },
     { term: 'ACTION', text: 'Mission task with STARTS / UNITS / USE LIMIT / COMPLETES / EFFECT. Not for battle-shocked, engaged (unless TITANIC), OC 0 or "–", AIRCRAFT/FORTIFICATION units, or after an advance / fall-back move; afterwards no shooting (unless TITANIC) or charging this turn.' },
     { term: 'SECURED', text: 'An objective that remains under your control even once you have no units within range of it, until your opponent\'s level of control over it is greater than yours at the end of a phase.' },

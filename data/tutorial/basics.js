@@ -154,7 +154,7 @@ export const BASICS = [
       {
         id: 'b-profile', title: 'The unit profile', title_de: 'Das Profil der Einheit',
         text: '<p>The profile tells you how fast and tough a model is:</p><ul><li><b>M</b> (Move) – how many inches it can move.</li><li><b>T</b> (Toughness) – how hard it is to wound.</li><li><b>Sv</b> (Save) – its armour, as a dice result: 3+ means a roll of 3 or more saves.</li><li><b>W</b> (Wounds) – how much damage it can take; at 0 it is destroyed.</li><li><b>Ld</b> (Leadership) – its courage, the 2D6 result it needs in leadership rolls (e.g. 7+).</li><li><b>OC</b> (Objective Control) – how strongly it holds objectives.</li></ul><p>Some models also have an <b>invulnerable save</b> (e.g. 4+). Weapons\' AP does not worsen it – you\'ll see how that works under "Making attacks".</p>',
-        text_de: '<p>Das Profil zeigt, wie schnell und zäh ein Modell ist (die Datenblätter verwenden die englischen Kürzel):</p><ul><li><b>M</b> (Move, Bewegung) – wie viele Zoll es sich bewegen darf.</li><li><b>T</b> (Toughness, Widerstand) – wie schwer es zu verwunden ist.</li><li><b>Sv</b> (Save, Rüstungswurf) – seine Rüstung als Würfelergebnis: 3+ heißt, eine 3 oder mehr rettet.</li><li><b>W</b> (Wounds, Lebenspunkte) – wie viel Schaden es verträgt; bei 0 ist es vernichtet.</li><li><b>Ld</b> (Leadership, Moralwert) – sein Mut, das 2W6-Ergebnis, das es bei Moralwürfen braucht (z. B. 7+).</li><li><b>OC</b> (Objective Control) – wie stark es Missionsziele hält.</li></ul><p>Manche Modelle haben zusätzlich einen <b>Rettungswurf</b> (z. B. 4+). Der DS einer Waffe verschlechtert ihn nicht – wie das funktioniert, siehst du bei „Angriffe durchführen“.</p>',
+        text_de: '<p>Das Profil zeigt, wie schnell und zäh ein Modell ist (die Datenblätter verwenden die englischen Kürzel):</p><ul><li><b>M</b> (Move, Bewegung) – wie viele Zoll es sich bewegen darf.</li><li><b>T</b> (Toughness, Widerstand) – wie schwer es zu verwunden ist.</li><li><b>Sv</b> (Save, Rüstungswurf) – seine Rüstung als Würfelergebnis: 3+ heißt, eine 3 oder mehr rettet.</li><li><b>W</b> (Wounds, Lebenspunkte) – wie viel Schaden es verträgt; bei 0 ist es vernichtet.</li><li><b>Ld</b> (Leadership, Moralwert) – sein Mut, das 2W6-Ergebnis, das es bei Moralwürfen braucht (z. B. 7+).</li><li><b>OC</b> (Objective Control) – wie stark es Missionsziele hält.</li></ul><p>Manche Modelle haben zusätzlich einen <b>Rettungswurf</b> (z. B. 4+). Der AP-Wert (Durchschlag) einer Waffe verschlechtert ihn nicht – wie das funktioniert, siehst du bei „Attacken durchführen“.</p>',
         tips: ['Lower is better for Sv and Ld (2+ beats 4+); higher is better for M, T, W and OC.'],
         tips_de: ['Bei Sv und Ld ist niedriger besser (2+ schlägt 4+), bei M, T, W und OC höher.'],
         refs: ['02', '02.01', '02.02'],
@@ -167,8 +167,8 @@ export const BASICS = [
             marks: { M: 1, T: 2, Sv: 3, InSv: 4, W: 5, Ld: 6, OC: 7 },
             callouts: [
               { n: 1, text: 'Move: up to 6" in a normal move', text_de: 'Bewegung: bis zu 6" bei einer normalen Bewegung' },
-              { n: 2, text: 'Toughness 4: compared with an attack\'s S', text_de: 'Widerstand 4: wird mit der S eines Angriffs verglichen' },
-              { n: 3, text: 'Save 3+: a roll of 3 or more stops an attack', text_de: 'Rüstungswurf 3+: eine 3 oder mehr wehrt einen Angriff ab' },
+              { n: 2, text: 'Toughness 4: compared with an attack\'s S', text_de: 'Widerstand 4: wird mit der S einer Attacke verglichen' },
+              { n: 3, text: 'Save 3+: a roll of 3 or more stops an attack', text_de: 'Rüstungswurf 3+: eine 3 oder mehr wehrt eine Attacke ab' },
               { n: 4, text: 'Invulnerable save 5+: AP never worsens it', text_de: 'Rettungswurf 5+: AP verschlechtert ihn nie' },
               { n: 5, text: 'Wounds 2: each model is destroyed after losing 2', text_de: 'Lebenspunkte 2: jedes Modell ist nach 2 verlorenen vernichtet' },
               { n: 6, text: 'Leadership 7+: needs 7 or more on 2D6', text_de: 'Moralwert 7+: braucht 7 oder mehr mit 2W6' },
@@ -189,7 +189,7 @@ export const BASICS = [
       {
         id: 'b-weapons', title: 'Weapons', title_de: 'Waffen',
         text: '<p>Each weapon has its own line:</p><ul><li><b>Range</b> – how far it shoots, in inches. "Melee" means a close-combat weapon.</li><li><b>A</b> (Attacks) – how many attack dice it rolls; can be random, like D6.</li><li><b>BS</b> / <b>WS</b> (Ballistic / Weapon Skill) – the roll needed to hit.</li><li><b>S</b> (Strength) – compared with the target\'s T to see how easily it wounds.</li><li><b>AP</b> (Armour Penetration) – makes the target\'s save worse, e.g. -1.</li><li><b>D</b> (Damage) – wounds the target loses per successful attack.</li></ul><p>Words in square brackets such as [ASSAULT], [HEAVY] or [RAPID FIRE 1] are <b>weapon abilities</b> that change how the weapon works. Look them up when they come up – nobody learns them all at once.</p>',
-        text_de: '<p>Jede Waffe hat ihre eigene Zeile:</p><ul><li><b>Range</b> (Reichweite) – wie weit sie schießt, in Zoll. „Melee“ steht für eine Nahkampfwaffe.</li><li><b>A</b> (Attacken) – wie viele Angriffswürfel sie wirft; kann zufällig sein, z. B. W6.</li><li><b>BS</b> / <b>WS</b> (Ballistische Fertigkeit / Kampfgeschick) – der Wurf, den du zum Treffen brauchst.</li><li><b>S</b> (Stärke) – wird mit dem T des Ziels verglichen und bestimmt, wie leicht sie verwundet.</li><li><b>AP</b> (Durchschlag) – verschlechtert den Rüstungswurf des Ziels, z. B. -1.</li><li><b>D</b> (Schaden) – Lebenspunkte, die das Ziel pro erfolgreichem Angriff verliert.</li></ul><p>Begriffe in eckigen Klammern wie [ASSAULT], [HEAVY] oder [RAPID FIRE 1] sind <b>Waffenfähigkeiten</b>, die die Waffe verändern. Schlag sie nach, wenn sie auftauchen – niemand lernt alle auf einmal.</p>',
+        text_de: '<p>Jede Waffe hat ihre eigene Zeile:</p><ul><li><b>Range</b> (Reichweite) – wie weit sie schießt, in Zoll. „Melee“ steht für eine Nahkampfwaffe.</li><li><b>A</b> (Attacken) – wie viele Attacken sie ausführt (je ein Trefferwurf); kann zufällig sein, z. B. W6.</li><li><b>BS</b> / <b>WS</b> (Ballistische Fertigkeit / Kampfgeschick) – der Wurf, den du zum Treffen brauchst.</li><li><b>S</b> (Stärke) – wird mit dem T des Ziels verglichen und bestimmt, wie leicht sie verwundet.</li><li><b>AP</b> (Durchschlag) – verschlechtert den Rüstungswurf des Ziels, z. B. -1.</li><li><b>D</b> (Schaden) – Lebenspunkte, die das Ziel pro erfolgreicher Attacke verliert.</li></ul><p>Begriffe in eckigen Klammern wie [ASSAULT], [HEAVY] oder [RAPID FIRE 1] sind <b>Waffenfähigkeiten</b>, die die Waffe verändern. Schlag sie nach, wenn sie auftauchen – niemand lernt alle auf einmal.</p>',
         refs: ['02.04', '24'],
         diagrams: [
           {
@@ -209,7 +209,7 @@ export const BASICS = [
               { n: 3, text: 'BS 4+: hits on a 4 or more', text_de: 'BS 4+: trifft bei 4 oder mehr' },
               { n: 4, text: 'Strength 4: compared with the target\'s T', text_de: 'Stärke 4: wird mit dem T des Ziels verglichen' },
               { n: 5, text: 'AP -1: the target\'s save gets 1 worse', text_de: 'AP -1: der Rüstungswurf des Ziels wird um 1 schlechter' },
-              { n: 6, text: 'Damage 1: per attack that gets through', text_de: 'Schaden 1: pro Angriff, der durchkommt' },
+              { n: 6, text: 'Damage 1: per attack that gets through', text_de: 'Schaden 1: pro Attacke, die durchkommt' },
               { n: 7, text: 'Weapon ability – look it up when needed', text_de: 'Waffenfähigkeit – bei Bedarf nachschlagen' },
               { n: 8, text: 'Melee: a close-combat weapon, hits with WS', text_de: 'Melee: eine Nahkampfwaffe, trifft mit WS' }
             ]
@@ -217,13 +217,13 @@ export const BASICS = [
           {
             type: 'flow', dir: 'down',
             caption: 'Each number of a weapon is used at one step of an attack (more under "Making attacks").',
-            caption_de: 'Jeder Wert einer Waffe wird in einem Schritt eines Angriffs gebraucht (mehr bei „Angriffe durchführen“).',
+            caption_de: 'Jeder Wert einer Waffe wird in einem Schritt einer Attacke gebraucht (mehr bei „Attacken durchführen“).',
             items: [
               { title: 'A', text: 'how many dice you roll', text_de: 'wie viele Würfel du wirfst', kind: 'you' },
               { title: 'BS / WS', text: 'hit roll', text_de: 'Trefferwurf', kind: 'you' },
               { title: 'S', text: 'wound roll against the target\'s T', text_de: 'Verwundungswurf gegen den T des Ziels', kind: 'you' },
               { title: 'AP', text: 'worsens the defender\'s save roll', text_de: 'verschlechtert den Rüstungswurf des Verteidigers', kind: 'opp' },
-              { title: 'D', text: 'wounds lost per unsaved attack', text_de: 'verlorene Lebenspunkte pro nicht abgewehrtem Angriff', kind: 'bad' }
+              { title: 'D', text: 'wounds lost per unsaved attack', text_de: 'verlorene Lebenspunkte pro nicht abgewehrter Attacke', kind: 'bad' }
             ]
           }
         ]
@@ -581,15 +581,15 @@ export const BASICS = [
       },
       {
         id: 'b-terrain-moving', title: 'Moving through terrain', title_de: 'Durch Gelände bewegen',
-        text: '<ul><li>Every model can move over and through <b>Exposed</b> and <b>Light</b> features.</li><li>INFANTRY (also BEASTS, SWARM) can move through <b>Dense</b> features – through walls and up and down floors. MOBILE models can also move horizontally through them.</li><li>Other models, such as most VEHICLES and MONSTERS, can only cross parts of a Dense feature that are 2" high or lower; taller parts they have to go around.</li></ul><p>Only INFANTRY, BEASTS, SWARM, FLY and MONSTER models may end a move on an upper floor, and only if they stand stable without overhanging the edge.</p>',
-        text_de: '<ul><li>Jedes Modell darf sich über und durch Geländestücke der Kategorien <b>Exposed</b> und <b>Light</b> bewegen.</li><li>INFANTRY (auch BEASTS, SWARM) darf sich durch <b>Dense</b>-Geländestücke bewegen – durch Wände und Stockwerke hinauf und hinunter. MOBILE-Modelle dürfen sich ebenfalls waagerecht hindurchbewegen.</li><li>Andere Modelle wie die meisten VEHICLES und MONSTERS können nur Abschnitte eines Dense-Geländestücks überqueren, die höchstens 2" hoch sind; um höhere müssen sie herum.</li></ul><p>Nur INFANTRY-, BEASTS-, SWARM-, FLY- und MONSTER-Modelle dürfen eine Bewegung in einem oberen Stockwerk beenden – und nur, wenn sie stabil stehen und nicht über die Kante ragen.</p>',
+        text: '<ul><li>Every model can move over and through <b>Exposed</b> and <b>Light</b> features.</li><li>INFANTRY (also BEASTS, SWARM) can move through <b>Dense</b> features – through walls and up and down floors. MOBILE models can also move horizontally through them.</li><li>Other models, such as most VEHICLES and MONSTERS, can move straight through parts of a Dense feature that are 2" high or lower; taller parts they have to climb over (the vertical distance counts towards the move, and they cannot stop on top) – often going around is shorter.</li></ul><p>Only INFANTRY, BEASTS, SWARM, FLY and MONSTER models may end a move on an upper floor, and only if they stand stable without overhanging the edge.</p>',
+        text_de: '<ul><li>Jedes Modell darf sich über und durch Geländestücke der Kategorien <b>Exposed</b> und <b>Light</b> bewegen.</li><li>INFANTRY (auch BEASTS, SWARM) darf sich durch <b>Dense</b>-Geländestücke bewegen – durch Wände und Stockwerke hinauf und hinunter. MOBILE-Modelle dürfen sich ebenfalls waagerecht hindurchbewegen.</li><li>Andere Modelle wie die meisten VEHICLES und MONSTERS können Abschnitte eines Dense-Geländestücks, die höchstens 2" hoch sind, direkt durchqueren; höhere Abschnitte müssen sie überklettern (die senkrechte Strecke zählt zur Bewegung, oben stehen bleiben dürfen sie nicht) – oft ist außen herum kürzer.</li></ul><p>Nur INFANTRY-, BEASTS-, SWARM-, FLY- und MONSTER-Modelle dürfen eine Bewegung in einem oberen Stockwerk beenden – und nur, wenn sie stabil stehen und nicht über die Kante ragen.</p>',
         tips: ['No model may end its move halfway inside a wall of a ruin – it has to stand clearly on one side.'],
         tips_de: ['Kein Modell darf seine Bewegung halb in einer Ruinenwand beenden – es muss klar auf einer Seite stehen.'],
         refs: ['13.06'],
         diagrams: [{
           w: 14, h: 7,
-          caption: 'The INFANTRY model walks straight through the ruin wall. The VEHICLE can\'t – it has to drive around.',
-          caption_de: 'Das INFANTRY-Modell geht direkt durch die Ruinenwand. Das VEHICLE kann das nicht – es muss außen herum fahren.',
+          caption: 'The INFANTRY model walks straight through the ruin wall. The VEHICLE can\'t – it would have to climb over the tall wall (counting the height), so it drives around.',
+          caption_de: 'Das INFANTRY-Modell geht direkt durch die Ruinenwand. Das VEHICLE kann das nicht – es müsste die hohe Mauer überklettern (die Höhe zählt mit), also fährt es außen herum.',
           terrain: [{ x: 6.3, y: 0.2, w: 0.4, h: 3.5, type: 'ruin', label: 'wall > 2" high', label_de: 'Wand > 2" hoch', ly: 4.05 }],
           models: [
             { x: 3.6, y: 0.9, side: 0, ghost: true }, { x: 9.4, y: 0.9, side: 0 },
@@ -690,7 +690,7 @@ export const BASICS = [
       {
         id: 'b-cover', title: 'Benefit of cover', title_de: 'Deckung',
         text: '<p>A unit you shoot at has the <b>benefit of cover</b> if <b>every</b> model in it either</p><ul><li>is INFANTRY (or BEASTS, SWARM) and stands in a terrain area, or</li><li>is not fully visible to the shooting model because of terrain in between.</li></ul><p>Cover makes the shot harder: the attack\'s <b>BS gets worse by 1</b> (a 3+ becomes a 4+).</p>',
-        text_de: '<p>Eine Einheit, auf die du schießt, hat <b>Deckung</b> (benefit of cover), wenn <b>jedes</b> ihrer Modelle entweder</p><ul><li>INFANTRY (oder BEASTS, SWARM) ist und in einem Geländebereich steht, oder</li><li>wegen Gelände dazwischen für das schießende Modell nicht vollständig sichtbar ist.</li></ul><p>Deckung erschwert den Schuss: Die <b>BS des Angriffs verschlechtert sich um 1</b> (aus 3+ wird 4+).</p>',
+        text_de: '<p>Eine Einheit, auf die du schießt, hat <b>Deckung</b> (benefit of cover), wenn <b>jedes</b> ihrer Modelle entweder</p><ul><li>INFANTRY (oder BEASTS, SWARM) ist und in einem Geländebereich steht, oder</li><li>wegen Gelände dazwischen für das schießende Modell nicht vollständig sichtbar ist.</li></ul><p>Deckung erschwert den Schuss: Die <b>BS der Attacke verschlechtert sich um 1</b> (aus 3+ wird 4+).</p>',
         tips: ['One model sticking out of the terrain area is enough to lose cover for the whole unit.', 'Weapons with [IGNORES COVER] ignore all of this.'],
         tips_de: ['Ein einziges Modell außerhalb des Geländebereichs kostet die ganze Einheit die Deckung.', 'Waffen mit [IGNORES COVER] ignorieren das alles.'],
         refs: ['13.08', '24.18'],
@@ -776,14 +776,14 @@ export const BASICS = [
   // ───────────────────────── 7. Making attacks ─────────────────────────
   {
     id: 'attacking', part: 'basics',
-    title: 'Making attacks', title_de: 'Angriffe durchführen',
+    title: 'Making attacks', title_de: 'Attacken durchführen',
     intro: 'Shooting and fighting use the same steps: choose weapons and targets, then roll to hit, to wound and to save.',
     intro_de: 'Schießen und Kämpfen laufen gleich ab: Waffen und Ziele wählen, dann für Treffer, Verwundung und Schutz würfeln.',
     steps: [
       {
         id: 'b-targets', title: 'Weapons and targets', title_de: 'Waffen und Ziele',
         text: '<p>When a unit shoots or fights:</p><ul><li><b>Select weapons</b> – shooting: each model may use one or more of its ranged weapons. Fighting: each model picks exactly one melee weapon.</li><li><b>Select targets</b> – a ranged weapon\'s target must be <b>visible</b>, <b>within range</b> and <b>unengaged</b>. A melee weapon\'s target must be engaged with the attacking model.</li><li><b>Resolve attacks</b> – gather one dice per attack and roll them as described next. Identical weapons against the same target are rolled together.</li></ul><p>Different weapons may pick different targets.</p>',
-        text_de: '<p>Wenn eine Einheit schießt oder kämpft:</p><ul><li><b>Waffen wählen</b> – beim Schießen darf jedes Modell eine oder mehrere seiner Fernkampfwaffen nutzen. Im Nahkampf wählt jedes Modell genau eine Nahkampfwaffe.</li><li><b>Ziele wählen</b> – das Ziel einer Fernkampfwaffe muss <b>sichtbar</b>, <b>in Reichweite</b> und <b>nicht im Nahkampf</b> sein. Das Ziel einer Nahkampfwaffe muss mit dem angreifenden Modell im Nahkampf sein.</li><li><b>Angriffe abhandeln</b> – nimm einen Würfel pro Attacke und würfle wie im nächsten Schritt beschrieben. Gleiche Waffen gegen dasselbe Ziel werden zusammen geworfen.</li></ul><p>Verschiedene Waffen dürfen verschiedene Ziele wählen.</p>',
+        text_de: '<p>Wenn eine Einheit schießt oder kämpft:</p><ul><li><b>Waffen wählen</b> – beim Schießen darf jedes Modell eine oder mehrere seiner Fernkampfwaffen nutzen. Im Nahkampf wählt jedes Modell genau eine Nahkampfwaffe.</li><li><b>Ziele wählen</b> – das Ziel einer Fernkampfwaffe muss <b>sichtbar</b>, <b>in Reichweite</b> und <b>nicht im Nahkampf</b> sein. Das Ziel einer Nahkampfwaffe muss mit dem angreifenden Modell im Nahkampf sein.</li><li><b>Attacken abhandeln</b> – nimm einen Würfel pro Attacke und würfle wie im nächsten Schritt beschrieben. Gleiche Waffen gegen dasselbe Ziel werden zusammen geworfen.</li></ul><p>Verschiedene Waffen dürfen verschiedene Ziele wählen.</p>',
         refs: ['04', '04.01', '04.02', '04.03'],
         diagrams: [{
           w: 13, h: 8.4,
@@ -856,7 +856,7 @@ export const BASICS = [
       {
         id: 'b-saves', title: 'Saves and damage', title_de: 'Schutzwürfe und Schaden',
         text: '<p>Now the defender rolls one D6 per wound – the <b>save roll</b>. Take the result and apply the weapon\'s AP: AP -1 turns a 4 into a 3. If it still reaches the model\'s Sv, the attack is stopped. A model with an invulnerable save checks the roll against it first – AP doesn\'t apply to that check. An unmodified 1 never saves.</p><p>Each attack that gets through makes one model lose wounds equal to the weapon\'s D. Damage always goes to a model that is already wounded first, and CHARACTER models in the unit come last. Leftover damage from one attack does not carry over to the next model.</p>',
-        text_de: '<p>Jetzt wirft der Verteidiger einen W6 pro Verwundung – den <b>Schutzwurf</b>. Auf das Ergebnis wird der DS (AP) der Waffe angewendet: AP -1 macht aus einer 4 eine 3. Erreicht es dann noch den Sv des Modells, ist der Angriff abgewehrt. Ein Modell mit Rettungswurf prüft das Ergebnis zuerst gegen diesen – AP gilt für diese Prüfung nicht. Eine unmodifizierte 1 rettet nie.</p><p>Jeder Angriff, der durchkommt, lässt ein Modell so viele Lebenspunkte verlieren, wie der D der Waffe angibt. Schaden geht immer zuerst an ein bereits verwundetes Modell, CHARACTER-Modelle der Einheit kommen zuletzt dran. Überschüssiger Schaden eines Angriffs springt nicht auf das nächste Modell über.</p>',
+        text_de: '<p>Jetzt wirft der Verteidiger einen W6 pro Verwundung – den <b>Schutzwurf</b>. Auf das Ergebnis wird der AP-Wert (Durchschlag) der Waffe angewendet: AP -1 macht aus einer 4 eine 3. Erreicht es dann noch den Sv des Modells, ist die Attacke abgewehrt. Ein Modell mit Rettungswurf prüft das Ergebnis zuerst gegen diesen – AP gilt für diese Prüfung nicht. Eine unmodifizierte 1 rettet nie.</p><p>Jede Attacke, die durchkommt, lässt ein Modell so viele Lebenspunkte verlieren, wie der D der Waffe angibt. Schaden geht immer zuerst an ein bereits verwundetes Modell, CHARACTER-Modelle der Einheit kommen zuletzt dran. Überschüssiger Schaden einer Attacke springt nicht auf das nächste Modell über.</p>',
         tips: ['The defender rolls all saves at once and resolves them from the lowest result up.'],
         tips_de: ['Der Verteidiger wirft alle Schutzwürfe auf einmal und handelt sie vom niedrigsten Ergebnis aufwärts ab.'],
         refs: ['05.03', '05.03.01', '05.04'],
@@ -896,8 +896,8 @@ export const BASICS = [
       },
       {
         id: 'b-attack-example', title: 'A worked example', title_de: 'Ein Rechenbeispiel',
-        text: '<p>Ten bolt rifles shoot at Space Marines: <b>10 attacks</b>, BS 3+, S 4, AP -1, D 1 against T 4, Sv 3+.</p><ul><li><b>Hit</b> on 3+ (4 of 6 results): about <b>6.7 hits</b>.</li><li><b>Wound</b>: S 4 equals T 4, so 4+ (half): about <b>3.3 wounds</b>.</li><li><b>Save</b>: AP -1 means the defender needs a 4 to make the 3+ – half fail: about <b>1.7 damage</b>.</li></ul><p>So on average fewer than two wounds get through. If the target had cover, BS 4+ would mean only 5 hits and about 1.25 damage.</p>',
-        text_de: '<p>Zehn Boltgewehre schießen auf Space Marines: <b>10 Attacken</b>, BS 3+, S 4, AP -1, D 1 gegen T 4, Sv 3+.</p><ul><li><b>Treffer</b> bei 3+ (4 von 6 Ergebnissen): etwa <b>6,7 Treffer</b>.</li><li><b>Verwundung</b>: S 4 gleich T 4, also 4+ (die Hälfte): etwa <b>3,3 Verwundungen</b>.</li><li><b>Schutzwurf</b>: Mit AP -1 braucht der Verteidiger eine 4, um die 3+ zu schaffen – die Hälfte scheitert: etwa <b>1,7 Schaden</b>.</li></ul><p>Im Schnitt kommen also weniger als zwei Lebenspunkte Schaden durch. Hätte das Ziel Deckung, gäbe BS 4+ nur 5 Treffer und etwa 1,25 Schaden.</p>',
+        text: '<p>Ten made-up rifles shoot at an armoured squad: <b>10 attacks</b>, BS 3+, S 4, AP -1, D 1 against T 4, Sv 3+.</p><ul><li><b>Hit</b> on 3+ (4 of 6 results): about <b>6.7 hits</b>.</li><li><b>Wound</b>: S 4 equals T 4, so 4+ (half): about <b>3.3 wounds</b>.</li><li><b>Save</b>: AP -1 means the defender needs a 4 to make the 3+ – half fail: about <b>1.7 damage</b>.</li></ul><p>So on average fewer than two wounds get through. If the target had cover, BS 4+ would mean only 5 hits and about 1.25 damage.</p>',
+        text_de: '<p>Zehn erfundene Gewehre schießen auf einen gepanzerten Trupp: <b>10 Attacken</b>, BS 3+, S 4, AP -1, D 1 gegen T 4, Sv 3+.</p><ul><li><b>Treffer</b> bei 3+ (4 von 6 Ergebnissen): etwa <b>6,7 Treffer</b>.</li><li><b>Verwundung</b>: S 4 gleich T 4, also 4+ (die Hälfte): etwa <b>3,3 Verwundungen</b>.</li><li><b>Schutzwurf</b>: Mit AP -1 braucht der Verteidiger eine 4, um die 3+ zu schaffen – die Hälfte scheitert: etwa <b>1,7 Schaden</b>.</li></ul><p>Im Schnitt kommen also weniger als zwei Lebenspunkte Schaden durch. Hätte das Ziel Deckung, gäbe BS 4+ nur 5 Treffer und etwa 1,25 Schaden.</p>',
         tips: ['Tough targets need high S, good armour needs AP – pick weapons that fit the target.'],
         tips_de: ['Zähe Ziele brauchen hohe S, gute Rüstung braucht AP – wähle Waffen passend zum Ziel.'],
         refs: ['05', '05.01', '05.02', '05.04', '13.08'],
@@ -928,14 +928,14 @@ export const BASICS = [
       {
         id: 'b-mortal', title: 'Mortal wounds and hazard rolls', title_de: 'Tödliche Wunden und Gefahrenwürfe',
         text: '<p><b>Mortal wounds</b> skip the dice: no hit, wound or save roll. Each one simply costs a model 1 wound – and unlike normal damage, they do carry over to the next model.</p><p>A <b>hazard roll</b> is one D6: on a 1–2 the unit suffers 1 mortal wound (3 if it consists only of MONSTERS or VEHICLES). You make them for example after attacking with [HAZARDOUS] weapons – one roll per such weapon used.</p>',
-        text_de: '<p><b>Tödliche Wunden</b> überspringen die Würfe: kein Treffer-, Verwundungs- oder Schutzwurf. Jede kostet ein Modell einfach 1 Lebenspunkt – und anders als normaler Schaden gehen sie auf das nächste Modell über.</p><p>Ein <b>Gefahrenwurf</b> (hazard roll) ist ein W6: Bei 1–2 erleidet die Einheit 1 tödliche Wunde (3, wenn sie nur aus MONSTERS oder VEHICLES besteht). Du wirfst sie zum Beispiel nach Angriffen mit [HAZARDOUS]-Waffen – einen pro eingesetzter Waffe.</p>',
+        text_de: '<p><b>Tödliche Wunden</b> überspringen die Würfe: kein Treffer-, Verwundungs- oder Schutzwurf. Jede kostet ein Modell einfach 1 Lebenspunkt – und anders als normaler Schaden gehen sie auf das nächste Modell über.</p><p>Ein <b>Gefahrenwurf</b> (hazard roll) ist ein W6: Bei 1–2 erleidet die Einheit 1 tödliche Wunde (3, wenn sie nur aus MONSTERS oder VEHICLES besteht). Du wirfst sie zum Beispiel nach Attacken mit [HAZARDOUS]-Waffen – einen pro eingesetzter Waffe.</p>',
         refs: ['06.02', '06.03', '06.03.01', '24.15'],
         diagrams: [
           {
             type: 'compare',
             caption: 'Models with 2 wounds each (numbers = wounds left). A D 3 attack destroys one model and the third point is lost; 3 mortal wounds destroy one and wound the next.',
-            caption_de: 'Modelle mit je 2 Lebenspunkten (Zahlen = verbleibende LP). Ein Angriff mit D 3 vernichtet ein Modell, der dritte Punkt verfällt; 3 tödliche Wunden vernichten eines und verwunden das nächste.',
-            labels: [{ text: 'one attack, D 3', text_de: 'ein Angriff, D 3' }, { text: '3 mortal wounds', text_de: '3 tödliche Wunden' }],
+            caption_de: 'Modelle mit je 2 Lebenspunkten (Zahlen = verbleibende LP). Eine Attacke mit D 3 vernichtet ein Modell, der dritte Punkt verfällt; 3 tödliche Wunden vernichten eines und verwunden das nächste.',
+            labels: [{ text: 'one attack, D 3', text_de: 'eine Attacke, D 3' }, { text: '3 mortal wounds', text_de: '3 tödliche Wunden' }],
             items: [
               {
                 w: 6, h: 3.2,

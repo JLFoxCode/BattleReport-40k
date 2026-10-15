@@ -9,6 +9,7 @@ import { diagramSvg } from './diagram.js';
 import { esc, sheet, toast } from './components.js';
 import { getLang } from '../i18n.js';
 import { originals, getSection, downloadOriginals, forgetOriginals, CORE_URL } from '../rules-orig.js';
+import { kwify } from './keywords.js';   // [KEYWORD] in the texts → tappable rule popup (as on the datasheets)
 
 const de = () => getLang() === 'de';
 const T = (en, deText) => (de() ? deText : en);
@@ -93,9 +94,9 @@ function stepHtml(ch, i) {
       <div class="kicker">${T('Step', 'Schritt')} ${i + 1} / ${ch.steps.length}</div>
       <h2>${esc(pick(s, 'title'))}</h2>
       ${pics(s, 'top')}
-      <div class="tut-text">${pick(s, 'text')}</div>
+      <div class="tut-text">${kwify(pick(s, 'text'))}</div>
       ${pics(s, 'bottom')}
-      ${tips.length ? `<div class="tut-tips"><div class="h">${T('Watch out', 'Darauf achten')}</div><ul>${tips.map(t => `<li>${t}</li>`).join('')}</ul></div>` : ''}
+      ${tips.length ? `<div class="tut-tips"><div class="h">${T('Watch out', 'Darauf achten')}</div><ul>${tips.map(t => `<li>${kwify(t)}</li>`).join('')}</ul></div>` : ''}
       ${refsHtml(s.refs)}
     </article>
     <nav class="tut-nav">
@@ -180,17 +181,29 @@ function bindSwipe(root) {
 
 /* ───────── in-game guide (player view) ───────── */
 /** The checklist of the current phase for this player: active player → game.you, the other → game.opp. */
+const GUIDE_PHASES = [['command', 'Command', 'Kommando'], ['movement', 'Movement', 'Bewegung'], ['shooting', 'Shooting', 'Fernkampf'],
+  ['charge', 'Charge', 'Angriff'], ['fight', 'Fight', 'Nahkampf'], ['end', 'End of turn', 'Zugende']];
+const GUIDE_PHASE = 'br40k.guidePhase';
+/** Phase picked in the guide for this turn ({ k: 'round:turn', p }) – only used while the game does not track phases. */
+const guidePick = () => { try { return JSON.parse(sessionStorage.getItem(GUIDE_PHASE) || '{}') || {}; } catch { return {}; } };
 export function guideHtml(state, me) {
   if (!guideOn() || !state || state.stage !== 'battle') return '';
-  const ch = phaseChapter(state.phase);
+  // without phase tracking (the default) state.phase stays 'command' all turn: the player steps through the phases here
+  const tracked = !!(state.opts && state.opts.phases === 'manual');
+  const turnKey = `${state.round}:${state.turn}`;
+  let phase = state.phase;
+  if (!tracked && phase !== 'end') { const g = guidePick(); if (g.k === turnKey && GUIDE_PHASES.some(p => p[0] === g.p)) phase = g.p; }
+  const ch = phaseChapter(phase);
   if (!ch || !ch.game) return '';
   const own = state.turn === me;
   const items = (own ? ch.game.you : ch.game.opp) || [];
-  if (!items.length) return '';
-  const li = g => `<li>${pick(g, 'text')}${(g.refs || []).slice(0, 2).map(r => ` <button type="button" class="tut-ref" data-tut-ref="${esc(r)}">${esc(r)}</button>`).join('')}</li>`;
+  const li = g => `<li>${kwify(pick(g, 'text'))}${(g.refs || []).slice(0, 2).map(r => ` <button type="button" class="tut-ref" data-tut-ref="${esc(r)}">${esc(r)}</button>`).join('')}</li>`;
+  const chips = tracked || state.phase === 'end' ? '' : `<div class="guide-phases" role="group" aria-label="${T('Phase', 'Phase')}">${GUIDE_PHASES.map(([id, en, d]) =>
+    `<button type="button" class="chip sm${id === phase ? ' on' : ''}" data-guide-phase="${id}" data-k="${esc(turnKey)}" aria-pressed="${id === phase}">${T(en, d)}</button>`).join('')}</div>`;
   return `<details class="card tile guide-card" data-no-i18n${guideOpen() ? ' open' : ''} data-guide>
     <summary class="tile-title"><span>🧭 ${T('Guide', 'Guide')} · ${esc(pick(ch, 'title'))}</span><span class="muted xs">${own ? T('your turn', 'dein Zug') : T("opponent's turn", 'Zug des Gegners')}</span></summary>
-    <ol class="guide-list">${items.map(li).join('')}</ol>
+    ${chips}
+    ${items.length ? `<ol class="guide-list">${items.map(li).join('')}</ol>` : `<p class="muted small">${T('Nothing to do for you in this phase.', 'In dieser Phase hast du nichts zu tun.')}</p>`}
     <p class="mt"><a class="btn ghost sm" href="#/learn/${esc(ch.id)}/0" data-learn-from>${T('Explain this phase', 'Diese Phase erklären')} ›</a>
       <button type="button" class="btn ghost sm" data-guide-off>${T('Hide guide', 'Guide ausblenden')}</button></p>
   </details>`;
@@ -203,6 +216,12 @@ export function bindGuide(root, onChange) {
   root.addEventListener('click', e => {
     // "Explain this phase": remember the game screen, the tutorial offers a way back to it
     if (e.target.closest('[data-learn-from]')) { try { sessionStorage.setItem(LEARN_FROM, location.hash); } catch {} return; }
+    const ph = e.target.closest('[data-guide-phase]');
+    if (ph) {
+      try { sessionStorage.setItem(GUIDE_PHASE, JSON.stringify({ k: ph.dataset.k, p: ph.dataset.guidePhase })); } catch {}
+      if (onChange) onChange();
+      return;
+    }
     if (!e.target.closest('[data-guide-off]')) return;
     setGuideOn(false);
     toast(T('Guide hidden – switch it on again under App & data', 'Guide ausgeblendet – unter App & Daten wieder einschalten'), 'ok', 4000);

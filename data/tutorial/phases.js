@@ -260,8 +260,8 @@ export const PHASES = [
         STRATS
       ],
       opp: [
-        { text: 'Gains 1 CP as well', text_de: 'Erhält ebenfalls 1 BP', refs: ['08.02'] },
-        { text: 'Makes no battle-shock rolls in your turn', text_de: 'Würfelt in deinem Zug keine Kampfschocktests', refs: ['08.03'] }
+        { text: 'You gain 1 CP as well', text_de: 'Du erhältst ebenfalls 1 BP', refs: ['08.02'] },
+        { text: 'No battle-shock rolls for you now – only your opponent rolls (you roll in your own Command phase)', text_de: 'Jetzt keine Kampfschocktests für dich – nur dein Gegner würfelt (du würfelst in deiner eigenen Kommandophase)', refs: ['08.03'] }
       ]
     }
   },
@@ -425,14 +425,14 @@ export const PHASES = [
       you: [
         { text: 'Pick every unit once: stay, NORMAL, ADVANCE or FALL-BACK MOVE', text_de: 'Jede Einheit einmal wählen: stehen, NORMAL, ADVANCE oder FALL-BACK MOVE', refs: ['09.02'] },
         { text: 'End more than 2" from enemies and in coherency', text_de: 'Mehr als 2" vom Gegner entfernt und kohärent enden', refs: ['09.05', '03.03'] },
-        { text: 'Advanced: no charge, only [ASSAULT] shooting this turn', text_de: 'Vorgerückt: kein Angriff, nur [ASSAULT]-Schüsse in diesem Zug', refs: ['09.06'] },
-        { text: 'Fell back: no shooting, no charge this turn', text_de: 'Zurückgezogen: kein Schießen, kein Angriff in diesem Zug', refs: ['09.07'] },
-        { text: 'Get out of TRANSPORTS', text_de: 'Aus TRANSPORTERN aussteigen', refs: ['18.03'] },
-        { text: 'From round 2: reserves arrive – within 6" of an edge, more than 8" from enemies', text_de: 'Ab Runde 2: Reserven kommen an – innerhalb 6" zur Kante, mehr als 8" vom Gegner', refs: ['20.04'] },
+        { text: 'Advanced: no charge, no action, only [ASSAULT] shooting this turn', text_de: 'Vorgerückt: kein Angriff, keine Aktion, nur [ASSAULT]-Schüsse in diesem Zug', refs: ['09.06'] },
+        { text: 'Fell back: no shooting, no charge, no action this turn', text_de: 'Zurückgezogen: kein Schießen, kein Angriff, keine Aktion in diesem Zug', refs: ['09.07'] },
+        { text: 'Get out of TRANSPORTS (disembark move)', text_de: 'Aus TRANSPORTS aussteigen (Disembark Move)', refs: ['18.03', '18.04'] },
+        { text: 'From round 2: reserves arrive – within 6" of an edge, more than 8" from enemies; before round 3 not in the enemy deployment zone', text_de: 'Ab Runde 2: Reserven kommen an – innerhalb 6" zur Kante, mehr als 8" vom Gegner; vor Runde 3 nicht in der gegnerischen Aufstellungszone', refs: ['20.04'] },
         STRATS
       ],
       opp: [
-        { text: 'End of phase: may react with stratagems, e.g. FIRE OVERWATCH', text_de: 'Ende der Phase: kann mit Strategemen reagieren, z. B. FIRE OVERWATCH', refs: ['15.08'] }
+        { text: 'End of the phase: you may react with stratagems, e.g. FIRE OVERWATCH', text_de: 'Ende der Phase: Du kannst mit Strategemen reagieren, z. B. FIRE OVERWATCH', refs: ['15.08'] }
       ]
     }
   },
@@ -557,14 +557,14 @@ export const PHASES = [
     game: {
       you: [
         { text: 'Pick a unit; fell back or started an action → it cannot shoot', text_de: 'Einheit wählen; zurückgezogen oder Aktion begonnen → sie kann nicht schießen', refs: ['10.02', '09.07', '16.01'] },
-        { text: 'Advanced → only [ASSAULT]; engaged → only [PISTOL]', text_de: 'Vorgerückt → nur [ASSAULT]; im Nahkampf → nur [PISTOL]', refs: ['10.05', '10.06'] },
+        { text: 'Advanced → only [ASSAULT]; engaged → only [CLOSE-QUARTERS]/[PISTOL] at the unit it fights (MONSTER/VEHICLE: all weapons, -1 to hit)', text_de: 'Vorgerückt → nur [ASSAULT]; im Nahkampf → nur [CLOSE-QUARTERS]/[PISTOL] auf die Einheit, mit der sie kämpft (MONSTER/VEHICLE: alle Waffen, -1 auf Treffer)', refs: ['10.05', '10.06'] },
         { text: 'Each weapon: target visible, in range, not engaged', text_de: 'Jede Waffe: Ziel sichtbar, in Reichweite, nicht im Nahkampf', refs: ['04.02'] },
         { text: 'Hit → wound → save → damage', text_de: 'Treffer → Verwundung → Schutzwurf → Schaden', refs: ['05'] },
         STRATS
       ],
       opp: [
-        { text: 'Rolls the saves and removes casualties', text_de: 'Würfelt die Schutzwürfe und entfernt Verluste', refs: ['05.03'] },
-        { text: 'May use stratagems, e.g. to give a unit cover', text_de: 'Kann Strategeme einsetzen, z. B. um einer Einheit Deckung zu geben', refs: ['15.10'] }
+        { text: 'You roll the saves and remove your casualties', text_de: 'Du würfelst die Schutzwürfe und entfernst deine Verluste', refs: ['05.03'] },
+        { text: 'You may use stratagems, e.g. to give a unit cover', text_de: 'Du kannst Strategeme einsetzen, z. B. um einer Einheit Deckung zu geben', refs: ['15.10'] }
       ]
     }
   },
@@ -719,7 +719,7 @@ export const PHASES = [
         STRATS
       ],
       opp: [
-        { text: 'End of phase: may counter-charge, e.g. HEROIC INTERVENTION', text_de: 'Ende der Phase: kann zurückstürmen, z. B. HEROIC INTERVENTION', refs: ['15.11'] }
+        { text: 'End of the phase: you may counter-charge, e.g. HEROIC INTERVENTION', text_de: 'Ende der Phase: Du kannst zurückstürmen, z. B. HEROIC INTERVENTION', refs: ['15.11'] }
       ]
     }
   },
@@ -841,9 +841,9 @@ export const PHASES = [
         STRATS
       ],
       opp: [
-        { text: 'Piles in and consolidates after you', text_de: 'Rückt nach dir heran und nach', refs: ['12.02', '12.07'] },
-        { text: 'Picks their own units to fight in between – all of them must fight', text_de: 'Wählt abwechselnd eigene Einheiten zum Kämpfen – alle müssen kämpfen', refs: ['12.04'] },
-        { text: 'May use fight stratagems too, e.g. to strike next', text_de: 'Kann ebenfalls Nahkampf-Strategeme einsetzen, z. B. um als Nächster zuzuschlagen', refs: ['15.12'] }
+        { text: 'You pile in and consolidate after your opponent', text_de: 'Du rückst nach deinem Gegner heran und konsolidierst nach ihm', refs: ['12.02', '12.07'] },
+        { text: 'You pick your units to fight in alternation with your opponent – all eligible units must fight', text_de: 'Du wählst abwechselnd mit deinem Gegner eigene Einheiten zum Kämpfen – alle berechtigten Einheiten müssen kämpfen', refs: ['12.04'] },
+        { text: 'You may use fight stratagems too, e.g. to strike next', text_de: 'Du kannst ebenfalls Nahkampf-Strategeme einsetzen, z. B. um als Nächster zuzuschlagen', refs: ['15.12'] }
       ]
     }
   },
@@ -963,11 +963,14 @@ export const PHASES = [
         { text: 'Remove models from units out of coherency', text_de: 'Modelle aus nicht kohärenten Einheiten entfernen', refs: ['03.03'] },
         { text: 'Score your "end of your turn" missions', text_de: 'Missionen „am Ende deines Zuges“ werten', refs: ['07.03'] },
         { text: 'Tactical: discard achieved cards; discard others for +1 CP', text_de: 'Taktisch: erfüllte Karten abwerfen; andere für +1 BP abwerfen', refs: ['07.03'] },
+        { text: 'End of battle round 3: units still in strategic reserves are destroyed', text_de: 'Ende der 3. Schlachtrunde: Einheiten, die noch in strategischen Reserven sind, werden zerstört', refs: ['20.04'] },
         STRATS
       ],
       opp: [
-        { text: 'Scores their "end of opponent\'s turn" missions', text_de: 'Wertet seine Missionen „am Ende des gegnerischen Zuges“', refs: ['07.03'] },
-        { text: 'Removes models from their own units out of coherency', text_de: 'Entfernt Modelle aus eigenen nicht kohärenten Einheiten', refs: ['03.03'] }
+        { text: 'Score your "end of your opponent\'s turn" missions', text_de: 'Deine Missionen „am Ende des gegnerischen Zuges“ werten', refs: ['07.03'] },
+        { text: 'Remove models from your own units out of coherency', text_de: 'Modelle aus deinen eigenen nicht kohärenten Einheiten entfernen', refs: ['03.03'] },
+        { text: 'Your AIRCRAFT on the battlefield go back into strategic reserves', text_de: 'Deine AIRCRAFT auf dem Schlachtfeld kommen zurück in die strategischen Reserven', refs: ['23.02'] },
+        { text: 'End of battle round 3: your units still in strategic reserves are destroyed', text_de: 'Ende der 3. Schlachtrunde: deine Einheiten, die noch in strategischen Reserven sind, werden zerstört', refs: ['20.04'] }
       ]
     }
   },
@@ -981,8 +984,8 @@ export const PHASES = [
     steps: [
       {
         id: 'tr-in', title: 'Getting in', title_de: 'Einsteigen',
-        text: `<p>A TRANSPORT's datasheet says which models fit inside and how many. Units can start the battle <b>embarked</b>; a DEDICATED TRANSPORT must start with a unit inside. Later, a unit can embark right after moving if every model ended within <b>3"</b> of the TRANSPORT.</p><p>Embarked units are <b>off the battlefield</b>: they cannot be seen or attacked – and cannot shoot themselves, unless the TRANSPORT has FIRING DECK.</p>`,
-        text_de: `<p>Das Datenblatt eines TRANSPORT sagt, welche Modelle hineinpassen und wie viele. Einheiten können die Schlacht <b>eingestiegen</b> beginnen; ein DEDICATED TRANSPORT muss mit einer Einheit darin beginnen. Später kann eine Einheit direkt nach einer Bewegung einsteigen, wenn jedes Modell innerhalb von <b>3"</b> zum TRANSPORT endet.</p><p>Eingestiegene Einheiten sind <b>nicht auf dem Schlachtfeld</b>: Sie können weder gesehen noch angegriffen werden – und selbst nicht schießen, außer der TRANSPORT hat FIRING DECK.</p>`,
+        text: `<p>A TRANSPORT's datasheet says which models fit inside and how many. Units can start the battle <b>embarked</b>; a DEDICATED TRANSPORT must start with a unit inside. Later, a unit can embark right after a normal, advance or fall-back move if every model ended within <b>3"</b> of the TRANSPORT, the unit was not set up on the battlefield this turn and there is room for all of its models.</p><p>Embarked units are <b>off the battlefield</b>: they cannot be seen or attacked – and cannot shoot themselves, unless the TRANSPORT has FIRING DECK.</p>`,
+        text_de: `<p>Das Datenblatt eines TRANSPORT sagt, welche Modelle hineinpassen und wie viele. Einheiten können die Schlacht <b>eingestiegen</b> beginnen; ein DEDICATED TRANSPORT muss mit einer Einheit darin beginnen. Später kann eine Einheit direkt nach einem NORMAL, ADVANCE oder FALL-BACK MOVE einsteigen, wenn jedes Modell innerhalb von <b>3"</b> zum TRANSPORT endet, die Einheit in diesem Zug nicht auf dem Schlachtfeld aufgestellt wurde und Platz für alle ihre Modelle ist.</p><p>Eingestiegene Einheiten sind <b>nicht auf dem Schlachtfeld</b>: Sie können weder gesehen noch angegriffen werden – und selbst nicht schießen, außer der TRANSPORT hat FIRING DECK.</p>`,
         refs: ['18.01', '18.02', '24.14'],
         diagrams: [
           {
@@ -991,8 +994,9 @@ export const PHASES = [
             stats: [['M', '12"'], ['T', '9'], ['Sv', '3+'], ['W', '10'], ['Ld', '6+'], ['OC', '2']],
             weaponHead: 'Ranged weapon', weaponHead_de: 'Fernkampfwaffe',
             weapons: [{ name: 'Hull gun', range: '24"', A: 2, skill: '3+', S: 4, AP: 0, D: 1, abilities: '[RAPID FIRE 2]' }],
+            abilities: ['TRANSPORT: 10 INFANTRY models', 'FIRING DECK 2'],
             keywords: 'VEHICLE, TRANSPORT, DEDICATED TRANSPORT',
-            marks: { keywords: 1 },
+            marks: { keywords: 1, ab0: 2, ab1: 3 },
             callouts: [
               { n: 1, text: 'TRANSPORT: it can carry other models; DEDICATED TRANSPORT: it must start with a unit inside', text_de: 'TRANSPORT: Er kann andere Modelle befördern; DEDICATED TRANSPORT: Er muss mit einer Einheit darin beginnen' },
               { n: 2, text: 'Its abilities say what fits inside, e.g. "10 INFANTRY models"', text_de: 'Seine Fähigkeiten sagen, was hineinpasst, z. B. „10 INFANTRY-Modelle“' },
@@ -1023,8 +1027,8 @@ export const PHASES = [
       },
       {
         id: 'tr-out', title: 'Getting out', title_de: 'Aussteigen',
-        text: `<p>In your Movement phase the passengers get out by setting up <b>wholly within 3"</b> of the TRANSPORT (not within 2" of enemies).</p><ul><li>If they get out <b>before the TRANSPORT moves</b>, they may then move normally and charge this turn.</li><li>If the TRANSPORT <b>already moved</b>, they get out but cannot charge this turn.</li><li>If the TRANSPORT advanced or fell back, nobody gets out this phase.</li></ul><p>If the TRANSPORT is destroyed, the passengers must bail out within 6" – some may get hurt, and they are battle-shocked.</p>`,
-        text_de: `<p>In deiner Bewegungsphase steigen die Passagiere aus, indem sie <b>vollständig innerhalb von 3"</b> zum TRANSPORT aufgestellt werden (nicht innerhalb von 2" zu Gegnern).</p><ul><li>Steigen sie aus, <b>bevor der TRANSPORT sich bewegt</b>, dürfen sie sich danach normal bewegen und in diesem Zug angreifen.</li><li>Hat sich der TRANSPORT <b>schon bewegt</b>, steigen sie aus, dürfen in diesem Zug aber nicht angreifen.</li><li>Ist der TRANSPORT vorgerückt oder hat sich zurückgezogen, steigt in dieser Phase niemand aus.</li></ul><p>Wird der TRANSPORT zerstört, müssen die Passagiere innerhalb von 6" aussteigen – dabei kann es Verluste geben, und sie sind kampfgeschockt.</p>`,
+        text: `<p>In your Movement phase the passengers get out with a <b>disembark move</b>: they are set up around the TRANSPORT. Not possible if they embarked this phase or the TRANSPORT advanced or fell back this phase. What the TRANSPORT did decides the mode:</p><ul><li><b>Tactical Disembark</b> – the TRANSPORT has <b>not moved yet</b> (or remains stationary) and the unit fits <b>wholly within 3"</b> without being engaged: it then makes a normal or advance move and may still charge this turn.</li><li><b>Rapid Disembark</b> – the TRANSPORT <b>already made a normal or ingress move</b>: wholly within 3", no charge this turn (after an ingress move they also follow its set-up rules, e.g. more than 8" from enemies).</li><li><b>Combat Disembark</b> – otherwise, e.g. the TRANSPORT is engaged and there is no room to get out unengaged: wholly within <b>6"</b>, one hazard roll per model, models may be set up engaged with enemies the TRANSPORT is engaged with; the unit is battle-shocked and cannot charge this turn.</li></ul><p>If the TRANSPORT is destroyed, the passengers must bail out within 6" (emergency disembark) – one hazard roll per model, then they are battle-shocked and cannot charge this turn.</p>`,
+        text_de: `<p>In deiner Bewegungsphase steigen die Passagiere mit einem <b>Disembark Move</b> aus: Sie werden um den TRANSPORT herum aufgestellt. Das geht nicht, wenn sie in dieser Phase eingestiegen sind oder der TRANSPORT in dieser Phase vorgerückt ist oder sich zurückgezogen hat. Was der TRANSPORT getan hat, entscheidet über die Art:</p><ul><li><b>Tactical Disembark</b> – der TRANSPORT hat sich <b>noch nicht bewegt</b> (oder bleibt stehen) und die Einheit passt <b>vollständig innerhalb von 3"</b> hin, ohne im Nahkampf zu sein: Danach macht sie einen NORMAL oder ADVANCE MOVE und darf in diesem Zug noch angreifen.</li><li><b>Rapid Disembark</b> – der TRANSPORT hat <b>schon einen NORMAL oder INGRESS MOVE gemacht</b>: vollständig innerhalb von 3", in diesem Zug kein Angriff (nach einem INGRESS MOVE gelten auch dessen Aufstellungsregeln, z. B. mehr als 8" vom Gegner).</li><li><b>Combat Disembark</b> – sonst, z. B. wenn der TRANSPORT im Nahkampf ist und kein Platz bleibt, um außerhalb des Nahkampfs auszusteigen: vollständig innerhalb von <b>6"</b>, ein Gefahrenwurf pro Modell, Modelle dürfen im Nahkampf mit Gegnern aufgestellt werden, mit denen der TRANSPORT im Nahkampf ist; die Einheit ist kampfgeschockt und darf in diesem Zug nicht angreifen.</li></ul><p>Wird der TRANSPORT zerstört, müssen die Passagiere innerhalb von 6" aussteigen (Emergency Disembark) – ein Gefahrenwurf pro Modell, danach sind sie kampfgeschockt und dürfen in diesem Zug nicht angreifen.</p>`,
         refs: ['18.03', '18.04', '18.05'],
         diagrams: [{
           w: 12, h: 8.6,
@@ -1043,8 +1047,8 @@ export const PHASES = [
           caption: 'What the TRANSPORT did decides how its passengers get out.',
           caption_de: 'Was der TRANSPORT getan hat, entscheidet, wie seine Passagiere aussteigen.',
           head: ['The TRANSPORT …', 'Passengers …'], head_de: ['Der TRANSPORT …', 'Passagiere …'],
-          rows: [['has not moved yet', 'set up within 3", then move – may charge'], ['made a normal move', 'set up within 3" – no charge'], ['advanced or fell back', 'cannot get out this phase'], ['is destroyed', 'within 6", hazard rolls, battle-shocked']],
-          rows_de: [['hat sich noch nicht bewegt', 'innerhalb 3" aufstellen, dann bewegen – Angriff erlaubt'], ['hat einen NORMAL MOVE gemacht', 'innerhalb 3" aufstellen – kein Angriff'], ['ist vorgerückt / zurückgezogen', 'können in dieser Phase nicht aussteigen'], ['wird zerstört', 'innerhalb 6", Gefahrenwürfe, kampfgeschockt']],
+          rows: [['has not moved yet / stays', 'Tactical: within 3" (unengaged), then move – may charge'], ['made a normal or ingress move', 'Rapid: within 3" – no charge'], ['is engaged, no room within 3"', 'Combat: within 6", hazard rolls, battle-shocked, no charge'], ['advanced or fell back', 'cannot get out this phase'], ['is destroyed', 'within 6", hazard rolls, battle-shocked, no charge']],
+          rows_de: [['hat sich noch nicht bewegt / bleibt stehen', 'Tactical: innerhalb 3" (nicht im Nahkampf), dann bewegen – Angriff erlaubt'], ['hat einen NORMAL oder INGRESS MOVE gemacht', 'Rapid: innerhalb 3" – kein Angriff'], ['ist im Nahkampf, kein Platz innerhalb 3"', 'Combat: innerhalb 6", Gefahrenwürfe, kampfgeschockt, kein Angriff'], ['ist vorgerückt / zurückgezogen', 'können in dieser Phase nicht aussteigen'], ['wird zerstört', 'innerhalb 6", Gefahrenwürfe, kampfgeschockt, kein Angriff']],
           hl: [[0, 1]]
         },
         {
@@ -1060,14 +1064,14 @@ export const PHASES = [
     id: 'attached-units', part: 'more',
     title: 'Leaders and attached units', title_de: 'Anführer und angeschlossene Einheiten',
     intro: 'Characters that join a squad and fight as one unit.',
-    intro_de: 'Charaktermodelle, die sich einem Trupp anschließen und als eine Einheit kämpfen.',
+    intro_de: 'CHARACTER-Modelle, die sich einem Trupp anschließen und als eine Einheit kämpfen.',
     steps: [
       {
         id: 'att-form', title: 'One unit with a leader', title_de: 'Eine Einheit mit Anführer',
         text: `<p>Characters with <b>LEADER</b> (or <b>SUPPORT</b>) can join one of the units listed on their datasheet – the bodyguard. You decide this when you build your army, and it lasts the whole battle. From then on they are <b>one unit</b>: they move, shoot and fight together and must stay in coherency.</p><p>Attacks against the unit use the <b>Toughness of the bodyguard</b>, and the character is usually hit last. The leader's abilities help the whole unit as long as the leader lives.</p>`,
-        text_de: `<p>Charaktermodelle mit <b>LEADER</b> (oder <b>SUPPORT</b>) können sich einer auf ihrem Datenblatt genannten Einheit anschließen – der Leibwache. Das legst du beim Aufstellen der Armee fest, und es gilt für die ganze Schlacht. Ab dann sind sie <b>eine Einheit</b>: Sie bewegen sich, schießen und kämpfen zusammen und müssen kohärent bleiben.</p><p>Attacken gegen die Einheit nutzen die <b>Toughness der Leibwache</b>, und das Charaktermodell wird meist zuletzt getroffen. Die Fähigkeiten des Anführers helfen der ganzen Einheit, solange er lebt.</p>`,
+        text_de: `<p>CHARACTER-Modelle mit <b>LEADER</b> (oder <b>SUPPORT</b>) können sich einer auf ihrem Datenblatt genannten Einheit anschließen – der Leibwache. Das legst du beim Aufstellen der Armee fest, und es gilt für die ganze Schlacht. Ab dann sind sie <b>eine Einheit</b>: Sie bewegen sich, schießen und kämpfen zusammen und müssen kohärent bleiben.</p><p>Attacken gegen die Einheit nutzen die <b>Toughness der Leibwache</b>, und das CHARACTER-Modell wird meist zuletzt getroffen. Die Fähigkeiten des Anführers helfen der ganzen Einheit, solange er lebt.</p>`,
         tips: ['Weapons with [PRECISION] can pick out the character inside the unit.'],
-        tips_de: ['Waffen mit [PRECISION] können das Charaktermodell gezielt in der Einheit treffen.'],
+        tips_de: ['Waffen mit [PRECISION] können das CHARACTER-Modell gezielt in der Einheit treffen.'],
         refs: ['19.01', '19.02', '19.04', '24.22', '24.28'],
         diagrams: [
           {
@@ -1089,8 +1093,9 @@ export const PHASES = [
             stats: [['M', '6"'], ['T', '4'], ['Sv', '3+'], ['W', '5'], ['Ld', '6+'], ['OC', '1']],
             weaponHead: 'Melee weapon', weaponHead_de: 'Nahkampfwaffe', skillHead: 'WS',
             weapons: [{ name: 'Officer\'s blade', range: 'Melee', A: 5, skill: '2+', S: 5, AP: -2, D: 2 }],
+            abilities: ['LEADER: Line Squad', 'Inspiring Command'],
             keywords: 'INFANTRY, CHARACTER',
-            marks: { T: 3, keywords: 4 },
+            marks: { ab0: 1, ab1: 2, T: 3, keywords: 4 },
             callouts: [
               { n: 1, text: 'LEADER: this model can be attached to a Line Squad', text_de: 'LEADER: Dieses Modell kann sich einem Line Squad anschließen' },
               { n: 2, text: 'Its ability, e.g. "while this model leads a unit, add 1 to hit rolls for that unit" – helps every model', text_de: 'Seine Fähigkeit, z. B. „solange dieses Modell eine Einheit anführt, +1 auf Trefferwürfe dieser Einheit“ – hilft jedem Modell' },
@@ -1186,8 +1191,8 @@ export const PHASES = [
     steps: [
       {
         id: 'big-models', title: 'Monsters and vehicles', title_de: 'Monster und Fahrzeuge',
-        text: `<ul><li>With a NORMAL or ADVANCE MOVE they can drive <b>through enemy models</b> (not through other MONSTERS/VEHICLES) – but must still end more than 2" away.</li><li>They cannot go through tall ruins and buildings (unless they are MOBILE); they have to drive around.</li><li>In melee they can keep shooting all their guns at -1 to hit (not for [CLOSE-QUARTERS] weapons at the unit they fight; no [BLAST] at it), and your other units can shoot an engaged enemy MONSTER/VEHICLE at -1 to hit.</li><li>Models without a base (FRAME) are measured to the closest point of the model itself.</li></ul>`,
-        text_de: `<ul><li>Bei einem NORMAL oder ADVANCE MOVE können sie <b>durch gegnerische Modelle</b> fahren (nicht durch andere MONSTER/VEHICLE) – müssen aber trotzdem mehr als 2" entfernt enden.</li><li>Durch hohe Ruinen und Gebäude kommen sie nicht (außer sie sind MOBILE); sie müssen außen herum.</li><li>Im Nahkampf können sie mit allen Waffen weiterschießen, mit -1 auf Treffer (nicht für [CLOSE-QUARTERS]-Waffen gegen die Einheit, mit der sie kämpfen; kein [BLAST] auf sie), und deine anderen Einheiten dürfen auf ein gegnerisches MONSTER/VEHICLE im Nahkampf schießen, ebenfalls mit -1.</li><li>Modelle ohne Base (FRAME) werden zum nächsten Punkt des Modells selbst gemessen.</li></ul>`,
+        text: `<ul><li>With a NORMAL or ADVANCE MOVE they can drive <b>through enemy models</b> (not through other MONSTERS/VEHICLES) – but must still end more than 2" away.</li><li>They cannot go straight through ruins and buildings taller than 2" (unless they are MOBILE); they have to climb over them (the height counts towards the move, no stopping on top) or drive around.</li><li>In melee they can keep shooting all their guns at -1 to hit (not for [CLOSE-QUARTERS] weapons at the unit they fight; no [BLAST] at it), and your other units can shoot an engaged enemy MONSTER/VEHICLE at -1 to hit.</li><li>FRAME models (most models without a base) are measured to the closest point of the model itself.</li></ul>`,
+        text_de: `<ul><li>Bei einem NORMAL oder ADVANCE MOVE können sie <b>durch gegnerische Modelle</b> fahren (nicht durch andere MONSTER/VEHICLE) – müssen aber trotzdem mehr als 2" entfernt enden.</li><li>Durch Ruinen und Gebäude über 2" Höhe kommen sie nicht direkt hindurch (außer sie sind MOBILE); sie müssen darüberklettern (die Höhe zählt zur Bewegung, oben stehen bleiben ist nicht erlaubt) oder außen herum fahren.</li><li>Im Nahkampf können sie mit allen Waffen weiterschießen, mit -1 auf Treffer (nicht für [CLOSE-QUARTERS]-Waffen gegen die Einheit, mit der sie kämpfen; kein [BLAST] auf sie), und deine anderen Einheiten dürfen auf ein gegnerisches MONSTER/VEHICLE im Nahkampf schießen, ebenfalls mit -1.</li><li>FRAME-Modelle (die meisten Modelle ohne Base) werden zum nächsten Punkt des Modells selbst gemessen.</li></ul>`,
         refs: ['17.01', '13.06', '10.06', '17.03', '17.02'],
         diagrams: [
           {
@@ -1205,8 +1210,8 @@ export const PHASES = [
           },
           {
             w: 14, h: 7.4,
-            caption: 'A tall ruin: INFANTRY move through its walls, a MONSTER or VEHICLE has to go around.',
-            caption_de: 'Eine hohe Ruine: INFANTRY bewegt sich durch ihre Mauern, ein MONSTER oder VEHICLE muss außen herum.',
+            caption: 'A tall ruin: INFANTRY move through its walls; a MONSTER or VEHICLE would have to climb over them (counting the height), so it goes around.',
+            caption_de: 'Eine hohe Ruine: INFANTRY bewegt sich durch ihre Mauern; ein MONSTER oder VEHICLE müsste sie überklettern (die Höhe zählt mit), also geht es außen herum.',
             terrain: [{ x: 5.0, y: 0.8, w: 3.4, h: 3.6, type: 'ruin', label: 'ruin', label_de: 'Ruine', ly: 3.9 }],
             models: [
               M(2.0, 2.0, 0, { ghost: true }), M(10.6, 2.0, 0),
@@ -1298,8 +1303,8 @@ export const PHASES = [
     steps: [
       {
         id: 'ab-read', title: 'Reading abilities', title_de: 'Fähigkeiten lesen',
-        text: `<p>Abilities in square brackets belong to weapons – [ASSAULT], [PISTOL], [RAPID FIRE 1], [LETHAL HITS] … Others belong to the unit – DEEP STRIKE, FEEL NO PAIN 5+, STEALTH … The app shows the exact rule text when you tap them.</p><p>The same ability twice does <b>not stack</b>. A keyword after an ability, like [ANTI-VEHICLE 4+], means it only works against units with that keyword.</p>`,
-        text_de: `<p>Fähigkeiten in eckigen Klammern gehören zu Waffen – [ASSAULT], [PISTOL], [RAPID FIRE 1], [LETHAL HITS] … Andere gehören zur Einheit – DEEP STRIKE, FEEL NO PAIN 5+, STEALTH … Die App zeigt den genauen Regeltext, wenn du sie antippst.</p><p>Dieselbe Fähigkeit zweimal <b>addiert sich nicht</b>. Ein Schlüsselwort hinter einer Fähigkeit, etwa [ANTI-VEHICLE 4+], heißt: Sie wirkt nur gegen Einheiten mit diesem Schlüsselwort.</p>`,
+        text: `<p>Abilities in square brackets belong to weapons – [ASSAULT], [PISTOL], [RAPID FIRE 1], [LETHAL HITS] … Others belong to the unit – DEEP STRIKE, FEEL NO PAIN 5+, STEALTH … The app shows the exact rule text when you tap them.</p><p>The same ability twice does <b>not stack</b>. Keywords after a colon, like [LETHAL HITS: VEHICLE], mean the ability only works against units with one of those keywords (NON-VEHICLE: against units without it). [ANTI-VEHICLE 4+] is an ability of its own: against VEHICLE units an unmodified wound roll of 4+ is a critical wound.</p>`,
+        text_de: `<p>Fähigkeiten in eckigen Klammern gehören zu Waffen – [ASSAULT], [PISTOL], [RAPID FIRE 1], [LETHAL HITS] … Andere gehören zur Einheit – DEEP STRIKE, FEEL NO PAIN 5+, STEALTH … Die App zeigt den genauen Regeltext, wenn du sie antippst.</p><p>Dieselbe Fähigkeit zweimal <b>addiert sich nicht</b>. Keywords nach einem Doppelpunkt, etwa [LETHAL HITS: VEHICLE], heißen: Die Fähigkeit wirkt nur gegen Einheiten mit einem dieser Keywords (NON-VEHICLE: gegen Einheiten ohne es). [ANTI-VEHICLE 4+] ist eine eigene Fähigkeit: Gegen VEHICLE-Einheiten ist ein unmodifizierter Verwundungswurf von 4+ eine kritische Verwundung.</p>`,
         refs: ['24', '24.01', '24.02'],
         diagrams: [
           {
@@ -1311,11 +1316,12 @@ export const PHASES = [
               { name: 'Assault rifle', range: '24"', A: 2, skill: '3+', S: 4, AP: -1, D: 1, abilities: '[ASSAULT] [LETHAL HITS]' },
               { name: 'Heat pistol', range: '6"', A: 1, skill: '3+', S: 8, AP: -4, D: 'D6', abilities: '[PISTOL] [ANTI-VEHICLE 4+]' }
             ],
+            abilities: ['DEEP STRIKE', 'FEEL NO PAIN 5+'],
             keywords: 'INFANTRY, BATTLELINE',
-            marks: { 'w0.abilities': 1, 'w1.abilities': 2, keywords: 4 },
+            marks: { 'w0.abilities': 1, 'w1.abilities': 2, ab0: 3, keywords: 4 },
             callouts: [
               { n: 1, text: 'Weapon abilities in [square brackets] – tap them in the app for the rule', text_de: 'Waffenfähigkeiten in [eckigen Klammern] – in der App antippen für die Regel' },
-              { n: 2, text: '[ANTI-VEHICLE 4+]: only works against VEHICLE units', text_de: '[ANTI-VEHICLE 4+]: wirkt nur gegen VEHICLE-Einheiten' },
+              { n: 2, text: '[ANTI-VEHICLE 4+]: against VEHICLE units an unmodified wound roll of 4+ is a critical wound', text_de: '[ANTI-VEHICLE 4+]: gegen VEHICLE-Einheiten ist ein unmodifizierter Verwundungswurf von 4+ eine kritische Verwundung' },
               { n: 3, text: 'Unit abilities (DEEP STRIKE, FEEL NO PAIN 5+ …) are listed without brackets', text_de: 'Einheitenfähigkeiten (DEEP STRIKE, FEEL NO PAIN 5+ …) stehen ohne Klammern' },
               { n: 4, text: 'Keywords – many rules refer to them', text_de: 'Schlüsselwörter – viele Regeln beziehen sich darauf' }
             ]
@@ -1340,14 +1346,14 @@ export const PHASES = [
           {
             w: 12, h: 8.4,
             caption: 'Aura 3": unit A has a model within 3" of the character and is affected; unit B is not.',
-            caption_de: 'Aura 3": Einheit A hat ein Modell innerhalb von 3" zum Charaktermodell und ist betroffen; Einheit B nicht.',
+            caption_de: 'Aura 3": Einheit A hat ein Modell innerhalb von 3" zum CHARACTER-Modell und ist betroffen; Einheit B nicht.',
             rings: [{ x: 6, y: 4.3, r: 3.79, kind: 'aura', label: 'Aura 3"', label_de: 'Aura 3"' }],
             models: [M(6, 4.3, 0, { r: 0.79, label: 'C' }), M(9.0, 2.3, 0, { label: 'A', mark: 'ok' }), M(10.4, 1.5, 0, { label: 'A' }), M(1.4, 5.6, 0, { label: 'B', mark: 'bad' }), M(1.0, 7.0, 0, { label: 'B' })]
           },
           {
             w: 13, h: 8.9,
             caption: 'Two characters with the same aura: unit A is within range of both, but gets the effect only once.',
-            caption_de: 'Zwei Charaktermodelle mit derselben Aura: Einheit A ist in Reichweite beider, erhält den Effekt aber nur einmal.',
+            caption_de: 'Zwei CHARACTER-Modelle mit derselben Aura: Einheit A ist in Reichweite beider, erhält den Effekt aber nur einmal.',
             rings: [{ x: 4.0, y: 4.2, r: 3.79, kind: 'aura', label: 'Aura 3"', label_de: 'Aura 3"' }, { x: 9.0, y: 4.2, r: 3.79, kind: 'aura', label: 'Aura 3"', label_de: 'Aura 3"' }],
             models: [M(4.0, 4.2, 0, { r: 0.79, label: 'C' }), M(9.0, 4.2, 0, { r: 0.79, label: 'C' }), M(6.5, 3.6, 0, { label: 'A', mark: 'ok' }), M(6.5, 5.0, 0, { label: 'A' })],
             notes: [{ x: 6.5, y: 8.65, text: 'counts once for unit A', text_de: 'zählt für Einheit A nur einmal', anchor: 'middle' }]
@@ -1394,7 +1400,7 @@ export const PHASES = [
       {
         id: 'mu-units', title: 'Units, Warlord, leaders, enhancements', title_de: 'Einheiten, Kriegsherr, Anführer, Optimierungen',
         text: `<ul><li>Add units of your faction with their wargear; note models and points.</li><li>Pick one CHARACTER model as your <b>WARLORD</b>.</li><li>Attach LEADER and SUPPORT units to their bodyguard units.</li><li>Give <b>enhancements</b> to CHARACTER units (not EPIC HEROES) – each one only once, at most one per unit.</li></ul><p>Show your finished list to your opponent before the game.</p>`,
-        text_de: `<ul><li>Füge Einheiten deiner Fraktion mit ihrer Ausrüstung hinzu; notiere Modelle und Punkte.</li><li>Wähle ein Charaktermodell als deinen <b>Kriegsherrn</b> (WARLORD).</li><li>Schließe LEADER- und SUPPORT-Einheiten ihren Leibwachen an.</li><li>Gib <b>Optimierungen</b> an CHARACTER-Einheiten (keine EPIC HEROES) – jede nur einmal, höchstens eine pro Einheit.</li></ul><p>Zeig deine fertige Liste vor dem Spiel deinem Gegner.</p>`,
+        text_de: `<ul><li>Füge Einheiten deiner Fraktion mit ihrer Ausrüstung hinzu; notiere Modelle und Punkte.</li><li>Wähle ein CHARACTER-Modell als deinen <b>Kriegsherrn</b> (WARLORD).</li><li>Schließe LEADER- und SUPPORT-Einheiten ihren Leibwachen an.</li><li>Gib <b>Optimierungen</b> an CHARACTER-Einheiten (keine EPIC HEROES) – jede nur einmal, höchstens eine pro Einheit.</li></ul><p>Zeig deine fertige Liste vor dem Spiel deinem Gegner.</p>`,
         refs: ['25.01', '25.04', '19.01'],
         diagrams: [
           {
