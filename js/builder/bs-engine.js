@@ -65,6 +65,7 @@ export class BSystem {
       costs: arr(L.costs).length ? arr(L.costs) : arr(el.costs),
       categoryLinks: [...arr(el.categoryLinks), ...arr(L.categoryLinks)],
       defaultId: el.defaultSelectionEntryId && el.defaultSelectionEntryId !== 'none' ? el.defaultSelectionEntryId : null,
+      defaultAmount: L.defaultAmount != null && L.defaultAmount !== '' ? L.defaultAmount : el.defaultAmount,
       sortIndex: L.sortIndex != null ? L.sortIndex : el.sortIndex,
       profiles: [...arr(el.profiles), ...arr(L.profiles)],
       infoLinks: [...arr(el.infoLinks), ...arr(L.infoLinks)],
@@ -275,11 +276,36 @@ function scopeObj(V, scope, self, parent) {
       return x && x.kind === 'sel' ? x : null;
     }
     default: {
+      // the scope is an option group (Vanguard Veterans "for every 5 models", Nemesis Claw "4 - 9 Legionaries"): the
+      // selections made through that group below the selection that holds it – not the model that sits in the group
       let x = sel;
-      while (x) { if (x.kind === 'sel' ? matches(V, x, scope) : x.ids && x.ids.has(scope)) return x; x = x.parent; }
+      while (x) {
+        if (x.kind === 'sel' && x.node) {
+          if (x.groups.some(g => g.ids.has(scope))) return groupScope(x.parent, scope);
+          if (groupBelow(V.sys, x.node, scope)) return groupScope(x, scope);
+        }
+        if (x.kind === 'sel' ? matches(V, x, scope) : x.ids && x.ids.has(scope)) return x;
+        x = x.parent;
+      }
       return null;
     }
   }
+}
+/** Pseudo scope "option group `gid` below selection p": the selections made through that group. */
+function groupScope(p, gid) {
+  if (!p) return null;
+  return { kind: 'group', ids: new Set([gid]), n: 1, parent: p, ch: (p.ch || []).filter(c => c.groups && c.groups.some(g => g.ids.has(gid))) };
+}
+/** Whether an option group with id `gid` sits directly below `node` (through groups only). */
+const groupBelowCache = new WeakMap();
+function groupBelow(sys, node, gid) {
+  let m = groupBelowCache.get(node);
+  if (!m) {
+    m = new Set();
+    (function f(n, d) { if (d > 5) return; for (const k of sys.children(n)) if (k.group) { k.ids.forEach(i => m.add(i)); f(k, d + 1); } })(node, 0);
+    groupBelowCache.set(node, m);
+  }
+  return m.has(gid);
 }
 function countIn(V, c, scope) {
   if (!scope) return 0;
@@ -315,9 +341,12 @@ function evalCond(V, c, self, parent) {
   }
   return cmp(c.type, countIn(V, c, scope), num(c.value));
 }
+/* The army's catalogue counts as an instance of a catalogue it is built on – one whose root entries it imports (Blood
+   Angels → Space Marines). A plain catalogue link only borrows entries: Chaos Daemons link Chaos Space Marines for the
+   Shadow Legion units, but a Daemons army is no CSM army (else the Daemonic Pact cap on LEGIONES DAEMONICA applies). */
 function catalogueImports(V, id) {
   const seen = new Set();
-  const walk = cid => { if (seen.has(cid)) return false; seen.add(cid); if (cid === id) return true; const c = V.sys.cats.get(cid); return !!c && arr(c.catalogueLinks).some(l => walk(l.targetId)); };
+  const walk = cid => { if (seen.has(cid)) return false; seen.add(cid); if (cid === id) return true; const c = V.sys.cats.get(cid); return !!c && arr(c.catalogueLinks).some(l => l.importRootEntries && walk(l.targetId)); };
   return walk(V.catalogueId);
 }
 function evalGroup(V, g, self, parent) {
@@ -361,20 +390,24 @@ function modNum(cur, m, times) {
 }
 /** Walks all modifiers (incl. modifier groups) of a node whose conditions hold for `self` (selection or null) under `parent`. */
 function applyMods(V, node, self, fn, parent = self ? self.parent : null) {
-  const run = (mods, groups) => {
+  // a modifier group can repeat too: its modifiers then apply once per repeat (Skitarii Vanguard: radium carbines
+  // -1 per special weapon model) – and not at all while the repeat count is 0
+  const run = (mods, groups, mult) => {
     for (const m of mods) {
       const ok = evalGroup(V, { type: 'and', conditions: m.conditions, conditionGroups: m.conditionGroups }, self, parent);
       if (!ok) continue;
       const times = repeatsOf(V, m, self, parent);
       if (arr(m.repeats).length && !times) continue;
-      fn(m, times);
+      fn(m, times * mult);
     }
     for (const g of groups) {
       if (!evalGroup(V, { type: 'and', conditions: g.conditions, conditionGroups: g.conditionGroups }, self, parent)) continue;
-      run(arr(g.modifiers), arr(g.modifierGroups));
+      const times = repeatsOf(V, g, self, parent);
+      if (arr(g.repeats).length && !times) continue;
+      run(arr(g.modifiers), arr(g.modifierGroups), mult * times);
     }
   };
-  run(node.modifiers, node.modifierGroups);
+  run(node.modifiers, node.modifierGroups, 1);
 }
 
 // ───────── Effective values ─────────
@@ -553,9 +586,20 @@ function isDefault(g, x) {
   if (g.defaultId) return x.id === g.defaultId || x.linkId === g.defaultId;
   return !!g.name && String(x.name).toLowerCase() === String(g.name).toLowerCase();
 }
-function fillDefaults(sys, V, node, s, parentW) {
-  // wrapper for condition evaluation of the new selection (not yet in the roster)
-  const w = { kind: 'sel', s, node, groups: [], parent: parentW, n: s.n, ch: [], ids: node.ids };
+/** BSData / New Recruit defaultAmount of an entry: how many are selected when its parent is created – a number, or a
+ *  list "1,1" = that many separate selections (two battlesuits that can be equipped differently). null = none given. */
+function defAmounts(x) {
+  const v = x.defaultAmount;
+  if (v == null || v === '') return null;
+  const a = String(v).split(',').map(p => num(p.trim())).filter(p => p > 0);
+  return a.length ? a : null;
+}
+const sumA = a => a.reduce((x, y) => x + y, 0);
+function fillDefaults(sys, V, node, s, parentW, groups = []) {
+  // wrapper for condition evaluation of the new selection (not yet in the roster); it collects the wrappers of what is
+  // filled in, so later defaults see earlier ones (the Desolation Sergeant's launcher follows the squad's)
+  const ids = new Set(node.ids); for (const g of groups) g.ids.forEach(i => ids.add(i));
+  const w = { kind: 'sel', s, node, groups, parent: parentW, n: s.n, ch: [], ids };
   /* Fill group k (token tok) with `need` selections: entries with their own minimum first (e.g. the Sergeant), the
      share of mandatory groups inside (the 1 "Special Weapon" slot of 9 Farstalkers), then the default entry (or the
      first one) up to its maximum, then the next ones; whatever is still missing goes into the groups inside
@@ -568,8 +612,16 @@ function fillDefaults(sys, V, node, s, parentW) {
     const share = new Map(groups.map(o => [o.g, Math.max(0, o.l.min, minInside(o.g))]));
     const counts = new Map();
     let left = Math.max(0, need - [...share.values()].reduce((a, b) => a + b, 0));
-    for (const o of opts) if (o.l.min > 0 && left > 0) { const c = Math.min(o.l.min, left); counts.set(o.x, c); left -= c; }
+    // the data's default amounts come first (Crisis Fireknife: plasma rifle 1 + missile pod 1 instead of 2 of the first);
+    // the group's default entry before the others when they compete for the places (TX42: every option has 1)
     const order = opts.slice().sort((p, q) => (isDefault(k, q.x) ? 1 : 0) - (isDefault(k, p.x) ? 1 : 0));
+    for (const o of order) {
+      const da = defAmounts(o.x);
+      if (!da || o.l.max === 0 || left <= 0) continue;
+      const c = Math.min(sumA(da), left, o.l.max < 0 ? Infinity : o.l.max);
+      if (c > 0) { counts.set(o.x, c); left -= c; }
+    }
+    for (const o of opts) if (o.l.min > 0 && left > 0) { const have = counts.get(o.x) || 0; const c = Math.min(Math.max(0, o.l.min - have), left); if (c > 0) { counts.set(o.x, have + c); left -= c; } }
     for (const o of order) {
       if (left <= 0) break;
       const have = counts.get(o.x) || 0;
@@ -587,9 +639,7 @@ function fillDefaults(sys, V, node, s, parentW) {
     }
     for (const o of opts) {
       const n = counts.get(o.x); if (!n) continue;
-      const c = { id: newId(), t: tok + '>' + o.x.token, n, ch: [] };
-      fillDefaults(sys, V, o.x, c, w);
-      s.ch.push(c);
+      addEntry(o.x, tok + '>' + o.x.token, n);
     }
     for (const o of groups) {
       const n = share.get(o.g);
@@ -607,14 +657,26 @@ function fillDefaults(sys, V, node, s, parentW) {
         const ask = !k.defaultId && node.type === 'upgrade' && parentW && parentW.kind === 'force';
         if (lim.min > 0 && !ask) fillGroup(k, tok, lim.min);
         else visit(sys.children(k), tok);   // nested groups / entries with their own min
-      } else if (lim.min > 0) {
-        const c = { id: newId(), t: tok, n: lim.min, ch: [] };
-        fillDefaults(sys, V, k, c, w);
-        s.ch.push(c);
+      } else {
+        const da = lim.max === 0 ? null : defAmounts(k);
+        const n = Math.max(lim.min, da ? Math.min(sumA(da), lim.max < 0 ? Infinity : lim.max) : 0);
+        if (n > 0) addEntry(k, tok, n);
       }
     }
   };
+  // n of entry x: one selection – or, when the data's default amount is a list ("1,1") and it adds up, one per item
+  const addEntry = (x, t, n) => {
+    const da = defAmounts(x);
+    const parts = da && da.length > 1 && sumA(da) === n ? da : [n];
+    const ch = sys.chain(node, t);
+    for (const p of parts) {
+      const c = { id: newId(), t, n: p, ch: [] };
+      w.ch.push(fillDefaults(sys, V, x, c, w, ch ? ch.slice(0, -1) : []));
+      s.ch.push(c);
+    }
+  };
   visit(sys.children(node), '');
+  return w;
 }
 
 export function addSel(sys, roster, parentId, t, n = 1) {
@@ -681,6 +743,26 @@ export { PTS, DP, findSel };
 /** For js/builder/profiles.js: the modifiers of a selection whose conditions hold, and whether a selection matches an id/category. */
 export const applyModsOf = (V, w, fn) => applyMods(V, w.node, w, fn);
 export const matchesSel = (V, w, id) => matches(V, w, id);
+/** All profiles of an entry: its own, those it links (infoLink type "profile" – many models share one Unit profile this
+ *  way, e.g. Cadian Veteran Guardsman) and those of its info groups (own or linked). */
+export function profilesOf(sys, node) {
+  if (node._profiles) return node._profiles;
+  const out = [...node.profiles];
+  const seen = new Set(out.map(p => p.id));
+  const take = p => { if (p && !seen.has(p.id)) { seen.add(p.id); out.push(p); } };
+  const info = (links, groups, d) => {
+    if (d > 4) return;
+    for (const l of arr(links)) {
+      const t = sys.idx.get(l.targetId);
+      if (!t) continue;
+      if (l.type === 'profile') take(t);
+      else if (l.type === 'infoGroup') { arr(t.profiles).forEach(take); info(t.infoLinks, t.infoGroups, d + 1); }
+    }
+    for (const g of arr(groups)) { arr(g.profiles).forEach(take); info(g.infoLinks, g.infoGroups, d + 1); }
+  };
+  info(node.infoLinks, [...arr(node.el.infoGroups), ...arr(node.link && node.link.infoGroups)], 0);
+  return (node._profiles = out);
+}
 
 /* Keeps a roster consistent with the data after a change (as New Recruit does):
  *  - a selection that is no longer available (hidden or max 0 by its modifiers, e.g. the Hesyr's gauntlet once he takes a hammer,
@@ -734,7 +816,7 @@ export function autoSync(sys, roster) {
           if (lim.min > 0 && !inG.length && gRoom > 0) {
             // options that are allowed right now; one that is mandatory now (min > 0) wins over the default
             const opts = sys.children(k).filter(x => !x.group).map(x => ({ x, l: limits(V, x, null, w) })).filter(o => !o.l.hidden && o.l.max !== 0);
-            const pick = opts.find(o => o.l.min > 0) || opts.find(o => isDefault(k, o.x)) || (opts.length === 1 ? opts[0] : null);
+            const pick = opts.find(o => o.l.min > 0) || opts.find(o => defAmounts(o.x)) || opts.find(o => isDefault(k, o.x)) || (opts.length === 1 ? opts[0] : null);
             const def = pick ? pick.x : null;
             if (def) { change = { add: { p: w.s.id, t: tok + '>' + def.token, n: def.type === 'model' ? lim.min : 1 } }; return; }
           }
