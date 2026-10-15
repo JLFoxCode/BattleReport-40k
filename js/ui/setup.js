@@ -3,6 +3,7 @@
  * Lokaler UI-Zustand (Schritt, Suche, Fixed-Auswahl) liegt je Spielcode in UI, damit State-Pushes ihn nicht verlieren.
  * Events: einmalige Delegation auf root (root.__setupBound), Aktionen über data-action / data-field. */
 import { esc, btn, chip, badge, confirmSheet, toast, colorOf, playerLabel } from './components.js';
+import { prepareQr, qrReady, joinUrl } from './qr.js';
 import { armyStep, unitsStep, missionStep, secStep, facListHtml, openUnitSheet, openImportSheet, dpLimit, dpOf, SIZE_LABEL } from './setup-steps.js';
 
 const STEPS = [
@@ -221,7 +222,9 @@ function checkStep(ctx, ui) {
 /* ═══════════════ Zusammenfassung (stage ≠ setup) ═══════════════ */
 function summary(ctx) {
   const s = ctx.state, m = s.mission, WH = ctx.data.WH, code = ctx.code;
-  const host = location.host;
+  // opened via localhost: the LAN address (as the QR codes use it), so other devices can open the links
+  if (!qrReady()) prepareQr().then(ch => { if (ch && ctx.rerender) ctx.rerender(); }).catch(() => {});
+  const host = joinUrl(code, 0).replace(/^https?:\/\//, '').replace(/\/index\.html#.*$/, '');
   const facName = p => { const f = ctx.data.FACTIONS.find(x => x.id === s.players[p].faction); return f ? f.name : 'no faction'; };
   return `
     <div class="setup wrap summary">
@@ -233,7 +236,7 @@ function summary(ctx) {
         <div class="card p${p}">
           <div class="card-head"><div class="title">${esc(playerLabel(s, p))}</div>${badge(`${s.players[p].units.length} unit${s.players[p].units.length === 1 ? '' : 's'}`)}</div>
           <div class="small">${esc(facName(p))}</div>
-          <div class="xs muted">${esc(s.players[p].detachments.join(', ') || '–')}</div>
+          <div class="xs muted">${esc(s.players[p].detachments.map(id => { const f = ctx.data.FACTIONS.find(x => x.id === s.players[p].faction); return ((f && (f.detachments || []).find(d => d.id === id)) || { name: id }).name; }).join(', ') || '–')}</div>
           <div class="xs muted">Secondary: ${s.players[p].secondaries.mode === 'fixed' ? 'Fixed – ' + esc((s.players[p].secondaries.fixed || []).map(id => (WH.SECONDARY[id] || { name: id }).name).join(', ')) : 'Tactical'}</div>
         </div>`).join('')}</div>
       <div class="card mt">

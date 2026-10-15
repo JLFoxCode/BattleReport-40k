@@ -289,6 +289,30 @@ const ATTACHED_AS_RE = /^(?:[•\-\*◦○]\s*)?Attached as\s*:\s*(.+?)\s*$/i;
 const WITH_RE = /^(?:[•\-\*◦○]\s*)?(\d+)\s+with\s+(.+)$/i;
 const GEAR_RE = /^(?:(\d+)\s*x?\s+)?(.+?)\s*$/i;
 
+/** Chat/forum unit lines → the New Recruit form UNIT_RE reads: "Name - 90" / "Name (90): …" / "Overlord (115 pts) - Warlord, X" /
+ *  "3 Skorpekh Destroyers (85 pts)" / "Lychguard x5 (80 pts)" / "Autarch w/ Mantle of Wisdom (Warlord) - 90". Bullet lines stay. */
+function chatUnitLine(t) {
+  if (/^[•\-\*◦○]/.test(t)) return t;
+  let s = t, gear = [];
+  const dash = /^(.+?)\s+[-–—]\s+(\d+)\s*(?:pts?|points?|punkte|pkt)?\.?\s*$/i.exec(s);
+  if (dash && !/[\(\[]\s*\d+\s*(?:pts?|points?|punkte|pkt|p)?\.?\s*[\)\]]/i.test(dash[1])) {
+    let name = dash[1];
+    if (/\(\s*warlord\s*\)/i.test(name)) { gear.push('Warlord'); name = name.replace(/\s*\(\s*warlord\s*\)/i, ''); }
+    const w = /^(.+?)\s+(?:w\/|with)\s+(.+)$/i.exec(name);
+    if (w) { name = w[1]; gear.push(w[2]); }
+    s = `${name.trim()} (${dash[2]} pts)`;
+  } else {
+    const bare = /^(.+?)\s*\(\s*(\d+)\s*\)\s*(?::\s*(.*))?$/.exec(s);
+    if (bare && +bare[2] >= 10) { s = `${bare[1]} (${bare[2]} pts)`; if (bare[3]) gear.push(bare[3]); }
+    const after = /^(.+?[\)\]])\s+[-–—]\s+(.+)$/.exec(s);
+    if (after && /\d\s*(?:pts?|points?|punkte|pkt|p)\.?\s*[\)\]]$/i.test(after[1])) { s = after[1]; gear.push(after[2]); }
+  }
+  if (!/[\(\[]\s*\d+\s*(?:pts?|points?|punkte|pkt|p)\.?\s*[\)\]]/i.test(s)) return t;
+  s = s.replace(/^(\d+)\s+(?!x\s)(?=\D)/i, '$1x ')                               // "3 Skorpekh Destroyers" → "3x …"
+    .replace(/^([^\(\[]+?)\s+x\s*(\d+)\s*(?=[\(\[])/i, '$2x $1 ');               // "Lychguard x5 (80 pts)" → "5x Lychguard"
+  return gear.length ? `${s}: ${gear.join(', ')}` : s;
+}
+
 // "9x Choppa, 9 with Slugga, Power klaw" → [{ name, count }] (Standardzahl = Modellzahl der Zeile)
 function parseGear(str, defCount, into, flags) {
   for (const part of String(str || '').split(/\s*,\s*/)) {
@@ -337,7 +361,7 @@ export function parseArmyText(text) {
     if (WARLORD_RE.test(t)) { if (cur) cur.warlord = true; continue; }
     const lm = LEAD_RE.exec(t);
     if (lm) { if (cur) { const k = /^lead/i.test(lm[1]) ? 'leading' : 'attachedTo'; cur[k] = lm[2].trim(); cur[k + 'Nth'] = lm[3] ? num(lm[3], 0) : 0; } continue; }
-    const noChar = t.replace(CHAR_RE, '');
+    const noChar = chatUnitLine(t.replace(CHAR_RE, ''));
     const sm = UNIT_SUFFIX_RE.exec(noChar);
     const um = UNIT_RE.exec(sm ? sm[1] : noChar);
     if (um) {
@@ -495,12 +519,14 @@ H['unit.update'] = (s, a) => {
     if (bad.length) fail('Only models/status/leader attachment can be changed during the battle');
   }
   if (keys.includes('id')) fail('The unit ID cannot be changed');
+  // the log names only the fields that really change (the setup form sends all of them; 'r' is the derived base radius)
+  const changed = keys.filter(k => k !== 'r' && JSON.stringify(u[k]) !== JSON.stringify(patch[k]));
   const merged = normalizeUnit(s, Object.assign({}, u, patch, { id: u.id }), a.player, true);
   merged.id = u.id; merged.startPos = u.startPos;
   if (patch.status === 'destroyed') merged.pos = null;
   Object.assign(u, merged);
   recalcControl(s);
-  log(s, a, pl.name + ': unit “' + u.name + '” updated (' + keys.join(', ') + ')', a.player, { unitId: u.id, patch });
+  log(s, a, pl.name + ': unit “' + u.name + '” updated (' + ((changed.length ? changed : keys).join(', ') || 'no change') + ')', a.player, { unitId: u.id, patch });
 };
 
 H['unit.remove'] = (s, a) => {
@@ -580,7 +606,7 @@ H['mission.set'] = (s, a) => {
     const ids = WH.DISPOSITIONS.map(x => x.id);
     const nd = [0, 1].map(i => (d[i] == null ? m.dispositions[i] : d[i]));
     nd.forEach(x => { if (x != null && !ids.includes(x)) fail('Unknown disposition: ' + x); });
-    m.dispositions = nd; changes.push('dispositions ' + nd.map(x => x || '–').join('/'));
+    m.dispositions = nd; changes.push('Force Dispositions ' + nd.map(x => (x && (WH.DISPOSITIONS.find(y => y.id === x) || {}).name) || x || '–').join(' / '));
   }
   if ('twist' in a) {
     if (a.twist != null && !WH.TWISTS.some(t => t.id === a.twist)) fail('Unknown twist');
@@ -789,7 +815,7 @@ H['phase.set'] = (s, a) => {
   const phase = a.phase == null ? s.phase : a.phase;
   if (!PHASE_IDS.includes(phase)) fail('Invalid phase');
   const prev = { round: s.round, turn: s.turn, phase: s.phase };
-  s.round = round; s.turn = turn; s.phase = phase; s.pending = null; delete s.endBonus;
+  s.round = round; s.turn = turn; s.phase = phase; s.pending = null; delete s.endBonus; delete s.endRequested;
   if (s.stage === 'over') s.stage = 'battle';
   // Wertungs-Checkpoints, die ab der neuen Position erneut durchlaufen werden, wieder freigeben
   const first = isIdx(s.mission.first) ? s.mission.first : 0;
@@ -994,6 +1020,12 @@ H['score.confirm'] = (s, a) => {
     if (runCheckpoint(s, a, base, 1 - pend.player, 'end')) return;
     delete s.endRequested;
     finishBattle(s, a);
+  } else if (pend.when !== 'end' && s.stage === 'battle' && s.endRequested) {
+    // game.end arrived while this scoring was open: now the end-of-battle scoring of both players
+    const base = deriveBase(s);
+    for (const p of [s.turn, 1 - s.turn]) if (runCheckpoint(s, a, base, p, 'end')) return;
+    delete s.endRequested;
+    finishBattle(s, a);
   }
 };
 
@@ -1059,8 +1091,14 @@ H['note.add'] = (s, a) => {
 
 H['game.end'] = (s, a) => {
   if (!['battle', 'over'].includes(s.stage)) fail('No battle in progress');
-  if (s.pending) fail('Pending scoring: confirm it first (score.confirm)');
   if (s.stage === 'over') fail('The battle is already over');
+  if (s.pending) {
+    // an end-of-turn / Command phase scoring is open: it is confirmed first, then the end-of-battle scoring follows
+    if (s.pending.when === 'end' || s.endRequested) fail('The end-of-battle scoring is already requested');
+    s.endRequested = true;
+    log(s, a, 'End of battle requested – after the pending scoring is confirmed', null);
+    return;
+  }
   const base = deriveBase(s);
   s.endRequested = true;
   for (const p of [s.turn, 1 - s.turn]) if (runCheckpoint(s, a, base, p, 'end')) return;

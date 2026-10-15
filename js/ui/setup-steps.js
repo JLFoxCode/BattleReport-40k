@@ -380,7 +380,7 @@ function primaryCard(WH, id, p) {
     <div class="card prim-card p${p}">
       <div class="card-head"><div class="title">${esc(c.name)}</div>${badge('Primary', `p${p}`)}</div>
       <p class="small">${esc(c.desc || '')}</p>
-      <ul class="cond-list">${(c.c || []).map(x => `<li class="${x.sub ? 'sub' : ''}"><span class="vp">${vpText(x.vp)}</span><span>${esc(x.t)}${x.k === 'per' ? ' (each)' : ''}<span class="muted xs"> · ${esc(WH.TIMING_LABELS[x.w] || x.w)}${x.r && (x.r[0] !== 1 || x.r[1] !== 5) ? ` · R${x.r[0]}–${x.r[1]}` : ''}</span></span></li>`).join('')}</ul>
+      <ul class="cond-list">${(c.c || []).map(x => `<li class="${x.sub ? 'sub' : ''}"><span class="vp">${vpText(x.vp)}</span><span>${esc(x.t)}${x.k === 'per' ? ' (each)' : ''}<span class="muted xs"> · ${esc(WH.TIMING_LABELS[x.w] || x.w)}${x.r && (x.r[0] !== 1 || x.r[1] !== 5) ? ` · R${x.r[0]}${x.r[1] !== x.r[0] ? `–${x.r[1]}` : ""}` : ''}</span></span></li>`).join('')}</ul>
     </div>`;
 }
 

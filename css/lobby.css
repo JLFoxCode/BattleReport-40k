@@ -26,6 +26,11 @@
 .lobby .pname.p0, .lobby .pname.p1 { color: var(--pc); }
 .lobby .roles { flex-wrap: wrap; gap: 6px; }
 .lobby .roles .btn { flex: 1 1 30%; }
+/* long player names (no spaces) wrap/clip inside the card instead of widening the page */
+.lobby .game-grid { grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr)); }
+.lobby .game, .lobby .game-players .pname { min-width: 0; }
+.lobby .game-players .pname { overflow-wrap: anywhere; }
+.lobby .roles .btn { min-width: 0; max-width: 100%; overflow: hidden; }
 .lobby .game-foot { align-items: center; gap: 6px; flex-wrap: wrap; }
 .lobby .tiny { font-size: .75rem; overflow-wrap: anywhere; }
 .lobby .small { font-size: .85rem; }

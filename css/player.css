@@ -22,6 +22,8 @@
   border-bottom: 1px solid var(--line); padding-top: var(--sa-top);
 }
 .pl-status { display: flex; align-items: center; gap: 10px; min-height: 56px; padding: 6px var(--gap) 6px; }
+/* phone in landscape: a pinned head + tabs would cover half the screen – it scrolls away there */
+@media (max-height: 500px) { .pl-pin { position: static; } }
 .pl-status-main { flex: 1 1 auto; min-width: 0; line-height: 1.15; }
 .pl-round { font-family: var(--font-title); font-weight: 700; font-size: 15px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .pl-turn { font-family: var(--font-title); font-weight: 700; font-size: 20px; line-height: 1.1; color: var(--pc, var(--text)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

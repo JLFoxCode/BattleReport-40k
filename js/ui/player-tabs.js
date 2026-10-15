@@ -233,7 +233,8 @@ function namedParagraphs(text, fallback) {
     const plain = cleanOrig(t).replace(/:\s*$/, '').trim();
     // A mixed-case lead-in ending with ":" ("Unless otherwise stated:") introduces bullets of the same rule – not a heading
     if (/:\s*$/.test(t) && !/^\*\*/.test(t) && /\p{Ll}/u.test(plain)) { head = fallback; continue; }
-    const isHead = /^\*\*[^*]+\*\*:?$/.test(t) || (plain.length <= 48 && !/[.!?]/.test(plain) && !/^[-•]/.test(t));
+    // table rows ("Onslaught - 6", "A | B", "… 6\"") are no headings
+    const isHead = /^\*\*[^*]+\*\*:?$/.test(t) || (plain.length <= 48 && !/[.!?|]/.test(plain) && !/^[-•]/.test(t) && !/\d+\s*["”+]?\s*$/.test(plain));
     if (isHead) { head = plain; continue; }
     const m = /^([A-Z][A-Z0-9 '’\-\/]{2,40}):\s+/.exec(plain);   // "METHODICAL ANNIHILATION: Each time …"
     out.push({ name: m ? m[1].trim() : head, text: cleanOrig(t) });
@@ -462,7 +463,34 @@ function unattachedLeaders(units, sheets, links) {
     return units.some(x => x !== u && !leaderTargets(sheets.get(x.id)) && (!allowed.length || allowed.includes(normName(x.name)) || allowed.includes(normName((sheets.get(x.id) || {}).name))));
   });
 }
-/** "Attached to" picker for a leader (select, data-change="unit.attach"). */
+/** Why the units `all` may not all join the bodyguard `b` ('' if they may) – core rules: one Leader unit and one SUPPORT
+ *  unit (ds.support) per bodyguard, more Leaders only when a datasheet says so ("up to two Leader units", "Starting
+ *  Strength of N", "no more than one … is a X unit", "not duplicates", "even if one X unit has already been attached"). */
+function attachLimit(b, all, sheets) {
+  if (all.length < 2) return '';
+  const plain = s => String(s || '').replace(/[*^]/g, '');
+  const sh = x => sheets.get(x.id) || {};
+  const sup = all.filter(x => !sh(x).leader && sh(x).support), ls = all.filter(x => !sup.includes(x));
+  if (sup.length > 1) return 'only one SUPPORT unit';
+  if (ls.length < 2) return '';
+  const hasKw = (x, kw) => { const k = normName(kw); return !!k && (normName(x.name) === k || (sh(x).keywords || []).some(t => normName(t) === k)); };
+  const all2 = y => { const o = []; (function f(z) { if (typeof z === 'string') o.push(z); else if (z && typeof z === 'object') Object.values(z).forEach(f); })(y); return plain(o.join('\n')); };
+  const bt = all2(sh(b).abilities);
+  const up = /up to (two|three|four|\d+) Leader units/i.exec(bt), ss = /Starting Strength of (\d+)/i.exec(bt);
+  const max = up && (!ss || (b.modelsStart || b.models || 0) >= +ss[1]) ? ({ two: 2, three: 3, four: 4 }[up[1].toLowerCase()] || +up[1]) : 1;
+  if (max > 1) {
+    if (ls.length > max) return `at most ${max} Leader units`;
+    const one = /no more than one of those units is an? (.+?) unit/i.exec(bt);
+    if (one && ls.filter(x => hasKw(x, one[1])).length > 1) return `only one ${one[1].trim().toUpperCase()} unit`;
+    if (/not duplicates/i.test(bt) && new Set(ls.map(x => normName(x.name))).size < ls.length) return 'no duplicate Leader units';
+    return '';
+  }
+  const evenIf = (a, o) => { const e = /even if (?:one |an? )?(.+?) (?:unit |model )?has already been attached/i.exec(plain((sh(a).leader || {}).text)); return !!e && hasKw(o, e[1]); };
+  if (ls.length === 2 && (evenIf(ls[0], ls[1]) || evenIf(ls[1], ls[0]))) return '';
+  return 'only one Leader unit';
+}
+/** "Attached to" picker for a leader (select, data-change="unit.attach"); bodyguards that already have as many
+ *  leaders as their datasheet allows are listed disabled with who leads them. */
 function attachPicker(u, ds, units, sheets, links) {
   const allowed = leaderTargets(ds);
   if (!allowed) return '';
@@ -470,8 +498,13 @@ function attachPicker(u, ds, units, sheets, links) {
   if (!cands.length) return '';
   const cur = (links.get(u.id) || {}).leading;
   const nth = x => { const same = units.filter(y => y.name === x.name); return same.length > 1 ? ` (${same.indexOf(x) + 1})` : ''; };
+  const full = x => {
+    if (cur === x) return null;
+    const ls = units.filter(y => y !== u && (links.get(y.id) || {}).leading === x);
+    return ls.length && attachLimit(x, [...ls, u], sheets) ? ls : null;
+  };
   return `<label class="ds-attach-pick"><span>${esc(u.name)} attached to</span><select data-change="unit.attach" data-unit="${esc(u.id)}">
-    <option value="">– not attached –</option>${cands.map(x => `<option value="${esc(x.id)}"${cur === x ? ' selected' : ''}>${esc(x.name + nth(x))}</option>`).join('')}</select></label>`;
+    <option value="">– not attached –</option>${cands.map(x => { const ls = full(x); return `<option value="${esc(x.id)}"${cur === x ? ' selected' : ''}${ls ? ' disabled' : ''}>${esc(x.name + nth(x))}${ls ? ` – led by ${esc(ls.map(y => y.name).join(', '))}` : ''}</option>`; }).join('')}</select></label>`;
 }
 
 /** Enhancements of a unit resolved against the original texts. */

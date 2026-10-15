@@ -118,6 +118,7 @@
 
 .caps { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; padding: 6px 4px; font-size: 13px; color: var(--muted); }
 .caps .cap { display: flex; align-items: baseline; gap: 6px; white-space: nowrap; }
+.caps > .btn.info { grid-column: 1 / -1; justify-self: end; }   /* its own row – the limits stay in two even columns */
 .caps .cap-l { flex: 1; overflow: hidden; text-overflow: ellipsis; }
 .caps .cap b { color: var(--text); font-family: var(--font-title); font-size: 16px; }
 .caps .cap.full b { color: var(--warn); }

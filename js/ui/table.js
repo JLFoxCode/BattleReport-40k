@@ -119,7 +119,7 @@ function setupStage(ctx) {
         <div class="card p${p}">
           <div class="card-head"><div class="title">${esc(pName(s, p))}</div>${s.players[p].ready ? badge('ready', 'ok') : badge('open', 'warn')}</div>
           <div class="small">${esc(facName(p))}</div>
-          <div class="xs muted">${esc(s.players[p].detachments.join(', ') || 'no Detachment')}</div>
+          <div class="xs muted">${esc(s.players[p].detachments.map(id => { const f = ctx.data.FACTIONS.find(x => x.id === s.players[p].faction); return ((f && (f.detachments || []).find(d => d.id === id)) || { name: id }).name; }).join(', ') || 'no Detachment')}</div>
           <div class="xs muted">Secondary: ${s.players[p].secondaries.mode === 'fixed' ? 'Fixed – ' + esc((s.players[p].secondaries.fixed || []).map(id => (WH.SECONDARY[id] || { name: id }).name).join(', ') || '–') : 'Tactical'}</div>
         </div>`).join('')}</div>
       <div class="card mt">
@@ -553,10 +553,16 @@ function syncSheet() {
   // New turn with Tactical Missions: ask to draw the cards right away (once per turn), showing them in full
   if (!key && s && s.stage === 'battle' && !ui.sheet) {
     const p = s.turn, sec = s.players[p].secondaries || {};
-    const dkey = `${s.code}|${s.round}|${s.turn}`;
+    const dkey = `${s.code}|${s.createdAt || ''}|${s.round}|${s.turn}`;
     // Start of every turn (Tactical and Fixed): draw new cards and/or recall the active Secondary Missions
     const startOfTurn = s.phase === 'command' || (sec.mode === 'tactical' && (sec.toDraw || 0) > 0);
-    if (startOfTurn && ui.drawShown !== dkey) { ui.drawShown = dkey; openDrawSheet(p); }
+    // remembered across reloads (per device), so the sheet does not come back after every reload
+    if (ui.drawShown === undefined) { try { ui.drawShown = localStorage.getItem('br40k-drawShown') || null; } catch { ui.drawShown = null; } }
+    if (startOfTurn && ui.drawShown !== dkey) {
+      ui.drawShown = dkey;
+      try { localStorage.setItem('br40k-drawShown', dkey); } catch { /* private mode */ }
+      openDrawSheet(p);
+    }
   }
 }
 
@@ -795,7 +801,7 @@ async function openInfoSheet(p, src, card) {
       ${def.desc ? `<p data-no-i18n>${esc(def.desc)}</p>` : ''}
       ${def.note ? `<p class="small"><b>Note:</b> ${esc(def.note)}</p>` : ''}
       ${def.drawn ? `<p class="small text-warn"><b>When drawn:</b> ${esc(def.drawn.text)}</p>` : ''}
-      <ul class="info-conds" data-no-i18n>${(def.c || []).map(c => `<li class="${c.sub ? 'sub' : ''}"><span class="vp">${c.k === 'choice' ? esc((c.opts || []).map(o => vpT(o.vp)).join('/')) : esc(vpT(c.vp))} VP${c.k === 'per' ? ' each' : ''}${c.max != null ? ', max. ' + esc(c.max) : ''}</span><span>${esc(c.t)}${c.opts ? ' – ' + esc(c.opts.map(o => `${o.t} (${vpT(o.vp)} VP)`).join(' · ')) : ''}<span class="muted xs"> · ${esc(WH.TIMING_LABELS[c.w] || c.w)}${c.r && (c.r[0] !== 1 || c.r[1] !== 5) ? ` · R${c.r[0]}–${c.r[1]}` : ''}</span></span></li>`).join('')}</ul>
+      <ul class="info-conds" data-no-i18n>${(def.c || []).map(c => `<li class="${c.sub ? 'sub' : ''}"><span class="vp">${c.k === 'choice' ? esc((c.opts || []).map(o => vpT(o.vp)).join('/')) : esc(vpT(c.vp))} VP${c.k === 'per' ? ' each' : ''}${c.max != null ? ', max. ' + esc(c.max) : ''}</span><span>${esc(c.t)}${c.opts ? ' – ' + esc(c.opts.map(o => `${o.t} (${vpT(o.vp)} VP)`).join(' · ')) : ''}<span class="muted xs"> · ${esc(WH.TIMING_LABELS[c.w] || c.w)}${c.r && (c.r[0] !== 1 || c.r[1] !== 5) ? ` · R${c.r[0]}${c.r[1] !== c.r[0] ? '–' + c.r[1] : ''}` : ''}</span></span></li>`).join('')}</ul>
       ${def.trk && def.trk.length ? `<p class="xs muted">Counters for this mission: ${esc(def.trk.map(t => t.label).join(', '))} – not tracked automatically here, book the points as agreed.</p>` : ''}`,
     actions: [{ label: 'Close', kind: 'ghost' }]
   });
@@ -1007,7 +1013,8 @@ function openEndSheet() {
         ui.dismissed = null;
         (cur.ui.ctx || ctx).dispatch({ type: 'game.end' }).then(r => {
           if (!r) return;
-          if (r.pending && r.pending.kind === 'score') toast('Confirm the end-of-battle scoring – the game ends automatically afterwards.', 'warn', 5000);
+          if (r.pending && r.pending.kind === 'score' && r.pending.when !== 'end') toast('Confirm the open scoring first – the end-of-battle scoring follows.', 'warn', 5000);
+          else if (r.pending && r.pending.kind === 'score') toast('Confirm the end-of-battle scoring – the game ends automatically afterwards.', 'warn', 5000);
           else toast('Battle ended', 'ok');
         });
       } }

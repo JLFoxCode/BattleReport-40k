@@ -197,6 +197,7 @@ export async function startGameServer(opts = {}) {
       createdAt: s.createdAt || null,
       stage: s.stage || null,
       players: (s.players || []).map(p => (p && p.name) || ''),
+      colors: (s.players || []).map(p => (p && Number.isInteger(p.color) ? p.color : null)),   // player colours for the join list
       round: s.round || 0,
       seq: game.actions.length
     };

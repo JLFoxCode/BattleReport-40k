@@ -299,7 +299,7 @@ const SECONDARY = {
   plunder: {
     name: 'Plunder',
     note: 'Plunder action (your Shooting phase, once per turn): a unit within a terrain area that is not within your territory plunders it immediately.',
-    drawn: { kind: 'conflict', other: 'cleanse', text: 'Cleanse is active for you – you can shuffle Plunder back into your deck and draw a new card.' },
+    drawn: { kind: 'conflict', other: 'cleanse', text: 'If Cleanse is active for you, you can shuffle Plunder back into your deck and draw a new card.' },
     c: [{ w: 'turn', r: ALL, k: 'bool', vp: 5, t: 'A terrain area was plundered this turn' }]
   },
   display_of_might: {
@@ -321,7 +321,7 @@ const SECONDARY = {
   cleanse: {
     name: 'Cleanse',
     note: 'Cleanse action (your Shooting phase, unlimited, each unit at a different objective, excluding your home objective): completes at the end of your turn if the unit is controlling that objective.',
-    drawn: { kind: 'conflict', other: 'plunder', text: 'Plunder is active for you – you can shuffle Cleanse back into your deck and draw a new card.' },
+    drawn: { kind: 'conflict', other: 'plunder', text: 'If Plunder is active for you, you can shuffle Cleanse back into your deck and draw a new card.' },
     c: [{ w: 'turn', r: ALL, k: 'choice', t: 'Objectives cleansed by your army this turn', opts: [{ t: 'One objective', vp: 2 }, { t: 'Two or more objectives', vp: 5 }] }]
   },
   grievous_blow: {

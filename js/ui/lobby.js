@@ -1,6 +1,6 @@
 /* Lobby: Spiel anlegen, Liste, Code eingeben, Rolle wählen (SPEC §7). */
 import { api } from '../net.js';
-import { esc, btn, sheet, confirmSheet, toast, badge } from './components.js';
+import { esc, btn, sheet, confirmSheet, toast, badge, colorOf } from './components.js';
 import { listFinished } from '../archive.js';
 import { checkDataUpdate, getDataStatus, onDataStatus, loadDataInfo } from '../data-update.js';
 import { askDataUpdate, checkForUpdates } from './update-popup.js';
@@ -48,7 +48,8 @@ export function render(root, ctx) {
   const page = PAGES[ctx.me] ? ctx.me : null;
   if (games === null && !loading) load(!page);
   const last = ctx.lastGame ? ctx.lastGame() : null;
-  const lastExists = last && games && games.some(g => g.code === last.code);
+  // a finished game is under 'Finished games', not 'Continue game'
+  const lastExists = last && games && games.some(g => g.code === last.code && g.stage !== 'over');
   // keep what is being typed when the page refreshes itself (nearby games, game list)
   const form = root.querySelector('[data-form=join]');
   const keep = form ? { code: form.code.value, role: (form.querySelector('input[name=role]:checked') || {}).value, focus: document.activeElement === form.code } : null;
@@ -246,7 +247,7 @@ function renderList(host) {
   if (games === null) return `<div class="card muted">Loading …</div>`;
   if (!games.length) return `<div class="card muted empty">${onHost() ? 'No games on this device yet.' : 'No games on the host device yet.'}</div>`;
   return `<div class="grid game-grid">${games.map(g => `
-    <article class="card game" data-code="${esc(g.code)}">
+    <article class="card game" data-code="${esc(g.code)}"${Array.isArray(g.colors) ? ` style="${g.colors.map((c, i) => (c == null ? '' : `--p${i}:${colorOf(c)};`)).join('')}"` : ''}>
       <div class="row between game-head">
         <div class="code">${esc(g.code)}</div>
         ${badge(STAGE_LABEL[g.stage] || g.stage || '–', STAGE_KIND[g.stage] || '')}
