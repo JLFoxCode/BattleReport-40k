@@ -279,3 +279,11 @@
   .arm-play .ds-card, .arm-play-box { break-inside: avoid; }
   .arm-play details:not([open]) > *:not(summary) { display: block; }
 }
+
+/* import report (sheet + banner in the editor) */
+.imp-grp { margin: 10px 0; }
+.imp-h { font-weight: 700; display: flex; align-items: center; gap: 6px; }
+.imp-error .imp-h { color: var(--bad); }
+.imp-warn .imp-h, .imp-rule .imp-h { color: var(--warn); }
+.imp-info .imp-h { color: var(--muted); }
+.imp-grp .arm-problist { margin: 4px 0 0; }

@@ -89,11 +89,21 @@ let sheetCount = 0;
  * back out again. */
 const sheetStack = [];
 let skipPop = 0;
+let afterPop = [];
 window.addEventListener('popstate', () => {
-  if (skipPop > 0) { skipPop--; return; }
+  if (skipPop > 0) { skipPop--; if (!skipPop) { const q = afterPop; afterPop = []; q.forEach(f => { try { f(); } catch (e) { console.error(e); } }); } return; }
   const top = sheetStack[sheetStack.length - 1];
   if (top) top(true);
 });
+/** Run fn once a popup closed by the app has taken its history entry back (history.back() is asynchronous: a
+ *  navigation or a new popup right after closing one would otherwise be undone by that back step). */
+export function whenSheetsSettled(fn) {
+  if (!(skipPop > 0)) { fn(); return; }
+  let done = false;
+  const once = () => { if (done) return; done = true; fn(); };
+  afterPop.push(once);
+  setTimeout(once, 600);   // safety: never wait for a back step that does not come
+}
 /**
  * sheet({ title, body (HTML), actions: [ { label, kind, cta, onClick(close, sheetEl), keep } ], onOpen(el, close), onClose, dismiss: true, cls })
  * → close() Funktion. Buttons in actions schließen das Sheet nach onClick, außer keep: true.

@@ -1,7 +1,7 @@
 /* Army builder ("My armies"), modelled on New Recruit: #/armies = saved lists, #/armies/<id> = editor.
  * Everything comes from the BSData catalogues (js/builder/bs-engine.js): units, model counts, wargear options,
  * enhancements, points and every restriction of the data. Lists are stored on this device (js/builder/store.js). */
-import { esc, btn, toast, sheet, confirmSheet, promptSheet, autoNote } from './components.js';
+import { esc, btn, toast, sheet, confirmSheet, promptSheet, autoNote, whenSheetsSettled } from './components.js';
 import { listArmies, loadArmy, saveArmy, deleteArmy, armyId } from '../builder/store.js';
 import { playableCatalogues, systemFor, ALLIANCES } from '../builder/load.js';
 import * as E from '../builder/bs-engine.js';
@@ -197,6 +197,41 @@ async function newArmy() {
     } }]
   });
 }
+/** The import report of an army (army.importNotes): what could not be taken over 1:1, grouped by importance. */
+function importReportHtml(army) {
+  const notes = army.importNotes || [];
+  const groups = [
+    ['error', 'Not imported', 'These were left out – add them by hand if you need them.'],
+    ['warn', 'Different from the list', 'Imported, but not exactly as in the list – please check.'],
+    ['rule', 'Rule problems in the imported army', 'The army as imported breaks these rules (state at the import).'],
+    ['info', 'Notes', '']
+  ];
+  const sum = army.summary || {};
+  const body = `<p><b>${esc(army.name)}</b> · ${esc(army.catalogueLabel || '')} · ${sum.points || 0} pts</p>
+    ${notes.length ? groups.map(([lv, title, sub]) => {
+      const list = notes.filter(n => n.level === lv);
+      return list.length ? `<div class="imp-grp imp-${lv}"><div class="imp-h">${lv === 'error' ? '✕' : lv === 'info' ? 'ⓘ' : '⚠'} ${esc(title)} <span class="badge">${list.length}</span></div>${sub ? `<p class="muted xs">${esc(sub)}</p>` : ''}<ul class="arm-problist">${list.map(n => `<li>${esc(n.text)}</li>`).join('')}</ul></div>` : '';
+    }).join('') : '<p class="text-ok">Everything was imported exactly as in the list.</p>'}`;
+  return body;
+}
+function openImportReport(army, fresh = false) {
+  sheet({
+    title: fresh ? 'Import done' : 'Import report', cls: 'arm-import-report', body: importReportHtml(army),
+    actions: [
+      ...((army.importNotes || []).length ? [{ label: 'Hide report', kind: 'ghost', onClick: () => dismissImport(army.id) }] : []),
+      { label: 'OK', kind: 'primary' }
+    ]
+  });
+}
+/** The import report is no longer needed (it stays reachable in the problems pop-up until then). */
+function dismissImport(id = ed.id) {
+  const a = id && loadArmy(id);
+  if (!a || !a.importNotes) return;
+  delete a.importNotes;
+  const saved = saveArmy(a);
+  if (ed.id === id) ed.army = saved;
+  rerender();
+}
 /** Import from New Recruit: a file (.txt text export, .ros/.rosz roster) or pasted text → a new army, opened in the editor. */
 function openImport(fallbackCat = null) {
   const body = `<p class="small muted">Paste a list – a New Recruit text export, a GW app list or a list copied from Reddit, a forum or a chat – or choose a file (New Recruit <b>.txt</b> or roster <b>.rosz</b>). Units, models, wargear, enhancements and the Warlord are matched by name; the import becomes a new army.${fallbackCat ? ' Without a faction line in the list, the faction of this army is used.' : ''}</p>
@@ -213,13 +248,7 @@ function openImport(fallbackCat = null) {
         close();
         const saved = saveWithSummary(res.sys, res.army);
         lastCtx.nav('#/armies/' + saved.id);
-        const n = E.view(res.sys, res.army).force.ch.filter(w => w.node && ['unit', 'model'].includes(w.node.type)).length;
-        sheet({
-          title: 'Import done', cls: 'arm-import-report',
-          body: `<p><b>${esc(saved.name)}</b> · ${esc(saved.catalogueLabel)} · ${n} unit${n === 1 ? '' : 's'} · ${(saved.summary || {}).points || 0} pts</p>
-            ${res.report.length ? `<p class="muted small">Please check these by hand:</p><ul class="arm-problist">${res.report.map(x => `<li>${esc(x)}</li>`).join('')}</ul>` : '<p class="text-ok">Everything was matched.</p>'}`,
-          actions: [{ label: 'OK', kind: 'primary' }]
-        });
+        whenSheetsSettled(() => openImportReport(saved, true));
       }).catch(err => toast('Import failed: ' + (err && err.message ? err.message : err), 'bad', 6000));
       return false;
     } }]
@@ -1204,6 +1233,7 @@ async function onClick(e) {
   if (a === 'arm-detcmp') { e.stopPropagation(); return openDetCompare(b.dataset.id); }
   if (a === 'arm-unit') return openUnit(b.dataset.id);
   if (a === 'arm-cfg') { ed.cfgOpen = !ed.cfgOpen; return rerender(); }
+  if (a === 'arm-impdone') { const r = Object.assign({}, ed.army); delete r.importNotes; saveWithSummary(ed.sys, r); return rerender(); }
   if (a === 'arm-print') { try { window.print(); } catch {} return; }
   if (a === 'arm-show') return toggleShow(b.dataset.t);
   if (a === 'arm-dp' || a === 'arm-dp-auto') {
@@ -1220,7 +1250,13 @@ async function onClick(e) {
   if (a === 'arm-problems') {
     const V = E.view(ed.sys, ed.army);
     const probs = problems(V);
-    sheet({ title: probs.length ? `${probs.length} problem${probs.length === 1 ? '' : 's'}` : 'No problems', body: probs.length ? `<ul class="arm-problist">${probs.map(p => { const u = p.sel ? rootOf(V, p.sel) : null; return `<li>${u ? `<b>${esc(E.effective(V, u.node, u, u.parent).name)}</b>: ` : ''}${esc(p.msg)}</li>`; }).join('')}</ul>` : '<p>The list is valid.</p>', actions: [{ label: 'Close', kind: 'ghost' }] });
+    const imp = (ed.army.importNotes || []).length;
+    sheet({
+      title: probs.length ? `${probs.length} problem${probs.length === 1 ? '' : 's'}` : 'No problems',
+      body: (probs.length ? `<ul class="arm-problist">${probs.map(p => { const u = p.sel ? rootOf(V, p.sel) : null; return `<li>${u ? `<b>${esc(E.effective(V, u.node, u, u.parent).name)}</b>: ` : ''}${esc(p.msg)}</li>`; }).join('')}</ul>` : '<p>The list is valid.</p>')
+        + (imp ? `<details class="arm-imp-sec"><summary><b>Import report</b> <span class="badge">${imp}</span> <span class="muted xs">what the import could not take over 1:1</span></summary>${importReportHtml(ed.army)}</details>` : ''),
+      actions: [...(imp ? [{ label: 'Hide import report', kind: 'ghost', onClick: () => dismissImport() }] : []), { label: 'Close', kind: 'ghost' }]
+    });
     return;
   }
   if (a === 'arm-text') {

@@ -25,7 +25,7 @@ import { checkOnOpen } from './ui/update-popup.js';
 import { openJoinSheet } from './ui/qr.js';
 import { installKeywordInfo } from './ui/keywords.js';
 import { startI18n } from './i18n.js';
-import { toast, esc } from './ui/components.js';
+import { toast, esc, whenSheetsSettled } from './ui/components.js';
 import * as lobby from './ui/lobby.js';
 import * as setup from './ui/setup.js';
 import * as player from './ui/player.js';
@@ -184,7 +184,8 @@ export function parseHash(hash = location.hash) {
 export function nav(hash) {
   if (!hash) hash = '#/';
   if (!hash.startsWith('#')) hash = '#' + (hash.startsWith('/') ? '' : '/') + hash;
-  if (location.hash === hash) route(); else location.hash = hash;
+  // after a popup closed: wait until its history entry is gone, otherwise that back step would undo this navigation
+  whenSheetsSettled(() => { if (location.hash === hash) route(); else location.hash = hash; });
 }
 
 export function roleHash(code, me, view) {

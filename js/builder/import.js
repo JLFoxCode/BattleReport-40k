@@ -132,11 +132,13 @@ export async function importText(text, opts = {}) {
   const roots = sys.rootNodes(cat.id).filter(n => ['unit', 'model'].includes(n.type));
   const units = parseArmyText(text);
   const leads = [];
+  const made = [];   // [{ u, id }] – a list unit and the selection it became
   for (const u of units) {
     const node = roots.find(n => norm(n.name) === norm(u.name)) || roots.find(n => norm(u.name).startsWith(norm(n.name)) || norm(n.name).startsWith(norm(u.name)));
     if (!node) { report.push(`Unit not found: ${u.name}`); continue; }
     r = E.addSel(sys, r, null, node.token);
     const id = last(r, sys).s.id;
+    made.push({ u, id });
     r = setModels(sys, r, id, u, report);
     r = setWargear(sys, r, id, u, report);
     // enhancements, Warlord
@@ -149,19 +151,58 @@ export async function importText(text, opts = {}) {
       const have = E.view(sys, r).byId.get(id).ch.some(c => c.node && /^Warlord$/i.test(c.node.name));
       if (wl && !have) r = E.addSel(sys, r, id, wl.tok);
     }
-    if (u.leading) leads.push({ id, target: u.leading });
+    if (u.leading) leads.push({ id, target: u.leading, name: u.name });
   }
   // "Leading …": the first unit of that name not led yet
   for (const l of leads) {
     const V = E.view(sys, r);
     const t = V.force.ch.find(w => w.node && norm(w.node.name) === norm(l.target) && !V.force.ch.some(x => x.s.lead === w.s.id));
     if (t) { const x = r.sel.find(s => s.id === l.id); if (x) x.lead = t.s.id; }
+    else report.push(`${l.name} leads ${l.target} – that unit is not in the imported army`);
   }
   r = revealUnits(sys, r);
   r = E.autoSync(sys, r);
   const pts = E.totalPoints(E.view(sys, r));
   r.name = `${cat.label} ${pts}`;
-  return { army: r, sys, report, units: units.length };
+  const notes = importNotes(sys, r, report, made, tot ? Number(tot[1]) : null, units.some(u => u.warlord));
+  r.importNotes = notes;
+  return { army: r, sys, report, notes, units: units.length };
+}
+
+/* ───────── Import report ───────── */
+/** Everything the import could not take over 1:1, by importance:
+ *  error = not imported · warn = different from the list · rule = rule problem of the imported army · info = note.
+ *  → [{ level, text }] (also stored on the army as army.importNotes, shown in the editor until dismissed) */
+function importNotes(sys, r, report, made, listTotal, hasWarlord) {
+  const notes = [];
+  const add = (level, text) => { if (!notes.some(n => n.text === text)) notes.push({ level, text }); };
+  for (const t of report) add(/^Unit not found/.test(t) ? 'error' : 'warn', t);
+  const V = E.view(sys, r);
+  const modelsOf = w => {
+    if (w.node.type === 'model') return w.n;
+    let n = 0; (function f(x, mult) { for (const c of x.ch) { if (!c.node) continue; if (c.node.type === 'model') n += c.n * mult; else f(c, mult * c.n); } })(w, 1);
+    return n;
+  };
+  for (const { u, id } of made) {
+    const w = V.byId.get(id);
+    if (!w) { add('error', `${u.name}: removed – not allowed in this army with the current data`); continue; }
+    const c = E.totalCost(V, w);
+    if (u.points > 0 && c !== u.points) add('warn', `${u.name}: ${u.points} pts in the list, ${c} pts with the current data${c < u.points || c > u.points ? ' (points update or different options)' : ''}`);
+    const m = modelsOf(w);
+    if (u.models > 0 && m > 0 && m !== u.models) add('warn', `${u.name}: ${u.models} model${u.models === 1 ? '' : 's'} in the list, ${m} imported`);
+  }
+  // total of the units that were imported: the list's points against the current data (the list's header total is often
+  // the battle size, so the units' own points are compared)
+  const listSum = made.reduce((x, m) => x + (V.byId.get(m.id) && m.u.points > 0 ? m.u.points : 0), 0);
+  const curSum = made.reduce((x, m) => { const w = V.byId.get(m.id); return x + (w && m.u.points > 0 ? E.totalCost(V, w) : 0); }, 0);
+  if (listSum && listSum !== curSum) add('warn', `Imported units: ${listSum} pts in the list, ${curSum} pts with the current data`);
+  if (!hasWarlord) add('warn', 'No Warlord marked in the list – choose one in the army');
+  for (const e of E.validate(V)) {
+    if (/Force Disposition/.test(e.msg)) { add('info', 'Choose a Force Disposition in the army configuration (it is not part of a list)'); continue; }
+    if (/^Warlord: at least/.test(e.msg) && !hasWarlord) continue;
+    add('rule', e.msg);
+  }
+  return notes;
 }
 
 const onlyOne = a => (a.length === 1 ? a[0] : undefined);
@@ -326,5 +367,8 @@ export async function importRoster(xml) {
   r.sel = top ? [...top.children].filter(c => c.tagName === 'selection').map(c => conv(c, null)).filter(Boolean) : [];
   r = revealUnits(sys, r);
   r = E.autoSync(sys, r);
-  return { army: r, sys, report, units: r.sel.length };
+  const hasWl = E.view(sys, r).force.ch.some(w => w.ch.some(c => c.node && /^Warlord$/i.test(c.node.name)));
+  const notes = importNotes(sys, r, report, [], null, hasWl);
+  r.importNotes = notes;
+  return { army: r, sys, report, notes, units: r.sel.length };
 }
