@@ -9,6 +9,7 @@ import { CORE } from '../../data/core.js';
 import { WH } from '../../data/rules.js';
 import { FACTIONS } from '../../data/factions/index.js';
 import { esc, btn } from './components.js';
+import { TERMS, EXACT_TERMS } from '../i18n-de.js';
 import { datasheetCard } from './datasheet.js';
 import { loadDatasheets } from '../data/datasheets.js';
 import { loadMissionsOrig, loadOrig, origStratagem, origPrimary, origSecondary, origTwist, normKey, normKeyBase } from '../data/orig.js';
@@ -116,7 +117,25 @@ function allEntries() {
 }
 
 // ---------------------------------------------------------------- Search
-function tokens(q) { return norm(q).split(/\s+/).filter(Boolean); }
+// German game terms (as the German UI / tutorial teaches them) → the English terms of the rules texts
+let deTerms = null;
+function enQuery(q) {
+  if (!deTerms) {
+    const m = new Map();
+    const add = (de, en) => { const k = norm(de); if (k && !m.has(k)) m.set(k, norm(en)); };
+    for (const [en, de] of [...Object.entries(TERMS), ...Object.entries(EXACT_TERMS)]) add(de, en);
+    Object.entries({ Deckung: 'cover', Gelände: 'terrain', Geländestück: 'terrain feature', Vorrücken: 'advance', Zurückfallen: 'fall back',
+      Nahkampf: 'fight', Fernkampf: 'shooting', Bewegung: 'movement', Angriff: 'charge', Sichtbarkeit: 'visible', Moral: 'battle-shock',
+      Transporter: 'transport', Aussteigen: 'disembark', Einsteigen: 'embark', Schlachtrunde: 'battle round', Sperrfeuer: 'overwatch' }).forEach(([de, en]) => add(de, en));
+    // whole words only ("sp" must not touch "space")
+    deTerms = [...m.entries()].sort((a, b) => b[0].length - a[0].length)
+      .map(([de, en]) => [new RegExp('(^|[^a-z0-9äöüß])' + de.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(?=$|[^a-z0-9äöüß])', 'g'), en]);
+  }
+  let out = norm(q);
+  for (const [re, en] of deTerms) out = out.replace(re, (x, pre) => pre + en);
+  return out;
+}
+function tokens(q) { return enQuery(q).split(/\s+/).filter(Boolean); }
 function search(q) {
   const toks = tokens(q);
   if (!toks.length) return { toks, groups: [], total: 0 };

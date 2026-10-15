@@ -20,7 +20,9 @@ function seen() { try { return new Set(JSON.parse(localStorage.getItem(SEEN) || 
 function markSeen(id) { const s = seen(); if (s.has(id)) return; s.add(id); try { localStorage.setItem(SEEN, JSON.stringify([...s])); } catch {} }
 
 // ───────── in-game guide setting ─────────
-const GUIDE = 'br40k.guide', GUIDE_OPEN = 'br40k.guideOpen';
+const GUIDE = 'br40k.guide', GUIDE_OPEN = 'br40k.guideOpen', LEARN_FROM = 'br40k.learnFrom';
+/** Game screen the tutorial was opened from via the guide (session only), or ''. */
+const learnFrom = () => { try { const h = sessionStorage.getItem(LEARN_FROM) || ''; return /^#\/g\/[A-Za-z0-9]+\//.test(h) ? h : ''; } catch { return ''; } };
 export const guideOn = () => { try { return localStorage.getItem(GUIDE) !== '0'; } catch { return true; } };
 export function setGuideOn(on) { try { localStorage.setItem(GUIDE, on ? '1' : '0'); } catch {} }
 const guideOpen = () => { try { return localStorage.getItem(GUIDE_OPEN) !== '0'; } catch { return true; } };
@@ -86,6 +88,7 @@ function stepHtml(ch, i) {
   const tips = pick(s, 'tips') || [];
   return `<div class="tut">
     <header class="tut-head"><a class="btn ghost sm" href="#/learn">‹ ${T('Chapters', 'Kapitel')}</a><h1 class="title">${esc(pick(ch, 'title'))}</h1></header>
+    ${learnFrom() ? `<p><a class="btn ghost sm" href="${esc(learnFrom())}">‹ ${T('Back to the game', 'Zurück zum Spiel')}</a></p>` : ''}
     <article class="tut-step" data-prev="${prev}" data-next="${next}">
       <div class="kicker">${T('Step', 'Schritt')} ${i + 1} / ${ch.steps.length}</div>
       <h2>${esc(pick(s, 'title'))}</h2>
@@ -188,7 +191,7 @@ export function guideHtml(state, me) {
   return `<details class="card tile guide-card" data-no-i18n${guideOpen() ? ' open' : ''} data-guide>
     <summary class="tile-title"><span>🧭 ${T('Guide', 'Guide')} · ${esc(pick(ch, 'title'))}</span><span class="muted xs">${own ? T('your turn', 'dein Zug') : T("opponent's turn", 'Zug des Gegners')}</span></summary>
     <ol class="guide-list">${items.map(li).join('')}</ol>
-    <p class="mt"><a class="btn ghost sm" href="#/learn/${esc(ch.id)}/0">${T('Explain this phase', 'Diese Phase erklären')} ›</a>
+    <p class="mt"><a class="btn ghost sm" href="#/learn/${esc(ch.id)}/0" data-learn-from>${T('Explain this phase', 'Diese Phase erklären')} ›</a>
       <button type="button" class="btn ghost sm" data-guide-off>${T('Hide guide', 'Guide ausblenden')}</button></p>
   </details>`;
 }
@@ -198,6 +201,8 @@ export function bindGuide(root, onChange) {
   root.__guideBound = true;
   root.addEventListener('toggle', e => { if (e.target.matches && e.target.matches('[data-guide]')) { try { localStorage.setItem(GUIDE_OPEN, e.target.open ? '1' : '0'); } catch {} } }, true);
   root.addEventListener('click', e => {
+    // "Explain this phase": remember the game screen, the tutorial offers a way back to it
+    if (e.target.closest('[data-learn-from]')) { try { sessionStorage.setItem(LEARN_FROM, location.hash); } catch {} return; }
     if (!e.target.closest('[data-guide-off]')) return;
     setGuideOn(false);
     toast(T('Guide hidden – switch it on again under App & data', 'Guide ausgeblendet – unter App & Daten wieder einschalten'), 'ok', 4000);

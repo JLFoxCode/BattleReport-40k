@@ -81,7 +81,7 @@ export const PHRASES = {
   'The Attacker uses the Attacker deployment zone of the deployment map, the Defender the opposite one.': 'Der Attacker nutzt die Attacker-Deployment zone der Karte, der Defender die gegenüberliegende.',
   'Each player chooses a Disposition. The Primary Mission results from your own and your opponent\'s Disposition.': 'Jeder Spieler wählt eine Disposition. Die Primary Mission ergibt sich aus deiner und der gegnerischen Disposition.',
   'The Primary Mission appears once both Dispositions are chosen.': 'Die Primary Mission erscheint, sobald beide Dispositions gewählt sind.',
-  'Dispositions → Primary mission': 'Dispositions → Primary mission', 'Tactical': 'Taktisch', 'Fixed': 'Fest', 'Tactical (deck will be shuffled)': 'Taktisch (Deck wird gemischt)',
+  'Dispositions → Primary mission': 'Dispositions → Primary mission', 'Tactical (deck will be shuffled)': 'Taktisch (Deck wird gemischt)',
   'At the start of each of your Command phases draw 2 cards (your hand grows, completed cards are discarded).': 'Zu Beginn jeder deiner Command phases ziehst du 2 Karten (deine Hand wächst, erfüllte Karten werden abgelegt).',
   'See the checklist for what is missing – starting will tell you what is still open.': 'In der Checkliste steht, was fehlt – beim Starten wird angezeigt, was noch offen ist.',
   'Both players ready': 'Beide Spieler bereit', 'Not ready': 'Nicht bereit', 'is ready.': 'ist bereit.', 'is no longer ready.': 'ist nicht mehr bereit.', 'not ready': 'nicht bereit',
@@ -123,6 +123,12 @@ export const PHRASES = {
   'Each Stratagem once per phase – pick the phase to use it again later in this turn.': 'Jedes Stratagem einmal pro Phase – Phase wählen, um es später in diesem Zug erneut einzusetzen.',
   'Short explanation of this app – the original text is a tap away (download once).': 'Kurzerklärung der App – der Originaltext ist einen Tipp entfernt (einmal herunterladen).',
   'Original text: Warhammer 40,000 Core Rules (Games Workshop), via': 'Originaltext: Warhammer 40.000 Grundregeln (Games Workshop), über',
+  'Confirm the open scoring first – the end-of-battle scoring follows.': 'Bestätige zuerst die offene Wertung – danach folgt die Wertung zum Schlachtende.',
+  'End of battle requested – after the pending scoring is confirmed': 'Schlachtende angefordert – nach Bestätigung der offenen Wertung',
+  'The end-of-battle scoring is already requested': 'Die Wertung zum Schlachtende ist bereits angefordert',
+  'If Cleanse is active for you, you can shuffle Plunder back into your deck and draw a new card.': 'Wenn Cleanse für dich aktiv ist, kannst du Plunder zurück in dein Deck mischen und eine neue Karte ziehen.',
+  'If Plunder is active for you, you can shuffle Cleanse back into your deck and draw a new card.': 'Wenn Plunder für dich aktiv ist, kannst du Cleanse zurück in dein Deck mischen und eine neue Karte ziehen.',
+  'no change': 'keine Änderung',
   'Games on the host device': 'Spiele auf dem Host-Gerät', 'No games on the host device yet.': 'Noch keine Spiele auf dem Host-Gerät.',
   'Only the device hosting the game can delete it': 'Nur das Gerät, auf dem das Spiel läuft, kann es löschen',
   'The last action was not made on this phone': 'Die letzte Aktion wurde nicht auf diesem Handy gemacht', 'it can only be undone there or on the scoreboard.': 'sie kann nur dort oder an der Anzeigetafel rückgängig gemacht werden.',
@@ -251,3 +257,29 @@ PATTERNS.push(
 
 Object.assign(EXACT, { 'Book': 'Buchen' });
 PATTERNS.push(['^Game (\\w{4})$', (m, c) => 'Spiel ' + c]);
+
+/* whole-text labels (names such as "Tactical Brethren" / "Fixed Missions" stay English) */
+Object.assign(EXACT, {
+  'Tactical': 'Taktisch', 'Fixed': 'Fest', 'Nothing chosen': 'Nichts gewählt', 'Nothing chosen – pick:': 'Nichts gewählt – wählen:',
+  'once per battle': 'einmal pro Schlacht', 'once per battle round': 'einmal pro Schlachtrunde', 'once per turn': 'einmal pro Zug', 'once per phase': 'einmal pro Phase',
+  'twice per battle': 'zweimal pro Schlacht', 'not in round 1': 'nicht in Runde 1', 'Already used this phase': 'In dieser Phase bereits genutzt'
+});
+Object.assign(PHRASES, {
+  'No rule text on file for this keyword.': 'Kein Regeltext zu diesem Keyword vorhanden.', '– the rule below uses it as “x”.': '– die Regel unten verwendet ihn als „x“.',
+  'Could not check for new unit data – using the data on this device.': 'Neue Einheitendaten konnten nicht geprüft werden – die Daten auf diesem Gerät werden verwendet.',
+  'Could not check for new unit data.': 'Neue Einheitendaten konnten nicht geprüft werden.', 'List copied as text': 'Liste als Text kopiert',
+  'Back to setup': 'Zurück zum Setup', 'over the points limit': 'über dem Punktelimit',
+  'No once-per-battle/round/turn abilities recognised': 'Keine Einmal-pro-Schlacht/Runde/Zug-Fähigkeiten erkannt',
+  'Find a unit by name or keyword …': 'Einheit nach Name oder Keyword suchen …', 'Search rules, missions, stratagems, units…': 'Regeln, Missionen, Stratagems, Einheiten suchen …',
+  'Paste the export from New Recruit or the GW app here': 'Export aus New Recruit oder der GW-App hier einfügen', 'Paste the army list here': 'Armeeliste hier einfügen',
+  'e.g. Votann 2000': 'z. B. Votann 2000', 'e.g. Orks, Necrons, Space Marines': 'z. B. Orks, Necrons, Space Marines', 'e.g. 1500': 'z. B. 1500', 'Points, e.g. 1500': 'Punkte, z. B. 1500',
+  'e.g. Boyz': 'z. B. Boyz', 'e.g. dice result, agreement …': 'z. B. Würfelergebnis, Absprache …', 'in the rule below.': 'in der Regel unten.'
+});
+PATTERNS.push(
+  ['^(.+) with the value(\\s*)$', (m, k, sp) => k + ' mit dem Wert' + sp],
+  ['^Game (\\w{4}) created$', (m, c) => 'Spiel ' + c + ' erstellt'], ['^(\\d+) units? imported$', (m, n) => n + (n === '1' ? ' Einheit' : ' Einheiten') + ' importiert'],
+  ['^At least (\\d+) (.+) required \\(has (\\d+)\\)$', (m, n, w, v) => 'Mindestens ' + n + ' ' + w + ' erforderlich (vorhanden: ' + v + ')'],
+  ['^(.+): at least (\\d+)(.*) required \\(has (\\d+)\\)$', (m, a, n, w, v) => a + ': mindestens ' + n + w + ' erforderlich (vorhanden: ' + v + ')'],
+  ['^(.+): at most (\\d+)(.*) per army \\(has (\\d+)\\)$', (m, a, n, w, v) => a + ': höchstens ' + n + w + ' pro Armee (vorhanden: ' + v + ')'],
+  ['^(.+) needs at least (\\d+)(.*) \\(has (\\d+)\\)$', (m, a, n, w, v) => a + ' braucht mindestens ' + n + w + ' (vorhanden: ' + v + ')']
+);

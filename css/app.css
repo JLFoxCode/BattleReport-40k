@@ -305,6 +305,7 @@ details.rule dd { margin: 0; }
   background: var(--scrim); animation: fade-in .15s ease-out;
   padding-left: var(--sa-left); padding-right: var(--sa-right);
 }
+.sheet:focus { outline: none; }
 .sheet {
   display: flex; flex-direction: column; width: 100%; max-height: min(92vh, 92dvh);
   background: var(--panel); border: 1px solid var(--line); border-bottom: 0;
@@ -338,7 +339,8 @@ details.rule dd { margin: 0; }
   max-width: min(520px, calc(100vw - 32px)); padding: 12px 16px;
   background: var(--panel2); color: var(--text); border: 1px solid var(--line); border-left: 4px solid var(--text);
   border-radius: var(--radius-sm); box-shadow: var(--shadow); font-weight: 500; font-size: 15px;
-  animation: toast-in .2s ease-out; pointer-events: auto;
+  /* taps go through to the buttons underneath (a toast must never swallow the End turn / Done tap) */
+  animation: toast-in .2s ease-out; pointer-events: none;
 }
 .toasts .toast { position: static; transform: none; }
 .toast.ok { border-left-color: var(--ok); }

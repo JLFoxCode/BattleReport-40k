@@ -28,22 +28,22 @@ export const CORE = {
     command: {
       title: 'Command phase',
       order: [
+        'Start of Command phase: resolve "start of your Command phase" rules; Tactical secondaries: draw two cards.',
         'Gain Core CP: both players gain 1 CP.',
         'Battle-shock step: for each of your units that is battle-shocked or at or below half-strength, roll 2D6 against its Ld.',
         'Apply the results: success = the unit is no longer battle-shocked, failure = the unit is battle-shocked.',
         'Command Abilities: resolve rules triggered "in your Command phase" (army rules, datasheets, command abilities).',
-        'Tactical secondaries: at the start of the phase draw two cards; at the end of the phase (once per battle, 1 CP) discard one card and draw a new one.',
-        'End of Command phase: check "end of your Command phase" scoring (from battle round 2).'
+        'End of Command phase: check "end of your Command phase" scoring (from battle round 2); Tactical secondaries: (once per battle, 1 CP) discard one card and draw a new one.'
       ],
       rules: [
         {
           id: 'cmd-cp', title: 'Gaining Command Points',
-          text: 'In the Gain Core CP step both players gain 1 CP – including the player whose turn it is not. CP are spent to use stratagems; the CP cost of a stratagem can never be modified below 0 CP and can never be increased by more than 1 CP.',
+          text: 'In the Gain Core CP step both players gain 1 CP – including the player whose turn it is not. CP are spent to use stratagems.',
           tags: ['CP'], ed: 11
         },
         {
           id: 'cmd-shock-who', title: 'Who must make a battle-shock roll?',
-          text: 'Only the active player rolls. One battle-shock roll must be made for each of their units that is currently battle-shocked or at or below half-strength – including units embarked within a TRANSPORT or in strategic reserves. No more than one battle-shock roll is made per unit in this step.',
+          text: 'Only the active player rolls. One battle-shock roll must be made for each of their units that is currently battle-shocked or at or below half-strength. No more than one battle-shock roll is made per unit in this step.',
           tags: ['BATTLE-SHOCK', 'LEADERSHIP']
         },
         {
@@ -102,7 +102,7 @@ export const CORE = {
       ],
       rules: [
         {
-          id: 'mov-types', title: 'Four move types',
+          id: 'mov-types', title: 'Move types',
           text: 'Each unit is selected to move once per phase: Remain Stationary (no models are moved), Normal Move (up to M"), Advance Move (roll one D6, up to M + result), Fall-back Move (up to M", only if the unit is engaged). Normal and Advance Moves require the unit to be unengaged; after any of these moves the unit must be unengaged. A unit cannot make more than one Normal Move in a phase.',
           tags: ['MOVEMENT']
         },
@@ -253,7 +253,7 @@ export const CORE = {
         },
         {
           id: 'sho-allocate', title: 'Allocation and save rolls',
-          text: 'The opposing player creates groups (one for each CHARACTER model, one for all other models with the same W, Sv and InSv) and declares the allocation order: a non-CHARACTER group with a wounded model must be first; no CHARACTER group can be earlier than a non-CHARACTER group (unless [PRECISION]); wounded CHARACTER groups before unwounded ones. One save roll per wounding attack, resolved from lowest to highest: an unmodified result equal to or greater than the InSv fails the attack; otherwise, modified by the weapon\'s AP, a result equal to or greater than the Sv fails the attack; anything else inflicts damage.',
+          text: 'The opposing player creates groups (one for each CHARACTER model, one for all other models with the same W, Sv and InSv) and declares the allocation order: a non-CHARACTER group with a wounded model must be first; no CHARACTER group can be earlier than a non-CHARACTER group (unless [PRECISION]); wounded CHARACTER groups before unwounded ones. One save roll per wounding attack, resolved from lowest to highest: an unmodified 1 always inflicts damage; a result (not modified by AP) equal to or greater than the InSv fails the attack; otherwise, modified by the weapon\'s AP, a result equal to or greater than the Sv fails the attack; anything else inflicts damage.',
           tags: ['SAVE', 'CHARACTER', 'INVULNERABLE']
         },
         {
@@ -403,7 +403,7 @@ export const CORE = {
         },
         {
           id: 'fgt-remove', title: 'Removing models',
-          text: 'Models destroyed by an attack are only removed after the attacking unit\'s attacks have been resolved; "when destroyed" rules (e.g. Deadly Demise) are resolved at that point. Fight On Death: models with such a rule stay on the battlefield until their unit has attacked or until the end of the phase. A unit that lost models still fights when it is selected.',
+          text: 'A destroyed model is removed at once; but if a "when destroyed" rule (e.g. Deadly Demise) applies to a model destroyed by an attack, that rule is resolved and the model removed only after the attacking unit\'s attacks have been resolved. Fight On Death: models with such a rule stay on the battlefield until their unit has attacked or until the end of the phase. A unit that lost models still fights when it is selected.',
           tags: ['DESTROYED', 'DEADLY DEMISE']
         },
         {
@@ -413,7 +413,7 @@ export const CORE = {
         },
         {
           id: 'fgt-overrun', title: 'Overrun fight',
-          text: 'When a unit is selected to fight, it selects a fight type: Normal Fight (if engaged) or Overrun Fight (if it is unengaged, or was unengaged at the start of the Fight step but became engaged during the phase – e.g. a charging unit whose target was destroyed). An overrun fight lets the unit make one additional pile-in move (targets: enemy units within 5") and then fight; enemy units that become engaged by it are eligible to fight this phase.',
+          text: 'When a unit is selected to fight, it selects a fight type: Normal Fight (if engaged) or Overrun Fight (if it is unengaged, or was unengaged at the start of the Fight step but became engaged during the phase – e.g. a charging unit whose target was destroyed). An overrun fight lets the unit make one additional pile-in move (targets: every enemy unit it is engaged with, otherwise enemy units within 5") and then fight; enemy units that become engaged by it are eligible to fight this phase.',
           tags: ['FIGHT'], ed: 11
         },
         {
@@ -569,7 +569,7 @@ export const CORE = {
     },
     {
       id: 'gen-terrain-cat', title: 'Terrain categories',
-      text: 'Dense: buildings, ruins, armoured containers, woods – obscuring, Solid, benefit of cover, only INFANTRY/BEASTS/SWARM/MOBILE can move horizontally through them. Light: barricades, low walls, statuary – obscuring and benefit of cover, all models can move through them. Exposed: craters, razorwire, scattered debris – can be traversed without hindrance, benefit of cover only for INFANTRY/BEASTS/SWARM within the terrain area. Terrain features 3" or more in height grant Plunging Fire.',
+      text: 'Dense: buildings, ruins, armoured containers, woods – obscuring, Solid, only INFANTRY/BEASTS/SWARM/MOBILE can move horizontally through them. Light: barricades, low walls, statuary – obscuring, all models can move through them. Exposed: craters, razorwire, scattered debris – can be traversed without hindrance. The category itself does not give the benefit of cover: a unit has it if every model is INFANTRY/BEASTS/SWARM within a terrain area (any category) or is not fully visible due to terrain. Terrain features 3" or more in height grant Plunging Fire.',
       tags: ['TERRAIN'], ed: 11
     },
     {
@@ -629,7 +629,7 @@ export const CORE = {
     },
     {
       id: 'gen-lone', title: 'Lone Operative',
-      text: 'Unless part of an attached unit, a Lone Operative unit is only visible to enemy models within 12" (Lone Operative X": X") and can only be targeted by [INDIRECT FIRE] weapons from within that distance. In an attached unit the rule only applies if all models have it (the highest value among them is used). The range cannot be better than 9" or worse than 30".',
+      text: 'Unless part of an attached unit, a Lone Operative unit is only visible to enemy models within 12" (Lone Operative X": X") and can only be targeted by [INDIRECT FIRE] weapons from within that distance. While the unit is part of an attached unit the rule does not apply. The range cannot be better than 9" or worse than 30".',
       tags: ['LONE OPERATIVE', 'CHARACTER']
     },
     {
@@ -664,7 +664,7 @@ export const CORE = {
     },
     {
       id: 'gen-inv', title: 'Invulnerable save',
-      text: 'When checking a save roll, if the models in the current allocation group have an InSv characteristic and the unmodified result is equal to or greater than it, the attack fails – AP is ignored. Only one save roll is made per attack (the result is checked against InSv first, then against Sv with AP). InSv can never be 1+ or better.',
+      text: 'When checking a save roll, if the models in the current allocation group have an InSv characteristic and the result is equal to or greater than it, the attack fails – AP is ignored (an unmodified 1 still always inflicts damage). Only one save roll is made per attack (the result is checked against InSv first, then against Sv with AP). InSv can never be 1+ or better.',
       tags: ['INVULNERABLE', 'SAVE']
     },
     {
@@ -694,7 +694,7 @@ export const CORE = {
     },
     {
       id: 'gen-engagement', title: 'Engagement range',
-      text: '2" horizontally and 5" vertically. Engaged units cannot make normal or advance moves, only fall back, and can only shoot using close-quarters shooting (or as MONSTER/VEHICLE units). Charges must end engaged with all charge targets. A charge roll of 2 is never sufficient.',
+      text: '2" horizontally and 5" vertically. Engaged units cannot make normal or advance moves, only fall back (being engaged solely with AIRCRAFT does not prevent normal or advance moves), and can only shoot using close-quarters shooting (or as MONSTER/VEHICLE units). Charges must end engaged with all charge targets. A charge roll of 2 is never sufficient.',
       tags: ['ENGAGEMENT RANGE'], ed: 11
     },
     {
@@ -775,7 +775,7 @@ export const CORE = {
     { term: 'M', text: 'Move: the speed at which a model traverses the battlefield – the maximum distance in inches for a normal or fall-back move (advance: + D6"). A model with M "–" can be set up but otherwise cannot be moved.' },
     { term: 'T', text: 'Toughness: the model\'s resilience against harm; compared with the attack\'s Strength in the wound roll.' },
     { term: 'SV', text: 'Save: the protection a model\'s armour gives it. A save roll modified by AP that is equal to or greater than Sv makes the attack fail. Can never be 1+ or better.' },
-    { term: 'INV', text: 'Invulnerable Save (InSv): an unmodified save roll equal to or greater than InSv makes the attack fail, ignoring AP. Can never be 1+ or better.' },
+    { term: 'INV', text: 'Invulnerable Save (InSv): a save roll equal to or greater than InSv (not modified by AP) makes the attack fail; an unmodified 1 always inflicts damage. Can never be 1+ or better.' },
     { term: 'W', text: 'Wounds: how much damage a model can sustain before it is destroyed. If a model\'s wounds are reduced to 0 or fewer, it is destroyed.' },
     { term: 'LD', text: 'Leadership: a leadership roll (2D6) equal to or greater than Ld succeeds – used for battle-shock rolls. Cannot be modified to 4+ or better, or 9+ or worse.' },
     { term: 'OC', text: 'Objective Control: how effectively a model can control an objective. A model with OC "–" (e.g. while battle-shocked) cannot control objectives at all.' },
@@ -807,7 +807,7 @@ export const CORE = {
     { term: 'LONE OPERATIVE', text: 'Unless part of an attached unit, this unit is not visible to enemy models unless they are within 12" of this unit, and it cannot be targeted by [INDIRECT FIRE] weapons unless the attacking model is within 12" of this unit. If this ability takes the form Lone Operative X", unless part of an attached unit, this unit is not visible to enemy models unless they are within X" of this unit, and it cannot be targeted by [INDIRECT FIRE] weapons unless the attacking model is within X" of this unit.', orig: true },
     { term: 'STEALTH', text: 'If every model in a unit has this ability, each time a ranged attack targets that unit, that unit has the benefit of cover against that attack (13.08).', orig: true },
     { term: 'FIGHTS FIRST', text: 'While every model in a unit has this ability, that unit is a Fights First unit. See the Resolve Fights First Combats step in the Fight phase (12.04).', orig: true },
-    { term: 'DEADLY DEMISE X', text: 'This ability always takes the form Deadly Demise X. Each time a model in this unit is destroyed, after the units embarked within it (if any) have made their emergency disembark moves, roll one D6. On a 6, that model suffers a deadly demise; each unit within 6" of that model suffers a number of mortal wounds denoted by X (if this is a random number, roll separately for each unit within 6").', orig: true },
+    { term: 'DEADLY DEMISE X', text: 'This ability always takes the form Deadly Demise X. Each time a model with this ability is destroyed, after the units embarked within it (if any) have made their emergency disembark moves, roll one D6. On a 6, that model suffers a deadly demise; each unit within 6" of that model suffers a number of mortal wounds denoted by X (if this is a random number, roll separately for each unit within 6").', orig: true },
     { term: 'FIRING DECK X', text: 'This ability always takes the form Firing Deck X. In your Shooting phase, each time this TRANSPORT is selected to shoot, if one or more units are embarked within it, resolve the following sequence: 1. Select up to X models embarked within this TRANSPORT (excluding models whose units have already been selected to shoot this phase). 2. For each selected model, select one of its ranged weapons (excluding [ONE SHOT] weapons). 3. Until this TRANSPORT has resolved all of its attacks, it has all of those selected weapons in addition to its other weapons. 4. Until the end of the turn, units embarked within this TRANSPORT are not eligible to shoot.', orig: true },
     { term: 'LEADER', text: 'Before the battle, in the Muster Armies step, for each leader and support unit in your army, you can select one friendly bodyguard unit that unit can lead. That unit will then lead that bodyguard unit for the battle and form an attached unit with it. Unless otherwise stated, each bodyguard unit can only have one leader unit and one support unit attached to it.', orig: true },
     { term: 'SUPPORT', text: 'Before the battle, in the Muster Armies step, for each leader and support unit in your army, you can select one friendly bodyguard unit that unit can lead. That unit will then lead that bodyguard unit for the battle and form an attached unit with it. Unless otherwise stated, each bodyguard unit can only have one leader unit and one support unit attached to it.', orig: true },

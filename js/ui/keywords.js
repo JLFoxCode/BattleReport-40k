@@ -91,6 +91,9 @@ async function refsHtml(text) {
     <p class="muted xs">${anyOrig ? 'Original text: Warhammer 40,000 Core Rules (Games Workshop), via ' + esc(CORE_URL.replace(/^https:\/\//, '')) : 'Short explanation of this app – the original text is a tap away (download once).'}</p></div>`;
 }
 
+/** Markdown-style *emphasis* (examples, designer's notes in the BSData texts) → italic, without the asterisks. */
+const emph = html => String(html).replace(/(^|[\s(>])\*(?!\s)([^*\n]+?)\*(?=[\s).,;:<]|$)/g, '$1<i>$2</i>');
+
 async function openKeyword(name) {
   const core = await loadCoreAbilities();
   const hit = lookup(core, name);
@@ -99,8 +102,10 @@ async function openKeyword(name) {
   // value = what follows the rule name, without restriction / asterisk / note ("SUSTAINED HITS 2: NON-MONSTER/VEHICLE" → 2)
   const bare = up.replace(/\s*\([^)]*\)\s*$/, '').replace(/\s*:.*$/, '').replace(/\s*\*+$/, '');
   const value = hit && hit.key !== bare && bare.replace(/-/g, ' ').startsWith(hit.key.replace(/-/g, ' ')) ? bare.slice(hit.key.length).replace(/^[\s-]+/, '') : '';
+  const xy = value && /^ANTI/.test(hit.key) ? value.match(/^(.+?)\s+(\d\+)$/) : null;
   const extra = hit ? [
-    value ? `${esc(hit.key)} with the value <b>${esc(value)}</b> – the rule below uses it as “x”.` : '',
+    xy ? `${esc(hit.key)}: X = <b>${esc(xy[1])}</b>, Y = <b>${esc(xy[2])}</b> in the rule below.`
+      : value ? `${esc(hit.key)} with the value <b>${esc(value)}</b> – the rule below uses it as “x”.` : '',
     hit.restr ? `Only against a target with one or more of the keywords after the colon (24.01): <b data-no-i18n>${esc(hit.restr)}</b> – a NON- keyword means a target without it.` : '',
     hit.star ? 'The asterisk (*) means the datasheet limits this ability – see the unit\'s abilities for the condition.' : '',
     hit.note ? `Datasheet note: <b data-no-i18n>${esc(hit.note)}</b>.` : ''
@@ -108,7 +113,7 @@ async function openKeyword(name) {
   sheet({
     title: `[${up}]`,
     body: hit
-      ? `${extra.map(x => `<p class="muted small">${refify(x)}</p>`).join('')}<div class="kw-rule" data-no-i18n lang="en">${kwify(esc(clean(hit.text))).replace(/\n/g, '<br>')}</div><p class="muted xs">Core rule (BSData / New Recruit).</p>${refs}`
+      ? `${extra.map(x => `<p class="muted small">${refify(x)}</p>`).join('')}<div class="kw-rule" data-no-i18n lang="en">${emph(kwify(esc(clean(hit.text)))).replace(/\n/g, '<br>')}</div><p class="muted xs">Core rule (BSData / New Recruit).</p>${refs}`
       : '<p class="muted">No core rule with this name – if it is an ability of a datasheet, its text is in the unit\'s abilities.</p>',
     cls: 'kw-sheet',
     actions: [{ label: 'Close', kind: 'ghost' }]

@@ -128,7 +128,19 @@ export function sheet(o = {}) {
       })).join('')}</div>` : ''}
     </div>`;
   let closed = false;
-  const onKey = e => { if (e.key === 'Escape' && o.dismiss !== false) close(); };
+  const opener = document.activeElement;
+  const onKey = e => {
+    // only the topmost sheet reacts
+    const all = document.querySelectorAll('.sheet-backdrop');
+    if (all.length && all[all.length - 1] !== wrap) return;
+    if (e.key === 'Escape' && o.dismiss !== false) close();
+    if (e.key !== 'Tab') return;
+    const f = [...wrap.querySelectorAll('button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])')].filter(x => x.offsetParent !== null);
+    if (!f.length) return;
+    const a = document.activeElement;
+    if (e.shiftKey && (a === f[0] || !wrap.contains(a))) { e.preventDefault(); f[f.length - 1].focus(); }
+    else if (!e.shiftKey && (a === f[f.length - 1] || !wrap.contains(a))) { e.preventDefault(); f[0].focus(); }
+  };
   const viaBack = fromPop => { if (o.dismiss === false && fromPop) { try { history.pushState({ brSheet: id }, ''); } catch {} return; } close(undefined, fromPop); };
   function close(result, fromPop) {
     if (closed) return;
@@ -139,6 +151,7 @@ export function sheet(o = {}) {
     document.removeEventListener('keydown', onKey);
     wrap.remove();
     if (!document.querySelector('.sheet-backdrop')) document.documentElement.classList.remove('sheet-open');
+    try { if (opener && opener.isConnected && typeof opener.focus === 'function') opener.focus({ preventScroll: true }); } catch {}
     if (typeof o.onClose === 'function') { try { o.onClose(result); } catch (e) { console.error(e); } }
   }
   wrap.addEventListener('click', e => {
@@ -167,6 +180,8 @@ export function sheet(o = {}) {
   // no automatic keyboard on phones: only focus the first field when asked (o.focus) or with a real keyboard + mouse
   const first = wrap.querySelector('.sheet-body input, .sheet-body select, .sheet-body textarea');
   if (first && (o.focus === true || (o.focus !== false && !matchMedia('(pointer: coarse)').matches))) { try { first.focus(); } catch {} }
+  // keyboard focus moves into the dialog (Tab stays inside it, see onKey) and comes back to the opener on close
+  else { try { const s = wrap.querySelector('.sheet'); s.setAttribute('tabindex', '-1'); s.focus({ preventScroll: true }); } catch {} }
   return close;
 }
 

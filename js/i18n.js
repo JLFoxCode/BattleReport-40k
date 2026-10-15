@@ -17,7 +17,7 @@ export function setKeepTerms(on) { write(LS_TERMS, on ? '1' : '0'); location.rel
 export const SKIP = [
   '.orig-text', '.orig-block', '.strat-orig', '.strat-t', '.ds-ab', '.ds-wname', '.ds-wabil', '.ds-kw', '.ds-keywords', '.ds-profile-name',
   '.ds-title', '.ds-tag', '.ds-unitbuff', '.ds-wbuff', '.ds-list', '.kw-tag', '.kw-rule', '.det-body', '.det-rule', '.arm-effect', '.cmp-w', '.cmp-kw',
-  '.arm-name', '.arm-u-main b', '.arm-row-name', '.arm-model-name', '.arm-opt', '.arm-check span:not(.arm-cost)', '.fac-item', '.arm-addrow > span:first-child',
+  '.arm-name', '.arm-u-main b', '.arm-row-name', '.arm-model-name', '.arm-opt:not([data-to=""])', '.det-strat', '.info-ol','.arm-check span:not(.arm-cost)', '.fac-item', '.arm-addrow > span:first-child',
   '.arm-cfg-line', '.arm-rules-names', '.arm-rules-body', '.cmp-opt-h b', '.strat-name', '.strat-name-btn', '.abil-name', '.abil-src', '.fx-name', '.rule-text',
   '.pname', '.code', '.cont-code', '.unit-name', '.ds-attach', '.rb-body', '.rb-text', '.mission-text', '.sec-text', '.score-text', '.score-card b',
   '.stage-text', '.log-text', '.lock-text', '.enh-text', '.dep-name', '.cond-list', '.crow', '.conds', '.fx-effect', '.fx-hint', '.dep-item .sub', '.disp-chips b', '.sec-rules li', '.mode-chips .badge',
@@ -46,6 +46,11 @@ export function tr(s) {
   if (EXACT[whole]) return String(s).replace(whole, EXACT[whole]);
   if (EXACT_TERMS[whole]) return keepTerms() ? s : String(s).replace(whole, EXACT_TERMS[whole]);
   let out = String(s);
+  // a whole-line dictionary entry wins over the line templates ("Opponent's turn", "+ Add unit")
+  if (map.has(whole)) {
+    out = out.replace(whole, map.get(whole));
+    return termRe ? out.replace(termRe, m => termMap.get(m)) : out;
+  }
   for (const [p, fn] of prePats) out = out.replace(p, fn);
   if (re) out = out.replace(re, m => map.get(m));
   for (const [p, fn] of pats) out = out.replace(p, fn);
@@ -66,7 +71,9 @@ function translateText(n) {
   if (t !== v) n.nodeValue = t;
 }
 function translateAttrs(el) {
-  if (el.__i18nAttr || skipped(el)) return;
+  // form fields are skipped for their value, but their placeholder/title are UI chrome
+  const field = el.matches && el.matches('input,textarea,select');
+  if (el.__i18nAttr || (field ? skipped(el.parentElement) : skipped(el))) return;
   el.__i18nAttr = true;
   for (const a of ['placeholder', 'title', 'aria-label']) {
     const v = el.getAttribute(a);

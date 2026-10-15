@@ -161,7 +161,7 @@ export const PHASES = [
             caption: 'The five steps of the Command phase – this step covers the first two.',
             caption_de: 'Die fünf Schritte der Kommandophase – dieser Abschnitt behandelt die ersten beiden.',
             items: [
-              { title: 'Start of the phase', title_de: 'Beginn der Phase', text: '"start of turn" rules; tactical missions: draw 2 cards', text_de: 'Regeln „zu Beginn des Zuges“; taktische Missionen: 2 Karten ziehen', kind: 'info' },
+              { title: 'Start of the phase', title_de: 'Beginn der Phase', text: '"start of the Command phase" rules; tactical missions: draw 2 cards', text_de: 'Regeln „zu Beginn der Kommandophase“; taktische Missionen: 2 Karten ziehen', kind: 'info' },
               { title: 'Gain CP', title_de: 'BP erhalten', text: 'both players +1 CP', text_de: 'beide Spieler +1 BP', kind: 'ok' },
               { title: 'Battle-shock', title_de: 'Kampfschock', text: 'roll for your weakened units', text_de: 'Tests für deine geschwächten Einheiten', kind: 'warn' },
               { title: 'Command abilities', title_de: 'Kommandofähigkeiten', text: '"in your Command phase" rules', text_de: 'Regeln „in deiner Kommandophase“', kind: 'you' },
@@ -252,7 +252,7 @@ export const PHASES = [
     ],
     game: {
       you: [
-        { text: 'Resolve "start of turn" rules; tactical missions: draw 2 cards', text_de: 'Regeln „zu Beginn des Zuges“ abhandeln; taktische Missionen: 2 Karten ziehen', refs: ['07.02', '08.01'] },
+        { text: 'Resolve "start of turn" rules (before the Command phase), then "start of the Command phase" rules; tactical missions: draw 2 cards', text_de: 'Regeln „zu Beginn des Zuges“ abhandeln (vor der Kommandophase), dann Regeln „zu Beginn der Kommandophase“; taktische Missionen: 2 Karten ziehen', refs: ['07.02', '08.01'] },
         { text: 'Both players gain 1 CP', text_de: 'Beide Spieler erhalten 1 BP', refs: ['08.02'] },
         { text: 'Battle-shock roll (2D6 ≥ Ld) for shocked units and units at/below half-strength', text_de: 'Kampfschocktest (2W6 ≥ Ld) für geschockte Einheiten und solche auf halber Sollstärke oder darunter', refs: ['08.03', '01.07'] },
         { text: 'Use "in your Command phase" abilities', text_de: '„In deiner Kommandophase“-Fähigkeiten nutzen', refs: ['08.04'] },
@@ -446,8 +446,8 @@ export const PHASES = [
     steps: [
       {
         id: 'sho-select', title: 'Who may shoot', title_de: 'Wer schießen darf',
-        text: `<p>Pick a unit, resolve all its shots, then pick the next. Every unit shoots at most once, and you do not have to shoot with all of them. How a unit may shoot depends on what it did:</p><ul><li><b>Moved normally or stood still</b> – all ranged weapons (NORMAL SHOOTING).</li><li><b>Advanced</b> – only <b>[ASSAULT]</b> weapons.</li><li><b>Fell back</b> or started an action – no shooting.</li><li><b>Engaged</b> – only <b>[PISTOL]</b>/<b>[CLOSE-QUARTERS]</b> weapons, at the enemy it is fighting. MONSTERS and VEHICLES may fire all their guns, at -1 to hit.</li></ul>`,
-        text_de: `<p>Wähle eine Einheit, handle all ihre Schüsse ab, dann wähle die nächste. Jede Einheit schießt höchstens einmal, und du musst nicht mit allen schießen. Wie eine Einheit schießen darf, hängt davon ab, was sie getan hat:</p><ul><li><b>Normal bewegt oder stehen geblieben</b> – alle Fernkampfwaffen (NORMAL SHOOTING).</li><li><b>Vorgerückt</b> – nur <b>[ASSAULT]</b>-Waffen.</li><li><b>Zurückgezogen</b> oder Aktion begonnen – kein Schießen.</li><li><b>Im Nahkampf</b> – nur <b>[PISTOL]</b>/<b>[CLOSE-QUARTERS]</b>-Waffen, auf den Gegner, mit dem sie kämpft. MONSTER und VEHICLE dürfen alle Waffen abfeuern, mit -1 auf Treffer.</li></ul>`,
+        text: `<p>Pick a unit, resolve all its shots, then pick the next. Every unit shoots at most once, and you do not have to shoot with all of them. How a unit may shoot depends on what it did:</p><ul><li><b>Moved normally or stood still</b> – all ranged weapons (NORMAL SHOOTING).</li><li><b>Advanced</b> – only <b>[ASSAULT]</b> weapons.</li><li><b>Fell back</b> or started an action – no shooting.</li><li><b>Engaged</b> – only <b>[PISTOL]</b>/<b>[CLOSE-QUARTERS]</b> weapons, at the enemy it is fighting. MONSTERS and VEHICLES may fire all their guns, at -1 to hit (no -1 for [CLOSE-QUARTERS] weapons at the unit they fight; [BLAST] weapons cannot target that unit).</li></ul>`,
+        text_de: `<p>Wähle eine Einheit, handle all ihre Schüsse ab, dann wähle die nächste. Jede Einheit schießt höchstens einmal, und du musst nicht mit allen schießen. Wie eine Einheit schießen darf, hängt davon ab, was sie getan hat:</p><ul><li><b>Normal bewegt oder stehen geblieben</b> – alle Fernkampfwaffen (NORMAL SHOOTING).</li><li><b>Vorgerückt</b> – nur <b>[ASSAULT]</b>-Waffen.</li><li><b>Zurückgezogen</b> oder Aktion begonnen – kein Schießen.</li><li><b>Im Nahkampf</b> – nur <b>[PISTOL]</b>/<b>[CLOSE-QUARTERS]</b>-Waffen, auf den Gegner, mit dem sie kämpft. MONSTER und VEHICLE dürfen alle Waffen abfeuern, mit -1 auf Treffer (kein -1 für [CLOSE-QUARTERS]-Waffen gegen die Einheit, mit der sie kämpfen; [BLAST]-Waffen dürfen diese Einheit nicht als Ziel wählen).</li></ul>`,
         tips: ['A unit either shoots or starts an action this turn – never both.'],
         tips_de: ['Eine Einheit schießt in diesem Zug oder beginnt eine Aktion – nie beides.'],
         refs: ['10.02', '10.04', '10.05', '10.06', '16.01', '24.27'],
@@ -457,8 +457,8 @@ export const PHASES = [
             caption: 'What the unit did this turn decides which weapons it may fire.',
             caption_de: 'Was die Einheit in diesem Zug getan hat, entscheidet, welche Waffen sie abfeuern darf.',
             head: ['The unit …', 'may shoot with'], head_de: ['Die Einheit …', 'darf schießen mit'],
-            rows: [['stood still / moved normally', 'all ranged weapons'], ['advanced', 'only [ASSAULT]'], ['fell back / started an action', 'nothing'], ['is engaged', '[PISTOL] at the enemy it fights (MONSTER/VEHICLE: all weapons, -1 to hit)']],
-            rows_de: [['stand / normal bewegt', 'allen Fernkampfwaffen'], ['ist vorgerückt', 'nur [ASSAULT]'], ['zurückgezogen / Aktion', 'nichts'], ['ist im Nahkampf', '[PISTOL] auf ihren Gegner im Nahkampf (MONSTER/VEHICLE: allen Waffen, -1 auf Treffer)']],
+            rows: [['stood still / moved normally', 'all ranged weapons'], ['advanced', 'only [ASSAULT]'], ['fell back / started an action', 'nothing'], ['is engaged', '[PISTOL] at the enemy it fights (MONSTER/VEHICLE: all weapons, -1 to hit except [CLOSE-QUARTERS])']],
+            rows_de: [['stand / normal bewegt', 'allen Fernkampfwaffen'], ['ist vorgerückt', 'nur [ASSAULT]'], ['zurückgezogen / Aktion', 'nichts'], ['ist im Nahkampf', '[PISTOL] auf ihren Gegner im Nahkampf (MONSTER/VEHICLE: allen Waffen, -1 auf Treffer außer [CLOSE-QUARTERS])']],
             hl: [[2, 1]]
           },
           {
@@ -1186,8 +1186,8 @@ export const PHASES = [
     steps: [
       {
         id: 'big-models', title: 'Monsters and vehicles', title_de: 'Monster und Fahrzeuge',
-        text: `<ul><li>With a NORMAL or ADVANCE MOVE they can drive <b>through enemy models</b> (not through other MONSTERS/VEHICLES) – but must still end more than 2" away.</li><li>They cannot go through tall ruins and buildings; they have to drive around.</li><li>In melee they can keep shooting all their guns at -1 to hit, and your other units can shoot an engaged enemy MONSTER/VEHICLE at -1 to hit.</li><li>Models without a base (FRAME) are measured to the closest point of the model itself.</li></ul>`,
-        text_de: `<ul><li>Bei einem NORMAL oder ADVANCE MOVE können sie <b>durch gegnerische Modelle</b> fahren (nicht durch andere MONSTER/VEHICLE) – müssen aber trotzdem mehr als 2" entfernt enden.</li><li>Durch hohe Ruinen und Gebäude kommen sie nicht; sie müssen außen herum.</li><li>Im Nahkampf können sie mit allen Waffen weiterschießen, mit -1 auf Treffer, und deine anderen Einheiten dürfen auf ein gegnerisches MONSTER/VEHICLE im Nahkampf schießen, ebenfalls mit -1.</li><li>Modelle ohne Base (FRAME) werden zum nächsten Punkt des Modells selbst gemessen.</li></ul>`,
+        text: `<ul><li>With a NORMAL or ADVANCE MOVE they can drive <b>through enemy models</b> (not through other MONSTERS/VEHICLES) – but must still end more than 2" away.</li><li>They cannot go through tall ruins and buildings (unless they are MOBILE); they have to drive around.</li><li>In melee they can keep shooting all their guns at -1 to hit (not for [CLOSE-QUARTERS] weapons at the unit they fight; no [BLAST] at it), and your other units can shoot an engaged enemy MONSTER/VEHICLE at -1 to hit.</li><li>Models without a base (FRAME) are measured to the closest point of the model itself.</li></ul>`,
+        text_de: `<ul><li>Bei einem NORMAL oder ADVANCE MOVE können sie <b>durch gegnerische Modelle</b> fahren (nicht durch andere MONSTER/VEHICLE) – müssen aber trotzdem mehr als 2" entfernt enden.</li><li>Durch hohe Ruinen und Gebäude kommen sie nicht (außer sie sind MOBILE); sie müssen außen herum.</li><li>Im Nahkampf können sie mit allen Waffen weiterschießen, mit -1 auf Treffer (nicht für [CLOSE-QUARTERS]-Waffen gegen die Einheit, mit der sie kämpfen; kein [BLAST] auf sie), und deine anderen Einheiten dürfen auf ein gegnerisches MONSTER/VEHICLE im Nahkampf schießen, ebenfalls mit -1.</li><li>Modelle ohne Base (FRAME) werden zum nächsten Punkt des Modells selbst gemessen.</li></ul>`,
         refs: ['17.01', '13.06', '10.06', '17.03', '17.02'],
         diagrams: [
           {
@@ -1226,8 +1226,8 @@ export const PHASES = [
             caption: '"It" is a MONSTER/VEHICLE that is engaged; "others" are units shooting at it from outside the fight.',
             caption_de: '„Es“ ist ein MONSTER/VEHICLE im Nahkampf; „andere“ sind Einheiten, die von außerhalb des Kampfes darauf schießen.',
             head: ['MONSTER/VEHICLE in melee', ''], head_de: ['MONSTER/VEHICLE im Nahkampf', ''],
-            rows: [['It shoots', 'all its guns, -1 to hit'], ['Others shoot at it', '-1 to hit'], ['… with [BLAST]', 'not allowed']],
-            rows_de: [['Es schießt', 'alle Waffen, -1 auf Treffer'], ['Andere schießen darauf', '-1 auf Treffer'], ['… mit [BLAST]', 'nicht erlaubt']]
+            rows: [['It shoots', 'all its guns, -1 to hit ([CLOSE-QUARTERS] at the unit it fights: no -1)'], ['Others shoot at it', '-1 to hit'], ['… with [BLAST]', 'not allowed']],
+            rows_de: [['Es schießt', 'alle Waffen, -1 auf Treffer ([CLOSE-QUARTERS] gegen die Einheit, mit der es kämpft: kein -1)'], ['Andere schießen darauf', '-1 auf Treffer'], ['… mit [BLAST]', 'nicht erlaubt']]
           }
         ]
       },

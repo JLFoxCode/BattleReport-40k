@@ -228,9 +228,12 @@ async function route() {
     if (my !== routeSeq) return; // inzwischen neue Route – die übernimmt
   }
   if (r.code && !r.spectator) remember(r.code, r.me, r.view);
+  // a new screen starts at the top (the previous screen's scroll position would hide its header)
+  const newScreen = !lastRoute || lastRoute.view !== r.view || codeChanged;
   lastRoute = r;
   updateStatusbar();
   render();
+  if (newScreen) try { window.scrollTo(0, 0); } catch {}
 }
 
 function disconnect() {
