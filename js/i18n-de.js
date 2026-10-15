@@ -338,5 +338,8 @@ PATTERNS.push(
   ['(?<![A-Za-z])rounds (\\d)', (m, n) => 'Runden ' + n],
   ['^booked (\\d+) VP$', (m, n) => 'gebucht: ' + n + ' VP'],
   // "Round 2 · opponent's turn" (active effects) – before the general "<name>'s turn" template
-  ['^Round (\\d+) · opponent\'s turn$', (m, n) => 'Runde ' + n + ' · Zug des Gegners'], ['^Round (\\d+) · your turn$', (m, n) => 'Runde ' + n + ' · dein Zug']
+  ['^Round (\\d+) · opponent\'s turn$', (m, n) => 'Runde ' + n + ' · Zug des Gegners'], ['^Round (\\d+) · your turn$', (m, n) => 'Runde ' + n + ' · dein Zug'],
+  // one Undo takes back a whole tablet step (End turn / Next phase); score popup: total before the VP caps
+  ['^Last step undone \\((\\d+) actions\\)$', (m, n) => 'Letzter Schritt rückgängig gemacht (' + n + ' Aktionen)'],
+  ['^\\((-?\\d+) VP before the caps\\)$', (m, n) => '(' + n + ' VP vor den Obergrenzen)']
 );

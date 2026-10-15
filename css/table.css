@@ -190,6 +190,8 @@
 .sheet.tbl-score .score-ctl { flex: none; display: flex; flex-direction: column; align-items: center; gap: 6px; }
 .sheet.tbl-score .score-total { display: flex; justify-content: space-between; align-items: center; padding: 12px 0 0; font-size: 18px; font-family: var(--font-title); }
 .sheet.tbl-score .score-total b { font-size: 24px; }
+.sheet.tbl-score .score-total-v { margin-left: 12px; text-align: right; }
+.sheet.tbl-score .score-uncapped { font-size: 13px; font-family: var(--font-body); margin-right: 6px; }
 .info-conds { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; font-size: 14px; }
 .info-conds li { display: flex; gap: 10px; align-items: flex-start; }
 .info-conds li.sub { padding-left: 16px; }

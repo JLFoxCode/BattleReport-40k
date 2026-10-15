@@ -5,6 +5,7 @@
  * UI-Zustand je Spielcode liegt in UI (überlebt Re-Renders bei jedem State-Push). */
 import { WH } from '../../data/rules.js';
 import { CORE } from '../../data/core.js';
+import { reduce } from '../../engine/index.js';
 import { esc, btn, badge, chip, sheet, confirmSheet, toast, colorOf } from './components.js';
 import { prepareQr, qrReady, qrSvg, joinUrl } from './qr.js';
 
@@ -248,22 +249,30 @@ function turnBar(s) {
   return `<div class="turnbar">${segs.join('')}</div>`;
 }
 
-/** End the current turn from the tablet: run through the remaining phases (stops at pending scorings, which reopen the sheet). */
-async function endTurn() {
+/** Undo group of one tablet press ("End turn" / "Next phase"): its automatic phase steps, the scoring confirmed on the
+ *  way and the continuation share one id, so a single Undo takes the whole step back (server undoSpan()). */
+const newGroup = () => 'g' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+const grouped = a => (cur.ui.group ? Object.assign(a, { group: cur.ui.group }) : a);
+
+/** End the current turn from the tablet: run through the remaining phases (stops at pending scorings, which reopen the sheet).
+ *  cont = continued after a confirmed scoring (keeps the press's undo group). */
+async function endTurn(cont) {
   const { ctx, ui } = cur;
   const c = () => (cur.ui.ctx || cur.ctx);
   let s = c().state;
-  if (!s || s.stage !== 'battle') { ui.endingTurn = false; return; }
+  if (!s || s.stage !== 'battle') { ui.endingTurn = false; ui.group = null; return; }
   if (s.pending) { ui.endingTurn = true; return openScoreSheet(); }
   ui.endingTurn = true;
+  if (!cont || !ui.group) ui.group = newGroup();
   const startRound = s.round, startTurn = s.turn;
   for (let i = 0; i < 8; i++) {
-    const r = await c().dispatch({ type: 'phase.next', endTurn: true, track: true }); // Command-phase scoring joins the end-of-turn popup
-    if (!r) { ui.endingTurn = false; return; }
+    const r = await c().dispatch(grouped({ type: 'phase.next', endTurn: true, track: true })); // Command-phase scoring joins the end-of-turn popup
+    if (!r) { ui.endingTurn = false; ui.group = null; return; }
     if (r.pending) return;                      // scoring sheet opens via syncSheet; confirmScore continues the turn
     if (r.stage !== 'battle' || r.round !== startRound || r.turn !== startTurn) break;
   }
   ui.endingTurn = false;
+  ui.group = null;
 }
 
 function ctaHtml(ctx) {
@@ -292,7 +301,10 @@ async function nextPhase() {
   ui.dismissed = null;
   if (s.pending) return openScoreSheet();
   ui.endingTurn = false;
-  return (ui.ctx || ctx).dispatch({ type: 'phase.next', track: true });
+  ui.group = newGroup();
+  const r = await (ui.ctx || ctx).dispatch(grouped({ type: 'phase.next', track: true }));
+  if (!r || !r.pending) ui.group = null;      // a scoring that blocks the step keeps the group for confirmScore
+  return r;
 }
 
 /* ───────── Reiter Score ───────── */
@@ -740,6 +752,25 @@ function openScoreSheet() {
     </div>`;
   };
   const totalVp = () => items.reduce((a, i) => a + i.vp, 0) + mod.vp;
+  // What the confirm books: only the difference to the score page; lowered rows unbook their entries first
+  const plan = () => {
+    const delta = items.map(it => Object.assign({}, it, { vp: it.vp - (it.already || 0) }));
+    return { dec: delta.filter(it => it.vp < 0), add: delta.filter(it => it.vp > 0).concat(mod.vp ? [{ src: 'bonus', card: 'modifier', ci: null, vp: mod.vp }] : []) };
+  };
+  // The VP actually booked after the caps (15 per round, 45 Primary / Secondary, 20 per Fixed card – 100 in all):
+  // the same steps run through the engine on a copy of the state. null = cannot tell (scoring no longer pending).
+  const cappedVp = () => {
+    try {
+      const st0 = (cur.ui.ctx || cur.ctx).state;
+      if (!st0 || !st0.pending || pendingKey(st0) !== key) return null;
+      const sum = st => (st.scores || []).filter(x => x.player === player).reduce((a, x) => a + (Number(x.vp) || 0), 0);
+      const { dec, add } = plan();
+      let st = st0;
+      for (const id of unbookIds(st0, player, dec)) st = reduce(st, { type: 'score.remove', scoreId: id });
+      st = reduce(st, { type: 'score.confirm', player, items: add.map(it => ({ src: it.src, card: it.card, ci: it.ci, vp: it.vp })), achieve: true });
+      return items.reduce((a, i) => a + (i.already || 0), 0) + sum(st) - sum(st0);
+    } catch { return null; }
+  };
   const bodyHtml = () => `${oppScoring
       ? `<p class="score-banner p${player}"><b class="text-p${player}">${esc(pName(s, player))}</b> scores now – missions that count at the end of <b class="text-p${s.turn}">${esc(pName(s, s.turn))}</b>'s turn · Round ${esc(s.round)}</p>`
       : `<p class="muted small">${esc(WHEN_LABEL[pend.when] || pend.when)} · Round ${esc(s.round)}</p>`}
@@ -753,7 +784,11 @@ function openScoreSheet() {
         </div></div>
       </div>
 `;
-  const totalHtml = () => `<div class="score-total"><span>Total</span><b>${totalVp()} VP</b></div>`;
+  const totalHtml = () => {
+    const raw = totalVp(), capped = cappedVp();
+    const shown = capped == null ? raw : capped;
+    return `<div class="score-total"><span>Total</span><span class="score-total-v">${capped != null && capped !== raw ? `<small class="muted score-uncapped">(${raw} VP before the caps)</small> ` : ''}<b>${shown} VP</b></span></div>`;
+  };
   const labelFor = () => (autoScore && !edited ? 'Apply suggestions' : 'Confirm scoring');
   const close = sheet({
     title: oppScoring
@@ -764,10 +799,8 @@ function openScoreSheet() {
     actions: [
       { label: labelFor(), kind: 'primary', cta: true, onClick: async () => {
         // Book only what is new compared with the score page; lowering below the booked value removes those entries first
-        const delta = items.map(it => Object.assign({}, it, { vp: it.vp - (it.already || 0) }));
-        const dec = delta.filter(it => it.vp < 0);
+        const { dec, add } = plan();
         if (dec.length) await unbookFor(player, dec);
-        const add = delta.filter(it => it.vp > 0).concat(mod.vp ? [{ src: 'bonus', card: 'modifier', ci: null, vp: mod.vp }] : []);
         await confirmScore(player, add);
       } }
     ],
@@ -803,15 +836,19 @@ function openScoreSheet() {
   ui.sheet = { kind: 'score', key, close };
 }
 
-/** Remove score-page bookings of this turn for conditions the popup lowered (newest entries first). */
-async function unbookFor(player, list) {
-  const c = cur.ui.ctx || cur.ctx;
+/** Score-page bookings of this turn to remove for conditions the popup lowered (newest entries first). */
+function unbookIds(s, player, list) {
+  const ids = [];
   for (const it of list) {
     let need = -it.vp;
-    const s = c.state;
     const entries = (s.scores || []).filter(x => x.player === player && x.src === it.src && x.card === it.card && x.ci === it.ci && x.round === s.round && x.turn === s.turn).reverse();
-    for (const e of entries) { if (need <= 0) break; await c.dispatch({ type: 'score.remove', scoreId: e.id }); need -= e.vp; }
+    for (const e of entries) { if (need <= 0) break; ids.push(e.id); need -= e.vp; }
   }
+  return ids;
+}
+async function unbookFor(player, list) {
+  const c = cur.ui.ctx || cur.ctx;
+  for (const id of unbookIds(c.state, player, list)) await c.dispatch(grouped({ type: 'score.remove', scoreId: id }));
 }
 
 async function confirmScore(player, items) {
@@ -820,13 +857,13 @@ async function confirmScore(player, items) {
   // the VP actually booked (after the caps), not the sum asked for
   const booked = st => (st.scores || []).filter(x => x.player === player).reduce((a, x) => a + (Number(x.vp) || 0), 0);
   const before = booked(c.state);
-  const s = await c.dispatch({ type: 'score.confirm', player, items: payload, achieve: true });
+  const s = await c.dispatch(grouped({ type: 'score.confirm', player, items: payload, achieve: true }));
   if (!s) return;
   toast(`Scoring confirmed: ${booked(s) - before} VP for ${pName(s, player)}`, 'ok');
-  if (s.stage !== 'battle' || s.pending) return;
+  if (s.stage !== 'battle' || s.pending) { if (s.stage !== 'battle') cur.ui.group = null; return; }
   // The scoring blocked the phase change: continue – the whole turn if the tablet is ending it, otherwise just one phase
-  if (cur.ui.endingTurn) await endTurn();
-  else await (cur.ui.ctx || c).dispatch({ type: 'phase.next', track: true });
+  if (cur.ui.endingTurn) await endTurn(true);
+  else { const r = await (cur.ui.ctx || c).dispatch(grouped({ type: 'phase.next', track: true })); if (!r || !r.pending) cur.ui.group = null; }
 }
 
 async function openInfoSheet(p, src, card) {

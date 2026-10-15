@@ -181,6 +181,18 @@ class GameServer {
         return null;
     }
 
+    /** How many trailing actions one undo takes back: all trailing actions sharing the last action's "group" (one tablet
+     *  "End turn" / "Next phase" press with its automatic phase steps and scoring), else just the last one (old games have
+     *  no groups). Never the game.init action at index 0. Same rule as server/game-server.js undoSpan(). */
+    static int undoSpan(List<JSONObject> actions) {
+        int n = actions.size();
+        Object grp = n > 1 ? actions.get(n - 1).opt("group") : null;
+        if (!(grp instanceof String) || ((String) grp).isEmpty()) return 1;
+        int k = 1;
+        while (k < n - 1 && grp.equals(actions.get(n - 1 - k).opt("group"))) k++;
+        return k;
+    }
+
     private static String iso() {
         java.text.SimpleDateFormat f = new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US);
         f.setTimeZone(TimeZone.getTimeZone("UTC"));
@@ -400,11 +412,18 @@ class GameServer {
                 Object bo = b.opt("by");
                 double bd = bo instanceof Number ? ((Number) bo).doubleValue() : -1;
                 Integer by = bd == 0 ? Integer.valueOf(0) : bd == 1 ? Integer.valueOf(1) : null;
+                int undone;
                 synchronized (this) {
                     if (g.actions.size() <= 1) { json(out, 400, err("Nothing to undo")); return false; }
                     JSONObject last = g.actions.get(g.actions.size() - 1);
-                    Object lb = last.opt("by");
-                    if (by != null && !(lb instanceof Number && ((Number) lb).doubleValue() == by)) {
+                    // one undo takes back the whole trailing group (one "End turn" press with its automatic phase steps)
+                    int n = undoSpan(g.actions);
+                    boolean foreign = false;
+                    if (by != null) for (int i = g.actions.size() - n; i < g.actions.size(); i++) {
+                        Object lb = g.actions.get(i).opt("by");
+                        if (!(lb instanceof Number && ((Number) lb).doubleValue() == by)) { foreign = true; break; }
+                    }
+                    if (foreign) {
                         String text = null;
                         JSONArray log = new JSONObject(g.stateJson).optJSONArray("log");
                         if (log != null) for (int i = log.length() - 1; i >= 0; i--) {
@@ -415,7 +434,8 @@ class GameServer {
                             + " \u2013 it can only be undone there or on the scoreboard."));
                         return false;
                     }
-                    List<JSONObject> rest = new ArrayList<>(g.actions.subList(0, g.actions.size() - 1));
+                    undone = n;
+                    List<JSONObject> rest = new ArrayList<>(g.actions.subList(0, g.actions.size() - n));
                     JSONObject res = engine.call("H.load(" + EngineHost.q(code) + "," + EngineHost.q(new JSONArray(rest).toString()) + ")");
                     if (res.has("error")) { json(out, 400, err("Undo failed: " + res.getString("error"))); return false; }
                     g.actions.clear();
@@ -425,7 +445,7 @@ class GameServer {
                 persist(g);
                 broadcast(g);
                 notifyListener();
-                json(out, 200, "{\"seq\":" + g.actions.size() + ",\"state\":" + g.stateJson + "}");
+                json(out, 200, "{\"seq\":" + g.actions.size() + ",\"undone\":" + undone + ",\"state\":" + g.stateJson + "}");
                 return false;
             }
             if (sub.equals("events") && m.equals("GET")) {

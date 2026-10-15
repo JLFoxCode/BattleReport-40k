@@ -315,9 +315,10 @@ async function undo() {
   if (store.spectator) { toast('Spectator – view only', 'warn', 1800); return null; }
   if (!net) return null;
   try {
-    const s = await net.undo(store.view === 'player' ? store.me : undefined);
-    toast('Last action undone', 'ok', 1500);
-    return s;
+    const r = await net.undo(store.view === 'player' ? store.me : undefined);
+    // one tablet step (End turn / Next phase with its automatic phase steps and scoring) is taken back as a whole
+    toast(r && r.undone > 1 ? `Last step undone (${r.undone} actions)` : 'Last action undone', 'ok', 1500);
+    return r ? r.state : null;
   } catch (e) {
     toast(e && e.message ? e.message : 'Undo failed', 'bad');
     return null;

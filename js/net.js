@@ -6,7 +6,7 @@
  *   onPhoto(fn) → unsubscribe                        (SSE-Event "photo" { kind: 'new'|'meta'|'delete', photo }, §11)
  *   onSignal(fn) → unsubscribe                       (SSE-Event "signal" { type, ...payload, ts }, §12 – z. B. 'capture', 'camera', 'pointer')
  *   onStatus(fn) → unsubscribe, isOnline(), refresh() → Promise<state>,
- *   dispatch(action) → Promise<state>, undo() → Promise<state>, pointer(p) → Promise<void>,
+ *   dispatch(action) → Promise<state>, undo(by?) → Promise<{ state, undone }>, pointer(p) → Promise<void>,
  *   uploadPhoto(blob, meta?) → Promise<photo>, updatePhoto(id, patch) → Promise<photo>,
  *   listPhotos() → Promise<photo[]>, deletePhoto(id) → Promise, photoUrl(id) → string,
  *   signal(obj) → Promise<void>                      (POST /signal, obj = { type, ...payload })
@@ -169,9 +169,10 @@ export function createNet(code, opts = {}) {
     },
     async undo(by) {
       // by = the player whose phone asks: the server only undoes that player's own last action (the scoreboard sends none)
+      // → { state, undone } – undone = number of actions taken back (a whole "End turn" step counts as one undo)
       const r = await request('POST', `${base}/undo`, typeof by === 'number' ? { by } : undefined);
       if (r && r.state) pushState(r.state);
-      return r ? r.state : null;
+      return r && r.state ? { state: r.state, undone: Number(r.undone) || 1 } : null;
     },
     async pointer(p) {
       // Feuer-und-vergessen; Fehler nur in die Konsole.

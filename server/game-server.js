@@ -398,11 +398,13 @@ export async function startGameServer(opts = {}) {
         const body = await readJson(req);
         const by = body && (body.by === 0 || body.by === 1) ? body.by : null;
         const last = g.actions[g.actions.length - 1];
-        if (by != null && last.by !== by) {
+        // one undo takes back the whole trailing group (one "End turn" press with its automatic phase steps)
+        const n = undoSpan(g.actions);
+        if (by != null && g.actions.slice(-n).some(a => a.by !== by)) {
           const entry = (g.state.log || []).slice().reverse().find(l => l.type === last.type);
           return sendJson(res, 409, { error: 'The last action was not made on this phone' + (entry ? ' (“' + entry.text + '”)' : '') + ' – it can only be undone there or on the scoreboard.' });
         }
-        const actions = g.actions.slice(0, -1);
+        const actions = g.actions.slice(0, -n);
         let state;
         try { state = replay(code, actions); }
         catch (e) { return sendJson(res, 400, { error: 'Undo failed: ' + (e && e.message ? e.message : e) }); }
@@ -411,7 +413,7 @@ export async function startGameServer(opts = {}) {
         await persist(g);
         broadcastState(g);
         changed();
-        return sendJson(res, 200, { seq: g.state.seq, state: g.state });
+        return sendJson(res, 200, { seq: g.state.seq, state: g.state, undone: n });
       }
 
       if (sub === 'events' && m === 'GET') {
@@ -651,6 +653,16 @@ export async function startGameServer(opts = {}) {
 }
 
 // ---------------------------------------------------------------- helpers (stateless)
+/** How many trailing actions one undo takes back: all trailing actions sharing the last action's `group` (one tablet
+ *  "End turn" / "Next phase" press with its automatic phase steps and scoring), else just the last one (old games have
+ *  no groups). Never the game.init action at index 0. Same rule as GameServer.java undoSpan(). */
+export function undoSpan(actions) {
+  const n = actions.length, grp = n > 1 ? actions[n - 1].group : null;
+  if (typeof grp !== 'string' || !grp) return 1;
+  let k = 1;
+  while (k < n - 1 && actions[n - 1 - k].group === grp) k++;
+  return k;
+}
 function sniffImage(buf) {
   if (buf.length > 3 && buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff) return 'image/jpeg';
   if (buf.length > 8 && buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47) return 'image/png';
