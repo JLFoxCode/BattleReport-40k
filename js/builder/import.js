@@ -154,10 +154,26 @@ export async function importText(text, opts = {}) {
   // units
   const roots = sys.rootNodes(cat.id).filter(n => ['unit', 'model'].includes(n.type));
   const units = parseArmyText(text);
+  // lines that look like a unit with its points ("Overlord (115 pts) - Warlord, …", "10x Dire Avengers - 140",
+  // "Autarch (90): …") but became no unit: reported as not imported instead of vanishing silently
+  {
+    const got = units.map(u => norm(u.name)).filter(Boolean);
+    const ptsOf = l => { const m = /[([]\s*(\d+)\s*(?:pts?|points?)\s*[)\]]|[([]\s*(\d+)\s*[)\]]\s*(?::|$)|[-–:]\s*(\d{2,3})\s*(?:pts?|points?)?\s*$/i.exec(l); return m ? Number(m[1] || m[2] || m[3]) : null; };
+    for (const l of lines) {
+      if (/^[+&=#•◦○]/.test(l) || !/[a-z]{3}/i.test(l) || /detachment|faction|total|strike force|incursion|onslaught|version/i.test(l)) continue;
+      const p = ptsOf(l);
+      if (p == null || p >= 500 || got.some(n => norm(l).includes(n))) continue;
+      report.push(`Unit not found: ${l}`);
+    }
+  }
   const leads = [];
   const made = [];   // [{ u, id }] – a list unit and the selection it became
   for (const u of units) {
-    const node = roots.find(n => norm(n.name) === norm(u.name)) || roots.find(n => norm(u.name).startsWith(norm(n.name)) || norm(n.name).startsWith(norm(u.name)));
+    // several entries of the same name (BSData keeps hidden shared copies, e.g. a 3-model Marneus Calgar): the one this
+    // army can take – a hidden one only if there is no other (Legends etc. are revealed below)
+    const V0 = E.view(sys, r);
+    const usable = list => list.find(n => { try { return !E.limits(V0, n, null, V0.force).hidden; } catch { return true; } }) || list[0];
+    const node = usable(roots.filter(n => norm(n.name) === norm(u.name))) || usable(roots.filter(n => norm(u.name).startsWith(norm(n.name)) || norm(n.name).startsWith(norm(u.name))));
     if (!node) { report.push(`Unit not found: ${u.name}`); continue; }
     r = E.addSel(sys, r, null, node.token);
     const id = last(r, sys).s.id;
@@ -174,12 +190,14 @@ export async function importText(text, opts = {}) {
       const have = E.view(sys, r).byId.get(id).ch.some(c => c.node && /^Warlord$/i.test(c.node.name));
       if (wl && !have) r = E.addSel(sys, r, id, wl.tok);
     }
-    if (u.leading) leads.push({ id, target: u.leading, name: u.name });
+    if (u.leading) leads.push({ id, target: u.leading, nth: u.leadingNth || 0, name: u.name });
   }
-  // "Leading …": the first unit of that name not led yet
+  // "Leading X[2]": the 2nd unit of that name in the list (the app's own export numbers same-named units); without a
+  // number the first unit of that name not led yet
   for (const l of leads) {
     const V = E.view(sys, r);
-    const t = V.force.ch.find(w => w.node && norm(w.node.name) === norm(l.target) && !V.force.ch.some(x => x.s.lead === w.s.id));
+    const named = V.force.ch.filter(w => w.node && norm(w.node.name) === norm(l.target));
+    const t = (l.nth && named[l.nth - 1]) || named.find(w => !V.force.ch.some(x => x.s.lead === w.s.id));
     if (t) { const x = r.sel.find(s => s.id === l.id); if (x) x.lead = t.s.id; }
     else report.push(`${l.name} leads ${l.target} – that unit is not in the imported army`);
   }
@@ -235,12 +253,26 @@ const onlyOne = a => (a.length === 1 ? a[0] : undefined);
 function setModels(sys, r, id, u, report) {
   let V = E.view(sys, r);
   const w = V.byId.get(id);
-  const types = entriesBelow(sys, w.node).filter(x => x.node.type === 'model');
+  // model stacks of the unit, also inside a size option that holds them ("2 Sergeants and 18 Shock Troopers")
+  const stacksOf = rr => { const o = []; (function f(x, mult) { for (const c of x.ch) { if (!c.node) continue; if (c.node.type === 'model') o.push({ c, n: c.n * mult }); else f(c, mult * c.n); } })(E.view(sys, rr).byId.get(id), 1); return o; };
+  const modelCount = rr => stacksOf(rr).reduce((a, s) => a + s.n, 0);
+  // size options of the unit (a group whose options hold the models): the one with the list's model count
+  const sizes = entriesBelow(sys, w.node).filter(x => x.group && x.node.type === 'upgrade' && !x.group.tok.includes('>') && sys.children(x.node).some(k => k.type === 'model'));
+  if (u.models && sizes.length > 1 && modelCount(r) !== u.models) {
+    for (const s of sizes) {
+      let r2 = null;
+      try { r2 = E.chooseInGroup(sys, r, id, s.group.tok, s.tok); } catch { r2 = null; }
+      if (r2 && modelCount(r2) === u.models) { r = r2; break; }
+    }
+  }
+  // model types: the unit's own and those of its chosen size option
+  const chosen = sizes.filter(s => E.view(sys, r).byId.get(id).ch.some(c => c.s.t === s.tok));
+  const types = [...entriesBelow(sys, w.node), ...chosen.flatMap(s => entriesBelow(sys, s.node, 1, s.tok))].filter(x => x.node.type === 'model');
   if (!types.length) return r;
   const lines = (u.modelLines || []).map(m => ({ m, t: types.find(x => norm(x.node.name) === norm(m.name)) || onlyOne(types.filter(x => norm(x.node.name).startsWith(norm(m.name) + ' w '))) })).filter(x => x.t);
   if (!lines.length) {
     // no model lines: grow the biggest stack to the unit's model count
-    const stacks = []; (function f(x) { for (const c of x.ch) { if (c.node && c.node.type === 'model') stacks.push(c); else f(c); } })(w);
+    const stacks = []; (function f(x) { for (const c of x.ch) { if (c.node && c.node.type === 'model') stacks.push(c); else f(c); } })(E.view(sys, r).byId.get(id));
     const cur = stacks.reduce((a, c) => a + c.n, 0);
     const big = stacks.sort((a, b) => b.n - a.n)[0];
     if (big && u.models > cur) r = E.setCount(r, big.s.id, big.n + u.models - cur);
@@ -250,9 +282,16 @@ function setModels(sys, r, id, u, report) {
   for (const { m, t } of lines) {
     V = E.view(sys, r);
     const ww = V.byId.get(id);
-    const have = ww.ch.find(c => c.s.t === t.tok && !seen.has(c.s.id));
+    const have = ww.ch.find(c => c.s.t === t.tok && !seen.has(c.s.id))
+      || (stacksOf(r).find(s => s.c.node.name === t.node.name && !seen.has(s.c.s.id)) || {}).c;   // a stack inside the size option
     if (have) { r = E.setCount(r, have.s.id, m.count); seen.add(have.s.id); }
-    else { r = E.addSel(sys, r, id, t.tok, m.count); const nw = E.view(sys, r).byId.get(id); const c = nw.ch[nw.ch.length - 1]; if (c) seen.add(c.s.id); }
+    else {
+      // a model type of the chosen size option is added inside that option's selection, not as a second option
+      const host = ww.ch.find(c => t.tok.startsWith(c.s.t + '>'));
+      const pid = host ? host.s.id : id;
+      r = E.addSel(sys, r, pid, host ? t.tok.slice(host.s.t.length + 1) : t.tok, m.count);
+      const nw = E.view(sys, r).byId.get(pid); const c = nw && nw.ch[nw.ch.length - 1]; if (c) seen.add(c.s.id);
+    }
   }
   // default stacks the export does not mention go away
   V = E.view(sys, r);
@@ -267,16 +306,20 @@ function setWargear(sys, r, id, u, report) {
   for (const g of u.wargear || []) {
     if (/^warlord$/i.test(g.name)) continue;
     let tries = 0, matched = false;
+    // "2 Multi-meltas" in the list may be one BSData option of that name ("2 Multi-meltas"), worth its count
+    const alt = g.count > 1 ? norm(g.count + ' ' + g.name) : null;
+    const isG = n => norm(n) === norm(g.name) || (!!alt && norm(n) === alt);
+    const worth = c => (alt && norm(c.node.name) === alt ? g.count : 1);
     for (;;) {
       if (++tries > 12) break;
       const V = E.view(sys, r);
       const w = V.byId.get(id);
       const holders = [w]; (function f(x) { for (const c of x.ch) { if (!c.node) continue; if (c.node.type === 'model') holders.push(c); else if (c.ch.some(k => k.node && k.node.type === 'model')) f(c); } })(w);   // models also inside a composition entry ("1 Sergeant and 9 Troopers")
-      const has = x => { let found = false; (function f(y) { for (const c of y.ch) { if (c.node && c.node.type !== 'model' && norm(c.node.name) === norm(g.name)) found = true; if (c.node && c.node.type !== 'model') f(c); } })(x); return found; };
+      const has = x => { let found = false; (function f(y) { for (const c of y.ch) { if (c.node && c.node.type !== 'model' && isG(c.node.name)) found = true; if (c.node && c.node.type !== 'model') f(c); } })(x); return found; };
       // a single model (or the unit itself) counts its weapons ("4x Lascannon" on a vehicle), a stack counts its models
-      const mine = x => { const out = []; (function f(y) { for (const c of y.ch) { if (c.node && c.node.type !== 'model' && norm(c.node.name) === norm(g.name)) out.push(c); if (c.node && c.node.type !== 'model') f(c); } })(x); return out; };
+      const mine = x => { const out = []; (function f(y) { for (const c of y.ch) { if (c.node && c.node.type !== 'model' && isG(c.node.name)) out.push(c); if (c.node && c.node.type !== 'model') f(c); } })(x); return out; };
       const single = h => h === w || h.n === 1;
-      const current = holders.reduce((t, h) => t + (single(h) ? mine(h).reduce((a, c) => a + c.n, 0) : has(h) ? h.n : 0), 0);
+      const current = holders.reduce((t, h) => t + (single(h) ? mine(h).reduce((a, c) => a + c.n * worth(c), 0) : has(h) ? h.n : 0), 0);
       let need = Math.max(1, g.count) - current;
       if (need <= 0) { matched = true; break; }
       // more of a weapon a single model already has: raise its count, as far as the rules allow
@@ -286,7 +329,7 @@ function setWargear(sys, r, id, u, report) {
         const r2 = E.setCount(r, grow.s.id, grow.n + need);
         if (E.validate(E.view(sys, r2)).length <= before) { r = r2; continue; }
       }
-      const cands = holders.filter(h => !has(h)).map(h => ({ h, e: entriesBelow(sys, h.node).find(x => x.node.type !== 'model' && norm(x.node.name) === norm(g.name)) })).filter(c => c.e);
+      const cands = holders.filter(h => !has(h)).map(h => ({ h, e: entriesBelow(sys, h.node).find(x => x.node.type !== 'model' && norm(x.node.name) === norm(g.name)) || (alt && entriesBelow(sys, h.node).find(x => x.node.type !== 'model' && norm(x.node.name) === alt)) })).filter(c => c.e);
       if (!cands.length) break;
       const n = c => (c.h === w ? 1 : c.h.n);
       cands.sort((p, q) => (n(q) === need) - (n(p) === need) || (n(q) <= need) - (n(p) <= need) || n(q) - n(p));

@@ -1,8 +1,12 @@
 /* Army builder ("My armies") – js/ui/armies.js. Phone first, like New Recruit: list of sections with unit rows,
    one sheet per unit with all its options. */
 .armies { max-width: 760px; margin: 0 auto; padding: 12px 12px calc(32px + var(--sa-bottom)); }
-.arm-head { display: flex; align-items: center; gap: 10px; margin: 4px 0 14px; }
-.arm-head .title { flex: 1; margin: 0; font-size: 26px; }
+.arm-head { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 4px 0 14px; }
+.arm-head .title { flex: 1 1 120px; min-width: 0; margin: 0; font-size: 26px; }
+.arm-head > .btn { flex: none; white-space: nowrap; }
+/* the actions wrap below the title on narrow phones (long German labels) instead of widening the page */
+.arm-head-act { display: flex; flex-wrap: wrap; gap: 8px; margin-left: auto; justify-content: flex-end; }
+.arm-head-act .btn { white-space: nowrap; }
 
 /* list */
 .arm-list { display: flex; flex-direction: column; gap: 10px; }
@@ -61,6 +65,8 @@
 .arm-choices { display: flex; flex-wrap: wrap; gap: 6px; }
 .arm-opt { min-height: 38px; padding: 6px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel2); color: var(--text); font: 600 14px/1.2 var(--font-body); cursor: pointer; text-align: left; }
 .arm-opt.on { background: color-mix(in srgb, var(--ok) 22%, var(--panel2)); border-color: var(--ok); }
+.arm-opt:disabled { opacity: .5; cursor: not-allowed; }
+.arm-ledby { color: var(--muted); font-weight: 600; font-size: 12px; }
 .arm-cost { color: var(--muted); font-weight: 600; font-size: 12px; white-space: nowrap; }
 .arm-row { display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 4px 0; border-bottom: 1px solid color-mix(in srgb, var(--line) 60%, transparent); }
 .arm-row-name { flex: 1; min-width: 0; font-size: 15px; }
@@ -85,6 +91,7 @@
 .arm-addrow { all: unset; box-sizing: border-box; display: flex; align-items: center; gap: 10px; width: 100%; min-height: 48px; padding: 8px 10px; border-bottom: 1px solid var(--line); cursor: pointer; }
 .arm-addrow > span:first-child { flex: 1; font-size: 15px; }
 .arm-addrow:disabled { opacity: .4; cursor: not-allowed; }
+.arm-addrow[hidden] { display: none; }   /* search filter ('all: unset' + display:flex above would override [hidden]) */
 .arm-addrow:active { background: var(--panel2); }
 
 /* import sheet: saved armies */

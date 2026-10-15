@@ -7,7 +7,7 @@
  *   key = normalised profile name (see profileKey); only profiles that change are listed.
  * group: the units that form one attached unit with unitW (leaders + bodyguard) – for "self.entries.group…".
  */
-import { applyModsOf, matchesSel } from './bs-engine.js';
+import { applyModsOf, matchesSel, profilesOf } from './bs-engine.js';
 
 export const profileKey = s => String(s || '').toLowerCase().replace(/^[^a-z0-9]+/, '').replace(/\(.*?\)/g, '').replace(/[’'`´]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
 const ID = /^[0-9a-f]{3,4}-[0-9a-f]{3,4}-[0-9a-f]{3,4}-[0-9a-f]{3,4}$/i;
@@ -43,7 +43,7 @@ export function profileChanges(V, unitW, group = []) {
   // every profile of every selection, with a working copy of its characteristics
   const profs = [];
   for (const w of sels) {
-    for (const p of (w.node && w.node.profiles) || []) {
+    for (const p of (w.node ? profilesOf(V.sys, w.node) : [])) {   // own + infoLink / info-group profiles (shared model profiles)
       if (!/Weapons|^Unit$/i.test(p.typeName || '')) continue;
       const chars = {};
       for (const c of p.characteristics || []) chars[c.typeId] = { name: c.name, v: c.$text == null ? '' : String(c.$text) };
@@ -92,7 +92,10 @@ export function profileChanges(V, unitW, group = []) {
   }
   // only what changed, by the datasheets' keys
   const out = { weapons: {}, models: {} };
+  // only unitW's own profiles: the group's modifiers reach them, but a leader's (bearer-only) changes stay the leader's
+  const own = new Set([unitW, ...below(unitW, true)]);
   for (const t of profs) {
+    if (!own.has(t.w)) continue;
     const chars = {}, base = {};
     for (const [id, c] of Object.entries(t.chars)) {
       if (c.v === t.base[id].v) continue;

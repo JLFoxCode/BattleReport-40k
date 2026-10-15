@@ -7,7 +7,7 @@ import { playableCatalogues, systemFor, ALLIANCES } from '../builder/load.js';
 import * as E from '../builder/bs-engine.js';
 import { summarize, armyText } from '../builder/export.js';
 import { importArmyFile, importText, switchOn } from '../builder/import.js';
-import { loadDatasheets, matchUnit, normName } from '../data/datasheets.js';
+import { loadDatasheets, normName } from '../data/datasheets.js';
 import { datasheetCard, datasheetGroupCard } from './datasheet.js';
 import { leaderBuffs } from './player-common.js';
 import { leaderTargets } from './player-tabs.js';
@@ -118,7 +118,7 @@ function listHtml() {
     <header class="arm-head">
       <a class="btn ghost sm" href="#/">‹ Menu</a>
       <h1 class="title">My armies</h1>
-      <div class="row nowrap">${btn({ label: '⇩ Import list', kind: 'ghost', small: true, action: 'arm-import' })}${btn({ label: 'New army', kind: 'primary', action: 'arm-new' })}</div>
+      <div class="arm-head-act">${btn({ label: '⇩ Import list', kind: 'ghost', small: true, action: 'arm-import' })}${btn({ label: 'New army', kind: 'primary', action: 'arm-new' })}</div>
     </header>
     ${list.length ? `<div class="arm-list">${list.map(a => {
       const s = a.summary || {};
@@ -304,13 +304,71 @@ function dsPack() {
 }
 const unitName = (V, w) => E.effective(V, w.node, w, w.parent).name;
 const isUnitSel = w => w.node && (w.node.type === 'unit' || w.node.type === 'model');
-/** Units of the list the leader `w` may lead (datasheet "Leader": attached to the following units …). */
+/** The unit's own converted datasheet – exact (normalised) name only: a fuzzy match would show another unit's
+ *  card and LEADER list (Land Raider Excelsior → Land Raider, Chaos Lord → Lord of Change). No datasheet → null. */
+const sheetIndex = new WeakMap();
+function sheetOf(pack, name) {
+  if (!pack || !name) return null;
+  let idx = sheetIndex.get(pack);
+  if (!idx) {
+    idx = new Map();
+    for (const u of pack.units || []) { const k = normName(u.name); if (k && !idx.has(k)) idx.set(k, u); }
+    sheetIndex.set(pack, idx);
+  }
+  return idx.get(normName(name)) || null;
+}
+const leadersOf = (V, b) => V.force.ch.filter(x => x.s.lead === b.s.id && isUnitSel(x));
+const plainText = s => String(s || '').replace(/[*^]/g, '');
+const allText = x => { const o = []; (function f(y) { if (typeof y === 'string') o.push(y); else if (y && typeof y === 'object') Object.values(y).forEach(f); })(x); return plainText(o.join('\n')); };
+/** Does unit `x` carry the keyword (or name) `kw` ("COMMAND SQUAD", "WARLOCKS", "Yvraine")? */
+function hasKeyword(V, x, kw, pack) {
+  const k = normName(kw), ds = sheetOf(pack, unitName(V, x));
+  return !!k && (normName(unitName(V, x)) === k || (ds && (ds.keywords || []).some(t => normName(t) === k)));
+}
+/** Why the leaders `ls` may not all lead the bodyguard `b`, '' if they may. Core rules: one Leader unit per bodyguard
+ *  unit unless a datasheet says otherwise – the bodyguard's own text ("up to two Leader units … no more than one of those
+ *  units is a COMMAND SQUAD unit", "Starting Strength of 20 … not duplicates") or the leader's ("… even if one WARLOCKS
+ *  unit has already been attached to it"). */
+function leaderLimit(V, b, all, pack) {
+  if (all.length < 2 || !pack) return '';
+  // core rules 24.22: one Leader unit AND one Support unit – the support unit does not count as a leader
+  const sup = all.filter(x => (attachRule(sheetOf(pack, unitName(V, x))) || {}).kind === 'support'), ls = all.filter(x => !sup.includes(x));
+  if (sup.length > 1) return `Supported by ${sup.map(x => unitName(V, x)).join(', ')} – a bodyguard unit can only have one Support unit attached`;
+  if (ls.length < 2) return '';
+  const head = `Led by ${ls.map(x => unitName(V, x)).join(', ')} – `;   // the problem list names the unit itself
+  const bt = allText((sheetOf(pack, unitName(V, b)) || {}).abilities);
+  const up = /up to (two|three|four|\d+) Leader units/i.exec(bt), ss = /Starting Strength of (\d+)/i.exec(bt);
+  const max = up && (!ss || countModels(b) >= +ss[1]) ? ({ two: 2, three: 3, four: 4 }[up[1].toLowerCase()] || +up[1]) : 1;
+  if (max > 1) {
+    if (ls.length > max) return head + `at most ${max} Leader units can be attached`;
+    const one = /no more than one of those units is an? (.+?) unit/i.exec(bt);
+    if (one && ls.filter(x => hasKeyword(V, x, one[1], pack)).length > 1) return head + `no more than one of them can be a ${one[1].trim().toUpperCase()} unit`;
+    if (/not duplicates/i.test(bt) && new Set(ls.map(x => normName(unitName(V, x)))).size < ls.length) return head + 'the Leader units must not be duplicates';
+    return '';
+  }
+  const evenIf = (a, o) => {
+    const e = /even if (?:one |an? )?(.+?) (?:unit |model )?has already been attached/i.exec(plainText(((sheetOf(pack, unitName(V, a)) || {}).leader || {}).text));
+    return !!e && hasKeyword(V, o, e[1], pack);
+  };
+  if (ls.length === 2 && (evenIf(ls[0], ls[1]) || evenIf(ls[1], ls[0]))) return '';
+  return head + 'a bodyguard unit can only have one Leader unit attached';
+}
+/** How a unit joins a bodyguard unit: { kind: 'leader' | 'support', names: [normalised bodyguard names] } from its
+ *  datasheet's LEADER or SUPPORT ("This model can be attached to the following units: …"), null if it does not. */
+function attachRule(ds) {
+  const kind = ds && (ds.leader ? 'leader' : ds.support ? 'support' : null);
+  if (!kind) return null;
+  const l = ds[kind];
+  return { kind, names: (l.canLead || []).length ? l.canLead.map(normName) : leaderTargets({ leader: l }) };
+}
+/** Units of the list the leader / support unit `w` may join (datasheet LEADER / SUPPORT: attached to the following units …). */
 function leaderCands(V, w, pack) {
   if (!pack) return null;
-  const sheet = n => matchUnit(pack.units || [], n);
-  const allowed = leaderTargets(sheet(unitName(V, w)));
-  if (!allowed) return null;
-  return V.force.ch.filter(x => x !== w && isUnitSel(x) && !leaderTargets(sheet(unitName(V, x)))
+  const sheet = n => sheetOf(pack, n);
+  const rule = attachRule(sheet(unitName(V, w)));
+  if (!rule) return null;
+  const allowed = rule.names;
+  return V.force.ch.filter(x => x !== w && isUnitSel(x) && !attachRule(sheet(unitName(V, x)))
     && (!allowed.length || allowed.includes(normName(unitName(V, x))) || allowed.includes(normName((sheet(unitName(V, x)) || {}).name))));
 }
 /** Leaders that could lead a unit of the list but lead none. */
@@ -326,6 +384,24 @@ function problems(V) {
   const out = E.validate(V);
   const dp = dpUsed(V), lim = dpLimitOf(V.roster);
   if (dp > lim) out.push({ sel: null, msg: `Detachments: ${dp} Detachment Points used – only ${lim} available` });
+  // one enhancement per unit (core rules) – also when they come from two detachments' enhancement groups, which the
+  // data's per-group limits do not catch; detachment "Upgrades" are no enhancements
+  for (const w of V.force.ch) {
+    if (!isUnitSel(w)) continue;
+    const enh = [];
+    (function f(x) { for (const c of x.ch) { if (!c.node) continue; if (c.groups.some(g => /Enhancement/i.test(g.name))) { if (!c.groups.some(g => /Upgrade/i.test(g.name) && !/Enhancement/i.test(g.name)) && !/Upgrade/i.test(c.node.name)) enh.push(c); } else f(c); } })(w);
+    if (enh.length > 1 && !out.some(p => p.sel && rootOf(V, p.sel) === w && /enhancement/i.test(p.msg)))
+      out.push({ sel: w.s.id, msg: `${enh.length} enhancements (${enh.map(c => unitName(V, c)).join(', ')}) – a unit can only have one enhancement` });
+  }
+  // leaders: how many may join one bodyguard unit (datasheets of the army's faction, once loaded)
+  const pack = dsCache.get((V.roster && V.roster.faction) || (ed.army && ed.army.faction));
+  if (pack && typeof pack === 'object') for (const b of V.force.ch) {
+    const why = isUnitSel(b) ? leaderLimit(V, b, leadersOf(V, b), pack) : '';
+    if (why) out.push({ sel: b.s.id, msg: why });
+    // core rules 25.04: each support unit must be attached to a bodyguard unit
+    if (isUnitSel(b) && !(b.s.lead && V.byId.get(b.s.lead)) && (attachRule(sheetOf(pack, unitName(V, b))) || {}).kind === 'support')
+      out.push({ sel: b.s.id, msg: 'Support unit not attached – each support unit must be attached to a bodyguard unit' });
+  }
   return out;
 }
 function saveWithSummary(sys, r) {
@@ -578,19 +654,40 @@ function weaponsOf(node, n = 1, depth = 0) {
     for (const c of p.characteristics || []) ch[c.name] = c.$text == null ? '' : String(c.$text);
     out.push({ name: p.name, type: /^Ranged/.test(p.typeName) ? 'ranged' : 'melee', n, ch });
   };
-  node.profiles.forEach(add);
-  for (const l of node.infoLinks) {
-    const t = sys.idx.get(l.targetId);
-    if (!t) continue;
-    if (l.type === 'profile') add(t);
-    else if (l.type === 'infoGroup') (t.profiles || []).forEach(add);
-  }
-  for (const g of node.el.infoGroups || []) (g.profiles || []).forEach(add);
+  E.profilesOf(sys, node).forEach(add);   // own, infoLink and info-group profiles
   if (depth < 3) for (const k of sys.children(node)) {
     if (k.group) continue;
     const min = k.constraints.filter(c => c.type === 'min' && c.field === 'selections' && c.scope === 'parent').reduce((x, c) => Math.max(x, Number(c.value) || 0), 0);
     if (min > 0) out.push(...weaponsOf(k, n * min, depth + 1));
   }
+  return out;
+}
+/** Weapon name as the converted datasheets have it ("➤ Plasma pistol - standard" → "Plasma pistol"). */
+const weaponBase = s => { const t = String(s || '').replace(/\s*\[Legends\]\s*/ig, ' ').replace(/\s+/g, ' ').trim(); const m = /^➤\s*(.+?)\s+[-–]\s+(.+)$/.exec(t); return m ? m[1].trim() : t.replace(/^➤\s*/, ''); };
+/** Wargear of a list unit for its datasheet card: every chosen selection – also inside containers ("Pistol,
+ *  Master-crafted Bolter & Melee Weapon" → its chosen pistol and melee weapon) – by the weapon profiles it carries
+ *  itself or through infoLinks ("2 Heavy Bolters" → Heavy bolter ×2, "Bolt Pistol and Boltgun" → both, "Force weapon" →
+ *  "Force weapon [Psychic]"); a selection without weapon profiles by its own name (Storm shield …), plus its ability
+ *  profiles (wargear abilities). Counts multiply down the tree (models × per model). */
+function wargearOf(V, w) {
+  const out = [];
+  const take = (x, n) => {
+    const ws = [...new Set(weaponsOf(x.node, 1, 3).map(p => weaponBase(p.name)))];
+    const per = x.node.type === 'model' ? 1 : Number((/^(\d+)\s*x?\s+\S/i.exec(unitName(V, x)) || [])[1]) || 1;
+    ws.forEach(name => out.push({ name, count: n * per }));
+    if (x === w || x.node.type === 'model') return;
+    if (!ws.length) out.push({ name: unitName(V, x), count: n });
+    effectsOf(x.node, 2).forEach(e => out.push({ name: e.name, count: n }));
+  };
+  take(w, 1);
+  (function walk(x, mult) {
+    for (const c of x.ch) {
+      if (!c.node || c.groups.some(g => /Enhancement/i.test(g.name)) || /^Warlord$/i.test(c.node.name)) continue;
+      const n = mult * (c.n || 1);
+      take(c, n);
+      walk(c, n);
+    }
+  })(w, 1);
   return out;
 }
 /** Effects a piece of wargear brings (BSData "Abilities" profiles, also linked ones): [{ name, text }]. */
@@ -837,7 +934,9 @@ function block(V, pw, nodes, prefix, depth, compact, caps = []) {
   const pickKey = (pid || 'force') + '|' + prefix;
   const short = n => String(n).replace(/^.*?\bw\/\s*/i, '');
   const boxHtml = () => {
-    if (others.length < 2 && !(others.length === 1 && !others[0].own)) return '';
+    // one model type: a box only if it has no choices of its own – or none of it is in the unit yet (an optional group
+    // such as Broadside "Shas'ui (0-2)" needs its "+ Add"; once added, its model card has the stepper)
+    if (others.length < 2 && !(others.length === 1 && (!others[0].own || !others[0].n))) return '';
     const sel = others.find(o => o.tok === ed.modelPick[pickKey]) || others.find(o => o.n > 0 && !o.own) || others.find(o => !o.own) || others[0];
     const last = sel.sels[sel.sels.length - 1];
     const can = sel.r.add || sel.r.swap;
@@ -993,9 +1092,12 @@ function leadHtml(V, w) {
   if (!cands || !cands.length) return '';
   const cur = w.s.lead && V.byId.get(w.s.lead) ? w.s.lead : '';
   const nth = x => { const same = cands.filter(y => unitName(V, y) === unitName(V, x)); return same.length > 1 ? ` (${same.indexOf(x) + 1})` : ''; };
-  return `<div class="arm-grp arm-lead"><div class="arm-gh">Leads${cur ? '' : ' <span class="arm-loose">not attached</span>'}</div><div class="arm-choices">
+  // a bodyguard that already has as many leaders as its datasheet allows is not offered (only shown, with who leads it)
+  const full = x => { const ls = leadersOf(V, x).filter(y => y !== w); return cur !== x.s.id && ls.length && leaderLimit(V, x, [...ls, w], dsPack()) ? ls : null; };
+  const support = (attachRule(sheetOf(dsPack(), unitName(V, w))) || {}).kind === 'support';
+  return `<div class="arm-grp arm-lead"><div class="arm-gh">${support ? 'Supports' : 'Leads'}${cur ? '' : ' <span class="arm-loose">not attached</span>'}</div><div class="arm-choices">
     <button type="button" class="arm-opt${cur ? '' : ' on'}" data-action="arm-op" data-op="lead" data-id="${esc(w.s.id)}" data-to="">None</button>
-    ${cands.map(x => `<button type="button" class="arm-opt${cur === x.s.id ? ' on' : ''}" data-action="arm-op" data-op="lead" data-id="${esc(w.s.id)}" data-to="${esc(x.s.id)}">${esc(unitName(V, x) + nth(x))}</button>`).join('')}</div></div>`;
+    ${cands.map(x => { const ls = full(x); return `<button type="button" class="arm-opt${cur === x.s.id ? ' on' : ''}" data-action="arm-op" data-op="lead" data-id="${esc(w.s.id)}" data-to="${esc(x.s.id)}"${ls ? ' disabled' : ''}>${esc(unitName(V, x) + nth(x))}${ls ? ` <span class="arm-ledby">led by ${esc(ls.map(y => unitName(V, y)).join(', '))}</span>` : ''}</button>`; }).join('')}</div></div>`;
 }
 
 /** Datasheet of the unit (profiles, weapons, abilities) below its options – with the chosen wargear. */
@@ -1010,7 +1112,7 @@ function dsHtml(V, w, play = false) {
   }
   if (pack === 'loading') return '<p class="muted small">Loading datasheet …</p>';
   const name = E.effective(V, w.node, w, w.parent).name;
-  const ds = matchUnit(pack.units || [], name);
+  const ds = sheetOf(pack, name);
   if (!ds) return '';
   const dets = summarize(ed.sys, ed.army).detachments.map(normName);
   // the attached unit as one group (leaders + bodyguard): "group" profile modifiers reach all of them
@@ -1018,7 +1120,7 @@ function dsHtml(V, w, play = false) {
   const member = x => {
     const u = summarize(ed.sys, { ...ed.army, sel: [x.s] }).units[0];
     if (!u) return null;
-    const wargear = [...u.gear.map(g => ({ name: g.name, count: g.n })), ...u.stacks.flatMap(m => m.gear.map(g => ({ name: g.name, count: g.n * m.n })))];
+    const wargear = wargearOf(V, x);
     let mods = null;
     try { mods = profileChanges(V, x, groupOf(x)); } catch (e) { console.warn('profiles', e); }
     return { id: x.s.id, name: u.name, models: u.models, points: u.pts, wargear, warlord: u.warlord, enhancements: u.enhancements.map(e => e.name), mods };
@@ -1026,7 +1128,7 @@ function dsHtml(V, w, play = false) {
   const u = member(w);
   // leaders attached to this unit: one group datasheet, every leader's buffs in its own colour
   const leaders = V.force.ch.filter(x => x.s.lead === w.s.id && isUnitSel(x)).map(x => {
-    const lds = matchUnit(pack.units || [], unitName(V, x));
+    const lds = sheetOf(pack, unitName(V, x));
     if (!lds) return null;
     const lu = member(x);
     const enh = enhOf(V, x);

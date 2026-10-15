@@ -141,13 +141,13 @@ export function datasheetCard(ds, opt = {}) {
     <div class="ds-section"><div class="ds-section-h">ABILITIES</div>
       ${(ab.core || []).length ? `<div class="ds-ab"><b>CORE:</b> ${kwList(ab.core)}</div>` : ''}
       ${(ab.faction || []).length ? `<div class="ds-ab"><b>FACTION:</b> ${ab.faction.map(esc).join(', ')}</div>` : ''}
-      ${abilityList((ab.unit || []).filter(a => abilityVisible(a, opt.detachments || null, opt.enhNames || null)), marks)}
+      ${abilityList((ab.unit || []).filter(a => abilityVisible(a, opt.detachments || null, opt.enhNames || null) && notSupportAb(ds)(a)), marks)}
       ${ab.invul ? `<div class="ds-ab ds-inv"><b>INVULNERABLE SAVE:</b> ${esc(String(ab.invul))}</div>` : ''}
       ${ab.damaged ? `<div class="ds-ab"><b>DAMAGED:</b> ${rich(ab.damaged)}</div>` : ''}
     </div>
     ${(() => { const wg = unit ? memberWargearAbilities(ds, unit) : (ab.wargear || []); return wg.length ? `<div class="ds-section"><div class="ds-section-h">WARGEAR ABILITIES</div>${abilityList(wg, marks)}</div>` : ''; })()}
     ${enh.length ? `<div class="ds-section"><div class="ds-section-h">ENHANCEMENTS</div>${enh.map(e => `<div class="ds-ab${marks && marks.has(e.name) ? ' ds-ab-buff' : ''}"><b>${esc(e.name)}${e.cost ? ` (${esc(String(e.cost))} pts)` : ''}${e.text ? ':' : ''}</b> ${e.text ? rich(e.text) : '<span class="muted xs">text not on file</span>'}</div>`).join('')}</div>` : ''}
-    ${ds.leader ? `<div class="ds-section"><div class="ds-section-h">LEADER</div><div class="ds-ab">${ds.leader.text ? rich(ds.leader.text) : (ds.leader.canLead || []).length ? `This model can be attached to the following units:<ul class="ds-list">${ds.leader.canLead.map(n => `<li>${esc(n)}</li>`).join('')}</ul>` : ''}</div></div>` : ''}
+    ${['leader', 'support'].map(k => ds[k] ? `<div class="ds-section"><div class="ds-section-h">${k.toUpperCase()}</div><div class="ds-ab">${ds[k].text ? rich(ds[k].text) : (ds[k].canLead || []).length ? `This model can be attached to the following units:<ul class="ds-list">${ds[k].canLead.map(n => `<li>${esc(n)}</li>`).join('')}</ul>` : ''}</div></div>` : '').join('')}
     ${ds.transport ? `<div class="ds-section"><div class="ds-section-h">TRANSPORT</div><div class="ds-ab">${rich(ds.transport)}</div></div>` : ''}
     ${ds.composition || (ds.options || []).length ? `<div class="ds-section"><div class="ds-section-h">UNIT COMPOSITION</div>${ds.composition ? `<div class="ds-ab">${rich(ds.composition)}</div>` : ''}${(ds.options || []).length ? `<ul class="ds-list ds-options">${ds.options.map(o => `<li>${esc(o)}</li>`).join('')}</ul>` : ''}</div>` : ''}
     <div class="ds-keywords"><span class="ds-kw-label">KEYWORDS:</span> ${(ds.keywords || []).map(k => `<span class="ds-kw">${esc(k)}</span>`).join('')}</div>
@@ -216,6 +216,8 @@ function memberWeapons(ds, unit, kind) {
   if (chosen && ![...(ds.ranged || []), ...(ds.melee || [])].some(w => chosen.has(normName(w.name)))) chosen = null;
   return list.filter(w => !chosen || chosen.get(normName(w.name))).map(w => ({ w, n: chosen ? chosen.get(normName(w.name)) : 0 }));
 }
+/** The plain "Support" ability repeats the datasheet's SUPPORT section (ds.support) – shown there only. */
+const notSupportAb = ds => a => !(ds && ds.support && /^Support$/i.test(String(a.name || '').trim()));
 /** Wargear abilities only for wargear the unit actually has. */
 export function memberWargearAbilities(ds, unit) {
   const ab = (ds && ds.abilities && ds.abilities.wargear) || [];
@@ -247,17 +249,19 @@ export function datasheetGroupCard(group, opt = {}) {
     const fx = buffEffects(b.buff.text);
     return `<span class="ds-unitbuff"${st(colorById.get(b.leaderId))}>${fx.length ? `<b>${fx.map(esc).join(' · ')}</b><span class="ds-unitbuff-src">${esc(b.buff.name)} · ${esc(b.leaderName)}</span>` : `${esc(b.buff.name)}<span class="ds-unitbuff-src">${esc(b.leaderName)}</span>`}${info(b)}</span>`;
   }).join('')}</div>` : '';
-  // ── weapons: unit + leaders in one table per kind; same weapon in both → one row
+  // ── weapons: unit + leaders in one table per kind; same weapon with the same profile in both → one row (a leader's
+  //    own version of a same-named weapon – other values or abilities – keeps its own row)
   const weaponRows = kind => {
     const rows = new Map();
-    const add = (entry, owner) => {
-      const k = normName(entry.w.name) + '|' + (entry.w.profile || '');
+    const add = (entry, owner, mods) => {
+      const w = entry.w, m = weaponMod(mods, w);   // a bearer-only change (enhancement) also keeps the bearer's row apart
+      const k = [normName(w.name), w.profile || '', w.range, w.A, w.BS, w.WS, w.S, w.AP, w.D, (w.abilities || []).join(','), m ? JSON.stringify([m.chars, m.keywords || [], m.notes || []]) : ''].join('|');
       const r = rows.get(k);
       if (r) { r.n += entry.n; if (r.owner !== owner) r.owner = 'both'; }
       else rows.set(k, { w: entry.w, n: entry.n, owner });
     };
-    memberWeapons(body.ds, body.unit, kind).forEach(e => add(e, 'unit'));
-    leaders.forEach(l => memberWeapons(l.ds, l.unit, kind).forEach(e => add(e, l.ds.name)));
+    memberWeapons(body.ds, body.unit, kind).forEach(e => add(e, 'unit', body.unit && body.unit.mods));
+    leaders.forEach(l => memberWeapons(l.ds, l.unit, kind).forEach(e => add(e, l.ds.name, l.unit && l.unit.mods)));
     return [...rows.values()];
   };
   const weaponTable2 = kind => {
@@ -281,7 +285,7 @@ export function datasheetGroupCard(group, opt = {}) {
   const enhNames = [body, ...leaders].flatMap(m => (m.enh || []).map(e => normKey(e.name || e)).concat((m.unit.enhancements || []).map(normKey)));
   const unitAb = [].concat((body.ds.abilities || {}).unit || [], memberWargearAbilities(body.ds, body.unit)).filter(a => abilityVisible(a, dets, enhNames));
   const seen = new Set(unitAb.map(a => normName(a.name)));
-  const leaderAb = leaders.flatMap(l => [].concat((l.ds.abilities || {}).unit || [], memberWargearAbilities(l.ds, l.unit)).filter(a => abilityVisible(a, dets, enhNames))
+  const leaderAb = leaders.flatMap(l => [].concat((l.ds.abilities || {}).unit || [], memberWargearAbilities(l.ds, l.unit)).filter(a => abilityVisible(a, dets, enhNames) && notSupportAb(l.ds)(a))
     .filter(a => { const k = normName(a.name); if (seen.has(k)) return false; seen.add(k); return true; }).map(a => Object.assign({ leaderName: l.ds.name }, a)));
   const abRow = (a, leader) => `<div class="ds-ab${leader ? ' from-leader' : ''}"${leader ? st(colorByName.get(leader)) : ''}><b>${esc(a.name)}:</b> ${rich(a.text || '')}${leader ? tagOf(leader) : ''}${detTag(a)}</div>`;
   const core = [...new Set([...((body.ds.abilities || {}).core || []), ...leaders.flatMap(l => (l.ds.abilities || {}).core || [])])];
