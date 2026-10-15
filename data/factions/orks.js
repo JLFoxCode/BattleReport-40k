@@ -101,10 +101,10 @@ X.push({
           effect: 'Your unit’s attacks can:\n\n- Re-roll hit rolls of 1.\n\n- If your unit is riled up, re-roll hit rolls.',
           restr: '' },
         { name: 'Hulking Brutes', cost: 1, ph: ['shooting'], whose: 'opp', timing: 'during', kw: ['MEGANOBZ', 'NOBZ'],
-          t: 'Ranged attacks that target your unit with a S greater than your unit’s T have -1 to wound rolls. +1CP',
+          t: 'Ranged attacks that target your unit with a S greater than your unit’s T have -1 to wound rolls. +1CP Or: Ranged attacks that target your…',
           when: 'Your opponent’s Shooting phase, when an enemy unit targets a friendly MEGANOBZ/NOBZ unit.',
           target: 'That MEGANOBZ/NOBZ unit.',
-          effect: 'Ranged attacks that target your unit with a S greater than your unit’s T have -1 to wound rolls.\n\n+1CP',
+          effect: 'Ranged attacks that target your unit with a S greater than your unit’s T have -1 to wound rolls.\n\n+1CP\nOr: Ranged attacks that target your unit have -1 to wound rolls.',
           restr: '' }
       ] },
     { id: 'orks--runt-swarm', name: 'Runt Swarm', dp: 1,

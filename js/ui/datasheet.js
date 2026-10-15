@@ -91,7 +91,12 @@ export function abilityVisible(a, dets, enhs = null) {
   return [].concat(a.detachment || []).some(n => dets.includes(normKey(n)) || e.includes(normKey(n)))
     || [].concat(a.enhancement || []).some(n => e.includes(normKey(n)));
 }
-const detTag = a => (a && (a.detachment || a.enhancement) ? ` <span class="ds-tag">${esc([].concat(a.detachment || [], a.enhancement || []).join(' / '))}</span>` : '');
+const detTag = a => {
+  // the option a wargear ability comes with, unless its name already says it ("Grav-chute: Deep Strike")
+  const wg = a && a.wargear && !normName(a.name).startsWith(normName(a.wargear)) ? [a.wargear] : [];
+  const t = a ? [].concat(a.detachment || [], a.enhancement || [], wg) : [];
+  return t.length ? ` <span class="ds-tag">${esc(t.join(' / '))}</span>` : '';
+};
 function abilityList(items, mark) {
   return items.map(a => `<div class="ds-ab${mark && mark.has(a.name) ? ' ds-ab-buff' : ''}"><b>${esc(a.name)}:</b> ${rich(a.text || '')}${mark && mark.has(a.name) ? ' <span class="ds-tag">affects led unit</span>' : ''}${detTag(a)}</div>`).join('');
 }
@@ -133,6 +138,7 @@ export function datasheetCard(ds, opt = {}) {
   const marks = attach && attach.role === 'leader' ? attach.marks : null;
   const profiles = (ds.profiles && ds.profiles.length) ? ds.profiles : [{ name: ds.name, M: '–', T: '–', SV: '–', W: '–', LD: '–', OC: '–' }];
   const enh = Array.isArray(opt.enhancements) ? opt.enhancements : (unit && (unit.enhancements || []).map(e => ({ name: typeof e === 'string' ? e : e.name, text: '' }))) || [];
+  const optKw = optionKeywords(ds, unit);
   const body = `${opt.top || ''}
     ${profiles.map(p => `${profiles.length > 1 ? `<div class="ds-profile-name">${esc(p.name)}</div>` : ''}${statRow(p, modelMod(unit && unit.mods, p, profiles.length === 1))}`).join('')}
     ${attach && attach.role === 'bodyguard' && attach.resolved ? buffsBlock(attach) : ''}
@@ -145,12 +151,13 @@ export function datasheetCard(ds, opt = {}) {
       ${ab.invul ? `<div class="ds-ab ds-inv"><b>INVULNERABLE SAVE:</b> ${esc(String(ab.invul))}</div>` : ''}
       ${ab.damaged ? `<div class="ds-ab"><b>DAMAGED:</b> ${rich(ab.damaged)}</div>` : ''}
     </div>
-    ${(() => { const wg = unit ? memberWargearAbilities(ds, unit) : (ab.wargear || []); return wg.length ? `<div class="ds-section"><div class="ds-section-h">WARGEAR ABILITIES</div>${abilityList(wg, marks)}</div>` : ''; })()}
+    ${(() => { const wg = (unit ? memberWargearAbilities(ds, unit) : (ab.wargear || [])).filter(a => abilityVisible(a, opt.detachments || null, opt.enhNames || null)); return wg.length ? `<div class="ds-section"><div class="ds-section-h">WARGEAR ABILITIES</div>${abilityList(wg, marks)}</div>` : ''; })()}
     ${enh.length ? `<div class="ds-section"><div class="ds-section-h">ENHANCEMENTS</div>${enh.map(e => `<div class="ds-ab${marks && marks.has(e.name) ? ' ds-ab-buff' : ''}"><b>${esc(e.name)}${e.cost ? ` (${esc(String(e.cost))} pts)` : ''}${e.text ? ':' : ''}</b> ${e.text ? rich(e.text) : '<span class="muted xs">text not on file</span>'}</div>`).join('')}</div>` : ''}
     ${['leader', 'support'].map(k => ds[k] ? `<div class="ds-section"><div class="ds-section-h">${k.toUpperCase()}</div><div class="ds-ab">${ds[k].text ? rich(ds[k].text) : (ds[k].canLead || []).length ? `This model can be attached to the following units:<ul class="ds-list">${ds[k].canLead.map(n => `<li>${esc(n)}</li>`).join('')}</ul>` : ''}</div></div>` : '').join('')}
     ${ds.transport ? `<div class="ds-section"><div class="ds-section-h">TRANSPORT</div><div class="ds-ab">${rich(ds.transport)}</div></div>` : ''}
-    ${ds.composition || (ds.options || []).length ? `<div class="ds-section"><div class="ds-section-h">UNIT COMPOSITION</div>${ds.composition ? `<div class="ds-ab">${rich(ds.composition)}</div>` : ''}${(ds.options || []).length ? `<ul class="ds-list ds-options">${ds.options.map(o => `<li>${esc(o)}</li>`).join('')}</ul>` : ''}</div>` : ''}
-    <div class="ds-keywords"><span class="ds-kw-label">KEYWORDS:</span> ${(ds.keywords || []).map(k => `<span class="ds-kw">${esc(k)}</span>`).join('')}</div>
+    ${ds.composition || (ds.options || []).length || (ds.pointsTiers || []).length ? `<div class="ds-section"><div class="ds-section-h">UNIT COMPOSITION</div>${ds.composition ? `<div class="ds-ab">${rich(ds.composition)}</div>` : ''}${(ds.options || []).length ? `<ul class="ds-list ds-options">${ds.options.map(o => `<li>${esc(o)}</li>`).join('')}</ul>` : ''}${tiersLine(ds)}</div>` : ''}
+    <div class="ds-keywords"><span class="ds-kw-label">KEYWORDS:</span> ${(ds.keywords || []).map(k => `<span class="ds-kw">${esc(k)}</span>`).join('')}${optKw.map(k => `<span class="ds-kw opt" title="from a chosen option">${esc(k)}</span>`).join('')}</div>
+    ${modelKwLine(ds)}${unit ? '' : optionKwLine(ds)}
     ${(ds.factionKeywords || []).length ? `<div class="ds-keywords faction"><span class="ds-kw-label">FACTION KEYWORDS:</span> ${ds.factionKeywords.map(k => `<span class="ds-kw">${esc(k)}</span>`).join('')}</div>` : ''}`;
   const flags = [unit && unit.warlord ? '<span class="ds-tag wl">Warlord</span>' : '', enh.length ? `<span class="ds-tag">${enh.length} enhancement${enh.length === 1 ? '' : 's'}</span>` : ''].filter(Boolean).join('');
   const head = `<div class="ds-head"><div class="ds-head-main"><div class="ds-title">${esc(ds.name)}${flags}</div>${attachLine(attach)}</div><div class="ds-meta">${esc(models)}${models && pts ? ' · ' : ''}${esc(pts)}</div></div>`;
@@ -218,11 +225,45 @@ function memberWeapons(ds, unit, kind) {
 }
 /** The plain "Support" ability repeats the datasheet's SUPPORT section (ds.support) – shown there only. */
 const notSupportAb = ds => a => !(ds && ds.support && /^Support$/i.test(String(a.name || '').trim()));
-/** Wargear abilities only for wargear the unit actually has. */
+/** Wargear abilities only for wargear the unit actually has. An ability tagged with its wargear (`a.wargear`: Daemon
+ *  Prince 'Seductive Gambit' → Slaanesh) or named like a keyword option (CSM Daemon Prince 'Khorne') needs that choice;
+ *  other detachment/enhancement-granted ones are no wargear choice. */
 export function memberWargearAbilities(ds, unit) {
   const ab = (ds && ds.abilities && ds.abilities.wargear) || [];
   const chosen = chosenMap(unit);
-  return chosen ? ab.filter(a => a.detachment || a.enhancement || chosen.has(normName(a.name))) : ab;   // detachment/enhancement-granted ones are no wargear choice
+  const opts = new Set(((ds && ds.keywordOptions) || []).map(o => normName(o.option)));
+  const has = n => !!chosen && chosen.has(normName(n));
+  return ab.filter(a => a.wargear ? has(a.wargear) : opts.has(normName(a.name)) ? has(a.name) : (!chosen || a.detachment || a.enhancement || has(a.name)));
+}
+/** Keywords the unit's chosen options add (ds.keywordOptions: Khorne → KHORNE, Jump Pack → FLY, JUMP PACK): an option
+ *  counts as chosen when it is in the unit's wargear or the unit already carries all its keywords (army builder entries). */
+export function optionKeywords(ds, unit) {
+  const ko = (ds && ds.keywordOptions) || [];
+  if (!ko.length || !unit) return [];
+  const chosen = chosenMap(unit);
+  const own = new Set((unit.keywords || []).map(k => String(k).toUpperCase()));
+  const base = new Set(ds.keywords || []);
+  return [...new Set(ko.filter(o => (chosen && chosen.has(normName(o.option))) || ((o.keywords || []).length && o.keywords.every(k => own.has(k))))
+    .flatMap(o => o.keywords || []))].filter(k => !base.has(k));
+}
+const ORD = n => n + (n % 10 === 1 && n % 100 !== 11 ? 'st' : n % 10 === 2 && n % 100 !== 12 ? 'nd' : n % 10 === 3 && n % 100 !== 13 ? 'rd' : 'th');
+/** Costs of further copies (ds.pointsTiers: "3rd+: 5 × 150 · 10 × 290 pts") – one compact line, '' if none. */
+function tiersLine(ds) {
+  const t = (ds && ds.pointsTiers) || [];
+  if (!t.length) return '';
+  const many = (ds.points || []).length > 1 || t.some(x => (x.points || []).length > 1);
+  return `<div class="ds-ab ds-tiers"><b>POINTS:</b> ${t.map(x => `<span class="ds-tier">${ORD(x.copy)}+ copy: ${(x.points || []).map(p => `${many && p.models ? p.models + ' × ' : ''}${p.pts}`).join(' · ')} pts</span>`).join(' ')}</div>`;
+}
+/** Keywords only some models of the unit have (ds.modelKeywords: Dark Commune "Mindwitch: PSYKER"). */
+function modelKwLine(ds) {
+  const mk = (ds && ds.modelKeywords) || {};
+  const e = Object.entries(mk).filter(([, v]) => (v || []).length);
+  return e.length ? `<div class="ds-keywords models"><span class="ds-kw-label">MODEL KEYWORDS:</span> ${e.map(([m, v]) => `<span class="ds-mkw"><span class="ds-mkw-m">${esc(m)}:</span> ${v.map(k => `<span class="ds-kw">${esc(k)}</span>`).join('')}</span>`).join('')}</div>` : '';
+}
+/** Without a list unit (rulebook): which option adds which keywords, compact. */
+function optionKwLine(ds) {
+  const ko = (ds && ds.keywordOptions) || [];
+  return ko.length ? `<div class="ds-keywords options"><span class="ds-kw-label">WITH OPTION:</span> ${ko.map(o => `<span class="ds-mkw"><span class="ds-mkw-m">${esc(o.option)}:</span> ${(o.keywords || []).map(k => `<span class="ds-kw">${esc(k)}</span>`).join('')}</span>`).join('')}</div>` : '';
 }
 
 export function datasheetGroupCard(group, opt = {}) {
@@ -292,8 +333,9 @@ export function datasheetGroupCard(group, opt = {}) {
   const fac = [...new Set([...((body.ds.abilities || {}).faction || []), ...leaders.flatMap(l => (l.ds.abilities || {}).faction || [])])];
   const invs = [body, ...leaders].map(m => (m.ds.abilities || {}).invul).filter(Boolean);
   const enh = leaders.flatMap(l => (l.enh || []).map(e => Object.assign({ leaderName: l.ds.name }, e))).concat((body.enh || []).map(e => Object.assign({ leaderName: null }, e)));
-  const kwUnit = new Set(body.ds.keywords || []);
-  const kwLeader = [...new Set(leaders.flatMap(l => l.ds.keywords || []))].filter(k => !kwUnit.has(k));
+  const kwOf = m => [...(m.ds.keywords || []), ...optionKeywords(m.ds, m.unit)];   // chosen options' keywords included
+  const kwUnit = new Set(kwOf(body));
+  const kwLeader = [...new Set(leaders.flatMap(kwOf))].filter(k => !kwUnit.has(k));
   const members = [body.unit, ...leaders.map(l => l.unit)];
   const pts = members.reduce((t, u) => t + (Number(u.points) || 0), 0);
   const models = members.reduce((t, u) => t + (Number(u.models) || 0), 0);
@@ -311,7 +353,7 @@ export function datasheetGroupCard(group, opt = {}) {
       ${invs.length ? `<div class="ds-ab ds-inv"><b>INVULNERABLE SAVE:</b> ${[...new Set(invs.map(String))].map(esc).join(' / ')}</div>` : ''}
     </div>
     ${enh.length ? `<div class="ds-section"><div class="ds-section-h">ENHANCEMENTS</div>${enh.map(e => `<div class="ds-ab${e.leaderName ? ' from-leader' : ''}"${e.leaderName ? st(colorByName.get(e.leaderName)) : ''}><b>${esc(e.name)}${e.cost ? ` (${esc(String(e.cost))} pts)` : ''}${e.text ? ':' : ''}</b> ${e.text ? rich(e.text) : '<span class="muted xs">not in the BSData (New Recruit) data</span>'}${e.leaderName ? tagOf(e.leaderName) : ''}</div>`).join('')}</div>` : ''}
-    <div class="ds-keywords"><span class="ds-kw-label">KEYWORDS:</span> ${[...kwUnit].map(k => `<span class="ds-kw">${esc(k)}</span>`).join('')}${kwLeader.map(k => `<span class="ds-kw from-leader"${st(colorById.get((leaders.find(l => (l.ds.keywords || []).includes(k)) || { unit: {} }).unit.id))}>${esc(k)}</span>`).join('')}</div>`;
+    <div class="ds-keywords"><span class="ds-kw-label">KEYWORDS:</span> ${[...kwUnit].map(k => `<span class="ds-kw">${esc(k)}</span>`).join('')}${kwLeader.map(k => `<span class="ds-kw from-leader"${st(colorById.get((leaders.find(l => kwOf(l).includes(k)) || { unit: {} }).unit.id))}>${esc(k)}</span>`).join('')}</div>`;
   const head = `<div class="ds-head"><div class="ds-head-main"><div class="ds-title">${leaderNames} + ${esc(body.ds.name)}</div><div class="ds-attach leader">Attached unit · acts as one unit</div></div><div class="ds-meta">${models} models${pts ? ` · ${pts} pts` : ''}</div></div>`;
   return `<details class="ds-card ds-group"${opt.key ? ` data-key="${esc(opt.key)}"` : ''}${opt.defaultOpen ? ' data-default-open="1"' : ''}${opt.open ? ' open' : ''}><summary>${head}</summary><div class="ds-body">${html}</div></details>`;
 }

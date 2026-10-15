@@ -4,7 +4,7 @@ import { WH } from '../../data/rules.js';
 import { esc, badge } from './components.js';
 import { kwify } from './keywords.js';
 import { loadDatasheets, matchUnit, normName, ALLY_PACKS } from '../data/datasheets.js';
-import { memberWargearAbilities, abilityVisible } from './datasheet.js';
+import { memberWargearAbilities, abilityVisible, optionKeywords } from './datasheet.js';
 
 // ---------------------------------------------------------------- Kernregeln (data/core.js) – optional, wird nachgeladen
 export const EMPTY_CORE = { phases: {}, turnStart: [], general: [], glossary: [] };
@@ -158,7 +158,7 @@ export function affectedUnits(units, kws, ctx = null) {
   if (!plain.length && !excl.some(x => x.unless.length)) return []; // e.g. Fire Overwatch: any unit – no list
   return units.filter(u => {
     const ds = ctx ? unitDatasheet(ctx, u) : null;
-    const ks = [].concat(u.keywords || [], (ds && ds.keywords) || [], (ds && ds.factionKeywords) || []).map(k => String(k).toUpperCase().replace(/\s+/g, ' ').trim());
+    const ks = [].concat(u.keywords || [], (ds && ds.keywords) || [], optionKeywords(ds, u), (ds && ds.factionKeywords) || []).map(k => String(k).toUpperCase().replace(/\s+/g, ' ').trim());
     const name = String(u.name || '').toUpperCase();
     const has = k => ks.includes(k) || k.split(' ').every(w => ks.includes(w)) || (name && name.includes(k));
     return (!plain.length || plain.some(has)) && !excl.some(x => has(x.kw) && !x.unless.some(has));

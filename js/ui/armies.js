@@ -338,7 +338,7 @@ function leaderLimit(V, b, all, pack) {
   if (all.length < 2 || !pack) return '';
   // core rules 24.22: one Leader unit AND one Support unit – the support unit does not count as a leader
   const sup = all.filter(x => (attachRule(sheetOf(pack, unitName(V, x))) || {}).kind === 'support'), ls = all.filter(x => !sup.includes(x));
-  if (sup.length > 1) return `Supported by ${sup.map(x => unitName(V, x)).join(', ')} – a bodyguard unit can only have one Support unit attached`;
+  if (sup.length > 2 || (sup.length === 2 && !evenIf(V, sup[0], sup[1], pack) && !evenIf(V, sup[1], sup[0], pack))) return `Supported by ${sup.map(x => unitName(V, x)).join(', ')} – a bodyguard unit can only have one Support unit attached`;
   if (ls.length < 2) return '';
   const head = `Led by ${ls.map(x => unitName(V, x)).join(', ')} – `;   // the problem list names the unit itself
   const bt = allText((sheetOf(pack, unitName(V, b)) || {}).abilities);
@@ -351,12 +351,23 @@ function leaderLimit(V, b, all, pack) {
     if (/not duplicates/i.test(bt) && new Set(ls.map(x => normName(unitName(V, x)))).size < ls.length) return head + 'the Leader units must not be duplicates';
     return '';
   }
-  const evenIf = (a, o) => {
-    const e = /even if (?:one |an? )?(.+?) (?:unit |model )?has already been attached/i.exec(plainText(((sheetOf(pack, unitName(V, a)) || {}).leader || {}).text));
-    return !!e && hasKeyword(V, o, e[1], pack);
-  };
-  if (ls.length === 2 && (evenIf(ls[0], ls[1]) || evenIf(ls[1], ls[0]))) return '';
+  if (ls.length === 2 && (evenIf(V, ls[0], ls[1], pack) || evenIf(V, ls[1], ls[0], pack))) return '';
   return head + 'a bodyguard unit can only have one Leader unit attached';
+}
+/** May `a` join a bodyguard unit that `o` has already joined? Its LEADER / SUPPORT names `o` in alsoWith (Locus: "even if a
+ *  PRIMUS, MAGUS, or ACOLYTE ICONWARD model has already been attached") or in its "even if … has already been attached" text. */
+function evenIf(V, a, o, pack) {
+  const s = sheetOf(pack, unitName(V, a)) || {};
+  const aw = [...((s.leader || {}).alsoWith || []), ...((s.support || {}).alsoWith || [])];
+  if (aw.some(k => hasKeyword(V, o, k, pack))) return true;
+  const e = /even if (?:one |an? )?(.+?) (?:unit |model )?has already been attached/i.exec(plainText((s.leader || s.support || {}).text));
+  return !!e && hasKeyword(V, o, e[1], pack);
+}
+/** Units an enhancement of `w` lets it lead as well (detachment enhancements' `leads`: Kill Kommanda → Kommandos). */
+function enhLeads(V, w, pack) {
+  const mine = new Set(w.ch.filter(c => c.node && c.groups.some(g => /Enhancement/i.test(g.name))).map(c => normName(unitName(V, c))));
+  if (!mine.size || !pack) return [];
+  return (pack.detachments || []).flatMap(d => d.enhancements || []).filter(e => (e.leads || []).length && mine.has(normName(e.name))).flatMap(e => e.leads);
 }
 /** How a unit joins a bodyguard unit: { kind: 'leader' | 'support', names: [normalised bodyguard names] } from its
  *  datasheet's LEADER or SUPPORT ("This model can be attached to the following units: …"), null if it does not. */
@@ -370,9 +381,11 @@ function attachRule(ds) {
 function leaderCands(V, w, pack) {
   if (!pack) return null;
   const sheet = n => sheetOf(pack, n);
-  const rule = attachRule(sheet(unitName(V, w)));
-  if (!rule) return null;
-  const allowed = new Set(rule.names.map(tight));
+  const own = attachRule(sheet(unitName(V, w))), extra = enhLeads(V, w, pack);
+  if (!own && !extra.length) return null;
+  // an enhancement may add a unit to the LEADER list (or make a character a leader of just that unit)
+  const rule = own || { kind: 'leader', names: [] };
+  const allowed = new Set(own && !rule.names.length ? [] : [...rule.names, ...extra].map(tight));
   return V.force.ch.filter(x => x !== w && isUnitSel(x) && !attachRule(sheet(unitName(V, x))) && (!allowed.size || canJoin(allowed, unitName(V, x), sheet(unitName(V, x)))));
 }
 /* A LEADER / SUPPORT list names datasheets by their keyword (core rules 19.01): "Acolyte Hybrids" takes both "Acolyte
@@ -1200,7 +1213,7 @@ function dsHtml(V, w, play = false) {
     const wargear = wargearOf(V, x);
     let mods = null;
     try { mods = profileChanges(V, x, groupOf(x)); } catch (e) { console.warn('profiles', e); }
-    return { id: x.s.id, name: u.name, models: u.models, points: u.pts, wargear, warlord: u.warlord, enhancements: u.enhancements.map(e => e.name), mods };
+    return { id: x.s.id, name: u.name, models: u.models, points: u.pts, wargear, warlord: u.warlord, enhancements: u.enhancements.map(e => e.name), mods, keywords: u.keywords };
   };
   const u = member(w);
   // leaders attached to this unit: one group datasheet, every leader's buffs in its own colour
@@ -1215,7 +1228,7 @@ function dsHtml(V, w, play = false) {
   if (leaders.length && u) {
     return `<div class="arm-ds">${head}${play ? '' : `<p class="muted xs">Led by ${leaders.map(l => esc(l.ds.name)).join(' + ')} – what a leader adds is shown in its colour.</p>`}${datasheetGroupCard({ body: { ds, unit: u, enh: enhOf(V, w) }, leaders }, { open: play ? bookOpen('book:u:' + w.s.id) : true, key: play ? 'book:u:' + w.s.id : undefined, noInfo: true, detachments: dets })}</div>`;
   }
-  return `<div class="arm-ds">${head}${datasheetCard(ds, { compact: true, open: play && bookOpen('book:u:' + w.s.id), key: play ? 'book:u:' + w.s.id : undefined, detachments: dets, enhNames: u ? u.enhancements.map(e => normName(e.name)) : [], enhancements: enhOf(V, w), unit: u })}</div>`;
+  return `<div class="arm-ds">${head}${datasheetCard(ds, { compact: true, open: play && bookOpen('book:u:' + w.s.id), key: play ? 'book:u:' + w.s.id : undefined, detachments: dets, enhNames: u ? u.enhancements.map(e => normName(e)) : [], enhancements: enhOf(V, w), unit: u })}</div>`;
 }
 
 /* ───────── Datasheet view (#/armies/<id>/view): the army as a datasheet book – nothing to edit, everything to play ───────── */

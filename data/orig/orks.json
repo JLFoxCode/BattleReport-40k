@@ -283,9 +283,9 @@
      "category": "",
      "when": "Your opponent’s Shooting phase, when an enemy unit targets a friendly MEGANOBZ/NOBZ unit.",
      "target": "That MEGANOBZ/NOBZ unit.",
-     "effect": "Ranged attacks that target your unit with a S greater than your unit’s T have -1 to wound rolls.\n\n+1CP",
+     "effect": "Ranged attacks that target your unit with a S greater than your unit’s T have -1 to wound rolls.\n\n+1CP\nOr: Ranged attacks that target your unit have -1 to wound rolls.",
      "restrictions": "",
-     "text": "WHEN: Your opponent’s Shooting phase, when an enemy unit targets a friendly MEGANOBZ/NOBZ unit.\n\nTARGET: That MEGANOBZ/NOBZ unit.\n\nEFFECT: Ranged attacks that target your unit with a S greater than your unit’s T have -1 to wound rolls.\n\n+1CP",
+     "text": "WHEN: Your opponent’s Shooting phase, when an enemy unit targets a friendly MEGANOBZ/NOBZ unit.\n\nTARGET: That MEGANOBZ/NOBZ unit.\n\nEFFECT: Ranged attacks that target your unit with a S greater than your unit’s T have -1 to wound rolls.\n\n+1CP\nOr: Ranged attacks that target your unit have -1 to wound rolls.",
      "flavour": "The thick armour and thicker skulls of Nobz make them a daunting prospect to gun down.",
      "src": "wahapedia"
     }
@@ -1486,9 +1486,9 @@
    "category": "",
    "when": "Your opponent’s Shooting phase, when an enemy unit targets a friendly MEGANOBZ/NOBZ unit.",
    "target": "That MEGANOBZ/NOBZ unit.",
-   "effect": "Ranged attacks that target your unit with a S greater than your unit’s T have -1 to wound rolls.\n\n+1CP",
+   "effect": "Ranged attacks that target your unit with a S greater than your unit’s T have -1 to wound rolls.\n\n+1CP\nOr: Ranged attacks that target your unit have -1 to wound rolls.",
    "restrictions": "",
-   "text": "WHEN: Your opponent’s Shooting phase, when an enemy unit targets a friendly MEGANOBZ/NOBZ unit.\n\nTARGET: That MEGANOBZ/NOBZ unit.\n\nEFFECT: Ranged attacks that target your unit with a S greater than your unit’s T have -1 to wound rolls.\n\n+1CP",
+   "text": "WHEN: Your opponent’s Shooting phase, when an enemy unit targets a friendly MEGANOBZ/NOBZ unit.\n\nTARGET: That MEGANOBZ/NOBZ unit.\n\nEFFECT: Ranged attacks that target your unit with a S greater than your unit’s T have -1 to wound rolls.\n\n+1CP\nOr: Ranged attacks that target your unit have -1 to wound rolls.",
    "flavour": "The thick armour and thicker skulls of Nobz make them a daunting prospect to gun down.",
    "src": "wahapedia"
   },

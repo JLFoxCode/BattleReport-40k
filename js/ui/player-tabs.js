@@ -10,7 +10,7 @@ import {
 } from './player-common.js';
 import { DS, ensureDatasheets } from './player-common.js';
 import { ruleBoxes, roleSections, roleOf as bookRole } from './army-book.js';
-import { datasheetCard, datasheetMissing, datasheetGroupCard, memberWargearAbilities, abilityVisible } from './datasheet.js';
+import { datasheetCard, datasheetMissing, datasheetGroupCard, memberWargearAbilities, abilityVisible, optionKeywords } from './datasheet.js';
 import { normName } from '../data/datasheets.js';
 
 export const TABS = [['army', 'Army'], ['strats', 'Stratagems'], ['units', 'Army list']];
@@ -491,10 +491,19 @@ function canJoinUnit(allowed, x, xs) {
   const set = new Set(allowed.map(tight));
   return [x.name, xs && xs.name, ...((xs && xs.keywords) || [])].some(n => n && set.has(tight(n)));
 }
+/** leaderTargets of list unit u plus the units its enhancement lets it lead (detachment enhancements' `leads` in the
+ *  faction's datasheets: Kill Kommanda → Kommandos, Kaptin's Hat → Flash Gitz); null if it can lead nothing. */
+function unitTargets(u, ds, data) {
+  const own = leaderTargets(ds);
+  const mine = new Set((u.enhancements || []).map(normName));
+  const extra = mine.size ? ((data && data.detachments) || []).flatMap(d => d.enhancements || []).filter(e => (e.leads || []).length && mine.has(normName(e.name))).flatMap(e => e.leads) : [];
+  if (!extra.length) return own;
+  return own && !own.length ? own : [...new Set([...(own || []), ...extra.map(normName)])];
+}
 /** Leaders of the list that could lead one of its units but lead none yet. */
-function unattachedLeaders(units, sheets, links) {
+function unattachedLeaders(units, sheets, links, data) {
   return units.filter(u => {
-    const allowed = leaderTargets(sheets.get(u.id));
+    const allowed = unitTargets(u, sheets.get(u.id), data);
     if (!allowed || (links.get(u.id) || {}).leading || u.status === 'destroyed') return false;
     return units.some(x => x !== u && !leaderTargets(sheets.get(x.id)) && canJoinUnit(allowed, x, sheets.get(x.id)));
   });
@@ -507,9 +516,16 @@ function attachLimit(b, all, sheets) {
   const plain = s => String(s || '').replace(/[*^]/g, '');
   const sh = x => sheets.get(x.id) || {};
   const sup = all.filter(x => !sh(x).leader && sh(x).support), ls = all.filter(x => !sup.includes(x));
-  if (sup.length > 1) return 'only one SUPPORT unit';
+  const hasKw = (x, kw) => { const k = normName(kw); return !!k && (normName(x.name) === k || [...(sh(x).keywords || []), ...(x.keywords || [])].some(t => normName(t) === k)); };
+  // "even if a PRIMUS, MAGUS or ACOLYTE ICONWARD model has already been attached": LEADER / SUPPORT alsoWith, else the text
+  const evenIf = (a, o) => {
+    const s = sh(a), aw = [...((s.leader || {}).alsoWith || []), ...((s.support || {}).alsoWith || [])];
+    if (aw.some(k => hasKw(o, k))) return true;
+    const e = /even if (?:one |an? )?(.+?) (?:unit |model )?has already been attached/i.exec(plain((s.leader || s.support || {}).text));
+    return !!e && hasKw(o, e[1]);
+  };
+  if (sup.length > 2 || (sup.length === 2 && !evenIf(sup[0], sup[1]) && !evenIf(sup[1], sup[0]))) return 'only one SUPPORT unit';
   if (ls.length < 2) return '';
-  const hasKw = (x, kw) => { const k = normName(kw); return !!k && (normName(x.name) === k || (sh(x).keywords || []).some(t => normName(t) === k)); };
   const all2 = y => { const o = []; (function f(z) { if (typeof z === 'string') o.push(z); else if (z && typeof z === 'object') Object.values(z).forEach(f); })(y); return plain(o.join('\n')); };
   const bt = all2(sh(b).abilities);
   const up = /up to (two|three|four|\d+) Leader units/i.exec(bt), ss = /Starting Strength of (\d+)/i.exec(bt);
@@ -521,14 +537,13 @@ function attachLimit(b, all, sheets) {
     if (/not duplicates/i.test(bt) && new Set(ls.map(x => normName(x.name))).size < ls.length) return 'no duplicate Leader units';
     return '';
   }
-  const evenIf = (a, o) => { const e = /even if (?:one |an? )?(.+?) (?:unit |model )?has already been attached/i.exec(plain((sh(a).leader || {}).text)); return !!e && hasKw(o, e[1]); };
   if (ls.length === 2 && (evenIf(ls[0], ls[1]) || evenIf(ls[1], ls[0]))) return '';
   return 'only one Leader unit';
 }
 /** "Attached to" picker for a leader (select, data-change="unit.attach"); bodyguards that already have as many
  *  leaders as their datasheet allows are listed disabled with who leads them. */
-function attachPicker(u, ds, units, sheets, links) {
-  const allowed = leaderTargets(ds);
+function attachPicker(u, ds, units, sheets, links, data) {
+  const allowed = unitTargets(u, ds, data);
   if (!allowed) return '';
   const cands = units.filter(x => x !== u && !leaderTargets(sheets.get(x.id)) && canJoinUnit(allowed, x, sheets.get(x.id)));
   if (!cands.length) return '';
@@ -593,7 +608,7 @@ export function renderUnitList(ctx, ui) {
     }
   }
   const merged = new Set([...leadersOf.values()].flat().map(u => u.id));
-  const hayOf = u => { const ds = sheets.get(u.id); return [u.name, ...(u.keywords || []), ...((ds && ds.keywords) || []), ...((ds && ds.factionKeywords) || [])].join(' ').toLowerCase(); };
+  const hayOf = u => { const ds = sheets.get(u.id); return [u.name, ...(u.keywords || []), ...((ds && ds.keywords) || []), ...optionKeywords(ds, u), ...((ds && ds.factionKeywords) || [])].join(' ').toLowerCase(); };
   const shown = units.filter(u => !merged.has(u.id) && (!q || [u, ...(leadersOf.get(u.id) || [])].some(m => hayOf(m).includes(q))));
   // the same book as the army builder's "Datasheet view": rule boxes on top, then every unit closed, grouped by role
   const cards = shown.map(u => {
@@ -609,7 +624,7 @@ export function renderUnitList(ctx, ui) {
       return datasheetGroupCard({
         body: { ds, unit: u, enh: unitEnhancements(ctx, u) },
         leaders: ldrs.map(L => ({ ds: sheets.get(L.id), unit: L, enh: unitEnhancements(ctx, L), buffs: buffsOf(ctx, data, L) }))
-      }, { open, key, detachments: myDetNames(ctx), top: ldrs.map(L => attachPicker(L, sheets.get(L.id), units, sheets, links)).join('') });
+      }, { open, key, detachments: myDetNames(ctx), top: ldrs.map(L => attachPicker(L, sheets.get(L.id), units, sheets, links, data)).join('') });
     }
     const l = links.get(u.id) || {};
     let attach = null;
@@ -618,7 +633,7 @@ export function renderUnitList(ctx, ui) {
     } else if (l.ledByName || l.ledBy) {
       attach = { role: 'bodyguard', name: l.ledBy ? l.ledBy.name : l.ledByName, resolved: !!l.ledBy, leaderId: l.ledBy ? l.ledBy.id : '', buffs: l.ledBy ? buffsOf(ctx, data, l.ledBy) : [] };
     }
-    return ds ? datasheetCard(ds, { unit: u, compact: true, open, key, enhancements: unitEnhancements(ctx, u), attach, detachments: myDetNames(ctx), enhNames: [u, l.ledBy].filter(Boolean).flatMap(m => (m.enhancements || []).map(normName)), top: attachPicker(u, ds, units, sheets, links) }) : datasheetMissing(u, { attach });
+    return ds ? datasheetCard(ds, { unit: u, compact: true, open, key, enhancements: unitEnhancements(ctx, u), attach, detachments: myDetNames(ctx), enhNames: [u, l.ledBy].filter(Boolean).flatMap(m => (m.enhancements || []).map(normName)), top: attachPicker(u, ds, units, sheets, links, data) }) : datasheetMissing(u, { attach });
   }
   // army rule, detachment rule(s), enhancements – original texts (BSData / New Recruit), so none of them is forgotten
   const o = origData(fac), mod = origMod();
@@ -635,11 +650,11 @@ export function renderUnitList(ctx, ui) {
   };
   const found = units.filter(u => sheets.get(u.id)).length;
   const pts = units.reduce((x, u) => x + (u.points || 0), 0);
-  const loose = q ? [] : unattachedLeaders(units, sheets, links);
+  const loose = q ? [] : unattachedLeaders(units, sheets, links, data);
   return `<div class="ds-wrap p${me}">
     ${loose.length ? `<div class="card lead-info"><div class="lead-info-h">ⓘ ${loose.length} leader${loose.length === 1 ? '' : 's'} not attached yet</div>
       <p class="muted xs">${loose.length === 1 ? 'This character can' : 'These characters can'} lead a unit of your army – attach to give the unit the leader's abilities.</p>
-      ${loose.map(L => attachPicker(L, sheets.get(L.id), units, sheets, links)).join('')}</div>` : ''}
+      ${loose.map(L => attachPicker(L, sheets.get(L.id), units, sheets, links, data)).join('')}</div>` : ''}
     <p class="muted xs ds-summary">${units.length} unit${units.length === 1 ? '' : 's'}${pts ? ` · ${pts} pts` : ''} · ${found}/${units.length} with a datasheet${data.version ? ` · data ${esc(String(data.version))}` : ''}${!data.units.length ? ' · no datasheets available for this faction' : ''}${q ? ` · ${shown.length} match${shown.length === 1 ? '' : 'es'}` : ''}</p>
     ${q ? '' : ruleBoxes(book, k => ui.open.has(k))}
     ${cards.length ? `<div class="book-units">${roleSections(cards)}</div>` : '<p class="muted small center">No unit matches.</p>'}</div>`;

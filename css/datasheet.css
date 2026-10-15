@@ -35,6 +35,14 @@
 .ds-keywords.faction { border-top: 0; padding-top: 0; margin-top: 4px; }
 .ds-kw-label { color: var(--muted); letter-spacing: .06em; font-size: .68rem; margin-right: 4px; }
 .ds-kw { background: var(--sunk, rgba(0,0,0,.25)); border: 1px solid var(--line); border-radius: 4px; padding: 1px 6px; text-transform: uppercase; letter-spacing: .03em; }
+/* keyword from a chosen option (Khorne → KHORNE); per-model keywords and option keywords as compact extra lines */
+.ds-kw.opt { border-color: color-mix(in srgb, var(--ok) 60%, var(--line)); color: var(--ok); }
+.ds-keywords.models, .ds-keywords.options { border-top: 0; padding-top: 0; margin-top: 4px; }
+.ds-mkw { display: inline-flex; flex-wrap: wrap; gap: 3px; align-items: center; margin-right: 8px; }
+.ds-mkw-m { color: var(--muted); font-size: .72rem; }
+.ds-tiers { font-size: .82rem; color: var(--muted); }
+.ds-tiers b { color: var(--text, inherit); }
+.ds-tier { white-space: nowrap; margin-right: 8px; }
 @media (max-width: 400px) { .ds-weapons { font-size: .78rem; } .ds-stat-v { font-size: 1.1rem; } }
 /* "Melee" / "Nahkampf" in the narrow range column: smaller, and it may break instead of running into the A value */
 /* narrow phones: column heads without letter spacing and a gap, so RANGE and A do not run together */
