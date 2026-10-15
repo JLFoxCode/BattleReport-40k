@@ -186,7 +186,7 @@ export function openStratSheet(ctx, ui, stratId, secPhase) {
       </div>
       ${s.t ? `<p class="strat-t">${esc(s.t)}</p>` : ''}
       ${stratOrigBlock(s, c0)}
-      ${s.plus && s.plus.name ? `<div class="orig-block"><div class="orig-label">${esc(s.plus.name)} (${Number(s.plus.cost) || 0} CP)</div><div class="orig-text">${esc(cleanOrig(s.plus.text || ''))}</div></div>` : ''}
+      ${s.plus && s.plus.name ? `<div class="orig-block"><div class="orig-label">${esc(s.plus.name)} (+${Number(s.plus.cost) || 0} CP – raise the CP cost below)</div><div class="orig-text">${esc(cleanOrig(s.plus.text || ''))}</div></div>` : ''}
       ${kwLine(kws)}
       
       ${addons.length && !canUse ? `<div class="strat-addons-info">${addonRow()}</div>` : ''}

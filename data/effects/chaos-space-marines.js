@@ -64,7 +64,7 @@ export default {
       { id: 'soul-forge-boons', name: 'Soul Forge Boons', kind: 'always', source: 'detachment', effect: 'HERETIC ASTARTES VEHICLE units gain DAEMON · VEHICLE, LORD DISCORDANT and VASHTORR THE ARKIFANE units gain SOUL FORGE · SOUL FORGE units have a 5+ invulnerable save' }
     ],
     'chaos-space-marines--renegade-warband': [
-      { id: 'slaves-to-none', name: 'Slaves to None', kind: 'always', source: 'detachment', effect: 'HERETIC ASTARTES models lose Dark Pacts · ranged weapons have [ASSAULT]' },
+      { id: 'slaves-to-none', name: 'Slaves to None', kind: 'always', replaces: ['dark-pacts'], source: 'detachment', effect: 'HERETIC ASTARTES models lose Dark Pacts · ranged weapons have [ASSAULT]' },
       { id: 'vendetta', name: 'Vendetta', kind: 'always', source: 'detachment', effect: 'Start of your Command phase: one enemy unit – HERETIC ASTARTES (not DAMNED) attacks vs it can re-roll the Hit roll until your next Command phase' },
       {
         id: 'twisted-doctrine', name: 'Twisted Doctrine', kind: 'choice', source: 'detachment', pick: 'one',

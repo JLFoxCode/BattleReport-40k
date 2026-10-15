@@ -141,6 +141,15 @@
 .tbl-cta .btn.cta { min-height: 64px; font-size: 20px; }
 .tbl-cta .btn.cta-p0, .tbl-cta .btn.cta-p1 { background: var(--pc); color: var(--on-p); }
 .tbl-cta .btn.cta-p0 { --pc: var(--p0); } .tbl-cta .btn.cta-p1 { --pc: var(--p1); }
+/* Next phase (main) + End turn (side) */
+.tbl-cta .cta-row { display: flex; gap: 10px; align-items: stretch; }
+.tbl-cta .cta-row .btn.cta { flex: 1 1 auto; min-width: 0; white-space: normal; line-height: 1.2; }
+.tbl-cta .cta-row .cta-side { flex: 0 0 auto; min-height: 64px; padding: 0 18px; font-size: 16px; }
+/* Phase strip in the head: Command · Movement · Shooting · Charge · Fight, the current phase lit in its colour */
+.phasestrip { display: flex; gap: 4px; margin-top: 6px; }
+.phasestrip .pseg { flex: 1 1 0; min-width: 0; padding: 5px 2px; border-radius: 6px; border: 1px solid color-mix(in srgb, var(--ph) 55%, transparent); color: var(--ph); font: 700 11px/1.1 var(--font-body); letter-spacing: .06em; text-transform: uppercase; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; opacity: .55; }
+.phasestrip .pseg.done { opacity: .3; }
+.phasestrip .pseg.cur { opacity: 1; background: var(--ph); color: var(--bg, #000); box-shadow: 0 0 0 2px var(--text); }
 .pulse-soft { animation: pulse 2s ease-in-out infinite; }
 
 /* ───────── Mehr ───────── */
@@ -208,6 +217,23 @@
   .tbl-main { padding: 10px 10px 12px; }
   .tbl-cta { padding-left: 10px; padding-right: 10px; }
   .caps { grid-template-columns: 1fr; }
+}
+/* Low screens: a smaller head; phones in landscape scroll the whole battle screen (head and tabs scroll away, the
+   CTA stays pinned) – a fixed head left only a strip of 28–100 px for the scoring cards */
+@media (max-height: 700px) {
+  .turnblocks .tblock { min-height: 40px; }
+  .turnblocks .tblock-n { font-size: 1rem; }
+  .phasestrip { margin-top: 4px; }
+  .phasestrip .pseg { padding: 4px 2px; }
+}
+@media (max-height: 560px) {
+  .tbl.stage-battle { height: auto; overflow: visible; }
+  .tbl.stage-battle .tbl-main { flex: none; overflow: visible; }
+  .tbl.stage-battle .tbl-cta { position: sticky; bottom: 0; }
+  .tbl-cta { padding-top: 6px; padding-bottom: calc(6px + var(--sa-bottom)); }
+  .tbl-cta .btn.cta, .tbl-cta .cta-row .cta-side { min-height: 52px; font-size: 17px; }
+  .head-vp .kpi.lg .kpi-value { font-size: 36px; }
+  .turnblocks .tblock { min-height: 34px; }
 }
 
 /* Info-Sheets: Kurzfassung + englischer Originaltext */

@@ -212,8 +212,10 @@ function enterCommand(s, action) {
   s.ctrlAtTurnStart = {};
   for (const o of s.objectives) s.ctrlAtTurnStart[o.id] = base.control[o.id] ? base.control[o.id].ctrl : null;
   setStartPositions(s, p);
+  // Older games: battle-shock ended by itself here. Games started with phase tracking (s.shockByRoll) follow 08.03: a unit
+  // stays battle-shocked until its battle-shock roll in the Battle-shock step succeeds (cleared by hand).
   let unshocked = 0;
-  for (const u of s.players[p].units) if (u.status === 'shocked') { u.status = 'ok'; unshocked++; }
+  if (!s.shockByRoll) for (const u of s.players[p].units) if (u.status === 'shocked') { u.status = 'ok'; unshocked++; }
   s.players.forEach(pl => { pl.cp = (pl.cp || 0) + 1; });
   const sec = s.players[p].secondaries;
   if (sec.mode === 'tactical') { ensureDeck(s, p); sec.toDraw = (sec.toDraw || 0) + 2; }
@@ -345,6 +347,7 @@ export function parseArmyText(text) {
   let firstPointsLine = true;
   let attachGroup = 0;
   const docHasSub = lines.some(l => /^\s*[◦○]/.test(l)); // GW-App-Format: Ausrüstung als Unterpunkte
+  const docHasSection = lines.some(l => SECTION_RE.test(l.trim()) || ATTACHED_HDR_RE.test(l.trim()));
   for (const raw of lines) {
     const t = raw.trim();
     if (!t) continue;
@@ -368,8 +371,9 @@ export function parseArmyText(text) {
       const name = um[2].trim();
       const pts = num(um[3], 0);
       if (SIZE_RE.test(name)) { cur = null; continue; }
-      // Armee-Kopfzeile ("Meine Armee (2000 Points)") vor dem ersten Abschnitt überspringen
-      if (!sawSection && firstPointsLine && pts >= 500) { firstPointsLine = false; cur = null; continue; }
+      // Armee-Kopfzeile ("Meine Armee (2000 Points)") vor dem ersten Abschnitt überspringen – also a small list's title
+      // ("Scratch Orks (460 Points)") when the list has sections (GW app / New Recruit: units only stand in sections)
+      if (!sawSection && firstPointsLine && (pts >= 500 || docHasSection)) { firstPointsLine = false; cur = null; continue; }
       firstPointsLine = false;
       cur = { name, points: pts, lineCount: um[1] ? num(um[1], 1) : 0, items: [], section, gear: [], enhancements: [], warlord: false, leading: null, attachedTo: null };
       if (sm && sm[2]) parseGear(sm[2], cur.lineCount || 1, cur.gear, cur);
@@ -494,6 +498,10 @@ H['player.army'] = (s, a) => {
   if (dp > limit) fail('Too many Detachment Points: ' + dp + ' > ' + limit);
   pl.faction = fac ? fac.id : null;
   pl.detachments = defs.map(d => d.id);
+  // Force Dispositions available to this army (from the saved list's detachments); without them all are offered
+  const dispIds = WH.DISPOSITIONS.map(d => d.id);
+  const disp = Array.isArray(a.dispositions) ? [...new Set(a.dispositions.filter(id => dispIds.includes(id)))] : [];
+  if (disp.length) pl.dispositions = disp; else delete pl.dispositions;
   const res = [];
   if (fac && fac.resource && fac.resource.name) res.push({ name: fac.resource.name, value: num(fac.resource.start, 0), max: fac.resource.max == null ? null : num(fac.resource.max, null), text: fac.resource.text || '' });
   for (const d of defs) if (d.resource && d.resource.name) res.push({ name: d.resource.name, value: num(d.resource.start, 0), max: d.resource.max == null ? null : num(d.resource.max, null), text: d.resource.text || '' });
@@ -515,7 +523,8 @@ H['unit.update'] = (s, a) => {
   const patch = a.patch || {};
   const keys = Object.keys(patch);
   if (s.stage === 'battle' || s.stage === 'over') {
-    const bad = keys.filter(k => !['models', 'status', 'leading', 'attachedTo'].includes(k)); // leader attachment = list info, may be set later
+    // leader attachment = list info, may be set later; reserve 'none' = arrived from reserves (phone reserves card)
+    const bad = keys.filter(k => !['models', 'status', 'leading', 'attachedTo'].includes(k) && !(k === 'reserve' && patch.reserve === 'none'));
     if (bad.length) fail('Only models/status/leader attachment can be changed during the battle');
   }
   if (keys.includes('id')) fail('The unit ID cannot be changed');
@@ -762,6 +771,9 @@ H['stage.battle'] = (s, a) => {
   s.stage = 'battle';
   s.round = 1; s.turn = s.mission.first; s.phase = 'command';
   s.pending = null; s.checkpointsDone = [];
+  // a.track (tablet): the tablet steps through the phases – stratagems follow the tracked phase, battle-shock per 08.03.
+  // Without the flag (older logs) the game replays exactly as before.
+  if (a.track) { s.opts.phases = 'manual'; s.shockByRoll = true; }
   s.players.forEach(pl => { for (const u of pl.units) u.startPos = u.pos ? { x: u.pos.x, y: u.pos.y } : null; });
   log(s, a, 'The battle begins. ' + pName(s, s.turn) + ' has the first turn.');
   enterCommand(s, a);
@@ -770,6 +782,8 @@ H['stage.battle'] = (s, a) => {
 H['phase.next'] = (s, a) => {
   if (s.stage !== 'battle') fail('No battle in progress');
   if (s.pending) fail('Pending scoring: confirm it first (score.confirm)');
+  // a.track: the tablet steps phase by phase – a game started before phase tracking switches to it with its first step
+  if (a.track && s.opts.phases !== 'manual') { s.opts.phases = 'manual'; log(s, a, 'Phases are tracked from now on'); }
   const base = deriveBase(s);
   const active = s.turn;
   const other = 1 - active;
@@ -869,21 +883,38 @@ H['sec.draw'] = (s, a) => {
   if (!(sec.toDraw > 0)) fail('No cards to draw');
   ensureDeck(s, a.player);
   const drawn = [];
+  const aside = [];
   while (sec.toDraw > 0) {
-    if (!sec.deck.length) {
-      if (!sec.discard.length) break;
-      const r = shuffle(s.rngState, sec.discard);
-      s.rngState = r.next; sec.deck = r.arr; sec.discard = [];
-      log(s, a, pl.name + ': discard pile reshuffled', a.player);
-    }
-    const card = sec.deck.shift();
-    sec.hand.push(card);
+    const card = drawCard(s, a, a.player);
+    if (!card) break;
+    // a.cardRule: "If it is the first battle round, draw one new Secondary Mission card and shuffle this card back"
+    // (Defend Stronghold) – resolved right away; the new card is drawn before the old one goes back
+    const d = WH.SECONDARY[card] && WH.SECONDARY[card].drawn;
+    if (a.cardRule && d && d.forced && d.kind === 'round1' && s.round === 1) { sec.hand.splice(sec.hand.indexOf(card), 1); aside.push(card); continue; }
     drawn.push(card);
     sec.toDraw -= 1;
   }
   sec.toDraw = 0;
-  log(s, a, pl.name + ' draws ' + drawn.length + ' Secondary Mission card(s): ' + drawn.map(id => WH.SECONDARY[id].name).join(', '), a.player, { cards: drawn });
+  if (aside.length) {
+    const r = shuffle(s.rngState, sec.deck.concat(aside));
+    s.rngState = r.next; sec.deck = r.arr;
+  }
+  log(s, a, pl.name + ' draws ' + drawn.length + ' Secondary Mission card(s): ' + drawn.map(id => WH.SECONDARY[id].name).join(', ') + (aside.length ? ' (' + aside.map(id => WH.SECONDARY[id].name).join(', ') + ' drawn in the first battle round: shuffled back, new card drawn)' : ''), a.player, { cards: drawn, returned: aside });
 };
+
+/** One card from the deck into the hand (the discard pile is reshuffled into an empty deck) → card id | null. */
+function drawCard(s, a, p) {
+  const pl = s.players[p], sec = pl.secondaries;
+  if (!sec.deck.length) {
+    if (!sec.discard.length) return null;
+    const r = shuffle(s.rngState, sec.discard);
+    s.rngState = r.next; sec.deck = r.arr; sec.discard = [];
+    log(s, a, pl.name + ': discard pile reshuffled', p);
+  }
+  const card = sec.deck.shift();
+  sec.hand.push(card);
+  return card;
+}
 
 H['sec.discard'] = (s, a) => {
   const pl = pIdx(s, a.player);
@@ -897,6 +928,25 @@ H['sec.discard'] = (s, a) => {
     const def = WH.SECONDARY[a.card] || {};
     if (!def.drawn) fail('This card cannot be returned to the deck');
     if (def.drawn.kind === 'round1' && s.round !== 1) fail('This card can only be returned in the first battle round');
+    if (a.cardRule) {
+      // as the card says: "draw one new … and shuffle this card back" (the new card first, so it cannot come straight back);
+      // "discard this card and draw one new" (A Grievous Blow, Bring It Down) goes to the discard pile
+      const d = def.drawn;
+      if (!['round1', 'conflict', 'target'].includes(d.kind)) fail('This card cannot be returned to the deck');
+      if (d.kind === 'conflict' && !sec.hand.includes(d.other)) fail('Only while ' + ((WH.SECONDARY[d.other] || {}).name || d.other) + ' is active for you');
+      sec.hand.splice(i, 1);
+      const nw = drawCard(s, a, a.player);
+      const nwTxt = nw ? ', drew “' + WH.SECONDARY[nw].name + '”' : ', no card left to draw';
+      if (d.kind === 'target') {
+        sec.discard.push(a.card);
+        log(s, a, pl.name + ': “' + name + '” discarded (card rule)' + nwTxt, a.player, { card: a.card, reason, drew: nw });
+        return;
+      }
+      const r = shuffle(s.rngState, sec.deck.concat([a.card]));
+      s.rngState = r.next; sec.deck = r.arr;
+      log(s, a, pl.name + ': “' + name + '” shuffled back into the deck (card rule)' + nwTxt, a.player, { card: a.card, reason, drew: nw });
+      return;
+    }
     sec.hand.splice(i, 1);
     const r = shuffle(s.rngState, sec.deck.concat([a.card]));
     s.rngState = r.next; sec.deck = r.arr;

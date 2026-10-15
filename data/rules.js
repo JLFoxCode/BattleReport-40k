@@ -414,9 +414,9 @@ const STRATAGEMS = [
     effect: 'You re-roll that roll. If you rolled more than one dice together (e.g. the Hit rolls of several attacks), you select one of those dice and re-roll only that one – excluding Charge rolls, which you must re-roll in full.',
     restr: '',
     orig: {
-      when: 'Any phase, just after you make one of the following rolls for a friendly unit or model: an Advance roll, a Charge roll, a Damage roll, a Hazardous roll, a Hit roll, a Save roll, a Wound roll, or a roll to determine the number of attacks made with a weapon.',
+      when: 'Any phase, just after you make one of the following rolls for a friendly unit or model:\n- Advance roll\n- Charge roll\n- Damage roll\n- Hazard roll\n- Hit roll\n- Save roll\n- Wound roll\n- A roll to determine the number of attacks generated with a weapon.',
       target: 'That unit or model.',
-      effect: 'You re-roll that roll. If you rolled more than one dice together (e.g. the Hit rolls of several attacks), you select one of those dice and re-roll only that one – excluding Charge rolls, which you must re-roll in full.',
+      effect: 'You re-roll that roll. If you are rolling more than one dice together, select one of those dice to re-roll (excluding charge rolls, which you must re-roll in full).',
       restr: ''
     },
     once: false, notRound1: false,
@@ -429,10 +429,10 @@ const STRATAGEMS = [
     effect: 'That Battle-shock roll is automatically successful.',
     restr: 'You cannot use this Stratagem more than once per battle.',
     orig: {
-      when: 'Battle-shock step of your Command phase, just before you make a Battle-shock roll for a friendly unit.',
+      when: 'Battle-shock step of your Command phase, just before you make a battle-shock roll for a friendly unit.',
       target: 'That unit.',
-      effect: 'That Battle-shock roll is automatically successful.',
-      restr: 'You cannot use this Stratagem more than once per battle.'
+      effect: 'That battle-shock roll is automatically successful.',
+      restr: 'You cannot use this stratagem more than once per battle.'
     },
     once: true, notRound1: false,
     t: 'A Battle-shock roll is automatically successful – once per battle only.'
@@ -445,8 +445,8 @@ const STRATAGEMS = [
     restr: '',
     orig: {
       when: 'Your Shooting phase.',
-      target: 'One friendly unengaged EXPLOSIVES unit (GRENADES units count as EXPLOSIVES units) that is eligible to shoot and did not make an Advance move this turn.',
-      effect: 'Select one EXPLOSIVES model in your unit, then select one unengaged enemy unit that is within 8" of and visible to that model. Roll six D6: for each 4+, that enemy unit suffers 1 mortal wound.',
+      target: 'One friendly unengaged EXPLOSIVES/GRENADES unit that is eligible to shoot and did not make an advance move this turn.',
+      effect: 'Resolve the following sequence:\n- Select one EXPLOSIVES/GRENADES model in your unit.\n- Select one unengaged enemy unit within 8" of and visible to that model.\n- Roll six D6: for each 4+, that enemy unit suffers 1 mortal wound (06.02).',
       restr: ''
     },
     once: false, notRound1: false,
@@ -459,9 +459,9 @@ const STRATAGEMS = [
     effect: 'Select one enemy unit that is engaged with your unit, then select one model in your unit that is engaged with that enemy unit. Roll a number of D6 equal to that model\'s Toughness characteristic: for each 1, your unit suffers 1 mortal wound; for each 5+, that enemy unit suffers 1 mortal wound (to a maximum of 6 mortal wounds).',
     restr: '',
     orig: {
-      when: 'Your Charge phase, just after a friendly MONSTER or VEHICLE unit ends a Charge move.',
-      target: 'That MONSTER or VEHICLE unit.',
-      effect: 'Select one enemy unit that is engaged with your unit, then select one model in your unit that is engaged with that enemy unit. Roll a number of D6 equal to that model\'s Toughness characteristic: for each 1, your unit suffers 1 mortal wound; for each 5+, that enemy unit suffers 1 mortal wound (to a maximum of 6 mortal wounds).',
+      when: 'Your Charge phase, just after a friendly MONSTER/VEHICLE unit ends a charge move.',
+      target: 'That MONSTER/VEHICLE unit.',
+      effect: 'Resolve the following sequence:\n- Select one enemy unit engaged with your unit.\n- Select one model in your unit engaged with that enemy unit.\n- Roll a number of D6 equal to the T characteristic of that model: for each 1, your unit suffers 1 mortal wound; for each 5+, that enemy unit suffers 1 mortal wound (to a maximum of 6 mortal wounds per unit).',
       restr: ''
     },
     once: false, notRound1: false,
@@ -476,7 +476,7 @@ const STRATAGEMS = [
     orig: {
       when: 'Fight phase, just after a friendly CHARACTER unit is selected to fight.',
       target: 'That CHARACTER unit.',
-      effect: 'Select one CHARACTER model in your unit. Until the end of the phase, that model\'s melee weapons have the [PRECISION] ability.',
+      effect: 'Select one CHARACTER model in your unit. Until the end of the phase, that model’s melee weapons have the [PRECISION] ability.',
       restr: ''
     },
     once: false, notRound1: false,
@@ -489,10 +489,10 @@ const STRATAGEMS = [
     effect: 'Your unit makes an Ingress move: it is set up on the battlefield following the Ingress rules for Strategic Reserves, as if it were your Movement phase.',
     restr: 'You cannot use this Stratagem during the first battle round.',
     orig: {
-      when: 'End of your opponent\'s Movement phase.',
-      target: 'One friendly unit that is in Strategic Reserves (excluding AIRCRAFT units).',
-      effect: 'Your unit makes an Ingress move: it is set up on the battlefield following the Ingress rules for Strategic Reserves, as if it were your Movement phase.',
-      restr: 'You cannot use this Stratagem during the first battle round.'
+      when: 'End of your opponent’s Movement phase.',
+      target: 'One friendly unit that is in strategic reserves (excluding AIRCRAFT).',
+      effect: 'Your unit makes an ingress move (20.04).',
+      restr: 'You cannot use this stratagem during the first battle round.'
     },
     once: false, notRound1: true,
     t: 'End of your opponent\'s Movement phase: one unit in Strategic Reserves (excluding AIRCRAFT) makes an Ingress move – not during the first battle round.'
@@ -504,9 +504,10 @@ const STRATAGEMS = [
     effect: 'Your unit shoots using Snap Shooting: it can only target one visible enemy unit within 24" (which must be an eligible target), each attack only scores a hit on an unmodified Hit roll of 6 (regardless of Ballistic Skill or modifiers), Hit rolls cannot be re-rolled, and afterwards your unit is not eligible to start an action until the end of the phase.',
     restr: '',
     orig: {
-      when: 'End of your opponent\'s Movement phase.',
+      when: 'End of your opponent’s Movement phase.',
       target: 'One friendly unengaged unit (excluding TITANIC units).',
-      effect: 'Your unit shoots using Snap Shooting: it can only target one visible enemy unit within 24" (which must be an eligible target), each attack only scores a hit on an unmodified Hit roll of 6 (regardless of Ballistic Skill or modifiers), Hit rolls cannot be re-rolled, and afterwards your unit is not eligible to start an action until the end of the phase.',
+      // the EFFECT names snap shooting – its rule (15.09) follows verbatim
+      effect: 'Your unit shoots using snap shooting.\n\nSNAP SHOOTING (15.09)\nWHILE SHOOTING:\n- You can only target one visible enemy unit within 24" of your unit (and only if it is an eligible target).\n- Each attack only hits on an unmodified hit roll of 6 (irrespective of the attacking weapon’s BS characteristic or any modifiers). Those hits are not critical hits.\n- You cannot re-roll hit rolls.\nAFTER SHOOTING: Until the end of the phase, your unit is not eligible to start an action.',
       restr: ''
     },
     once: false, notRound1: false,
@@ -519,9 +520,9 @@ const STRATAGEMS = [
     effect: 'Until the end of the phase, each time an attack targets your SMOKE unit, or targets a unit that is not fully visible to the attacking model because of models in your SMOKE unit, the target has the Benefit of Cover against that attack.',
     restr: '',
     orig: {
-      when: 'Start of your opponent\'s Shooting phase.',
+      when: 'Start of your opponent’s Shooting phase.',
       target: 'One friendly SMOKE unit.',
-      effect: 'Until the end of the phase, each time an attack targets your SMOKE unit, or targets a unit that is not fully visible to the attacking model because of models in your SMOKE unit, the target has the Benefit of Cover against that attack.',
+      effect: 'Until the end of the phase, each time an attack targets either your SMOKE unit, or a unit that is not fully visible to the attacking model because of one or more models in your SMOKE unit, the target has the benefit of cover against that attack (13.08).',
       restr: ''
     },
     once: false, notRound1: false,
@@ -536,9 +537,9 @@ const STRATAGEMS = [
     effect: 'Resolve a charge with your unit. Before making the Charge roll, select one of the following modes: Leap to Defend – when selecting the targets of the charge, you can only select enemy units that made a Charge move this phase and are within the maximum charge distance. Into the Fray (this Stratagem costs 1 additional CP) – when making the Charge roll, if the result (after modifiers) is greater than 6, change it to 6; you can select any enemy units within 6" of your unit and within the maximum charge distance as targets of the charge.',
     restr: '',
     orig: {
-      when: 'End of your opponent\'s Charge phase.',
-      target: 'One friendly unengaged unit that is within 12" of one or more enemy units. A VEHICLE unit can only be selected if it is a CHARACTER or WALKER unit.',
-      effect: 'Resolve a charge with your unit. Before making the Charge roll, select one of the following modes: Leap to Defend – when selecting the targets of the charge, you can only select enemy units that made a Charge move this phase and are within the maximum charge distance. Into the Fray (this Stratagem costs 1 additional CP) – when making the Charge roll, if the result (after modifiers) is greater than 6, change it to 6; you can select any enemy units within 6" of your unit and within the maximum charge distance as targets of the charge.',
+      when: 'End of your opponent’s Charge phase.',
+      target: 'One friendly unengaged unit within 12" of one or more enemy units. You can only select a VEHICLE unit if it is a CHARACTER/WALKER unit.',
+      effect: 'Resolve a charge with your unit (11.02). While doing so, before making the charge roll, you must select one of the following modes:\n- Leap to Defend: When selecting charge targets, you can only select enemy units that made a charge move this phase and are within the maximum distance.\n- Into the Fray (+1CP):\n  - When making the charge roll, if the result is greater than 6 (after modifiers), change it to 6.\n  - When selecting charge targets, you can select any enemy units that are within 6" of your unit and within the maximum distance.',
       restr: ''
     },
     once: false, notRound1: false,
@@ -551,9 +552,9 @@ const STRATAGEMS = [
     effect: 'Until the end of the phase, your unit has the Fights First ability and it must be the next unit you select to fight.',
     restr: '',
     orig: {
-      when: 'Fight step of your opponent\'s Fight phase, just after an enemy unit has resolved its attacks.',
+      when: 'Fight step of your opponent’s Fight phase, just after an enemy unit has resolved its attacks.',
       target: 'One friendly unit that is eligible to fight.',
-      effect: 'Until the end of the phase, your unit has the Fights First ability and it must be the next unit you select to fight.',
+      effect: 'Until the end of the phase, your unit has the Fights First ability and it must be the next unit you select to fight (12.04).',
       restr: ''
     },
     once: false, notRound1: false,

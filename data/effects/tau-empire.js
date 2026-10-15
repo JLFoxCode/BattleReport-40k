@@ -17,7 +17,7 @@ export default {
   ],
   detachments: {
     'tau-empire--mont-ka': [
-      { id: 'killing-blow', name: 'Killing Blow', kind: 'counter', source: 'detachment', byRound: { 1: montka, 2: montka, 3: montka } }
+      { id: 'killing-blow', name: 'Killing Blow', kind: 'counter', source: 'detachment', byRound: { 1: montka, 2: montka, 3: montka, 4: null, 5: null } }
     ],
     'tau-empire--retaliation-cadre': [
       { id: 'bonded-heroes', name: 'Bonded Heroes', kind: 'always', source: 'detachment', scope: 'Shooting', effect: 'T’AU EMPIRE BATTLESUIT ranged attacks vs a unit within 12": +1 Strength; within 8": also +1 AP' }

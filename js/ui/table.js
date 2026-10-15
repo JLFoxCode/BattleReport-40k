@@ -214,6 +214,7 @@ function head(ctx) {
       <button type="button" class="head-mid" data-action="phase-info" title="Rules for the current phase">
         <div class="head-round"><span class="muted">Round</span> <b>${esc(s.round)}</b><span class="muted">/5</span> · <span class="muted">Turn</span> <b class="text-p${t}">${esc(pName(s, t))}</b></div>
         ${turnBlocks(s)}
+        ${phaseStrip(s, idx)}
       </button>
       <div class="head-vp p1">
         <button class="cpbox" type="button" data-action="cp-sheet" data-p="1" aria-label="Adjust CP ${esc(pName(s, 1))}"><b>${esc(cp[1])}</b><span>CP</span></button>
@@ -227,6 +228,11 @@ function turnBlocks(s) {
   const first = s.mission.first == null ? 0 : s.mission.first;
   const order = [first, 1 - first];
   return `<div class="turnblocks">${order.map((p, k) => `<div class="tblock p${p} ${s.turn === p ? 'cur' : (k === 0 ? 'done' : '')}"><span class="tblock-k">${k === 0 ? '1st turn' : '2nd turn'}</span><span class="tblock-n">${esc(pName(s, p))}</span></div>`).join('')}</div>`;
+}
+
+/** The five phases of the turn (07.02); the current one is lit, finished ones dimmed. End of turn lights no phase. */
+function phaseStrip(s, idx) {
+  return `<div class="phasestrip">${WH.PHASES.filter(p => p.id !== 'end').map((p, i) => `<span class="pseg ph-${esc(p.id)} ${i < idx ? 'done' : i === idx ? 'cur' : ''}">${esc(p.name)}</span>`).join('')}</div>`;
 }
 
 /** Ten turns of the battle (round 1 first player … round 5 second player) as a progress bar. */
@@ -252,7 +258,7 @@ async function endTurn() {
   ui.endingTurn = true;
   const startRound = s.round, startTurn = s.turn;
   for (let i = 0; i < 8; i++) {
-    const r = await c().dispatch({ type: 'phase.next', endTurn: true }); // Command-phase scoring joins the end-of-turn popup
+    const r = await c().dispatch({ type: 'phase.next', endTurn: true, track: true }); // Command-phase scoring joins the end-of-turn popup
     if (!r) { ui.endingTurn = false; return; }
     if (r.pending) return;                      // scoring sheet opens via syncSheet; confirmScore continues the turn
     if (r.stage !== 'battle' || r.round !== startRound || r.turn !== startTurn) break;
@@ -268,7 +274,25 @@ function ctaHtml(ctx) {
   }
   const lastTurn = s.round >= 5 && s.turn !== (s.mission.first == null ? 0 : s.mission.first);
   const label = lastTurn ? 'End battle – final scoring' : `End turn of ${pName(s, s.turn)} – scoring, then ${pName(s, 1 - s.turn)}`;
-  return btn({ label, kind: 'primary', cta: true, action: 'next', cls: `cta-p${s.turn}` });
+  // Command → Movement → Shooting → Charge → Fight (07.02) step by step; from the Fight phase the turn ends
+  const idx = WH.PHASES.findIndex(p => p.id === s.phase);
+  const next = idx >= 0 && idx < WH.PHASES.length - 2 ? WH.PHASES[idx + 1] : null;
+  if (!next) return btn({ label, kind: 'primary', cta: true, action: 'next', cls: `cta-p${s.turn}` });
+  return `<div class="cta-row">
+    ${btn({ label: `Next phase: ${next.full}`, kind: 'primary', cta: true, action: 'phase-next', cls: `cta-p${s.turn}` })}
+    ${btn({ label: lastTurn ? 'End battle' : 'End turn', kind: 'ghost', action: 'next', cls: 'cta-side', title: label })}
+  </div>`;
+}
+
+/** One phase on (tablet "Next phase"); leaving the Command phase may open its scoring first (confirmScore continues). */
+async function nextPhase() {
+  const { ctx, ui } = cur;
+  const s = ctx.state;
+  if (!s || s.stage !== 'battle') return;
+  ui.dismissed = null;
+  if (s.pending) return openScoreSheet();
+  ui.endingTurn = false;
+  return (ui.ctx || ctx).dispatch({ type: 'phase.next', track: true });
 }
 
 /* ───────── Reiter Score ───────── */
@@ -352,11 +376,7 @@ function secondariesHtml(ctx, p, sc) {
     if (!list.length && !canDraw) out += `<div class="card flat muted center small">No cards in hand.</div>`;
   }
   for (const c of list) {
-    const canReturn = sec.mode === 'tactical' && c.drawn && (
-      (c.drawn.kind === 'round1' && s.round === 1) ||
-      (c.drawn.kind === 'conflict' && [...(sec.hand || []), ...(sec.achieved || [])].includes(c.drawn.other)) ||
-      c.drawn.kind === 'target');
-    const drawnHint = c.drawn && (c.drawn.kind !== 'round1' || s.round === 1) ? `<div class="xs text-warn sec-hint">${esc(c.drawn.text)}${canReturn ? ' ' + btn({ label: 'Return to deck & redraw', kind: 'ghost', small: true, action: 'sec-return', data: { p, card: c.card } }) : ''}</div>` : '';
+    const drawnHint = drawnHintShown(s, p, c.card) ? `<div class="xs text-warn sec-hint">${esc(c.drawn.text)}${returnBtn(s, p, c.card)}</div>` : '';
     out += `
       <div class="card scard secondary p${p}" data-card="${esc(c.card)}">
         <div class="card-head">
@@ -423,7 +443,7 @@ function condRow(ctx, p, src, card, c) {
   }
   return `<div class="crow ${c.sub ? 'sub' : ''} ${c.active ? 'active' : ''} ${booked > 0 ? 'booked' : ''}">
     <div class="crow-main">
-      <div class="crow-text">${esc(c.text)}${c.k === 'per' ? ` <span class="muted">(${esc(c.vp)} VP each${c.max != null ? ', max. ' + esc(c.max) : ''})</span>` : ''}</div>
+      <div class="crow-text"><span class="crow-cond">${esc(c.text)}</span>${c.k === 'per' ? ` <span class="muted crow-each">(${esc(c.vp)} VP each${c.max != null ? ', max. ' + esc(c.max) : ''})</span>` : ''}</div>
       ${c.opts ? `<div class="crow-opts muted xs">${c.opts.map(o => esc(o.t) + ' (' + esc(o.vp) + ' VP)').join(' · ')}</div>` : ''}
       <div class="crow-meta xs muted">${meta}${booked > 0 ? ` · <span class="text-ok">booked ${esc(booked)} VP</span>` : ''}</div>
     </div>
@@ -578,15 +598,30 @@ function secCardHtml(s, p, card, o) {
     ${origBlock(o && (o.text || o), 'Original card text')}
     ${!o ? `<ul class="info-conds" data-no-i18n>${conds}</ul>` : ''}
     ${def.note ? `<p class="small"><b>Action:</b> ${esc(def.note)}</p>` : ''}
-    ${def.drawn ? `<p class="small text-warn"><b>When drawn:</b> ${esc(def.drawn.text)}${canReturnCard(s, p, card) ? ' ' + btn({ label: 'Return to deck & redraw', kind: 'ghost', small: true, action: 'sec-return', data: { p, card } }) : ''}</p>` : ''}
+    ${drawnHintShown(s, p, card) ? `<p class="small text-warn"><b>When drawn:</b> ${esc(def.drawn.text)}${returnBtn(s, p, card)}</p>` : ''}
   </div>`;
 }
-/** May this hand card be shuffled back per its own card rule right now? */
+/** May this hand card be shuffled back / discarded per its own card rule right now? ("active" = in the hand) */
 function canReturnCard(s, p, card) {
   const def = WH.SECONDARY[card], sec = s.players[p].secondaries || {};
   if (!def || !def.drawn || sec.mode !== 'tactical' || !(sec.hand || []).includes(card)) return false;
   const d = def.drawn;
-  return (d.kind === 'round1' && s.round === 1) || (d.kind === 'conflict' && [...(sec.hand || []), ...(sec.achieved || [])].includes(d.other)) || d.kind === 'target';
+  return (d.kind === 'round1' && s.round === 1) || (d.kind === 'conflict' && (sec.hand || []).includes(d.other)) || d.kind === 'target';
+}
+/** The card's "when drawn" rule applies: Tactical only (Fixed Missions are never drawn), round-1 rules in round 1,
+ *  Plunder/Cleanse only while the other card is active. */
+function drawnHintShown(s, p, card) {
+  const def = WH.SECONDARY[card], sec = s.players[p].secondaries || {};
+  if (!def || !def.drawn || sec.mode !== 'tactical') return false;
+  const d = def.drawn;
+  if (d.kind === 'round1') return s.round === 1;
+  if (d.kind === 'conflict') return (sec.hand || []).includes(d.other);
+  return true;
+}
+function returnBtn(s, p, card) {
+  if (!canReturnCard(s, p, card)) return '';
+  const discard = WH.SECONDARY[card].drawn.kind === 'target';
+  return ' ' + btn({ label: discard ? 'Discard & draw a new card' : 'Draw a new card & shuffle this back', kind: 'ghost', small: true, action: 'sec-return', data: { p, card } });
 }
 
 /** Popup at the start of a turn: draw the Tactical cards, read them in full, then the rest of the hand in full. */
@@ -621,12 +656,19 @@ async function openDrawSheet(p) {
     onOpen: el => {
       el.addEventListener('click', async e => {
         const rb = e.target.closest('[data-action="sec-return"]');
-        if (rb) { rb.disabled = true; const r0 = await (cur.ui.ctx || cur.ctx).dispatch({ type: 'sec.discard', player: p, card: rb.dataset.card, reason: 'return' }); if (r0) drawn = drawn.filter(c => c !== rb.dataset.card); el.querySelector('.sheet-body').innerHTML = body(); return; }
+        if (rb) {
+          rb.disabled = true;
+          const before0 = ((cur.ui.ctx || cur.ctx).state.players[p].secondaries.hand || []).slice();
+          const r0 = await (cur.ui.ctx || cur.ctx).dispatch({ type: 'sec.discard', player: p, card: rb.dataset.card, reason: 'return', cardRule: true });
+          // the card rule draws the new card right away: it shows under "Drawn now"
+          if (r0) drawn = drawn.filter(c => c !== rb.dataset.card).concat((r0.players[p].secondaries.hand || []).filter(c => !before0.includes(c)));
+          el.querySelector('.sheet-body').innerHTML = body(); return;
+        }
         const b = e.target.closest('[data-action="draw-now"]');
         if (!b) return;
         b.disabled = true;
         const before = ((cur.ui.ctx || cur.ctx).state.players[p].secondaries.hand || []).slice();
-        const r = await (cur.ui.ctx || cur.ctx).dispatch({ type: 'sec.draw', player: p });
+        const r = await (cur.ui.ctx || cur.ctx).dispatch({ type: 'sec.draw', player: p, cardRule: true });
         if (r) drawn = (r.players[p].secondaries.hand || []).filter(c => !before.includes(c));
         el.querySelector('.sheet-body').innerHTML = body();
       });
@@ -775,13 +817,16 @@ async function unbookFor(player, list) {
 async function confirmScore(player, items) {
   const c = cur.ui.ctx || cur.ctx;
   const payload = items.map(it => ({ src: it.src, card: it.card, ci: it.ci, vp: it.vp }));
+  // the VP actually booked (after the caps), not the sum asked for
+  const booked = st => (st.scores || []).filter(x => x.player === player).reduce((a, x) => a + (Number(x.vp) || 0), 0);
+  const before = booked(c.state);
   const s = await c.dispatch({ type: 'score.confirm', player, items: payload, achieve: true });
   if (!s) return;
-  toast(`Scoring confirmed: ${payload.reduce((a, i) => a + i.vp, 0)} VP for ${pName(s, player)}`, 'ok');
+  toast(`Scoring confirmed: ${booked(s) - before} VP for ${pName(s, player)}`, 'ok');
   if (s.stage !== 'battle' || s.pending) return;
   // The scoring blocked the phase change: continue – the whole turn if the tablet is ending it, otherwise just one phase
   if (cur.ui.endingTurn) await endTurn();
-  else await (cur.ui.ctx || c).dispatch({ type: 'phase.next' });
+  else await (cur.ui.ctx || c).dispatch({ type: 'phase.next', track: true });
 }
 
 async function openInfoSheet(p, src, card) {
@@ -842,7 +887,7 @@ async function openTwistInfo(id) {
   if (!t) return;
   const mo = await origMissions();
   const o = mo && ORIG.mod ? ORIG.mod.origTwist(mo, id) : null;
-  openTextSheet('Twist: ' + t.name, `<p>${esc(t.t || '')}</p>${origBlock(o && (o.text || o), 'Original text')}`);
+  openTextSheet('Twist: ' + t.name, `<p data-no-i18n>${esc(t.t || '')}</p>${origBlock(o && (o.text || o), 'Original text')}`);
 }
 function openPhaseInfo() {
   const s = cur.ctx.state;
@@ -1045,12 +1090,13 @@ async function onClick(e) {
     case 'log-more': ui.logN += 100; return paint();
     case 'check': ui.checks[d.key] = !ui.checks[d.key]; return paint();
     case 'first': return ctx.dispatch({ type: 'mission.set', first: p });
-    case 'battle': { const r = await ctx.dispatch({ type: 'stage.battle' }); if (r) toast(`The battle begins – ${pName(r, r.turn)} takes the first turn`, 'ok', 3000); return; }
+    case 'battle': { const r = await ctx.dispatch({ type: 'stage.battle', track: true }); if (r) toast(`The battle begins – ${pName(r, r.turn)} takes the first turn`, 'ok', 3000); return; }
     case 'next': {
       if (s.pending) return openScoreSheet();
       ui.dismissed = null;
       return endTurn();
     }
+    case 'phase-next': return nextPhase();
     case 'open-score': ui.dismissed = null; return openScoreSheet();
     case 'obj': {
       const o = (s.objectives || []).find(x => x.id === d.id);
@@ -1101,14 +1147,14 @@ async function onClick(e) {
     case 'caps-info': return openCapsInfo();
     case 'res-info': return openResInfo(p, Number(d.i));
     case 'dep-info': return openDepInfo(d.key);
-    case 'sec-draw': return ctx.dispatch({ type: 'sec.draw', player: p });
+    case 'sec-draw': return ctx.dispatch({ type: 'sec.draw', player: p, cardRule: true });
     case 'sec-achieve': {
       const name = (WH.SECONDARY[d.card] || { name: d.card }).name;
       if (await confirmSheet({ title: `"${name}" achieved?`, text: 'The card moves to the "achieved" pile. Book its points beforehand via the condition rows (or the end-of-turn scoring).', ok: 'Achieved', kind: 'primary' })) return (ui.ctx || ctx).dispatch({ type: 'sec.achieve', player: p, card: d.card });
       return;
     }
     case 'sec-discard': return openDiscardSheet(p, d.card);
-    case 'sec-return': return ctx.dispatch({ type: 'sec.discard', player: p, card: d.card, reason: 'return' });
+    case 'sec-return': return ctx.dispatch({ type: 'sec.discard', player: p, card: d.card, reason: 'return', cardRule: true });
     case 'res': {
       const r = s.players[p].resources[Number(d.i)];
       if (!r) return;

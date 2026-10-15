@@ -26,13 +26,13 @@ async function request(method, url, body) {
       cache: 'no-store'
     });
   } catch (e) {
-    throw new Error('Keine Verbindung zum Server');
+    throw new Error('No connection to the server');
   }
   let data = null;
   const text = await res.text();
   if (text) { try { data = JSON.parse(text); } catch { data = null; } }
   if (!res.ok) {
-    const msg = (data && data.error) || `Serverfehler ${res.status}`;
+    const msg = (data && data.error) || `Server error ${res.status}`;
     const err = new Error(msg);
     err.status = res.status;
     err.data = data;
@@ -192,10 +192,10 @@ export function createNet(code, opts = {}) {
       let res;
       try {
         res = await fetch(`${base}/photos${q.toString() ? '?' + q : ''}`, { method: 'POST', headers: { 'Content-Type': type }, body: blob, cache: 'no-store' });
-      } catch { throw new Error('Keine Verbindung zum Server'); }
+      } catch { throw new Error('No connection to the server'); }
       let data = null;
       try { data = await res.json(); } catch { data = null; }
-      if (!res.ok) throw Object.assign(new Error((data && data.error) || `Upload fehlgeschlagen (${res.status})`), { status: res.status });
+      if (!res.ok) throw Object.assign(new Error((data && data.error) || `Upload failed (${res.status})`), { status: res.status });
       return data.photo;
     },
     async updatePhoto(id, patch) {

@@ -68,6 +68,7 @@ export function render(root, ctx) {
       const pin = root.querySelector('.pl-pin');
       if (pin) root.style.setProperty('--pin-h', pin.offsetHeight + 'px');
       if (stage === 'battle') autoEffects(ctx, ui);
+      if (stage === 'battle' && ui.tab === 'strats') followPhase(root, ctx, ui);
     }
   } catch (e) {
     console.error('player render', e);
@@ -87,6 +88,20 @@ function autoEffects(ctx, ui) {
     ui.fxSent.add(k);
     Promise.resolve(ctx.dispatch(a)).catch(err => console.warn('effect auto-set', err));
   });
+}
+
+/** Stratagems tab with tracked phases: when the tablet moves to another phase, scroll to that phase's section. */
+function followPhase(root, ctx, ui) {
+  const s = ctx.state;
+  if (!(s.opts && s.opts.phases === 'manual')) return;
+  const key = `${ctx.code}|${s.round}|${s.turn}|${s.phase}`;
+  if (ui.lastPhaseKey === key) return;
+  ui.lastPhaseKey = key;
+  const sec = root.querySelector('section.phase.cur:not(.side-any)');
+  if (!sec) return;
+  const pin = root.querySelector('.pl-pin');
+  const top = sec.getBoundingClientRect().top + window.scrollY - ((pin ? pin.offsetHeight : 0) + 8);
+  requestAnimationFrame(() => { try { window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' }); } catch { window.scrollTo(0, Math.max(0, top)); } });
 }
 
 /** Army list tab: keep the search input (focus/cursor), replace only the list. */
@@ -161,6 +176,8 @@ H['strat.goto'] = (el, ctx, ui) => {
     card.classList.add('flash'); setTimeout(() => card.classList.remove('flash'), 1600);
   }, 30);
 };
+/** Reserves card: the unit has arrived on the battlefield (no longer in reserves). */
+H['unit.arrived'] = (el, ctx) => ctx.dispatch({ type: 'unit.update', player: ctx.me, unitId: el.dataset.unit, patch: { reserve: 'none' } });
 H['unit.attach'] = (el, ctx) => ctx.dispatch({ type: 'unit.update', player: ctx.me, unitId: el.dataset.unit, patch: { leading: el.value || null, attachedTo: null } });
 H['buff.info'] = (el, ctx, ui) => S.openBuffSheet(ctx, ui, el.dataset.leader, Number(el.dataset.buff));
 /** Once-per-X tracker row: available → ability.use, used → ability.undo of the blocking use. */

@@ -239,7 +239,14 @@ export function openImportSheet(ctx, p) {
         const text = el.querySelector('textarea').value;
         if (!text.trim()) { toast('No text pasted', 'warn'); return false; }
         close();
-        const before = ctx.state.players[p].units.length;
+        // a second import would add the whole list again: replace the units (before the battle) or add to them
+        let st1 = ctx.state;
+        const have = st1.players[p].units;
+        if (have.length && st1.stage !== 'battle' && st1.stage !== 'over'
+          && await confirmSheet({ title: 'Replace units?', text: `${have.length} unit(s) are already in the list. Remove them and import the pasted list?`, ok: 'Replace', cancel: 'Add to them' })) {
+          for (const u of have.slice()) st1 = (await ctx.dispatch({ type: 'unit.remove', player: p, unitId: u.id })) || st1;
+        }
+        const before = st1.players[p].units.length;
         const st = await ctx.dispatch({ type: 'army.import', player: p, text, keywords: await importEntries(ctx.state.players[p].faction, text) });
         if (st && st.players) {
           const n = st.players[p].units.length - before;
@@ -262,7 +269,10 @@ async function importSavedArmy(ctx, p, id) {
     const bare = s => norm(String(s || '').replace(/\s*\([^)]*\)\s*$/, ''));
     const all = fac ? fac.detachments || [] : [];
     const dets = a.detachments.map(n => all.find(d => norm(d.name) === norm(n)) || all.find(d => !isBoarding(d) && bare(d.name) === bare(n))).filter(Boolean).map(d => d.id);
-    st0 = (await ctx.dispatch({ type: 'player.army', player: p, faction: a.faction, detachments: [...new Set(dets)] })) || st0;
+    // the Force Dispositions its detachments make available (written by the builder's list text)
+    const avail = /^\+\s*FORCE DISPOSITIONS AVAILABLE:\s*(.+?)\s*$/im.exec(a.text || '');
+    const dispositions = avail ? avail[1].split(',').map(n => (ctx.data.WH.DISPOSITIONS || []).find(d => norm(d.name) === norm(n))).filter(Boolean).map(d => d.id) : [];
+    st0 = (await ctx.dispatch({ type: 'player.army', player: p, faction: a.faction, detachments: [...new Set(dets)], dispositions })) || st0;
     // the list's Force Disposition (chosen in My armies) is this player's Disposition for the mission
     const fd = /^\+\s*FORCE DISPOSITION:\s*(.+?)\s*$/im.exec(a.text || '');
     const disp = fd && (ctx.data.WH.DISPOSITIONS || []).find(d => norm(d.name) === norm(fd[1].replace(/^\d+\.\s*/, '')));
@@ -329,7 +339,9 @@ export async function importEntries(factionId, text, given) {
 function dispAllowed(ctx, p) {
   const fac = facOf(ctx, p), pl = ctx.state.players[p];
   const ds = fac ? (fac.detachments || []).filter(d => pl.detachments.includes(d.id) && Array.isArray(d.dispositions) && d.dispositions.length) : [];
-  return ds.length ? new Set(ds.flatMap(d => d.dispositions)) : null;
+  if (ds.length) return new Set(ds.flatMap(d => d.dispositions));
+  // a list from My armies brings the dispositions its detachments allow (player.army { dispositions })
+  return Array.isArray(pl.dispositions) && pl.dispositions.length ? new Set(pl.dispositions) : null;
 }
 
 /* ═══════════════ Schritt 4: Mission ═══════════════ */
@@ -441,6 +453,5 @@ function secCard(WH, id, c, p, on) {
       <ul class="cond-list">${conds.map(x => x.k === 'choice'
         ? `<li><span class="vp"></span><span>${esc(x.t)}: ${(x.opts || []).map(o => `${esc(o.t)} (${vpText(o.vp, 'F')})`).join(' · ')}</span></li>`
         : `<li class="${x.sub ? 'sub' : ''}"><span class="vp">${vpText(x.vp, 'F')}</span><span>${esc(x.t)}${x.max ? `<span class="muted xs"> · max ${x.max}</span>` : ''}</span></li>`).join('')}</ul>
-      ${c.drawn && c.drawn.text ? `<p class="xs muted">${esc(c.drawn.text)}</p>` : ''}
     </div>`;
 }

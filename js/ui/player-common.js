@@ -360,6 +360,8 @@ export function stratIn(s, ctx, phase) {
   const out = Object.assign({}, s, { whose, usePhase: key });
   // not this player's turn for that phase ("Your Shooting phase or the Fight phase" in the opponent's Shooting phase)
   if (whose !== 'either' && whose !== (state.turn === me ? 'own' : 'opp')) Object.assign(out, { fits: false, available: false, reason: whose === 'own' ? 'Only in your own turn' : 'Only in your opponent\'s turn' });
+  // tracked phases (tablet steps through them): a section of another phase is not usable now
+  else if (state.opts && state.opts.phases === 'manual' && state.stage === 'battle' && phase && phase !== 'any' && phase !== state.phase) Object.assign(out, { fits: false, available: false, reason: 'Only in the ' + phaseOf(phase).full });
   const lockPhase = !(state.opts && state.opts.stratLock === 'round');
   if (!lockPhase || state.stage !== 'battle' || out.fits === false) return out;
   const usedHere = (state.stratUses || []).some(u => u.player === me && u.stratId === s.id && u.round === state.round && u.turn === state.turn && u.phase === key);
@@ -627,8 +629,12 @@ export function counterNow(state, p, e) {
   if (e.byRound && typeof e.byRound === 'object') {
     const r = Math.max(1, state.round || 1);
     const keys = Object.keys(e.byRound).map(Number).filter(Number.isFinite).sort((a, b) => a - b);
-    const k = keys.filter(x => x <= r).pop() ?? keys[0];
-    return k == null ? null : { label: `Round ${Math.max(1, state.round || 1)}`, effect: String(e.byRound[k]) };
+    // the value of the last listed round up to now; before the first listed round (Patient Hunter: rounds 3–5) or a round
+    // listed as null (an effect that ends) it does not apply
+    const k = keys.filter(x => x <= r).pop();
+    const v = k == null ? null : e.byRound[k];
+    if (v == null || v === '') return { label: `Round ${r}`, effect: 'Not active in this battle round', inactive: true };
+    return { label: `Round ${r}`, effect: String(v) };
   }
   if (Array.isArray(e.tiers) && e.tiers.length) {
     const res = resourceFor(state, p, e.resource);

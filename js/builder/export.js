@@ -1,6 +1,6 @@
 /* Army list → New Recruit text (WTC layout, the format engine/reduce.js parseArmyText reads) + the game's faction /
  * detachment choice. Used to take a saved list into a game and to copy it as text. */
-import { view, totalCost, effective, categoriesOfSel } from './bs-engine.js';
+import { view, totalCost, effective, categoriesOfSel, limits } from './bs-engine.js';
 import { profileChanges } from './profiles.js';
 
 const CONFIG = /^(Battle Size|Detachment|Force Disposition|Show\/Hide Options|Show Legends|Order of Battle|Show Unaligned|Show Crucible)/i;
@@ -63,7 +63,24 @@ export function summarize(sys, roster) {
     if (t) { const same = units.filter(x => x.name === t.name); u.leadsNth = same.length > 1 ? same.indexOf(t) + 1 : 0; }
   }
   const size = (cfg('Battle Size')[0] || '').replace(/^\d+\.\s*/, '').replace(/\s*\(.*$/, '');
-  return { detachments: cfg('Detachment'), disposition: cfg('Force Disposition')[0] || null, size, units, points: units.reduce((x, u) => x + u.pts, 0) };
+  return { detachments: cfg('Detachment'), disposition: cfg('Force Disposition')[0] || null, dispositions: dispositionsOf(sys, V), size, units, points: units.reduce((x, u) => x + u.pts, 0) };
+}
+
+/** Force Dispositions the army's detachments make available (the options of the Force Disposition configuration that are
+ *  not hidden) – the game offers only these in the Mission step. [] when the data has no such choice. */
+function dispositionsOf(sys, V) {
+  const out = [];
+  for (const w of V.force.ch.filter(x => x.node && x.node.name === 'Force Disposition')) {
+    const walk = (n, d) => {
+      if (d > 2) return;
+      for (const k of sys.children(n)) {
+        if (limits(V, k, null, w).hidden) continue;
+        if (k.group) walk(k, d + 1); else out.push(String(k.name || '').replace(/^\d+\.\s*/, ''));
+      }
+    };
+    try { walk(w.node, 0); } catch { /* data without the choice */ }
+  }
+  return [...new Set(out.filter(Boolean))];
 }
 
 /** New Recruit WTC text of the list (parseArmyText reads it back: units, models, wargear, Warlord, enhancements). */
@@ -74,6 +91,7 @@ export function armyText(sys, roster, meta = {}) {
   if (meta.faction) L.push('+ FACTION KEYWORD: ' + meta.faction);
   if (s.detachments.length) L.push('+ DETACHMENT: ' + s.detachments.join(', '));
   if (s.disposition) L.push('+ FORCE DISPOSITION: ' + s.disposition);
+  if (s.dispositions.length) L.push('+ FORCE DISPOSITIONS AVAILABLE: ' + s.dispositions.join(', '));
   L.push('+ TOTAL ARMY POINTS: ' + s.points + 'pts');
   L.push('+++++++++++++++++++++++++++++++++++++++++++++++');
   let ci = 0;

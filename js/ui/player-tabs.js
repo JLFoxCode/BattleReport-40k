@@ -34,7 +34,7 @@ export function renderHead(ctx, ui) {
   const who = now.battle ? `<span class="pl-who p${state.turn}">${esc(pName(state, state.turn))}${state.turn === me ? ' (you)' : ''}</span>` : `<span class="pl-who muted">${state.stage === 'deploy' ? 'Deployment' : state.stage === 'over' ? 'Battle over' : 'Setup'}</span>`;
   return `<div class="pl-status">
       <div class="pl-status-main">
-        <div class="pl-round">${now.battle ? `Round ${state.round}<span class="muted">/5</span>` : esc(state.stage === 'deploy' ? 'Deployment' : 'Setup')}</div>
+        <div class="pl-round">${now.battle ? `Round ${state.round}<span class="muted">/5</span>` : esc(state.stage === 'deploy' ? 'Deployment' : 'Setup')}${now.battle && state.opts && state.opts.phases === 'manual' ? ` ${phasePill(now.phase)}` : ''}</div>
         <div class="pl-turn p${now.battle ? state.turn : me}">${now.battle ? (ctx.spectator ? `${esc(pName(state, state.turn))}'s turn` : now.side === 'own' ? `Your turn<span class="pl-turn-who"> · ${who}</span>` : `Opponent's turn · ${who}`) : who}</div>
       </div>
       <div class="pl-kpis">
@@ -198,9 +198,30 @@ export function renderArmy(ctx, ui) {
   </div>`;
   const oppHtml = `<div class="card p${opp} opp-card">${detailsRule(ui, 'army:opp', `Opponent: ${pName(state, opp)} – active effects`, `<div class="fx-list">${fxList(ctx, opp, { readOnly: true })}</div>`)}</div>`;
   return `${fxCard}
+    ${reservesCard(ctx)}
     ${renderAbilityCard(ctx, ui)}
     ${enhHtml}
     ${oppHtml}`;
+}
+
+/** Units declared in Strategic Reserves / Deep Strike (setup list): reminder of when they may arrive (20.03, 20.04) and
+ *  "Arrived" to take them off the list (unit.update reserve 'none'). Nothing shown without reserves. */
+function reservesCard(ctx) {
+  const { state, me } = ctx;
+  if (!['deploy', 'battle'].includes(state.stage)) return '';
+  const units = myUnits(state, me).filter(u => (u.reserve === 'strategic' || u.reserve === 'deepstrike') && u.status !== 'destroyed');
+  if (!units.length) return '';
+  const r = state.stage === 'battle' ? state.round : 0;
+  const hint = r <= 1 ? 'Units in strategic reserves arrive with an ingress move (20.04) from the second battle round onwards (20.03).'
+    : r === 2 ? 'Can arrive now: ingress move (20.04) – wholly within 6" of a battlefield edge, more than 8" horizontally from all enemy units; before the third battle round not within your opponent\'s deployment zone.'
+      : r === 3 ? 'Last round to arrive: at the end of the third battle round, strategic reserves units that have not made an ingress move are destroyed (20.04).'
+        : 'Strategic reserves units that had not arrived by the end of the third battle round are destroyed.';
+  const label = { strategic: 'Strategic Reserves', deepstrike: 'Deep Strike' };
+  return `<div class="card p${me} res-card"><div class="card-head"><div class="title">Reserves</div><span class="badge">${units.length}</span></div>
+    <p class="small${r === 3 ? ' text-warn' : ' muted'}">${esc(hint)}</p>
+    ${units.some(u => u.reserve === 'deepstrike') && r <= 3 ? `<p class="small muted">${esc('Deep Strike (24.09): in its ingress move the unit can be set up anywhere on the battlefield more than 8" horizontally from all enemy units, even within your opponent\'s deployment zone.')}</p>` : ''}
+    <ul class="res-list">${units.map(u => `<li class="row"><span class="res-name"><b>${esc(u.name)}</b> <span class="muted xs">${esc(label[u.reserve])}</span></span><span class="spacer"></span>${state.stage === 'battle' && !ctx.spectator ? btn({ label: 'Arrived', kind: 'ghost', small: true, action: 'unit.arrived', data: { unit: u.id } }) : ''}</li>`).join('')}</ul>
+  </div>`;
 }
 
 /* ═══════════════ Once-per-X ability tracker (army rule · detachment rules · datasheets · enhancements) ═══════════════ */
@@ -209,6 +230,9 @@ const LIMIT_LABEL = { battle: 'once per battle', round: 'once per battle round',
  * "twice per battle" → 'battle' (see limitUses); "once per phase" and "only make one … move per phase" → 'phase' (booked like a turn limit). */
 export function limitOf(text, name = '') {
   const t = `${String(name || '')} ${String(text || '')}`;
+  // the limit belongs to each listed option, not to the rule ("You can only select each of these abilities once per battle",
+  // Kindred Sorcery) – the options are tracked in Active effects
+  if (/\b(?:select|choose|use|pick) each of (?:these|the following|those)\b[^.;]{0,40}\b(?:once|twice) per\b/i.test(t)) return null;
   if (/\b(?:once|twice) per (?:battle )?round\b/i.test(t)) return 'round';
   if (/\b(?:once|twice) per battle\b/i.test(t)) return 'battle';
   if (/\b(?:once|twice) per turn\b/i.test(t)) return 'turn';
@@ -363,14 +387,17 @@ export function renderStrats(ctx, ui) {
   effectsOf(ctx, (ctx.state.players[me] || {}).faction);   // stratagem add-ons (loads once, rerenders)
   const f = ui.sfilter || 'all';
   const secs = stratSections().filter(sec => f === 'all' || sec.side === 'any' || sec.side === f);
+  // tracked phases: only the current phase of the current turn is "now"; untracked: the whole turn side
+  const tracked = ctx.state.opts && ctx.state.opts.phases === 'manual';
+  const isNow = sec => now.battle && sec.side === now.side && (!tracked || sec.phase === now.phase);
   const html = secs.map(sec => {
-    const cur = now.battle && (sec.side === now.side || sec.side === 'any');
+    const cur = isNow(sec) || (now.battle && sec.side === 'any');
     const items = stratsOf(list, sec);
     if (!items.length) return '';
     const phase = sec.phase || 'any';
     const title = sec.side === 'any' ? 'Any time' : phaseOf(sec.phase).full;
     const badge = sec.side === 'any' ? '' : turnBadge(sec.side);
-    const nowTag = now.battle && sec.side === now.side ? '<span class="side-tag now">Now</span>' : '';
+    const nowTag = isNow(sec) ? '<span class="side-tag now">Now</span>' : '';
     return `<section class="phase card ph-${esc(phase)} side-${esc(sec.side)}${cur ? ' cur' : ''}" data-sec-id="${esc(sec.id)}" id="sec-${esc(sec.id.replace(':', '-'))}">
       <h2 class="phase-h"><span class="phase-title">${esc(title)}</span>${badge}${nowTag}<span class="muted xs cnt">${items.length}</span></h2>
       <div class="strat-list">${items.map(s => stratCard(s, ctx, ui, { phase, sec: sec.id })).join('')}</div>
@@ -455,12 +482,21 @@ export function leaderTargets(ds) {
   const names = ls.flatMap(l => ((l.canLead || []).length ? l.canLead : String(l.text || '').replace(/^[^:]*:/, '').split(/,|\band\b|\n|•/).map(x => x.replace(/[*^.]/g, '').trim()).filter(Boolean)));
   return [...new Set(names.map(normName))];
 }
+/* A LEADER / SUPPORT list names datasheets by their keyword (core rules 19.01): "Acolyte Hybrids" takes "Acolyte Hybrids
+   with Autopistols" (keyword ACOLYTE HYBRIDS); spaces do not matter ("HANDFLAMERS") – the same rule as the army builder. */
+const tight = s => normName(s).replace(/[^a-z0-9]/g, '');
+/** May unit x (datasheet xs) join a leader whose leaderTargets are `allowed`? (empty list = any unit) */
+function canJoinUnit(allowed, x, xs) {
+  if (!allowed.length) return true;
+  const set = new Set(allowed.map(tight));
+  return [x.name, xs && xs.name, ...((xs && xs.keywords) || [])].some(n => n && set.has(tight(n)));
+}
 /** Leaders of the list that could lead one of its units but lead none yet. */
 function unattachedLeaders(units, sheets, links) {
   return units.filter(u => {
     const allowed = leaderTargets(sheets.get(u.id));
     if (!allowed || (links.get(u.id) || {}).leading || u.status === 'destroyed') return false;
-    return units.some(x => x !== u && !leaderTargets(sheets.get(x.id)) && (!allowed.length || allowed.includes(normName(x.name)) || allowed.includes(normName((sheets.get(x.id) || {}).name))));
+    return units.some(x => x !== u && !leaderTargets(sheets.get(x.id)) && canJoinUnit(allowed, x, sheets.get(x.id)));
   });
 }
 /** Why the units `all` may not all join the bodyguard `b` ('' if they may) – core rules: one Leader unit and one SUPPORT
@@ -494,7 +530,7 @@ function attachLimit(b, all, sheets) {
 function attachPicker(u, ds, units, sheets, links) {
   const allowed = leaderTargets(ds);
   if (!allowed) return '';
-  const cands = units.filter(x => x !== u && !leaderTargets(sheets.get(x.id)) && (!allowed.length || allowed.includes(normName(x.name)) || allowed.includes(normName((sheets.get(x.id) || {}).name))));
+  const cands = units.filter(x => x !== u && !leaderTargets(sheets.get(x.id)) && canJoinUnit(allowed, x, sheets.get(x.id)));
   if (!cands.length) return '';
   const cur = (links.get(u.id) || {}).leading;
   const nth = x => { const same = units.filter(y => y.name === x.name); return same.length > 1 ? ` (${same.indexOf(x) + 1})` : ''; };

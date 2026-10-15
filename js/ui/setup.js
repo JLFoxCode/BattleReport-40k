@@ -36,6 +36,36 @@ export function render(root, ctx) {
   paint();
 }
 
+/* ───────── Steps in the history: the phone's back button / back gesture goes to the previous step ─────────
+ * A step further on puts one history entry on (same URL, state { brSetup, step }); "back" pops it and shows the step
+ * below. Popups put their own entries on top (components.js sheet) – their back steps land on the current step again. */
+function markStep(code, step) {
+  const h = history.state;
+  if (h && h.brSheet) return;                                     // a popup's entry is on top
+  if (h && h.brSetup === code && h.step === step) return;
+  try { history.replaceState({ brSetup: code, step }, ''); } catch { /* no history */ }
+}
+function goStep(n) {
+  const { ctx, ui } = cur;
+  const to = Math.max(0, Math.min(STEPS.length - 1, n));
+  if (to === ui.step) return;
+  // forward: a new entry; backward with the in-app buttons: the current entry shows the lower step (the entry below may
+  // not be this setup's – e.g. after coming back from another screen – so the app never steps back in the history itself)
+  if (to > ui.step) { try { history.pushState({ brSetup: ctx.code, step: to }, ''); } catch { /* no history */ } }
+  else markStep(ctx.code, to);
+  ui.step = to;
+  window.scrollTo({ top: 0 });
+  paint();
+}
+window.addEventListener('popstate', () => {
+  if (!cur || document.body.dataset.view !== 'setup') return;
+  const h = history.state;
+  if (!h || h.brSheet || h.brSetup !== cur.ctx.code || h.step === cur.ui.step) return;
+  cur.ui.step = h.step;
+  window.scrollTo({ top: 0 });
+  paint();
+});
+
 function isTyping(el) {
   if (!el) return false;
   if (el.tagName === 'TEXTAREA') return true;
@@ -57,6 +87,7 @@ function paint() {
   if (document.body.dataset.view !== 'setup' || !root.isConnected) { ui.pending = false; return; }
   if (s.stage !== 'setup') { root.innerHTML = summary(ctx); return; }
   ui.step = Math.max(0, Math.min(STEPS.length - 1, ui.step));
+  markStep(ctx.code, ui.step);
   root.innerHTML = `
     <div class="setup wrap">
       ${header(ctx, ui)}
@@ -315,9 +346,9 @@ async function onClick(e) {
   const p = d.p != null ? Number(d.p) : null;
   const go = () => paint();
   switch (a) {
-    case 'step': ui.step = Number(d.i); return go();
-    case 'prev': ui.step = Math.max(0, ui.step - 1); window.scrollTo({ top: 0 }); return go();
-    case 'next': ui.step = Math.min(STEPS.length - 1, ui.step + 1); window.scrollTo({ top: 0 }); return go();
+    case 'step': return goStep(Number(d.i));
+    case 'prev': return goStep(ui.step - 1);
+    case 'next': return goStep(ui.step + 1);
     case 'tab': ui.tab = p; return go();
     case 'undo': return ctx.undo();
     case 'go': return ctx.nav(d.hash);
