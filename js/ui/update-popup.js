@@ -1,18 +1,54 @@
-/* When the app opens (once per app start, only with internet): check for newer unit data (New Recruit / BSData) and
- * – once a source is configured – a newer app version; offer each update in a popup (Update now / Later). */
-import { confirmSheet, toast } from './components.js';
-import { checkDataUpdate } from '../data-update.js';
+/* When the app opens (once per app start, only with internet): check for a newer app version (popup: Update now / Later)
+ * and for newer unit data (New Recruit / BSData) – new unit data is offered in a banner that does not block the app,
+ * once per data version; "Check for updates" / "Check now" in the menu ask in a popup. */
+import { confirmSheet, toast, esc } from './components.js';
+import { checkDataUpdate, onDataStatus } from '../data-update.js';
+import { getLang } from '../i18n.js';
 
-const fmt = iso => { try { return new Date(iso).toLocaleString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }); } catch { return iso || ''; } };
+const loc = () => (getLang() === 'de' ? 'de-DE' : 'en-GB');
+const fmt = iso => { try { return new Date(iso).toLocaleString(loc(), { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }); } catch { return iso || ''; } };
+const fmtDay = iso => { try { return new Date(iso).toLocaleDateString(loc(), { day: '2-digit', month: '2-digit', year: 'numeric' }); } catch { return iso || ''; } };
+const filesChanged = n => (n != null ? `${n} file${n === 1 ? '' : 's'} changed` : '');
 
-/** Popup: offer new unit data. Resolves true = install now. */
+/** Popup: offer new unit data. Resolves true = install now. (One sentence per paragraph – each is translated whole.) */
 export function askDataUpdate(info) {
   return confirmSheet({
     title: 'New unit data available',
-    text: `New Recruit's data (BSData) has been updated${info.latestDate ? ' on ' + fmt(info.latestDate) : ''}${info.files != null ? ` – ${info.files} file${info.files === 1 ? '' : 's'} changed` : ''}. `
-      + 'Datasheets, abilities, army and detachment rules and enhancements will be updated on this device (takes a few seconds, games are not affected).',
+    body: `<p>${info.latestDate ? `New Recruit's data (BSData) has been updated on ${esc(fmt(info.latestDate))}.` : 'New Recruit\'s data (BSData) has been updated.'}${info.files != null ? `</p><p class="muted small">${esc(filesChanged(info.files))}` : ''}</p>`
+      + '<p>Datasheets, abilities, army and detachment rules and enhancements will be updated on this device (takes a few seconds, games are not affected).</p>',
     ok: 'Update now',
     cancel: 'Later'
+  });
+}
+
+/* ── Banner when the app opens: new unit data, with an Update button; does not block the menu. Shown once per data
+ *    version (BSData commit) – afterwards the menu line "Unit data …" says it is available (Check now). */
+const LS_OFFERED = 'br40k.dataOffered';
+let banner = null;   // { el, done(result) }
+export function closeDataBanner() { if (banner) banner.done(false); }
+export function bannerAsk(info) {
+  try { if (localStorage.getItem(LS_OFFERED) === info.latest) return Promise.resolve(false); localStorage.setItem(LS_OFFERED, info.latest); } catch {}
+  closeDataBanner();
+  return new Promise(resolve => {
+    const el = document.createElement('div');
+    el.className = 'upd-banner';
+    el.setAttribute('role', 'status');
+    el.innerHTML = `<div class="upd-banner-t"><b>New unit data available</b>${info.latestDate ? `<span class="muted xs">New Recruit data from ${esc(fmtDay(info.latestDate))}</span>` : ''}${info.files != null ? `<span class="muted xs">${esc(filesChanged(info.files))}</span>` : ''}</div>
+      <button type="button" class="btn primary sm" data-upd="ok">Update</button>
+      <button type="button" class="btn ghost icon" data-upd="x" aria-label="Later">✕</button>`;
+    // another check starting (Check now) ends this offer
+    const off = onDataStatus(s => { if (s.state === 'checking' || s.state === 'updating') done(false); });
+    const done = r => {
+      if (!banner || banner.el !== el) return;
+      banner = null;
+      off();
+      el.classList.add('out');
+      setTimeout(() => el.remove(), 220);
+      resolve(r);
+    };
+    el.addEventListener('click', e => { const b = e.target.closest('[data-upd]'); if (b) done(b.dataset.upd === 'ok'); });
+    banner = { el, done };
+    document.body.appendChild(el);
   });
 }
 
@@ -28,6 +64,8 @@ let appState = 'unknown';   // last result of the app version check: current | a
  *    (BR.applyWebUpdate: Android reloads engine + page, Windows restarts). Returns true (started) / false (declined) /
  *    null (not possible → full update). */
 const rawUrl = (repo, tag, p) => `https://raw.githubusercontent.com/${repo}/${encodeURIComponent(tag)}/${p.split('/').map(encodeURIComponent).join('/')}`;
+/** Release notes (written in English, content – not translated). */
+const relNotes = body => (body ? `<p class="muted small" data-no-i18n lang="en">${esc(String(body).slice(0, 300))}</p>` : '');
 const kb = n => (n >= 1e6 ? (n / 1e6).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB');
 function toBase64(buf) {
   const bytes = new Uint8Array(buf);
@@ -49,9 +87,9 @@ async function partialUpdate(repo, latest, code, me, platform) {
   const bytes = changed.reduce((t, [, f]) => t + (f.s || 0), 0);
   const ok = await confirmSheet({
     title: 'New app version available',
-    text: `Battle Report 40k ${tag}${latest.published_at ? ' from ' + fmt(latest.published_at) : ''} is available (installed: ${me.versionCode}). `
-      + `Only the changes are downloaded: ${changed.length} file${changed.length === 1 ? '' : 's'}, ${kb(bytes)}.`
-      + (latest.body ? ' ' + String(latest.body).slice(0, 300) : '') + ' Your games stay on this device.',
+    body: `<p>${esc(`Battle Report 40k ${tag}${latest.published_at ? ' from ' + fmt(latest.published_at) : ''} is available (installed: ${me.versionCode}).`)}</p>`
+      + `<p>${esc(`Only the changes are downloaded: ${changed.length} file${changed.length === 1 ? '' : 's'}, ${kb(bytes)}.`)}</p>`
+      + relNotes(latest.body) + '<p>Your games stay on this device.</p>',
     ok: 'Update now', cancel: 'Later'
   });
   if (!ok) return false;
@@ -93,8 +131,8 @@ async function checkAppUpdate() {
   const apk = full.assets.find(isInstaller);
   const ok = await confirmSheet({
     title: 'New app version available',
-    text: `Battle Report 40k ${full.tag_name}${full.published_at ? ' from ' + fmt(full.published_at) : ''} is available (installed: ${me.versionCode}).`
-      + (full.body ? ' ' + String(full.body).slice(0, 300) : '') + (platform === 'windows' ? ' The update installs in the background and the app restarts by itself; your games stay on this computer.' : ' Android will ask you to confirm the installation; your games stay on the device.'),
+    body: `<p>${esc(`Battle Report 40k ${full.tag_name}${full.published_at ? ' from ' + fmt(full.published_at) : ''} is available (installed: ${me.versionCode}).`)}</p>`
+      + relNotes(full.body) + `<p>${platform === 'windows' ? 'The update installs in the background and the app restarts by itself; your games stay on this computer.' : 'Android will ask you to confirm the installation; your games stay on the device.'}</p>`,
     ok: 'Update now', cancel: 'Later'
   });
   if (!ok) return false;
@@ -109,6 +147,7 @@ export async function checkForUpdates() {
   if (!window.BR) return;
   if (!navigator.onLine) { toast('No internet – the app keeps working with what it has.', 'warn'); return; }
   toast('Checking for updates …', 'ok', 2000);
+  closeDataBanner();   // its pending offer ends – this check asks again (popup)
   try { if (await checkAppUpdate()) return; } catch (e) { console.warn('app update check', e); }
   const st = await checkDataUpdate({ ask: askDataUpdate });
   if (appState === 'current' && st.state === 'current') toast('Everything is up to date – app and unit data.', 'ok', 4000);
@@ -123,6 +162,6 @@ export async function checkOnOpen() {
   try { if (sessionStorage.getItem('br40k.openChecked')) return; sessionStorage.setItem('br40k.openChecked', '1'); } catch {}
   if (!navigator.onLine) return;   // offline: nothing to check, the app works with what it has
   try { if (await checkAppUpdate()) return; } catch (e) { console.warn('app update check', e); }   // the installer takes over
-  const st = await checkDataUpdate({ ask: askDataUpdate });
+  const st = await checkDataUpdate({ ask: bannerAsk });
   if (st.state === 'error') toast('Could not check for new unit data – using the data on this device.', 'warn', 4000);
 }

@@ -331,7 +331,7 @@ Object.assign(EXACT, {
   'Detachments': 'Detachments', 'Always': 'Immer', 'Replace': 'Ersetzen', 'Battle size': 'Spielgröße', 'BATTLE SIZE': 'SPIELGRÖSSE'
 });
 PATTERNS.push(
-  ['^No match for “(.+)”\\.', (m, q) => 'Kein Treffer für „' + q + '“.'],
+  ['^No match for “(.+?)”\\.', (m, q) => 'Kein Treffer für „' + q + '“.'],
   ['^(\\d+) results?$', (m, n) => n + (n === '1' ? ' Treffer' : ' Treffer')],
   ['^(\\d+) results? · showing the first (\\d+) – refine your search$', (m, n, k) => n + ' Treffer · die ersten ' + k + ' werden gezeigt – Suche verfeinern'],
   ['^Units \\((\\d+)\\)$', (m, n) => 'Einheiten (' + n + ')'],
@@ -366,4 +366,89 @@ PATTERNS.push(
   ['^Game (\\w{4}) moved to (.+) – switching …$', (m, c, n) => 'Spiel ' + c + ' ist auf ' + n + ' umgezogen – wechsle …'],
   ['^This game was moved to (.+) – continue there\\.$', (m, n) => 'Dieses Spiel ist auf ' + n + ' umgezogen – dort weiterspielen.'],
   ['^Moved to (.+)$', (m, n) => 'Umgezogen auf ' + n]
+);
+
+/* Usability run 2026-10-16: whole sentences / templates instead of word-by-word pieces (no half translations) */
+TERMS['Command points'] = 'Befehlspunkte';
+delete PHRASES['in battle'];   // only as the whole text (ability state) – inside sentences it broke "Not in battle round 1"
+Object.assign(EXACT, {
+  'in battle': 'in der Schlacht', 'ready': 'bereit', '✓ Ready': '✓ Bereit', 'Ready': 'Bereit', 'Update': 'Aktualisieren', 'Add': 'Hinzufügen', 'or': 'oder',
+  'Once per battle': 'Einmal pro Schlacht', 'Once per battle round': 'Einmal pro Schlachtrunde', 'Once per turn': 'Einmal pro Zug', 'Once per phase': 'Einmal pro Phase',
+  'Twice per battle': 'Zweimal pro Schlacht', 'Factions:': 'Fraktionen:', 'All factions': 'Alle Fraktionen', 'Models': 'Modelle', 'Reserve': 'Reserve',
+  'Edit unit': 'Einheit bearbeiten', 'First turn:': 'Erster Zug:', 'Drawn now': 'Gerade gezogen', 'Already active': 'Bereits aktiv', 'Battle over': 'Schlacht vorbei'
+});
+Object.assign(PHRASES, {
+  // setup / review & start / deployment checklist
+  'I’m ready': 'Ich bin bereit', 'tap to take it back': 'tippen zum Zurücknehmen', 'Deployment in progress': 'Aufstellung läuft', 'Score – setup in progress': 'Spielstand – Setup läuft',
+  'no list yet – the phone then has no datasheets, Stratagem targets or automatic army rules': 'noch keine Liste – das Handy hat dann keine Datenblätter, keine Stratagem-Ziele und keine automatischen Armeeregeln',
+  'Continue on the devices': 'Auf den Geräten weiter', 'Tablet in the middle of the table (Score):': 'Tablet in der Tischmitte (Spielstand):', '· one phone per player (rules):': '· ein Handy pro Spieler (Regeln):',
+  'Keywords (comma-separated)': 'Keywords (durch Komma getrennt)', 'Token radius (inches)': 'Token-Radius (Zoll)', 'M (inches)': 'M (Zoll)',
+  'Token radius: automatic by number of models as long as the field is left empty.': 'Token-Radius: automatisch nach Modellanzahl, solange das Feld leer bleibt.',
+  '(Defender) deploys first: one unit each, alternating, wholly within your own deployment zone, until all units are deployed or in Reserves. After deploying a TITANIC unit, skip your next deployment. Redeployments afterwards alternate, starting with the Attacker.':
+    '(Defender) stellt zuerst auf: abwechselnd je eine Einheit, vollständig in der eigenen deployment zone, bis alle Einheiten aufgestellt oder in Reserves sind. Nach einer TITANIC-Einheit setzt du beim nächsten Aufstellen einmal aus. Umstellungen danach abwechselnd, beginnend mit dem Attacker.',
+  'Roll off: both players roll, the winner takes the first turn. Pre-battle rules (e.g. Scouts) are resolved alternately afterwards, starting with the player taking the first turn.':
+    'Wurf: Beide Spieler würfeln, der Gewinner hat den ersten Zug. Regeln vor der Schlacht (z. B. Scouts) werden danach abwechselnd abgehandelt, beginnend mit dem Spieler, der den ersten Zug hat.',
+  'Start battle (choose first turn first)': 'Schlacht starten (zuerst den ersten Zug wählen)',
+  'No Warlord marked in the list – choose one in the army': 'Kein Warlord in der Liste markiert – wähle einen in der Armee',
+  'Choose a Force Disposition in the army configuration (it is not part of a list)': 'Wähle eine Force Disposition in der Armee-Konfiguration (sie ist nicht Teil einer Liste)',
+  // player phone / tablet
+  'Active Secondary Missions': 'Aktive Secondary Missions', 'No Fixed Missions chosen.': 'Keine Fixed Missions gewählt.',
+  // Stratagem checks of the game engine (engine/stratagems.js) – also inside "Not possible – …"
+  'Not in battle round 1': 'Nicht in Schlachtrunde 1', 'Once per battle – already used': 'Einmal pro Schlacht – bereits genutzt',
+  'Already used this battle round (house rule)': 'In dieser Schlachtrunde bereits genutzt (Hausregel)', 'Battle not in progress': 'Die Schlacht läuft nicht',
+  'Unknown Stratagem': 'Unbekanntes Stratagem', 'Unknown player': 'Unbekannter Spieler', "Only in your opponent's turn": 'Nur im Zug des Gegners', 'Only in your own turn': 'Nur im eigenen Zug',
+  'Invalid cost': 'Ungültige Kosten', 'Unit not found': 'Einheit nicht gefunden', 'Unit is destroyed': 'Die Einheit ist vernichtet',
+  'Battle-shocked units cannot be targeted by your own Stratagems': 'Battle-shocked Einheiten können nicht Ziel deiner eigenen Stratagems sein',
+  'This unit was already targeted by a Stratagem this phase': 'Diese Einheit war in dieser Phase bereits Ziel eines Stratagems',
+  // unit data / app updates (popup, banner, status line in App & data)
+  "New Recruit's data (BSData) has been updated.": 'Die Daten von New Recruit (BSData) wurden aktualisiert.',
+  'Datasheets, abilities, army and detachment rules and enhancements will be updated on this device (takes a few seconds, games are not affected).': 'Datenblätter, Fähigkeiten, Armee- und Detachment-Regeln sowie Optimierungen werden auf diesem Gerät aktualisiert (dauert ein paar Sekunden, Spiele sind nicht betroffen).',
+  'New unit data available – not installed yet.': 'Neue Einheitendaten verfügbar – noch nicht installiert.', 'Unit data is up to date.': 'Die Einheitendaten sind aktuell.',
+  'No internet – using the data on this device.': 'Kein Internet – die Daten auf diesem Gerät werden verwendet.', 'Checking New Recruit data (BSData) …': 'Prüfe die New-Recruit-Daten (BSData) …',
+  'Update check failed – using the data on this device.': 'Update-Prüfung fehlgeschlagen – die Daten auf diesem Gerät werden verwendet.',
+  'Your games stay on this device.': 'Deine Spiele bleiben auf diesem Gerät.', 'Downloading the new app version …': 'Die neue App-Version wird geladen …',
+  'The update installs in the background and the app restarts by itself; your games stay on this computer.': 'Das Update wird im Hintergrund installiert und die App startet von selbst neu; deine Spiele bleiben auf diesem Computer.',
+  'Android will ask you to confirm the installation; your games stay on the device.': 'Android bittet dich, die Installation zu bestätigen; deine Spiele bleiben auf dem Gerät.',
+  'No internet – the app keeps working with what it has.': 'Kein Internet – die App arbeitet mit dem weiter, was sie hat.',
+  // rulebook search
+  'Core rules only': 'nur Grundregeln',
+  'Only the factions of your game or army lists are searched – “All factions” searches every faction.': 'Nur die Fraktionen deines Spiels bzw. deiner Armeelisten werden durchsucht – „Alle Fraktionen“ durchsucht jede Fraktion.',
+  'Matches in other factions – tap “All factions”.': 'Treffer in anderen Fraktionen – tippe auf „Alle Fraktionen“.'
+});
+const nUnits = n => n + (n === '1' ? ' Einheit' : ' Einheiten'), nFiles = n => n + (n === '1' ? ' Datei' : ' Dateien');
+const readyDe = r => (r === 'ready' ? 'bereit' : 'nicht bereit');
+PATTERNS.push(
+  // builder
+  ['^Create (.+) army$', (m, n) => 'Armee erstellen: ' + n], ['^(\\d+) profiles$', (m, n) => n + ' Profile'],
+  ['^No enhancements in your list( \\(no army list imported\\))?\\.$', (m, x) => 'Keine Optimierungen in deiner Liste' + (x ? ' (keine Armeeliste importiert)' : '') + '.'],
+  // setup
+  ['^(.+): up to (\\d+) Detachment Points\\. Several Detachments are allowed as long as the DP total fits\\.$', (m, s, n) => s + ': bis zu ' + n + ' Detachment Points. Mehrere Detachments sind erlaubt, solange die DP-Summe passt.'],
+  ['^(.+?): (not ready|ready)(?: · (.+?): (not ready|ready))?$', (m, a, ra, b, rb) => a + ': ' + readyDe(ra) + (b ? ' · ' + b + ': ' + readyDe(rb) : '')],
+  ['^points · (\\d+) units?$', (m, n) => 'Punkte · ' + nUnits(n)],
+  ['^“(.+)” taken into the game(?: · game size (.+) \\((\\d+) points\\))?$', (m, n, g, p) => '„' + n + '“ ins Spiel übernommen' + (g ? ' · Spielgröße ' + g + ' (' + p + ' Punkte)' : '')],
+  ['^“(.+)” could not be taken into the game – nothing was imported$', (m, n) => '„' + n + '“ konnte nicht ins Spiel übernommen werden – nichts wurde importiert'],
+  ['^Army is (\\d+) points over the limit\\.$', (m, n) => 'Die Armee liegt ' + n + ' Punkte über dem Limit.'],
+  ['^Battle · Round (\\d+)$', (m, n) => 'Schlacht · Runde ' + n], ['^Game (\\w{4}) created\\.$', (m, c) => 'Spiel ' + c + ' erstellt.'],
+  ['^The battle begins – (.+) takes the first turn$', (m, n) => 'Die Schlacht beginnt – ' + n + ' hat den ersten Zug'],
+  // tablet: start of a turn (Secondary Missions)
+  ['^Start of (.+)\'s turn · Round (\\d+) · Read your new cards, then review your active Secondary Missions\\.$', (m, n, r) => 'Beginn des Zuges von ' + n + ' · Runde ' + r + ' · Lies deine neuen Karten und prüfe dann deine aktiven Secondary Missions.'],
+  ['^Start of (.+)\'s turn · Round (\\d+) · Your Fixed Secondary Missions \\(active all battle\\):$', (m, n, r) => 'Beginn des Zuges von ' + n + ' · Runde ' + r + ' · Deine Fixed Secondary Missions (die ganze Schlacht aktiv):'],
+  // player phone: toasts / booked notes (one line each – js/i18n.js translates multi-line toasts line by line)
+  ['^(.+) used \\((.+)\\)$', (m, n, l) => n + ' genutzt (' + l + ')'], ['^(.+): use undone$', (m, n) => n + ': Nutzung rückgängig gemacht'],
+  ['^(.+) undone$', (m, n) => n + ' rückgängig gemacht'], ['^(.+) used$', (m, n) => n + ' eingesetzt'],
+  ['^Only in: (.+)$', (m, p) => 'Nur in: ' + p], ['^Not enough CP \\((\\d+)/(\\d+)\\)$', (m, a, b) => 'Nicht genug CP (' + a + '/' + b + ')'],
+  // unit data / app updates
+  ['^New Recruit\'s data \\(BSData\\) has been updated on (.+)\\.$', (m, d) => 'Die Daten von New Recruit (BSData) wurden am ' + d + ' aktualisiert.'],
+  ['^(\\d+) files? changed$', (m, n) => nFiles(n) + ' geändert'], ['^New Recruit data from (.+)$', (m, d) => 'New-Recruit-Daten vom ' + d],
+  ['^Battle Report 40k (\\S+)(?: from (.+?))? is available \\(installed: (\\d+)\\)\\.$', (m, t, d, n) => 'Battle Report 40k ' + t + (d ? ' vom ' + d : '') + ' ist verfügbar (installiert: ' + n + ').'],
+  ['^Only the changes are downloaded: (\\d+) files?, (.+)\\.$', (m, n, s) => 'Nur die Änderungen werden geladen: ' + nFiles(n) + ', ' + s + '.'],
+  ['^Downloading (\\d+) changed files? \\((.+)\\) …$', (m, n, s) => nFiles(n).replace(/^(\d+) /, '$1 geänderte ') + ' werden geladen (' + s + ') …'],
+  ['^Updated to (.+) – restarting …$', (m, t) => 'Aktualisiert auf ' + t + ' – Neustart …'], ['^App update failed: (.+)$', (m, e) => 'App-Update fehlgeschlagen: ' + e],
+  ['(?<![A-Za-z])Downloading (\\S+) \\((\\d+)/(\\d+)\\) …', (m, f, a, b) => 'Lade ' + f + ' (' + a + '/' + b + ') …'],
+  ['(?<![A-Za-z])Loading (\\S+\\.json) \\((\\d+)/(\\d+)\\) …', (m, f, a, b) => 'Lese ' + f + ' (' + a + '/' + b + ') …'],
+  ['(?<![A-Za-z])Converting (\\d+) files on the device …', (m, n) => 'Wandle ' + nFiles(n) + ' auf dem Gerät um …'],
+  ['(?<![A-Za-z])Unit data updated \\((\\d+) files? downloaded\\) – reloading …', (m, n) => 'Einheitendaten aktualisiert (' + nFiles(n) + ' geladen) – lade neu …'],
+  // rulebook
+  ['^(.+) – step (\\d+)$', (m, p, n) => p + ' – Schritt ' + n],
+  ['^No entry contains all (\\d+) words – best matches with (\\d+) of them\\.$', (m, n, k) => 'Kein Eintrag enthält alle ' + n + ' Wörter – beste Treffer mit ' + k + ' davon.']
 );

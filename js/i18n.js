@@ -20,7 +20,7 @@ export const SKIP = [
   '.arm-name', '.arm-u-main b', '.arm-row-name', '.arm-model-name', '.arm-opt:not([data-to=""])', '.det-strat', '.info-ol','.arm-check span:not(.arm-cost)', '.fac-item', '.arm-addrow > span:first-child',
   '.arm-cfg-line', '.arm-rules-names', '.arm-rules-body', '.cmp-opt-h b', '.strat-name', '.strat-name-btn', '.abil-name', '.abil-src', '.fx-name', '.rule-text',
   '.pname', '.code', '.cont-code', '.unit-name', '.ds-attach', '.rb-text', '.rb-title', '.rb-snip', '.rb-order', '.rb-tag', '.rb-ct', '.rb-strat-row', '.rb-orig-rule', '.mission-text', '.sec-text', '.score-text', '.score-card b',
-  '.stage-text', '.log-text', '.lock-text', '.enh-text', '.dep-name', '.cond-list', '.crow-text', '.crow-opts', '.crow.later', '.conds', '.fx-effect', '.fx-hint', '.dep-item .sub', '.disp-chips b', '.sec-rules li', '.mode-chips .badge',
+  '.stage-text', '.log-text', '.lock-text', '.enh-text', '.dep-name', '.cond-list', '.crow-text', '.crow-opts', '.crow.later', '.conds', '.fx-effect', '.fx-hint', '.disp-chips b', '.sec-rules li', '.mode-chips .badge',
   '[data-no-i18n]', 'code', 'pre', 'textarea', 'input', 'select'
 ].join(',');
 
@@ -42,13 +42,20 @@ function build() {
 export function tr(s) {
   if (getLang() !== 'de' || !s) return s;
   if (!map) build();
-  const whole = String(s).trim();
-  if (EXACT[whole]) return String(s).replace(whole, EXACT[whole]);
-  if (EXACT_TERMS[whole]) return keepTerms() ? s : String(s).replace(whole, EXACT_TERMS[whole]);
-  let out = String(s);
+  // surrounding white space and a leading ": " / "· " (the text after a bold name: "<b>Unit</b>: …") stay as they are,
+  // the line templates (^…$) see the text itself
+  const m = /^(\s*(?:[:·]\s+)?)([\s\S]*?)(\s*)$/.exec(String(s));
+  if (!m[2]) return s;
+  // a multi-line text (toast with the booked lines) line by line
+  return m[1] + (m[2].includes('\n') ? m[2].split('\n').map(tr).join('\n') : trText(m[2])) + m[3];
+}
+function trText(whole) {
+  if (Object.hasOwn(EXACT, whole)) return EXACT[whole];
+  if (Object.hasOwn(EXACT_TERMS, whole)) return keepTerms() ? whole : EXACT_TERMS[whole];
+  let out = whole;
   // a whole-line dictionary entry wins over the line templates ("Opponent's turn", "+ Add unit")
   if (map.has(whole)) {
-    out = out.replace(whole, map.get(whole));
+    out = map.get(whole);
     return termRe ? out.replace(termRe, m => termMap.get(m)) : out;
   }
   for (const [p, fn] of prePats) out = out.replace(p, fn);
@@ -61,9 +68,9 @@ export function tr(s) {
 const skipped = el => !!(el && el.closest && el.closest(SKIP));
 // what this layer has written itself is not translated again (no loop, no double translation)
 const done = new WeakMap();
-function translateText(n) {
+function translateText(n, force = false) {
   const p = n.parentElement;
-  if (!p || skipped(p)) return;
+  if (!p || (!force && skipped(p))) return;
   const v = n.nodeValue;
   if (done.get(n) === v || !/[A-Za-z]/.test(v)) return;
   const t = tr(v);
@@ -83,7 +90,9 @@ function translateAttrs(el) {
 function translateNode(root) {
   if (!root) return;
   if (root.nodeType === 3) return translateText(root);
-  if (root.nodeType !== 1 || skipped(root)) return;
+  if (root.nodeType !== 1) return;
+  translateOptions(root);
+  if (skipped(root)) return;
   translateAttrs(root);
   const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT, {
     acceptNode: n => (n.nodeType === 1 ? (skipped(n) ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_SKIP) : NodeFilter.FILTER_ACCEPT)
@@ -92,6 +101,17 @@ function translateNode(root) {
   for (let n = w.nextNode(); n; n = w.nextNode()) texts.push(n);
   texts.forEach(translateText);
   root.querySelectorAll('[placeholder],[title],[aria-label]').forEach(translateAttrs);
+}
+
+/* <select> content is skipped (unit / faction names), but its empty choice ("– no unit –", value "") and options marked
+ * data-i18n are interface text */
+const OPT = 'option[value=""], option[data-i18n]';
+function translateOptions(root) {
+  const list = root.matches(OPT) ? [root] : root.querySelectorAll(OPT);
+  for (const o of list) {
+    if (o.closest('[data-no-i18n]')) continue;
+    for (const n of o.childNodes) if (n.nodeType === 3) translateText(n, true);
+  }
 }
 
 let started = false;

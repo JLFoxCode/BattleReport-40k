@@ -15,6 +15,7 @@ import { kwify } from './keywords.js';
 import { datasheetCard } from './datasheet.js';
 import { loadDatasheets } from '../data/datasheets.js';
 import { loadMissionsOrig, loadOrig, origStratagem, origPrimary, origSecondary, origTwist, normKey, normKeyBase } from '../data/orig.js';
+import { listArmies } from '../builder/store.js';
 
 const TYPE_LABEL = {
   core: 'Core rule', step: 'Phase step', glossary: 'Glossary',
@@ -43,7 +44,10 @@ const S = {
   origLoading: new Set(),
   missions: undefined,      // missions orig json | null (undefined = not loaded)
   missionsLoading: false,
-  preloadedFor: null
+  preloadedFor: null,
+  picked: new Set(),        // factions picked in "Search units of" (always in the search scope)
+  allFac: false,            // search every faction
+  armyFac: []               // factions of the own army lists (scope without a game)
 };
 const ALL = new Map();      // entry id → entry (static + dynamic)
 let STATIC = null;
@@ -119,44 +123,129 @@ function allEntries() {
 }
 
 // ---------------------------------------------------------------- Search
-// German game terms (as the German UI / tutorial teaches them) → the English terms of the rules texts
-let deTerms = null;
-function enQuery(q) {
-  if (!deTerms) {
-    const m = new Map();
-    const add = (de, en) => { const k = norm(de); if (k && !m.has(k)) m.set(k, norm(en)); };
-    for (const [en, de] of [...Object.entries(TERMS), ...Object.entries(EXACT_TERMS)]) add(de, en);
-    Object.entries({ Deckung: 'cover', Gelände: 'terrain', Geländestück: 'terrain feature', Vorrücken: 'advance', Zurückfallen: 'fall back',
-      Nahkampf: 'fight', Fernkampf: 'shooting', Bewegung: 'movement', Angriff: 'charge', Sichtbarkeit: 'visible', Moral: 'battle-shock',
-      Transporter: 'transport', Aussteigen: 'disembark', Einsteigen: 'embark', Schlachtrunde: 'battle round', Sperrfeuer: 'overwatch' }).forEach(([de, en]) => add(de, en));
-    // whole words only ("sp" must not touch "space")
-    deTerms = [...m.entries()].sort((a, b) => b[0].length - a[0].length)
-      .map(([de, en]) => [new RegExp('(^|[^a-z0-9äöüß])' + de.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(?=$|[^a-z0-9äöüß])', 'g'), en]);
-  }
-  let out = norm(q);
-  for (const [re, en] of deTerms) out = out.replace(re, (x, pre) => pre + en);
-  return out;
+// A query is split into terms; each term has alternatives (the word itself, English stems, the English rules terms of a
+// German game word). An entry matches a term when its text contains one of the alternatives. Results: entries with all
+// terms – or, when no entry has all of them, those with the most terms. Faction content (stratagems, army / detachment
+// rules, units) only of the factions in scope (the game's armies, else the own army lists, factions named in the query,
+// factions picked above) unless "All factions" is on.
+const fold = s => norm(s).replace(/ä|ae/g, 'a').replace(/ö|oe/g, 'o').replace(/ü|ue/g, 'u').replace(/ß/g, 'ss');
+// German game words (as players say them / the German UI teaches them) → the English words of the rules texts
+const DE_WORDS = {
+  deckung: 'cover', 'deckungsbonus': 'cover', gelände: 'terrain', geländestück: 'terrain', ruine: 'ruins', ruinen: 'ruins', wald: 'woods', krater: 'crater',
+  vorrücken: 'advance', vorrückt: 'advance', vorgerückt: 'advance', zurückfallen: 'fall back', zurückgefallen: 'fall back', rückzug: 'fall back',
+  nahkampf: ['fight', 'melee'], kämpfen: 'fight', kampf: 'fight', kämpft: 'fight', fernkampf: ['shoot', 'ranged'], schießen: 'shoot', schiessen: 'shoot', schießt: 'shoot',
+  beschuss: 'shoot', schuss: 'shoot', feuern: ['shoot', 'fire'], bewegung: 'move', bewegen: 'move', bewegt: 'move', bewegungsphase: 'movement phase',
+  angriff: 'charge', angriffe: 'charge', angreifen: 'charge', angreift: 'charge', angriffsbewegung: 'charge move', angriffswurf: 'charge roll',
+  sichtbarkeit: 'visible', sichtbar: 'visible', sichtlinie: ['visible', 'line of sight'], versteckt: 'hidden',
+  moral: 'battle-shock', kampfschocktest: 'battle-shock', 'halbe stärke': 'half-strength', transporter: 'transport', transport: 'transport',
+  aussteigen: 'disembark', einsteigen: 'embark', eingestiegen: 'embark', schlachtrunde: 'battle round', sperrfeuer: 'overwatch', abwehrfeuer: 'overwatch',
+  'heldenhaft eingreifen': 'heroic intervention', eingreifen: 'heroic intervention', kohärenz: 'coherency', einheitenkohärenz: 'coherency',
+  nahkampfreichweite: 'engagement range', kampfreichweite: 'engagement range', reichweite: 'range', trefferwurf: 'hit roll', treffer: 'hit', treffen: 'hit',
+  verwundungswurf: 'wound roll', verwunden: 'wound', verwundung: 'wound', verwundungen: 'wound', lebenspunkte: 'wound', 'tödliche verwundungen': 'mortal wound',
+  tödlich: 'mortal', tödliche: 'mortal', schutzwurf: 'saving throw', rüstungswurf: 'saving throw', rettungswurf: 'invulnerable save', schaden: 'damage',
+  widerstand: 'toughness', stärke: 'strength', durchschlag: 'armour penetration', attacken: 'attacks', moralwert: 'leadership', missionsziel: 'objective',
+  missionsziele: 'objective', marker: 'marker', kontrolle: 'control', kontrollieren: 'control', wiederholen: 're-roll', wiederholung: 're-roll',
+  'neu würfeln': 're-roll', kommandowiederholung: 'command re-roll', würfel: ['dice', 'roll'], wurf: 'roll', würfeln: 'roll', fliegen: 'fly', flug: 'fly',
+  flugzeug: 'aircraft', flieger: 'aircraft', waffe: 'weapon', waffen: 'weapon', fahrzeuge: 'vehicle', charaktermodelle: 'character', anführer: 'leader',
+  leibwache: 'bodyguard', infiltratoren: 'infiltrators', aufklärer: 'scouts', explodiert: 'deadly demise', reserve: 'reserves', aufstellen: 'deploy',
+  aufstellungszone: 'deployment zone', punkte: 'points', zug: 'turn', runde: 'round', befehlspunkt: 'command point', strategem: 'stratagem', kosten: 'cost'
+};
+// fill words of a longer question ("wie weit darf ich vorrücken") – only dropped when other words remain
+const STOP = new Set('und oder der die das den dem des ein eine einer einen im in mit von zu zum zur auf fur wie was wann wo darf ich man kann wird ist sind bei nach the a an of to and or on for how what when can i is are does do my'.split(' '));
+let DE = null;      // folded German term → [English alternatives]
+function deMap() {
+  if (DE) return DE;
+  DE = new Map();
+  const add = (de, en) => {
+    const k = fold(de);
+    if (!k) return;
+    const v = DE.get(k) || [];
+    for (const x of [].concat(en)) { const n = norm(x); if (n && !v.includes(n)) v.push(n); }
+    DE.set(k, v);
+  };
+  for (const [en, de] of [...Object.entries(TERMS), ...Object.entries(EXACT_TERMS)]) add(de, en);
+  Object.entries(DE_WORDS).forEach(([de, en]) => add(de, en));
+  return DE;
 }
-function tokens(q) { return enQuery(q).split(/\s+/).filter(Boolean); }
+/** English inflection → stem ("charging" → "charg", "units" → "unit"), only for longer words. */
+const stem = w => (w.length >= 5 ? w.replace(/(ing|ed|es|s)$/, '') : w);
+/** Query → terms [{ raw, alts }]. */
+function terms(q) {
+  const M = deMap();
+  const words = norm(q).split(/[\s,;:!?()"“”„]+/).filter(Boolean);
+  const out = [];
+  for (let i = 0; i < words.length; i++) {
+    // German phrases of two / three words first ("heldenhaft eingreifen", "tödliche verwundungen")
+    let hit = null;
+    for (let n = Math.min(3, words.length - i); n >= 2 && !hit; n--) {
+      const k = fold(words.slice(i, i + n).join(' '));
+      if (M.has(k)) { hit = { raw: words.slice(i, i + n).join(' '), alts: M.get(k) }; i += n - 1; }
+    }
+    if (hit) { out.push({ raw: hit.raw, alts: [hit.raw, ...hit.alts] }); continue; }
+    const w = words[i], f = fold(w);
+    const alts = new Set([w]);
+    if (stem(w) !== w) alts.add(stem(w));
+    if (M.has(f)) M.get(f).forEach(a => alts.add(a));
+    else {
+      // inflected German word ("vorrückens", "nahkampfwaffen" → longest known start) or one still being typed ("vorrü")
+      let best = '';
+      if (f.length >= 5) for (const k of M.keys()) if (k.length >= 5 && k.length > best.length && !k.includes(' ') && f.startsWith(k)) best = k;
+      if (best) M.get(best).forEach(a => alts.add(a));
+      else if (f.length >= 4) { let c = 0; for (const [k, v] of M) if (k.startsWith(f) && c++ < 6) v.forEach(a => alts.add(a)); }
+    }
+    out.push({ raw: w, alts: [...alts] });
+  }
+  const real = out.filter(t => !STOP.has(fold(t.raw)));
+  return real.length ? real : out;
+}
+/** Everything to highlight for a query. */
+function hlToks(q) { return [...new Set(terms(q).flatMap(t => t.alts))].sort((a, b) => b.length - a.length); }
+/** Factions searched by default: the game's armies (else the own army lists), factions picked above, factions the query names. null = all. */
+function scopeFactions(T) {
+  if (S.allFac) return null;
+  const ids = new Set(S.picked);
+  const st = lastCtx && lastCtx.state;
+  const game = st && Array.isArray(st.players) ? st.players.filter(p => p && p.faction).map(p => p.faction) : [];
+  (game.length ? game : S.armyFac).forEach(id => ids.add(id));
+  if (T) for (const f of FACTIONS) {
+    const nm = norm(f.name);
+    if (T.some(t => t.alts.some(a => a.length >= 4 && nm.includes(a)))) ids.add(f.id);
+  }
+  return ids;
+}
 function search(q) {
-  const toks = tokens(q);
-  if (!toks.length) return { toks, groups: [], total: 0 };
-  if (!S.allDs) { S.allDs = true; FACTIONS.forEach(f => ensureDs(f.id)); } // army/detachment rules live in the BSData files
-  const hits = [];
+  const T = terms(q);
+  const toks = [...new Set(T.flatMap(t => t.alts))].sort((a, b) => b.length - a.length);
+  if (!T.length) return { toks, groups: [], total: 0, hidden: 0, scope: scopeFactions(null) };
+  const scope = scopeFactions(T);
+  (scope ? [...scope] : FACTIONS.map(f => f.id)).forEach(ensureDs);   // army/detachment rules and units live in the BSData files
+  const n = T.length;
+  const cand = [], out = [];
+  let best = 0, bestOut = 0;
   for (const e of allEntries()) {
-    let ok = true;
-    for (const t of toks) if (!e.hay.includes(t)) { ok = false; break; }
-    if (ok) hits.push(e);
+    let m = 0, tm = 0;
+    for (const t of T) if (t.alts.some(a => e.hay.includes(a))) { m++; if (t.alts.some(a => e.thay.includes(a))) tm++; }
+    if (!m) continue;
+    const inScope = !e.fac || !scope || scope.has(e.fac);
+    cand.push({ e, m, tm, inScope });
+    if (inScope) best = Math.max(best, m); else bestOut = Math.max(bestOut, m);
   }
-  const rank = e => toks.every(t => e.thay.includes(t)) ? 0 : 1;
+  const need = best || bestOut || n;   // all terms when an entry has them all, else the most any entry has
+  let hidden = 0;
+  for (const c of cand) { if (c.m < need) continue; if (c.inScope) out.push(c); else hidden++; }
+  const qn = norm(q).trim();
+  // title hits first: whole query = title, all terms in the title, some in the title, text only
+  const rank = c => (c.e.thay === qn ? 0 : c.tm === n ? 1 : c.tm ? 2 : 3);
   const groups = [];
-  for (const [gid, label] of GROUPS) {
-    const list = hits.filter(e => (gid === 'mission' ? MISSION_TYPES[e.type] : e.type === gid));
-    if (!list.length) continue;
-    list.sort((a, b) => rank(a) - rank(b) || a.title.localeCompare(b.title, 'en'));
-    groups.push({ id: gid, label, list });
-  }
-  return { toks, groups, total: hits.length };
+  GROUPS.forEach(([gid, label], gi) => {
+    const list = out.filter(c => (gid === 'mission' ? MISSION_TYPES[c.e.type] : c.e.type === gid));
+    if (!list.length) return;
+    list.sort((a, b) => rank(a) - rank(b) || a.e.title.localeCompare(b.e.title, 'en'));
+    groups.push({ id: gid, label, gi, top: rank(list[0]), list: list.map(c => c.e) });
+  });
+  // groups with title hits before groups with text hits only; within a level the rules order (core rules first)
+  groups.sort((a, b) => Math.min(a.top, 2) - Math.min(b.top, 2) || a.gi - b.gi);
+  return { toks, groups, total: out.length, hidden, scope, partial: best && best < n ? { best, n } : null };
 }
 const reEsc = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 function hl(s, toks) {
@@ -286,10 +375,13 @@ function fullHtml(e, toks) {
 
 function rowHtml(e, toks, opts = {}) {
   const open = S.open.has(e.id);
-  // faction entries name factions / detachments (stay English); the other subtitles are interface (phase, "Primary mission")
-  const sub = opts.noSub ? '' : (e.sub ? `<div class="rb-sub"${e.fac ? ' data-no-i18n' : ''}>${hl(e.sub, toks)}</div>` : '');
+  // faction entries name factions / detachments (stay English); the other subtitles are interface (phase, "Primary mission"):
+  // translated as a whole here – highlight marks would split them into half-translated pieces ("Angriff phase")
+  const sub = opts.noSub || !e.sub ? '' : e.fac ? `<div class="rb-sub" data-no-i18n>${hl(e.sub, toks)}</div>` : `<div class="rb-sub" data-no-i18n>${esc(tr(e.sub))}</div>`;
+  // phase-step titles are interface ("Charge phase – step 2"), the other titles are rules names
+  const title = e.type === 'step' ? esc(tr(e.title)) : hl(e.title, toks);
   return `<div class="rb-row${open ? ' open' : ''}" data-rb="toggle" data-id="${esc(e.id)}" role="button" tabindex="0" aria-expanded="${open ? 'true' : 'false'}">
-    <div class="rb-row-head">${opts.noType ? '' : typeBadge(e)}<span class="rb-title">${hl(e.title, toks)}</span><span class="rb-caret" aria-hidden="true">${open ? '▴' : '▾'}</span></div>
+    <div class="rb-row-head">${opts.noType ? '' : typeBadge(e)}<span class="rb-title">${title}</span><span class="rb-caret" aria-hidden="true">${open ? '▴' : '▾'}</span></div>
     ${sub}
     ${open ? `<div class="rb-full">${fullHtml(e, toks)}</div>` : `<div class="rb-snip">${hl(snippet(e.text, toks), toks)}</div>`}
   </div>`;
@@ -297,24 +389,34 @@ function rowHtml(e, toks, opts = {}) {
 function rows(list, toks, opts) { return list.map(e => rowHtml(e, toks, opts)).join(''); }
 
 // ---------------------------------------------------------------- Views
+const facName = id => (FACTIONS.find(f => f.id === id) || {}).name || id;
 function unitChips() {
-  const loaded = [...S.ds.keys()].map(id => FACTIONS.find(f => f.id === id)).filter(Boolean);
-  const loading = [...S.dsLoading].map(id => FACTIONS.find(f => f.id === id)).filter(Boolean);
+  // only the game's factions and those picked here (not every faction the rulebook loaded in the background)
+  const st = lastCtx && lastCtx.state;
+  const picked = [...new Set([...(st && Array.isArray(st.players) ? st.players.filter(p => p && p.faction).map(p => p.faction) : []), ...S.picked])];
   return `<div class="rb-chips">
     <label class="rb-chips-label" for="rb-fac">Search units of:</label>
     <select id="rb-fac" data-rb="facsel" aria-label="Load datasheets of a faction">
       <option value="">${esc(tr('– choose faction –'))}</option>
-      <option value="__all"${FACTIONS.every(f => S.ds.has(f.id)) ? ' disabled' : ''}>${esc(tr('All factions (every datasheet)'))}</option>
-      ${FACTIONS.map(f => `<option value="${esc(f.id)}"${S.ds.has(f.id) ? ' disabled' : ''}>${esc(f.name)}${S.ds.has(f.id) ? ' ✓' : ''}</option>`).join('')}
+      <option value="__all"${S.allFac ? ' disabled' : ''}>${esc(tr('All factions (every datasheet)'))}</option>
+      ${FACTIONS.map(f => `<option value="${esc(f.id)}"${S.picked.has(f.id) ? ' disabled' : ''}>${esc(f.name)}${S.picked.has(f.id) ? ' ✓' : ''}</option>`).join('')}
     </select>
-    ${loaded.map(f => `<span class="chip sm on" data-no-i18n>${esc(f.name)} · ${S.ds.get(f.id).units.length}</span>`).join('')}
-    ${loading.map(f => `<span class="chip sm" data-no-i18n>${esc(f.name)} …</span>`).join('')}
+    ${S.allFac ? `<span class="chip sm on">All factions</span>` : picked.map(id => `<span class="chip sm${S.ds.has(id) ? ' on' : ''}" data-no-i18n>${esc(facName(id))}${S.ds.has(id) ? ' · ' + S.ds.get(id).units.length : ' …'}</span>`).join('')}
+  </div>`;
+}
+/** While searching: one line – which factions are searched, and the switch to search all of them. */
+function scopeLine(r) {
+  const ids = r.scope ? [...r.scope] : null;
+  const names = ids ? ids.map(facName).join(' · ') : '';
+  return `<div class="rb-chips one">
+    <span class="rb-chips-label">Factions:</span>
+    ${ids ? (ids.length ? `<span class="rb-scope" data-no-i18n title="${esc(names)}">${esc(names)}</span>` : `<span class="rb-scope">Core rules only</span>`) : ''}
+    <button type="button" class="chip sm rb-allfac${S.allFac ? ' on' : ''}" data-rb="allfac" aria-pressed="${S.allFac ? 'true' : 'false'}"><span>All factions</span>${!S.allFac && r.hidden ? ` <span class="rb-count">+${r.hidden}</span>` : ''}</button>
   </div>`;
 }
 
-function resultsHtml(q) {
-  const r = search(q);
-  if (!r.total) return `<p class="muted center rb-empty">No match for “${esc(q)}”.${S.ds.size ? '' : ' Units are only searched for loaded factions – pick one above.'}</p>`;
+function resultsHtml(q, r) {
+  if (!r.total) return `<p class="muted center rb-empty">No match for “${esc(q)}”.${S.allFac ? '' : r.hidden ? ' Matches in other factions – tap “All factions”.' : ' Only the factions of your game or army lists are searched – “All factions” searches every faction.'}</p>`;
   let shown = 0;
   const html = r.groups.map(g => {
     if (shown >= MAX_RESULTS) return '';
@@ -322,7 +424,8 @@ function resultsHtml(q) {
     shown += list.length;
     return `<section class="rb-group"><div class="rb-group-h">${esc(g.label)} <span class="rb-count">${g.list.length}</span></div>${rows(list, r.toks)}</section>`;
   }).join('');
-  return `<div class="rb-total muted small">${r.total} result${r.total === 1 ? '' : 's'}${r.total > MAX_RESULTS ? ` · showing the first ${MAX_RESULTS} – refine your search` : ''}</div>${html}`;
+  const partial = r.partial ? `<div class="rb-partial muted small">No entry contains all ${r.partial.n} words – best matches with ${r.partial.best} of them.</div>` : '';
+  return `<div class="rb-total muted small">${r.total} result${r.total === 1 ? '' : 's'}${r.total > MAX_RESULTS ? ` · showing the first ${MAX_RESULTS} – refine your search` : ''}</div>${partial}${html}`;
 }
 
 function section(id, title, count, inner, lvl = 1) {
@@ -420,7 +523,8 @@ function paint() {
   if (!body) return;
   const q = S.q.trim();
   const fac = S.faction ? FACTIONS.find(f => f.id === S.faction) : null;
-  body.innerHTML = unitChips() + (q ? resultsHtml(q) : fac ? factionPage(fac) : browseHtml());
+  if (q) { const r = search(q); body.innerHTML = scopeLine(r) + resultsHtml(q, r); }
+  else body.innerHTML = unitChips() + (fac ? factionPage(fac) : browseHtml());
   const clr = lastRoot.querySelector('.rb-clear');
   if (clr) clr.hidden = !q;
 }
@@ -429,6 +533,7 @@ export function render(root, ctx) {
   lastRoot = root;
   lastCtx = ctx;
   staticIndex();
+  try { S.armyFac = [...new Set(listArmies().map(a => a.faction).filter(Boolean))]; } catch { S.armyFac = []; }
   // With a game: preload the datasheets of both armies once per game code
   const st = ctx && ctx.state;
   if (st && Array.isArray(st.players) && S.preloadedFor !== ctx.code) {
@@ -463,7 +568,7 @@ function onChange(e) {
   if (t && t.dataset.rb === 'facsel' && t.value) {
     const id = t.value;
     t.value = '';
-    if (id === '__all') FACTIONS.forEach(f => ensureDs(f.id)); else ensureDs(id);
+    if (id === '__all') { S.allFac = true; FACTIONS.forEach(f => ensureDs(f.id)); } else { S.picked.add(id); ensureDs(id); }
     paint();
   }
 }
@@ -484,7 +589,7 @@ function toggleEntry(id, rowEl) {
     const tmp = document.createElement('div');
     const noType = !rowEl.querySelector(':scope > .rb-row-head > .rb-type');
     const noSub = !rowEl.querySelector(':scope > .rb-sub');
-    tmp.innerHTML = rowHtml(e, tokens(S.q), { noType, noSub });
+    tmp.innerHTML = rowHtml(e, S.q.trim() ? hlToks(S.q) : [], { noType, noSub });
     rowEl.replaceWith(tmp.firstElementChild);
   } else paint();
 }
@@ -517,6 +622,12 @@ function onClick(e) {
     try { lastRoot.querySelector('.rb-facpage').scrollIntoView({ block: 'start' }); } catch {}
     return;
   }
+  if (act === 'allfac') {
+    S.allFac = !S.allFac;
+    if (S.allFac) FACTIONS.forEach(f => ensureDs(f.id));
+    paint();
+    return;
+  }
   if (act === 'back') { S.faction = null; S.secs.add('factions'); paint(); return; }
   if (act === 'det') {
     const id = b.dataset.det;
@@ -533,4 +644,4 @@ function onClick(e) {
 }
 
 /** Debug/testing helpers (no UI): current state and raw search. */
-export const _rb = { S, search, allEntries };
+export const _rb = { S, search, terms, allEntries };

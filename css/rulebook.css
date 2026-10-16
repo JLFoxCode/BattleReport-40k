@@ -20,6 +20,13 @@
 .rb-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: var(--gap); }
 .rb-chips-label { margin: 0; font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; font-weight: 600; }
 .rb-chips select { width: auto; flex: 1 1 180px; min-height: 40px; padding: 4px 10px; font-size: 15px; }
+/* while searching: one line (searched factions + "All factions"), the results start right below the search field */
+.rb-chips.one { flex-wrap: nowrap; gap: 6px; margin-bottom: 8px; min-width: 0; }
+.rb-chips.one .rb-chips-label { flex: none; }
+.rb-scope { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
+.rb-allfac { flex: none; margin-left: auto; min-height: 36px; white-space: nowrap; }
+.rb-allfac .rb-count { font-size: 12px; }
+.rb-partial { margin: -4px 0 8px; }
 .rb-total { margin: 0 0 8px; }
 .rb-empty { padding: 24px 0; }
 .rb-count { font-family: var(--font-title); font-weight: 600; font-size: 13px; color: var(--muted); letter-spacing: .04em; }

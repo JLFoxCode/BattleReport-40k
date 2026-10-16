@@ -84,7 +84,7 @@ export function diagramSvg(d, lang = 'en') {
   }
   for (const z of d.zones || []) {
     out.push(`<rect x="${P(z.x)}" y="${P(z.y)}" width="${L(z.w)}" height="${L(z.h)}" fill="${SIDE[z.side] || 'var(--muted)'}" fill-opacity=".10" stroke="${SIDE[z.side] || 'var(--muted)'}" stroke-opacity=".5" stroke-dasharray="6 4"/>`);
-    if (z.label) out.push(text(z.x + 0.2, z.y + 0.5, tr(z, 'label'), 'dg-zone-l', 'start', SIDE[z.side]));
+    if (z.label) out.push(zoneLabel(z, tr(z, 'label'), k));
   }
   for (const t of d.terrain || []) {
     const st = TERRAIN[t.type] || TERRAIN.area;
@@ -149,6 +149,25 @@ function model(m, tr) {
 }
 function text(x, y, t, cls, anchor = 'start', color = null) {
   return `<text x="${P(x)}" y="${P(y)}" text-anchor="${anchor}" class="${cls}"${color ? ` fill="${color}"` : ''}>${esc(t)}</text>`;
+}
+/** Zone label, wrapped onto more lines when it would run past its zone at the phone label size
+ *  (11px × --dgk bold, ~0.62 em per character) – German labels are longer ("Einheit: 1 Panzer"). */
+function zoneLabel(z, t, k) {
+  const wrap = fs => {
+    const max = Math.max(4, Math.floor((z.w * S - 12) / (fs * 0.62)));
+    const lines = [];
+    for (const w of String(t).split(/\s+/)) {
+      const last = lines[lines.length - 1];
+      if (last != null && (last + ' ' + w).length <= max) lines[lines.length - 1] = last + ' ' + w; else lines.push(w);
+    }
+    return lines;
+  };
+  const x = P(z.x + 0.2);
+  const svg = lines => (lines.length < 2 ? text(z.x + 0.2, z.y + 0.5, t, 'dg-zone-l', 'start', SIDE[z.side])
+    : `<text x="${x}" y="${P(z.y + 0.5)}" text-anchor="start" class="dg-zone-l" fill="${SIDE[z.side] || 'var(--muted)'}">${lines.map((l, i) => `<tspan x="${x}"${i ? ' dy="1.1em"' : ''}>${esc(l)}</tspan>`).join('')}</text>`);
+  const desk = wrap(11), phone = wrap(11 * Math.max(1, Number(k) || 1));
+  // the phone label size differs (css/tutorial.css): both variants, CSS shows the matching one
+  return desk.length === phone.length ? svg(desk) : `<g class="dg-zl-d">${svg(desk)}</g><g class="dg-zl-m">${svg(phone)}</g>`;
 }
 const mid = (a, b) => [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
 

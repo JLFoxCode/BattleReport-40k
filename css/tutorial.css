@@ -12,6 +12,7 @@
 .dg-model-l { font-size: 11px; font-weight: 700; fill: var(--on-p); }
 .dg-terrain-l { font-size: 12px; font-weight: 600; fill: var(--muted); }
 .dg-zone-l { font-size: 11px; font-weight: 700; }
+.dg-zl-m { display: none; }   /* zone label wrapped for the phone label size (js/ui/diagram.js zoneLabel) */
 .dg-mark { font-size: 11px; font-weight: 700; }
 .dg-obj { fill: #E8B23C; fill-opacity: .25; stroke: #E8B23C; stroke-width: 2; }
 .dg-obj-x { stroke: #E8B23C; stroke-width: 2; }
@@ -131,6 +132,8 @@
   .dg-note, .dg-tag { font-size: calc(13px * var(--dgk, 1)); }
   .dg-terrain-l { font-size: calc(12px * var(--dgk, 1)); }
   .dg-zone-l { font-size: calc(11px * var(--dgk, 1)); }
+  .dg-zl-d { display: none; }
+  .dg-zl-m { display: inline; }
   /* compared pictures one below the other, each at full width */
   .dg-compare { grid-template-columns: 1fr; }
   .dg-flow.right.many { flex-direction: column; align-items: stretch; }

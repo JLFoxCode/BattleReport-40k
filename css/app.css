@@ -426,4 +426,18 @@ label.chip.on { color: var(--bg); }
 .kw-short { margin-bottom: 8px; }
 .kw-short > b { display: block; font-size: 14px; margin-bottom: 2px; }
 /* toast that lists what a button booked automatically (components.autoNote) */
+/* German interface: texts that come from CSS content (css/armies.css army rules box) */
+html[lang="de"] .arm-rules > summary::after { content: '▾ lesen'; }
+html[lang="de"] .arm-rules[open] > summary::after { content: '▴ schließen'; }
+
+/* new unit data when the app opens (js/ui/update-popup.js): a banner at the bottom, the app stays usable */
+.upd-banner {
+  position: fixed; left: 50%; bottom: calc(16px + var(--sa-bottom)); transform: translateX(-50%); z-index: 190;
+  width: min(520px, calc(100vw - 32px)); display: flex; align-items: center; gap: 8px; padding: 10px 8px 10px 14px;
+  background: var(--panel2); color: var(--text); border: 1px solid var(--line); border-left: 4px solid var(--ok);
+  border-radius: var(--radius-sm); box-shadow: var(--shadow); animation: toast-in .2s ease-out;
+}
+.upd-banner.out { animation: toast-out .2s ease-in forwards; }
+.upd-banner-t { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; line-height: 1.25; }
+.upd-banner .btn { flex: none; }
 .toast.auto { white-space: pre-line; border-left-color: var(--warn); font-size: 14px; line-height: 1.4; }

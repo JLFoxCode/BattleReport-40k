@@ -26,9 +26,9 @@ export const BASICS = [
               { x: 3.5, y: 0.2, w: 7, h: 2.9, side: 1, label: 'enemy unit', label_de: 'feindliche Einheit' }
             ],
             models: [
-              { x: 0.95, y: 5.9, side: 0 }, { x: 2.25, y: 5.9, side: 0 }, { x: 3.55, y: 5.9, side: 0 }, { x: 4.85, y: 5.9, side: 0 }, { x: 6.15, y: 5.9, side: 0 },
-              { x: 9.1, y: 5.9, side: 0, shape: 'rect', rw: 2.4, rh: 1.5 },
-              { x: 12.45, y: 5.9, side: 0, r: 0.79 },
+              { x: 0.95, y: 6.1, side: 0 }, { x: 2.25, y: 6.1, side: 0 }, { x: 3.55, y: 6.1, side: 0 }, { x: 4.85, y: 6.1, side: 0 }, { x: 6.15, y: 6.1, side: 0 },
+              { x: 9.1, y: 6.2, side: 0, shape: 'rect', rw: 2.4, rh: 1.5 },
+              { x: 12.45, y: 6.3, side: 0, r: 0.79 },
               { x: 4.6, y: 1.9, side: 1 }, { x: 6, y: 1.9, side: 1 }, { x: 7.4, y: 1.9, side: 1 }, { x: 8.8, y: 1.9, side: 1 }
             ],
             notes: [{ x: 7, y: 3.75, text: 'friendly = yours · enemy = your opponent\'s', text_de: 'befreundet = deine · feindlich = gegnerische', anchor: 'middle' }]
