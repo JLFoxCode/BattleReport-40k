@@ -6,6 +6,8 @@ import { esc, btn, confirmSheet, toast, colorOf } from './components.js';
 import { loadFinished, deleteFinished } from '../archive.js';
 
 const pName = (s, p) => ((s.players || [])[p] || {}).name || `Player ${p + 1}`;
+/** VP booked as Battle Ready (bonus 'battle-ready'); the rest of the bonus VP is the manual Modifier. */
+const battleReady = (s, p) => (s.scores || []).filter(x => x.player === p && x.src === 'bonus' && x.card === 'battle-ready').reduce((a, x) => a + (Number(x.vp) || 0), 0);
 
 export function render(root, ctx) {
   const code = ctx.archive;
@@ -32,7 +34,8 @@ export function render(root, ctx) {
       <div class="scoreboard">${[0, 1].map(p => `
         <div class="card p${p} ${winner === p ? 'winner' : ''}">
           <div class="kpi lg p${p}"><span class="kpi-value">${esc(vp[p].total)}</span><span class="kpi-label">${esc(pName(s, p))}</span></div>
-          <div class="sb-split muted small">Primary ${esc(vp[p].primary)} · Secondary ${esc(vp[p].secondary)}${vp[p].bonus ? ' · Modifier ' + esc(vp[p].bonus) : ''}</div>
+          <div class="sb-split muted small">Primary ${esc(vp[p].primary)} · Secondary ${esc(vp[p].secondary)}${(() => { const br = battleReady(s, p), mod = vp[p].bonus - br;
+            return (br ? ' · Battle Ready ' + esc(br) : '') + (mod ? ' · Modifier ' + esc(mod) : ''); })()}</div>
         </div>`).join('')}</div>
       <div class="card pad0 mt">
         <table class="rtable">

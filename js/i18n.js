@@ -17,9 +17,9 @@ export function setKeepTerms(on) { write(LS_TERMS, on ? '1' : '0'); location.rel
 export const SKIP = [
   '.orig-text', '.orig-block', '.strat-orig', '.strat-t', '.ds-ab', '.ds-wname', '.ds-wabil', '.ds-kw', '.ds-keywords', '.ds-profile-name',
   '.ds-title', '.ds-tag', '.ds-unitbuff', '.ds-wbuff', '.ds-list', '.kw-tag', '.kw-rule', '.det-body', '.det-rule', '.arm-effect', '.cmp-w', '.cmp-kw',
-  '.arm-name', '.arm-u-main b', '.arm-row-name', '.arm-model-name', '.arm-opt:not([data-to=""])', '.det-strat', '.info-ol','.arm-check span:not(.arm-cost)', '.fac-item', '.arm-addrow > span:first-child',
+  '.arm-name', '.arm-u-main b', '.arm-row-name', '.arm-model-name', '.arm-opt:not([data-to=""]):not(.arm-opt-i18n)', '.det-strat', '.info-ol:not([data-i18n])','.arm-check span:not(.arm-cost)', '.fac-item', '.arm-addrow > span:first-child',
   '.arm-cfg-line', '.arm-rules-names', '.arm-rules-body', '.cmp-opt-h b', '.strat-name', '.strat-name-btn', '.abil-name', '.abil-src', '.fx-name', '.rule-text',
-  '.pname', '.code', '.cont-code', '.unit-name', '.ds-attach', '.rb-text', '.rb-title', '.rb-snip', '.rb-order', '.rb-tag', '.rb-ct', '.rb-strat-row', '.rb-orig-rule', '.mission-text', '.sec-text', '.score-text', '.score-card b',
+  '.pname', '.code', '.cont-code', '.unit-name', '.ds-attach b','.rb-text', '.rb-title', '.rb-snip', '.rb-order', '.rb-tag', '.rb-ct', '.rb-strat-row', '.rb-orig-rule', '.mission-text', '.sec-text', '.score-text', '.score-card b',
   '.stage-text', '.log-text', '.lock-text', '.enh-text', '.dep-name', '.cond-list', '.crow-text', '.crow-opts', '.crow.later', '.conds', '.fx-effect', '.fx-hint', '.disp-chips b', '.sec-rules li', '.mode-chips .badge',
   '[data-no-i18n]', 'code', 'pre', 'textarea', 'input', 'select'
 ].join(',');

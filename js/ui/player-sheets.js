@@ -7,7 +7,7 @@ import {
   stratOrigBlock, stratUseState, stratAddonsOf, resourceFor, resShort, fxItem, armyOf, origData, origMod, ensureOrig, enhancementOf,
   unitGroups, srcBadge, cardName
 } from './player-common.js';
-import { buffsOfId, abilityByKey, abilityUseOf, entryLabel, phaseUsesOf, PHASE_CHOICES, cpReductions, resolveLeaders, ensureMissionsOrig, missionsOrig, WHEN_LABEL } from './player-tabs.js';
+import { buffsOfId, abilityByKey, abilityUseOf, entryLabel, phaseUsesOf, PHASE_CHOICES, cpReductions, resolveLeaders, ensureMissionsOrig, missionsOrig, myParts, partsLabel, objLabel, bonusRows } from './player-tabs.js';
 import { reduce } from '../../engine/index.js';
 export { cpReductions };
 
@@ -416,8 +416,8 @@ export function openMissionInfo(ctx, ui, src, card) {
     cls: 'p' + c.me + ' mis-sheet',
     body: `${o ? `<div class="orig-block"><div class="orig-label">Original card text</div><div class="orig-text">${esc(cleanOrig(o))}</div></div>` : ''}
       <div class="label">Scoring</div><ul class="info-conds">${conds}</ul>
-      ${def.note ? `<p class="small"><b>Note:</b> ${esc(def.note)}</p>` : ''}
-      ${def.drawn ? `<p class="small text-warn"><b>When drawn:</b> ${esc(def.drawn.text)}</p>` : ''}`,
+      ${def.note ? `<p class="small"><b>Note:</b> <span class="rule-text">${esc(def.note)}</span></p>` : ''}
+      ${def.drawn ? `<p class="small text-warn"><b>When drawn:</b> <span class="rule-text">${esc(def.drawn.text)}</span></p>` : ''}`,
     actions: [{ label: 'Close', kind: 'ghost' }]
   });
 }
@@ -433,9 +433,12 @@ export function openDiscardSheet(ctx, ui, card) {
   const cpGain = own && sec.cpDiscardTurn !== `${state.round}:${state.turn}`;
   const canRedraw = !sec.redrawUsed && own && state.phase === 'command' && (state.players[me].cp || 0) >= 1;
   const run = reason => (closeFn) => {
-    (ui.ctx || ctx).dispatch({ type: 'sec.discard', player: me, card, reason }).then(r => {
+    const before = (sec.hand || []).slice();
+    // redraw: the new card is drawn right away (drawNow)
+    (ui.ctx || ctx).dispatch(Object.assign({ type: 'sec.discard', player: me, card, reason }, reason === 'redraw' ? { drawNow: true } : {})).then(r => {
       if (!r) return;
-      toast(reason === 'redraw' ? `${name} discarded – draw a new card` : `${name} discarded${cpGain ? (state.phase === 'end' ? ' · +1 CP' : ' · +1 CP at the end of your turn') : ''}`, 'ok', 2500);
+      const drew = reason === 'redraw' ? ((r.players[me].secondaries || {}).hand || []).filter(x => !before.includes(x)) : [];
+      toast(reason === 'redraw' ? (drew.length ? `${name} discarded · drew ${drew.map(x => cardName('secondary', x)).join(', ')}` : `${name} discarded · no card left to draw`) : `${name} discarded${cpGain ? (state.phase === 'end' ? ' · +1 CP' : ' · +1 CP at the end of your turn') : ''}`, 'ok', 3000);
       closeFn();
     }).catch(err => toast(err && err.message ? err.message : String(err), 'bad'));
     return false;
@@ -452,19 +455,57 @@ export function openDiscardSheet(ctx, ui, card) {
   });
 }
 
-/** Key of the pending scoring (same as the score device). */
-export function pendingKey(s) { const p = s && s.pending; return p ? (p.key || `${s.round}:${s.turn}:${p.when}:${p.player}`) : null; }
+/** "When drawn" picks on the phone: Beacon – one friendly unit; Burden of Trust – one friendly unit per objective. Stored as
+ *  the player effect 'sec:<card>' (effect.set), the same as the tablet's picker. */
+export function openPickSheet(ctx, ui, card) {
+  const c = ui.ctx || ctx;
+  const s = c.state, p = c.me;
+  const units = (s.players[p].units || []).filter(u => u.status !== 'destroyed');
+  const cur0 = ((s.players[p].effects || {})['sec:' + card] || {}).value;
+  const def = WH.SECONDARY[card] || { name: card };
+  const done = async value => {
+    const cc = ui.ctx || ctx;
+    const display = value == null ? null : card === 'beacon' ? (units.find(u => u.id === value) || {}).name : value.map(x => { const [o, u] = x.split(':'); const ob = (s.objectives || []).find(y => y.id === o); return (ob ? objLabel(s, ob) : o) + ': ' + ((units.find(y => y.id === u) || {}).name || u); }).join(', ');
+    const r = await cc.dispatch({ type: 'effect.set', player: p, key: 'sec:' + card, value, label: def.name + (card === 'beacon' ? ' – beacon unit' : ' – guards'), display });
+    if (r) toast(card === 'beacon' ? 'Beacon unit selected' : 'Guards saved', 'ok', 2000);
+  };
+  if (card === 'beacon') {
+    return sheet({
+      title: `${def.name} – select the beacon unit`, cls: 'p' + p,
+      body: `<p class="small muted rule-text">${esc(def.drawn ? def.drawn.text : '')}</p><div class="col pick-list">${units.map(u => `<button type="button" class="btn ${cur0 === u.id ? `p${p}` : 'ghost'} cta" data-unit="${esc(u.id)}">${esc(u.name)}</button>`).join('')}</div>`,
+      actions: [{ label: 'Cancel', kind: 'ghost' }],
+      onOpen: (el, close) => el.addEventListener('click', e => { const b = e.target.closest('[data-unit]'); if (!b) return; close(); done(b.dataset.unit).catch(err => toast(err && err.message ? err.message : String(err), 'bad')); })
+    });
+  }
+  const have = {};
+  for (const x of Array.isArray(cur0) ? cur0 : []) { const [o, u] = String(x).split(':'); have[o] = u; }
+  const objs = s.objectives || [];
+  return sheet({
+    title: `${def.name} – select the guards`, cls: 'p' + p,
+    body: `<p class="small muted rule-text">${esc(def.drawn ? def.drawn.text : '')}</p>
+      ${objs.map(o => `<label class="field"><span>${esc(objLabel(s, o))}</span><select name="${esc(o.id)}"><option value="">– no guard –</option>${units.map(u => `<option value="${esc(u.id)}"${have[o.id] === u.id ? ' selected' : ''}>${esc(u.name)}</option>`).join('')}</select></label>`).join('') || '<p class="muted small">No objective markers (deployment map missing).</p>'}`,
+    actions: [{ label: 'Cancel', kind: 'ghost' }, { label: 'Save', kind: 'primary', onClick: (close, el) => {
+      const v = objs.map(o => { const sel = el.querySelector(`select[name="${o.id}"]`); return sel && sel.value ? o.id + ':' + sel.value : null; }).filter(Boolean);
+      done(v.length ? v : null).catch(err => toast(err && err.message ? err.message : String(err), 'bad'));
+    } }]
+  });
+}
+
+/** Key of player me's open part(s) of the pending scoring (null = nothing for this player to confirm). */
+export function pendingKey(s, me) { const ps = myParts(s, me); return ps.length ? ps.map(x => x.key).join('+') : null; }
 const SRC_LABEL = { primary: 'Primary', secondary: 'Secondary', bonus: 'Bonus' };
 
-/** The player's own scoring popup (pending score of this player): toggles for achieved conditions, counters for "X VP each",
- *  a modifier, the total after the caps; confirm books score.confirm (achieve: Tactical cards that scored are discarded).
- *  The phone never changes the phase – the score device continues the turn when the scoring is confirmed. */
+/** The player's own scoring popup (this player's open part(s) of the pending scoring – with the merged end-of-turn sheet
+ *  pending.parts, only their own): toggles for achieved conditions, counters for "X VP each", a modifier, the total after
+ *  the caps; objective rows pre-filled from the tablet's objective strip. Confirm books score.confirm { player } with the
+ *  tablet's undo group (state.pendingGroup: one Undo there takes back the whole End-turn step); achieve: Tactical cards
+ *  that scored are discarded. The phone never changes the phase – the score device continues once all parts are confirmed. */
 export function openScoreSheet(ctx, ui) {
   const c0 = ui.ctx || ctx;
   const s = c0.state, me = c0.me;
-  const pend = s.pending;
-  if (!pend || pend.kind !== 'score' || pend.player !== me) { toast('No scoring pending for you', 'warn'); return null; }
-  const key = pendingKey(s);
+  const parts = myParts(s, me);
+  if (!parts.length) { toast('No scoring pending for you', 'warn'); return null; }
+  const key = pendingKey(s, me);
   if (ui.scoreSheet && ui.scoreSheet.key === key) return null;
   if (ui.scoreSheet) { ui.scoreSheet.close(); ui.scoreSheet = null; }
   const player = me;
@@ -476,12 +517,15 @@ export function openScoreSheet(ctx, ui) {
     return sec ? (sec.conds || []).find(x => x.ci === it.ci) || null : null;
   };
   // already booked this turn (tapped on the score device) counts as pre-selected – only the difference is booked
-  const items = pend.items.map(it => {
+  const items = parts.flatMap(part => part.items.map(it => {
     const c = condOf(it);
     const already = c ? Number(c.scoredThisTurn) || 0 : 0;
     const unit = c && c.vp != null ? Number(c.vp) : it.unit != null ? Number(it.unit) : (it.vp != null && it.k !== 'per' ? Number(it.vp) : 0);
-    return Object.assign({}, it, { vp: already, already, unit, n: unit > 0 ? Math.round(already / unit) : 0, opts: c && c.opts ? c.opts : null, max: c && c.max != null ? Number(c.max) : (it.max != null ? Number(it.max) : null) });
-  });
+    // objective control (the tablet's strip) pre-fills; kills, actions and markers stay at "nothing" until tapped
+    const pre = !!it.obj && Number(it.suggest) > 0;
+    const vp = pre ? already + Number(it.suggest) : already;
+    return Object.assign({}, it, { when: part.when, vp, already, prefill: pre, unit, n: unit > 0 ? Math.round(vp / unit) : 0, opts: c && c.opts ? c.opts : null, max: c && c.max != null ? Number(c.max) : (it.max != null ? Number(it.max) : null) });
+  }));
   const maxOf = it => (it.max != null ? Number(it.max) : 15);
   const mod = { vp: 0 };
   const yesNo = (vp, on) => `<button type="button" class="score-tog${on ? ' on' : ''}" data-opt="${esc(vp)}" aria-pressed="${on}">${on ? '✓ Achieved' : 'Not achieved'}</button>`;
@@ -489,7 +533,7 @@ export function openScoreSheet(ctx, ui) {
     let ctl, sub = '';
     if (it.opts) {
       ctl = `<div class="score-stages">${it.opts.map(o => { const v = Number(o.vp) || 0;
-        return `<div class="score-stage"><span class="score-stage-t">${esc(o.t)} <b class="score-stage-vp">· ${esc(v)} VP</b></span>${yesNo(v, it.vp === v)}</div>`; }).join('')}</div>`;
+        return `<div class="score-stage"><span class="score-stage-t"><span class="rule-text">${esc(o.t)}</span> <b class="score-stage-vp">· ${esc(v)} VP</b></span>${yesNo(v, it.vp === v)}</div>`; }).join('')}</div>`;
     } else if (it.k === 'per') {
       sub = `${esc(it.unit)} VP each${it.max != null ? ` · max. ${esc(it.max)} VP` : ''}`;
       ctl = `<div class="score-count"><div class="stepper sm p${player}">
@@ -505,7 +549,8 @@ export function openScoreSheet(ctx, ui) {
       <div class="score-main">
         <div class="score-card"><span class="badge ${it.src === 'primary' ? 'ok' : 'warn'}">${esc(SRC_LABEL[it.src] || it.src)}</span> <b>${esc(it.name)}</b></div>
         <div class="score-text">${esc(it.text || '')}</div>
-        ${sub || it.already ? `<div class="score-sub muted xs">${sub}${it.already ? (sub ? ' · ' : '') + '<span class="text-ok">' + esc(it.already) + ' VP already booked</span>' : ''}</div>` : ''}
+        ${(() => { const h = [sub, it.already ? `<span class="text-ok">${esc(it.already)} VP already booked</span>` : '', it.prefill ? '<span class="text-warn">pre-filled from the objective strip – check</span>' : ''].filter(Boolean);
+          return h.length ? `<div class="score-sub muted xs">${h.join(' · ')}</div>` : ''; })()}
       </div>
       <div class="score-ctl2">${ctl}</div>
     </div>`;
@@ -524,20 +569,24 @@ export function openScoreSheet(ctx, ui) {
     return ids;
   };
   const sum = st => (st.scores || []).filter(x => x.player === player).reduce((a, x) => a + (Number(x.vp) || 0), 0);
+  // only this player's part (score.confirm { player }); group = the tablet step waiting for this scoring
+  const withGroup = (a, st) => (st && typeof st.pendingGroup === 'string' && st.pendingGroup ? Object.assign(a, { group: st.pendingGroup }) : a);
+  const confirmAction = (add, st) => withGroup({ type: 'score.confirm', player, items: add.map(it => ({ src: it.src, card: it.card, ci: it.ci, vp: it.vp })), achieve: true }, st);
   // VP actually booked after the caps: the same steps on a copy of the state (null = cannot tell)
   const cappedVp = () => {
     try {
       const st0 = (ui.ctx || ctx).state;
-      if (!st0 || !st0.pending || pendingKey(st0) !== key) return null;
+      if (!st0 || !st0.pending || pendingKey(st0, player) !== key) return null;
       const { dec, add } = plan();
       let st = st0;
       for (const id of unbookIds(st0, dec)) st = reduce(st, { type: 'score.remove', scoreId: id });
-      st = reduce(st, { type: 'score.confirm', player, items: add.map(it => ({ src: it.src, card: it.card, ci: it.ci, vp: it.vp })), achieve: true });
+      st = reduce(st, confirmAction(add, null));
       return items.reduce((a, i) => a + (i.already || 0), 0) + sum(st) - sum(st0);
     } catch { return null; }
   };
   const totalVp = () => items.reduce((a, i) => a + i.vp, 0) + mod.vp;
-  const bodyHtml = () => `<p class="muted small">${esc(WHEN_LABEL[pend.when] || pend.when)} · Round ${esc(s.round)}${pend.when === 'turn' && player !== s.turn ? ` · end of ${esc(pName(s, s.turn))}'s turn` : ''}</p>
+  const label = partsLabel(s, player, parts);
+  const bodyHtml = () => `<p class="muted small">${esc(label)} · Round ${esc(s.round)}</p>
       <div class="score-list">${items.map(rowHtml).join('') || '<p class="muted small">Nothing to score right now.</p>'}</div>
       <div class="score-item score-mod">
         <div class="score-main"><div class="score-card"><b>Modifier</b></div><div class="score-text muted small">Manual correction for anything the list above cannot express (booked as a separate entry).</div></div>
@@ -553,17 +602,18 @@ export function openScoreSheet(ctx, ui) {
     return `<span>Total</span><span class="score-total-v">${capped != null && capped !== raw ? `<small class="muted score-uncapped">(${raw} VP before the caps)</small> ` : ''}<b>${shown} VP</b></span>`;
   };
   const close = sheet({
-    title: 'Your scoring · ' + (WHEN_LABEL[pend.when] || pend.when),
+    title: 'Your scoring · ' + label,
     cls: 'tbl-score pl-score p' + player,
     body: bodyHtml(),
     actions: [{ label: 'Confirm scoring', kind: 'primary', cta: true, onClick: (closeFn) => {
       (async () => {
         const c = ui.ctx || ctx;
-        if (!c.state.pending || pendingKey(c.state) !== key) { toast('This scoring was already confirmed', 'warn'); closeFn(); return; }
+        if (!c.state.pending || pendingKey(c.state, player) !== key) { toast('This scoring was already confirmed', 'warn'); closeFn(); return; }
         const { dec, add } = plan();
         const shown = cappedVp();   // before unbooking (the preview runs the same steps on the current state)
-        for (const id of unbookIds(c.state, dec)) await c.dispatch({ type: 'score.remove', scoreId: id });
-        const r = await (ui.ctx || c).dispatch({ type: 'score.confirm', player, items: add.map(it => ({ src: it.src, card: it.card, ci: it.ci, vp: it.vp })), achieve: true });
+        for (const id of unbookIds(c.state, dec)) await c.dispatch(withGroup({ type: 'score.remove', scoreId: id }, c.state));
+        const c2 = ui.ctx || c;
+        const r = await c2.dispatch(confirmAction(add, c2.state));
         if (!r) return;
         toast(`Scoring confirmed${shown != null ? `: ${shown} VP` : ''}`, 'ok');
         closeFn();
@@ -585,6 +635,7 @@ export function openScoreSheet(ctx, ui) {
         if (!it) return;
         if (n) { it.n = Math.max(0, it.n + Number(n.dataset.n)); it.vp = Math.min(maxOf(it), it.n * it.unit); if (Number(n.dataset.n) > 0 && it.vp >= maxOf(it)) it.n = Math.ceil(it.vp / it.unit); }
         else { const v = Number(o.dataset.opt) || 0; it.vp = it.vp === v ? 0 : v; }
+        it.prefill = false;
         el.querySelector('.sheet-body').innerHTML = bodyHtml();
         tot.innerHTML = totalHtml();
       });
@@ -614,7 +665,7 @@ export function openScoreView(ctx, ui) {
     body: `<table class="vp-table">${head}<tbody>
         <tr><td>Primary</td><td>${vp[0].primary}</td><td>${vp[1].primary}</td></tr>
         <tr><td>Secondary</td><td>${vp[0].secondary}</td><td>${vp[1].secondary}</td></tr>
-        <tr><td>Modifier / bonus</td><td>${vp[0].bonus}</td><td>${vp[1].bonus}</td></tr>
+        ${bonusRows(state, vp)}
         <tr class="total"><td>Total</td><td>${vp[0].total}</td><td>${vp[1].total}</td></tr></tbody></table>
       <div class="label">By battle round</div>
       <table class="vp-table">${head}<tbody>${rounds.map(r => `<tr><td>Round ${r}</td><td>${per(0, r)}</td><td>${per(1, r)}</td></tr>`).join('')}${endRow}</tbody></table>

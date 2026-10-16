@@ -15,6 +15,7 @@ import { loadOrig, origDetachment, origDetachmentRule, origEnhancements } from '
 import { kwList, kwify } from './keywords.js';
 import { ruleBoxes, roleSections, roleOf } from './army-book.js';
 import { profileChanges } from '../builder/profiles.js';
+import { tr } from '../i18n.js';   // titles set on existing elements (the German layer does not watch attribute changes)
 
 const dsCache = new Map();   // faction id → datasheet package (or 'loading')
 
@@ -1308,7 +1309,8 @@ function leadHtml(V, w) {
     <button type="button" class="arm-opt${cur ? '' : ' on'}" data-action="arm-op" data-op="lead" data-id="${esc(w.s.id)}" data-to="">None</button>
     ${cands.map(x => {
       const ls = full(x), others = leadersOf(V, x).filter(y => y !== w), m = countModels(x);
-      return `<button type="button" class="arm-opt${cur === x.s.id ? ' on' : ''}" data-action="arm-op" data-op="lead" data-id="${esc(w.s.id)}" data-to="${esc(x.s.id)}"${ls ? ' disabled' : ''}>${esc(unitName(V, x) + nth(x))}${m ? ` <span class="arm-cost">(${m})</span>` : ''}${others.length ? ` <span class="arm-ledby">– led by ${esc(others.map(y => unitName(V, y)).join(', '))}</span>` : ''}</button>`;
+      // only the unit names are kept from the German layer (data-no-i18n); "– led by" is interface text (arm-opt-i18n)
+      return `<button type="button" class="arm-opt arm-opt-i18n${cur === x.s.id ? ' on' : ''}" data-action="arm-op" data-op="lead" data-id="${esc(w.s.id)}" data-to="${esc(x.s.id)}"${ls ? ' disabled' : ''}><span data-no-i18n>${esc(unitName(V, x) + nth(x))}</span>${m ? ` <span class="arm-cost">(${m})</span>` : ''}${others.length ? ` <span class="arm-ledby">– led by <span data-no-i18n>${esc(others.map(y => unitName(V, y)).join(', '))}</span></span>` : ''}</button>`;
     }).join('')}</div></div>`;
 }
 
@@ -1542,7 +1544,7 @@ function openAdd(q0 = '') {
           x.disabled = info.max >= 0 && info.have >= info.max;
           const over = !x.disabled && Number(x.querySelector('.arm-u-pts').textContent) > rest;
           x.classList.toggle('over', over);
-          if (over) x.title = 'More than the points left'; else x.removeAttribute('title');
+          if (over) x.title = tr('More than the points left'); else x.removeAttribute('title');
         });
         return V2;
       };

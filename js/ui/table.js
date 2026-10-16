@@ -487,7 +487,7 @@ function secondariesHtml(ctx, p, sc) {
     if (!list.length && !canDraw) out += `<div class="card flat muted center small">No cards in hand.</div>`;
   }
   for (const c of list) {
-    const drawnHint = drawnHintShown(s, p, c.card) ? `<div class="xs text-warn sec-hint">${esc(c.drawn.text)}${drawnExtra(s, p, c.card)}</div>` : '';
+    const drawnHint = drawnHintShown(s, p, c.card) ? `<div class="xs text-warn sec-hint"><span class="rule-text">${esc(c.drawn.text)}</span>${drawnExtra(s, p, c.card)}</div>` : '';
     out += `
       <div class="card scard secondary p${p}" data-card="${esc(c.card)}">
         <div class="card-head">
@@ -716,8 +716,8 @@ function secCardHtml(s, p, card, o) {
     <div class="card-head"><div class="title">${esc(def.name)}</div>${def.fixed ? badge('Fixed-eligible', '') : ''}</div>
     ${origBlock(o && (o.text || o), 'Original card text')}
     ${!o ? `<ul class="info-conds" data-no-i18n>${conds}</ul>` : ''}
-    ${def.note ? `<p class="small"><b>Action:</b> ${esc(def.note)}</p>` : ''}
-    ${drawnHintShown(s, p, card) ? `<p class="small text-warn"><b>When drawn:</b> ${esc(def.drawn.text)}${drawnExtra(s, p, card)}</p>` : ''}
+    ${def.note ? `<p class="small"><b>Action:</b> <span class="rule-text">${esc(def.note)}</span></p>` : ''}
+    ${drawnHintShown(s, p, card) ? `<p class="small text-warn"><b>When drawn:</b> <span class="rule-text">${esc(def.drawn.text)}</span>${drawnExtra(s, p, card)}</p>` : ''}
   </div>`;
 }
 /** May this hand card be shuffled back / discarded per its own card rule right now? ("active" = in the hand) */
@@ -792,7 +792,7 @@ function openPickSheet(p, card, after) {
   if (card === 'beacon') {
     sheet({
       title: `${def.name} – select the beacon unit`, cls: 'p' + p,
-      body: `<p class="small muted">${esc(def.drawn ? def.drawn.text : '')}</p><div class="col pick-list">${units.map(u => `<button type="button" class="btn ${cur0 === u.id ? `p${p}` : 'ghost'} cta" data-unit="${esc(u.id)}">${esc(u.name)}</button>`).join('')}</div>`,
+      body: `<p class="small muted rule-text">${esc(def.drawn ? def.drawn.text : '')}</p><div class="col pick-list">${units.map(u => `<button type="button" class="btn ${cur0 === u.id ? `p${p}` : 'ghost'} cta" data-unit="${esc(u.id)}">${esc(u.name)}</button>`).join('')}</div>`,
       actions: [{ label: 'Cancel', kind: 'ghost' }],
       onOpen: (el, close) => el.addEventListener('click', e => { const b = e.target.closest('[data-unit]'); if (!b) return; close(); done(b.dataset.unit); })
     });
@@ -803,7 +803,7 @@ function openPickSheet(p, card, after) {
   const objs = (s.objectives || []);
   sheet({
     title: `${def.name} – select the guards`, cls: 'p' + p,
-    body: `<p class="small muted">${esc(def.drawn ? def.drawn.text : '')}</p>
+    body: `<p class="small muted rule-text">${esc(def.drawn ? def.drawn.text : '')}</p>
       ${objs.map(o => `<label class="field"><span>${esc(objLabel(s, o))}</span><select name="${esc(o.id)}"><option value="">– no guard –</option>${units.map(u => `<option value="${esc(u.id)}"${have[o.id] === u.id ? ' selected' : ''}>${esc(u.name)}</option>`).join('')}</select></label>`).join('') || '<p class="muted small">No objective markers (deployment map missing).</p>'}`,
     actions: [{ label: 'Cancel', kind: 'ghost' }, { label: 'Save', kind: 'primary', onClick: (close, el) => {
       const v = objs.map(o => { const sel = el.querySelector(`select[name="${o.id}"]`); return sel && sel.value ? o.id + ':' + sel.value : null; }).filter(Boolean);
@@ -885,7 +885,7 @@ function editorRow(sec, si, it, i) {
   let ctl, sub = '';
   if (it.opts) {
     ctl = `<div class="score-stages">${it.opts.map(o => { const v = Number(o.vp) || 0;
-      return `<div class="score-stage"><span class="score-stage-t">${esc(o.t)} <b class="score-stage-vp">· ${esc(v)} VP</b></span>${yesNo(v, it.vp === v)}</div>`; }).join('')}</div>`;
+      return `<div class="score-stage"><span class="score-stage-t"><span class="rule-text">${esc(o.t)}</span> <b class="score-stage-vp">· ${esc(v)} VP</b></span>${yesNo(v, it.vp === v)}</div>`; }).join('')}</div>`;
   } else if (it.k === 'per') {
     sub = `${esc(it.unit)} VP each${it.max != null ? ` · max. ${esc(it.max)} VP` : ''}`;
     ctl = `<div class="score-count"><div class="stepper sm p${sec.player}">
@@ -1135,7 +1135,7 @@ function openMoveHostSheet() {
   const code = cur.ctx.code;
   openTextSheet('Move host to another device', `
     <p class="small">The game runs on the device that created it. To move it to this tablet / PC or another one (e.g. when the phone that hosts it must leave the table):</p>
-    <ol class="info-ol">
+    <ol class="info-ol" data-i18n>
       <li>On the device that should host the game, open Battle Report 40k (the app – Android or Windows).</li>
       <li>On a tablet or PC the home screen shows “Take over game ${esc(code)}”; otherwise go to <b>Join game</b> → <b>Games nearby</b> and tap <b>Take over as host</b> on game ${esc(code)}.</li>
       <li>All connected devices switch to the new host by themselves, in the same role. The old device keeps a read-only copy.</li>
@@ -1159,7 +1159,7 @@ async function openInfoSheet(p, src, card) {
       ${origBlock(o && (o.text || o), 'Original card text')}
       ${def.desc ? `<p data-no-i18n>${esc(def.desc)}</p>` : ''}
       ${def.note ? `<p class="small"><b>Note:</b> ${esc(def.note)}</p>` : ''}
-      ${def.drawn ? `<p class="small text-warn"><b>When drawn:</b> ${esc(def.drawn.text)}</p>` : ''}
+      ${def.drawn ? `<p class="small text-warn"><b>When drawn:</b> <span class="rule-text">${esc(def.drawn.text)}</span></p>` : ''}
       <ul class="info-conds" data-no-i18n>${(def.c || []).map(c => `<li class="${c.sub ? 'sub' : ''}"><span class="vp">${c.k === 'choice' ? esc((c.opts || []).map(o => vpT(o.vp)).join('/')) : esc(vpT(c.vp))} VP${c.k === 'per' ? ' each' : ''}${c.max != null ? ', max. ' + esc(c.max) : ''}</span><span>${esc(c.t)}${c.opts ? ' – ' + esc(c.opts.map(o => `${o.t} (${vpT(o.vp)} VP)`).join(' · ')) : ''}<span class="muted xs"> · ${esc(WH.TIMING_LABELS[c.w] || c.w)}${c.r && (c.r[0] !== 1 || c.r[1] !== 5) ? ` · R${c.r[0]}${c.r[1] !== c.r[0] ? '–' + c.r[1] : ''}` : ''}</span></span></li>`).join('')}</ul>
       ${def.trk && def.trk.length ? `<p class="xs muted">Counters for this mission: ${esc(def.trk.map(t => t.label).join(', '))} – not tracked automatically here, book the points as agreed.</p>` : ''}`,
     actions: [{ label: 'Close', kind: 'ghost' }]

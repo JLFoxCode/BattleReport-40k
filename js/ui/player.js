@@ -47,7 +47,8 @@ export function render(root, ctx) {
     } else {
       put('head', T.renderHead(ctx, ui));
       put('tabs', T.renderTabs(ctx, ui));
-      put('deploy', stage === 'deploy' ? T.renderDeploy(ctx, ui) : '');
+      // deployment info, in the battle the "+1 CP" rule offers (Add / Skip) above every tab
+      put('deploy', stage === 'deploy' ? T.renderDeploy(ctx, ui) : T.renderCpOffers(ctx));
       put('side', T.renderSide(ctx, ui));
       put('guide', compactGuide(guideHtml(state, me)));
       bindGuide(root, ctx.rerender);
@@ -96,7 +97,7 @@ function compactGuide(html) {
 function syncSheets(ctx, ui) {
   const s = ctx.state;
   if (!s) return;
-  const key = s.stage === 'battle' && s.pending && s.pending.kind === 'score' && s.pending.player === ctx.me ? S.pendingKey(s) : null;
+  const key = s.stage === 'battle' ? S.pendingKey(s, ctx.me) : null;   // only this player's own open part
   if (ui.scoreSheet && ui.scoreSheet.key !== key) { const c = ui.scoreSheet.close; ui.scoreSheet = null; c(); }
   if (key && !ctx.spectator && !ui.scoreSheet && ui.scoreDismissed !== key) S.openScoreSheet(ctx, ui);
   if (ui.startSheet) { ui.startSheet.refresh(); return; }
@@ -295,6 +296,15 @@ H['sec.achieve'] = async (el, ctx, ui) => {
   if (r) toast(`${name} achieved`, 'ok', 2000);
 };
 H['sec.discard.open'] = (el, ctx, ui) => S.openDiscardSheet(ctx, ui, el.dataset.card);
+H['sec.pick'] = (el, ctx, ui) => S.openPickSheet(ctx, ui, el.dataset.card);
+/** "+1 CP" rule offer (Da Boss …): Add books the CP, Skip only removes the offer. */
+H['cp.offer'] = async (el, ctx, ui) => {
+  const ok = el.dataset.ok === '1';
+  const o = (ctx.state.cpOffers || []).find(x => x.id === el.dataset.id);
+  el.disabled = true;
+  const r = await (ui.ctx || ctx).dispatch({ type: 'cp.offer', player: ctx.me, offerId: el.dataset.id, accept: ok });
+  if (r && ok && o) toast(`+${o.cp} CP – ${o.name}`, 'ok', 2000);
+};
 H['sec.return'] = async (el, ctx) => {
   const r = await ctx.dispatch({ type: 'sec.discard', player: ctx.me, card: el.dataset.card, reason: 'return', cardRule: true });
   if (r) toast('Card rule applied – new card drawn', 'ok', 2500);

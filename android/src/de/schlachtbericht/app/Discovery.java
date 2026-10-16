@@ -66,9 +66,15 @@ class Discovery {
                             o.put("host", host);
                             o.put("port", i.getPort());
                             Map<String, byte[]> a = i.getAttributes();
-                            for (String k : new String[] { "code", "p0", "p1", "stage" }) {
+                            for (String k : new String[] { "code", "p0", "p1", "stage", "dev" }) {
                                 byte[] v = a.get(k);
                                 o.put(k, v == null ? "" : new String(v, StandardCharsets.UTF_8));
+                            }
+                            // c0 / c1 = the players' colour indices (missing from older hosts → null), like server/mdns.js list()
+                            for (String k : new String[] { "c0", "c1" }) {
+                                byte[] v = a.get(k);
+                                String t = v == null ? "" : new String(v, StandardCharsets.UTF_8);
+                                o.put(k, t.matches("\\d{1,3}") ? (Object) Integer.parseInt(t) : JSONObject.NULL);
                             }
                             found.put(i.getServiceName(), o);
                         }

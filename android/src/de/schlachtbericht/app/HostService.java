@@ -84,7 +84,15 @@ public class HostService extends Service {
             active.add(code);
             String p0 = g.optJSONArray("players") != null ? g.optJSONArray("players").optString(0, "") : "";
             String p1 = g.optJSONArray("players") != null ? g.optJSONArray("players").optString(1, "") : "";
-            String key = p0 + "|" + p1 + "|" + g.optString("stage");
+            // c0 / c1 = the players' colour indices (join list), dev = this device's name (handover banner) – like server/mdns.js
+            org.json.JSONArray colors = g.optJSONArray("colors");
+            String[] col = new String[2];
+            for (int i = 0; i < 2; i++) {
+                Object c = colors != null && i < colors.length() ? colors.opt(i) : null;
+                col[i] = c instanceof Number && ((Number) c).doubleValue() == Math.rint(((Number) c).doubleValue()) && ((Number) c).longValue() >= 0 ? String.valueOf(((Number) c).longValue()) : null;
+            }
+            String dev = cut(deviceName());
+            String key = p0 + "|" + p1 + "|" + g.optString("stage") + "|" + col[0] + "|" + col[1] + "|" + dev;
             if (key.equals(advertisedKey.get(code))) continue;
             unadvertise(code);
             NsdServiceInfo info = new NsdServiceInfo();
@@ -95,6 +103,8 @@ public class HostService extends Service {
             info.setAttribute("p0", cut(p0));
             info.setAttribute("p1", cut(p1));
             info.setAttribute("stage", g.optString("stage"));
+            for (int i = 0; i < 2; i++) if (col[i] != null) info.setAttribute("c" + i, col[i]);
+            if (!dev.isEmpty()) info.setAttribute("dev", dev);
             NsdManager.RegistrationListener l = new NsdManager.RegistrationListener() {
                 public void onRegistrationFailed(NsdServiceInfo s, int e) { android.util.Log.w("HostService", "NSD register failed " + e); }
                 public void onUnregistrationFailed(NsdServiceInfo s, int e) {}
@@ -110,6 +120,14 @@ public class HostService extends Service {
     }
 
     private static String cut(String s) { return s.length() > 40 ? s.substring(0, 40) : s; }
+
+    /** The device's name as the user set it ("Justin's Pixel"), else the model ("Pixel 7"). */
+    private String deviceName() {
+        String n = null;
+        try { n = android.provider.Settings.Global.getString(getContentResolver(), "device_name"); } catch (Exception ignored) {}
+        if (n == null || n.trim().isEmpty()) n = Build.MODEL;
+        return n == null ? "" : n.trim();
+    }
 
     private void unadvertise(String code) {
         NsdManager.RegistrationListener l = advertised.remove(code);

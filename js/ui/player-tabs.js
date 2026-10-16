@@ -77,7 +77,35 @@ export function missionsDue(ctx) {
   const { state, me } = ctx;
   if (state.stage !== 'battle' || ctx.spectator) return false;
   const sec = (state.players[me] || {}).secondaries || {};
-  return (sec.mode === 'tactical' && (sec.toDraw || 0) > 0) || !!(state.pending && state.pending.kind === 'score' && state.pending.player === me);
+  return (sec.mode === 'tactical' && (sec.toDraw || 0) > 0) || myParts(state, me).length > 0 || (state.cpOffers || []).some(o => o.player === me);
+}
+
+/** Open parts of the pending scoring: merged (pending.parts = [{ player, when, key, items, done }], one sheet per end of
+ *  turn on the tablet) or the classic single one (pending.player / when / items). */
+export function scoreParts(s) {
+  const pend = s && s.stage === 'battle' && s.pending;
+  if (!pend || pend.kind !== 'score') return [];
+  if (Array.isArray(pend.parts)) return pend.parts.filter(x => !x.done);
+  return [{ player: pend.player, when: pend.when, key: pend.key || `${s.round}:${s.turn}:${pend.when}:${pend.player}`, items: pend.items || [] }];
+}
+/** The player's own open part(s) – the phone shows and confirms only these. */
+export const myParts = (s, me) => scoreParts(s).filter(x => x.player === me);
+/** "End of turn" / "End of Anna's turn" / "End of battle" for the parts of player me (joined with +). */
+export function partsLabel(state, me, parts) {
+  const ws = [...new Set(parts.map(x => x.when))];
+  return ws.map(w => (w === 'turn' && me !== state.turn ? `End of ${pName(state, state.turn)}'s turn` : (WHEN_LABEL[w] || w))).join(' + ');
+}
+
+/** Open "+1 CP" rule offers of this player (state.cpOffers – Da Boss, Grand Strategist …): Add / Skip, shown above every
+ *  tab. Never booked by themselves: only the player knows whether the model is still on the battlefield. */
+export function renderCpOffers(ctx) {
+  const { state, me } = ctx;
+  if (state.stage !== 'battle' || ctx.spectator) return '';
+  return (state.cpOffers || []).filter(o => o.player === me).map(o => `<div class="card p${me} mis-due cp-offer">
+      <div class="card-head"><div class="title">${esc(o.name)}: +${esc(o.cp)} CP?</div></div>
+      <p class="small muted">${o.req === 'warlord' ? `Only if your WARLORD (${esc(o.unitName)}) is on the battlefield.` : `Only if ${esc(o.unitName)} is on the battlefield.`}</p>
+      <div class="row">${btn({ label: `Add ${o.cp} CP`, kind: `p${me}`, small: true, action: 'cp.offer', data: { id: o.id, ok: 1 } })}${btn({ label: 'Skip', kind: 'ghost', small: true, action: 'cp.offer', data: { id: o.id, ok: 0 } })}</div>
+    </div>`).join('');
 }
 
 export function renderTabs(ctx, ui) {
@@ -580,7 +608,8 @@ export function missionCondsNow(state, conds) {
 function condListHtml(state, conds) {
   const { now, later, atEnd } = missionCondsNow(state, conds || []);
   const vpTxt = c => `${c.vp != null ? esc(c.vp) + ' VP' : 'VP'}${c.k === 'per' ? ' each' : ''}`;
-  const notes = [...later.map(c => `From round ${esc(c.r[0])}: ${esc(c.text)} (${vpTxt(c)})`), ...atEnd.map(c => `End of the battle: ${esc(c.text)} (${vpTxt(c)})`)];
+  // the condition text is rule content (stays English): its own span, the frame around it is interface text
+  const notes = [...later.map(c => `<span>From round ${esc(c.r[0])}:</span> <span class="rule-text">${esc(c.text)}</span> <span>(${vpTxt(c)})</span>`), ...atEnd.map(c => `<span>End of the battle:</span> <span class="rule-text">${esc(c.text)}</span> <span>(${vpTxt(c)})</span>`)];
   return `${now.length ? `<ul class="conds">${now.map(c => condRow(c, { markActive: state.stage === 'battle' })).join('')}</ul>` : '<p class="muted xs">Nothing to score with this card in this battle round.</p>'}
     ${notes.length ? `<p class="muted xs mis-later">${notes.join(' · ')}</p>` : ''}`;
 }
@@ -599,6 +628,18 @@ export function canReturnCard(state, p, card) {
   const d = def.drawn;
   return (d.kind === 'round1' && state.round === 1) || (d.kind === 'conflict' && (sec.hand || []).includes(d.other)) || d.kind === 'target';
 }
+/** Objective marker label (same as the tablet's objective strip). */
+export const objLabel = (s, o) => (o.kind === 'home' ? `Home ${o.home != null ? pName(s, o.home) : ''}` : o.kind === 'exp' ? (o.id === 'o3' ? 'Expansion 1' : 'Expansion 2') : 'Centre');
+/** Picked units of Beacon / Burden of Trust (player effect 'sec:<card>') as one line, '' when none. */
+export function pickedText(s, p, card) {
+  const e = (((s.players[p] || {}).effects || {})['sec:' + card] || {}).value;
+  if (e == null) return '';
+  const unit = id => ((s.players[p].units || []).find(u => u.id === id) || { name: '?' }).name;
+  if (card === 'beacon') return 'Beacon unit: ' + unit(String(e));
+  const objName = id => { const o = (s.objectives || []).find(x => x.id === id); return o ? objLabel(s, o) : id; };
+  const list = (Array.isArray(e) ? e : []).map(x => String(x).split(':')).map(([o, u]) => objName(o) + ' – ' + unit(u));
+  return list.length ? 'Guards: ' + list.join(' · ') : '';
+}
 const misInfo = (src, card, name) => `<button type="button" class="btn ghost icon ds-info mis-info" data-action="mission.info" data-src="${esc(src)}" data-card="${esc(card)}" aria-label="Card text of ${esc(name)}">i</button>`;
 
 export function renderMissions(ctx, ui) {
@@ -611,13 +652,15 @@ export function renderMissions(ctx, ui) {
   const sec = (state.players[me] || {}).secondaries || {};
   const tactical = sec.mode === 'tactical';
   const out = [];
-  const pend = battle && state.pending && state.pending.kind === 'score' ? state.pending : null;
-  if (pend && pend.player === me) {
-    out.push(`<div class="card p${me} mis-due"><div class="card-head"><div class="title">Your scoring is due</div><span class="badge warn">${esc(WHEN_LABEL[pend.when] || pend.when)}</span></div>
+  const mine = myParts(state, me);
+  const others = [...new Set(scoreParts(state).map(x => x.player).filter(p => p !== me))];
+  if (mine.length) {
+    out.push(`<div class="card p${me} mis-due"><div class="card-head"><div class="title">Your scoring is due</div><span class="badge warn">${esc(partsLabel(state, me, mine))}</span></div>
       <p class="small">Mark what you achieved and confirm. The score device shows the result.</p>
       ${act ? btn({ label: 'Score now', kind: `p${me}`, cta: true, action: 'score.open', cls: 'pulse-soft' }) : ''}</div>`);
-  } else if (pend) {
-    out.push(`<div class="card mis-wait"><p class="small muted">Waiting for ${esc(pName(state, pend.player))} to confirm their scoring (${esc(WHEN_LABEL[pend.when] || pend.when)}).</p></div>`);
+  } else if (others.length) {
+    const doneMine = Array.isArray(state.pending.parts) && state.pending.parts.some(x => x.player === me && x.done);
+    out.push(`<div class="card mis-wait"><p class="small muted">${doneMine ? 'Your scoring is confirmed. ' : ''}Waiting for ${others.map(p => esc(pName(state, p))).join(' & ')} to confirm their scoring.</p></div>`);
   }
   if (battle && tactical && (sec.toDraw || 0) > 0) {
     const n = sec.toDraw;
@@ -636,7 +679,11 @@ export function renderMissions(ctx, ui) {
   out.push(`<div class="mis-bar"><span class="title sm">Secondary Missions</span><span class="muted xs">${tactical ? `Tactical · hand ${esc((sec.hand || []).length)} · deck ${esc((sec.deck || []).length)} · achieved ${esc((sec.achieved || []).length)}${sec.redrawUsed ? ' · redraw used' : ''}` : sec.mode === 'fixed' ? 'Fixed – active all battle' : ''}</span></div>`);
   if (!list.length) out.push(`<div class="card flat muted center small">${tactical ? ((sec.toDraw || 0) > 0 ? 'Draw your cards above.' : 'No cards in hand.') : 'No Secondary Missions.'}</div>`);
   list.forEach(c => {
-    const hint = drawnHintShown(state, me, c.card) ? `<p class="xs text-warn mis-hint"><b>When drawn:</b> ${esc(c.drawn.text)}${act && canReturnCard(state, me, c.card) ? ' ' + btn({ label: WH.SECONDARY[c.card].drawn.kind === 'target' ? 'Discard & draw a new card' : 'Draw a new card & shuffle this back', kind: 'ghost', small: true, action: 'sec.return', data: { card: c.card } }) : ''}</p>` : '';
+    const dk = ((WH.SECONDARY[c.card] || {}).drawn || {}).kind;
+    // Beacon (one unit) / Burden of Trust (a guard per objective): pick on the phone, stored as effect 'sec:<card>'
+    const picked = dk === 'unit' || dk === 'guard' ? pickedText(state, me, c.card) : '';
+    const pickBtn = act && (dk === 'unit' || dk === 'guard') && myUnits(state, me).length ? ' ' + btn({ label: dk === 'unit' ? (picked ? 'Change beacon unit' : 'Select beacon unit') : (picked ? 'Change guards' : 'Select guards'), kind: picked ? 'ghost' : `p${me}`, small: true, action: 'sec.pick', data: { card: c.card } }) : '';
+    const hint = drawnHintShown(state, me, c.card) || picked ? `<p class="xs text-warn mis-hint"><b>When drawn:</b> <span class="rule-text">${esc(c.drawn ? c.drawn.text : '')}</span>${act && canReturnCard(state, me, c.card) ? ' ' + btn({ label: WH.SECONDARY[c.card].drawn.kind === 'target' ? 'Discard & draw a new card' : 'Draw a new card & shuffle this back', kind: 'ghost', small: true, action: 'sec.return', data: { card: c.card } }) : ''}${picked ? `<span class="sec-picked"> ${esc(picked)}.</span>` : ''}${pickBtn}</p>` : '';
     const foot = act && tactical ? `<div class="mis-foot">
         ${btn({ label: 'Achieved', kind: 'ok', small: true, action: 'sec.achieve', data: { card: c.card } })}
         ${btn({ label: cpNote ? 'Discard · +1 CP' : 'Discard', kind: 'ghost', small: true, action: 'sec.discard.open', data: { card: c.card } })}
@@ -958,6 +1005,14 @@ export function renderDeploy(ctx, ui) {
       ${btn({ label: 'Rulebook', kind: 'ghost', small: true, action: 'nav', data: { href: `#/g/${ctx.code}/rules` } })}</div>`;
 }
 
+/** Bonus VP split into Battle Ready (bonus 'battle-ready') and the manual Modifier – rows only for what was booked. */
+export function bonusRows(state, vp) {
+  const br = [0, 1].map(p => (state.scores || []).filter(x => x.player === p && x.src === 'bonus' && x.card === 'battle-ready').reduce((a, x) => a + (Number(x.vp) || 0), 0));
+  const mod = [0, 1].map(p => (Number(vp[p].bonus) || 0) - br[p]);
+  return (br.some(Boolean) ? `<tr><td>Battle Ready</td><td>${br[0]}</td><td>${br[1]}</td></tr>` : '')
+    + (mod.some(Boolean) ? `<tr><td>Modifier</td><td>${mod[0]}</td><td>${mod[1]}</td></tr>` : '');
+}
+
 export function renderOver(ctx) {
   const { state, derived, me, code } = ctx;
   const vp = derived.vp || [{ total: 0, primary: 0, secondary: 0, bonus: 0 }, { total: 0, primary: 0, secondary: 0, bonus: 0 }];
@@ -970,7 +1025,7 @@ export function renderOver(ctx) {
     </div>
     <div class="card"><table class="vp-table"><thead><tr><th></th><th class="text-p0">${esc(pName(state, 0))}</th><th class="text-p1">${esc(pName(state, 1))}</th></tr></thead>
       <tbody><tr><td>Primary</td><td>${vp[0].primary}</td><td>${vp[1].primary}</td></tr><tr><td>Secondary</td><td>${vp[0].secondary}</td><td>${vp[1].secondary}</td></tr>
-      <tr><td>Modifier</td><td>${vp[0].bonus}</td><td>${vp[1].bonus}</td></tr><tr class="total"><td>Total</td><td>${vp[0].total}</td><td>${vp[1].total}</td></tr></tbody></table></div>
+      ${bonusRows(state, vp)}<tr class="total"><td>Total</td><td>${vp[0].total}</td><td>${vp[1].total}</td></tr></tbody></table></div>
     <div class="row">${btn({ label: 'Score view (read-only)', kind: 'primary', action: 'nav', data: { href: `#/g/${code}/watch` } })}${btn({ label: 'Lobby', kind: 'ghost', action: 'nav', data: { href: '#/' } })}</div>
   </div>`;
 }

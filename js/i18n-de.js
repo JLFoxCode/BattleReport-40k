@@ -452,3 +452,118 @@ PATTERNS.push(
   ['^(.+) – step (\\d+)$', (m, p, n) => p + ' – Schritt ' + n],
   ['^No entry contains all (\\d+) words – best matches with (\\d+) of them\\.$', (m, n, k) => 'Kein Eintrag enthält alle ' + n + ' Wörter – beste Treffer mit ' + k + ' davon.']
 );
+
+/* Seamless game flow 2026-10-16: merged scoring sheet, scoring on the phone, CP rule offers, score correction, card-rule
+ * picks, army builder (allies, saved mark, leader picker), setup "From My armies", host handover */
+const WHEN_DE = { 'End of turn': 'Ende des Zuges', 'End of battle': 'Schlachtende', 'End of the battle': 'Ende der Schlacht', 'End of Command phase': 'Ende der Command phase', 'End of your turn': 'Ende deines Zuges' };
+/** "End of turn + End of Anna's turn" → German, or null when a part is not a known moment. */
+const whenDe = w => {
+  const parts = String(w).split(' + ').map(x => WHEN_DE[x] || (/^End of (.+)'s turn$/.test(x) ? x.replace(/^End of (.+)'s turn$/, 'Ende des Zuges von $1') : null));
+  return parts.every(Boolean) ? parts.join(' + ') : null;
+};
+Object.assign(EXACT, {
+  'Skip': 'Überspringen', 'Allies': 'Verbündete', '✓ Saved': '✓ Gespeichert', '⚠ Not saved': '⚠ Nicht gespeichert', 'Battle Size': 'Spielgröße',
+  'Waiting for': 'Warten auf', 'to confirm on their phones': '– Bestätigung auf den Handys', 'to confirm on their phone': '– Bestätigung auf dem Handy',
+  'Confirm here': 'Hier bestätigen', '\'s phone is connected': ' – Handy verbunden', 'Leading:': 'Führt an:', 'Led by:': 'Angeführt von:', '(not in list)': '(nicht in der Liste)',
+  '– led by': '– angeführt von', 'Score now': 'Jetzt werten', 'Score breakdown': 'Punkteübersicht', 'Your scoring is due': 'Deine Wertung ist fällig',
+  'Scoring confirmed': 'Wertung bestätigt', 'Correct last scoring': 'Letzte Wertung korrigieren', 'Save correction': 'Korrektur speichern', 'No change': 'Keine Änderung',
+  'Select beacon unit': 'Beacon-Einheit wählen', 'Change beacon unit': 'Beacon-Einheit ändern', 'Select guards': 'Wachen wählen', 'Change guards': 'Wachen ändern',
+  '– no guard –': '– keine Wache –', 'Beacon unit selected': 'Beacon-Einheit gewählt', 'Guards saved': 'Wachen gespeichert',
+  'End of your turn': 'Ende deines Zuges', 'End of the battle': 'Ende der Schlacht', 'End of the battle:': 'Am Ende der Schlacht:',
+  'End of turn and end of the battle': 'Ende des Zuges und Ende der Schlacht', 'Start of': 'Beginn des Zuges von', 'active now': 'jetzt aktiv',
+  'none of your units': 'keine deiner Einheiten', 'Units with the keyword': 'Einheiten mit dem Keyword', 'Your units excluded': 'Deine ausgeschlossenen Einheiten',
+  'Move host to another device': 'Host auf ein anderes Gerät verlegen', 'Move host to another device…': 'Host auf ein anderes Gerät verlegen …',
+  'is ready and waiting for you': 'ist bereit und wartet auf dich', 'is ready and waiting for': 'ist bereit und wartet auf', '✓ You are ready – waiting for': '✓ Du bist bereit – warten auf',
+  'and tap': 'und tippe auf', 'No card left to draw': 'Keine Karte mehr zum Ziehen'
+});
+Object.assign(PHRASES, {
+  'Discard · +1 CP': 'Abwerfen · +1 CP', 'Discard & redraw (1 CP)': 'Abwerfen & neu ziehen (1 CP)',   // whole line: CP still goes through TERMS
+  // scoring (tablet sheet, phone sheet, correction)
+  'No scoring pending for you': 'Für dich ist keine Wertung offen', 'No scoring pending': 'Keine Wertung offen', 'This scoring was already confirmed': 'Diese Wertung wurde bereits bestätigt',
+  'Nothing to score right now.': 'Gerade gibt es nichts zu werten.', 'Your latest entries': 'Deine letzten Einträge',
+  'Mark what you achieved and confirm. The score device shows the result.': 'Markiere, was du erfüllt hast, und bestätige. Das Spielstand-Gerät zeigt das Ergebnis.',
+  'pre-filled from the objective strip – check': 'aus der Missionsziel-Leiste vorausgefüllt – bitte prüfen',
+  'Shows what is booked for that turn. Change what was wrong – only the difference is booked.': 'Zeigt, was für diesen Zug gebucht ist. Ändere, was falsch war – nur die Differenz wird gebucht.',
+  // Secondary Missions on the phone
+  'Discarding a card in your turn gives +1 CP at the end of your turn (once per turn).': 'Wirfst du in deinem Zug eine Karte ab, erhältst du am Ende deines Zuges +1 CP (einmal pro Zug).',
+  'You already discarded a card this turn – no further CP.': 'Du hast in diesem Zug schon eine Karte abgeworfen – kein weiterer CP.',
+  'Once per battle, at the end of your Command phase, you can spend 1 CP to discard a card and draw a new one.': 'Einmal pro Schlacht kannst du am Ende deiner Command phase 1 CP ausgeben, um eine Karte abzuwerfen und eine neue zu ziehen.',
+  'You gain 1 CP now (once per turn).': 'Du erhältst jetzt 1 CP (einmal pro Zug).', 'You gain 1 CP at the end of your turn (once per turn).': 'Du erhältst am Ende deines Zuges 1 CP (einmal pro Zug).',
+  'No CP – you already discarded a card this turn.': 'Kein CP – du hast in diesem Zug schon eine Karte abgeworfen.', 'No CP – it is not your turn.': 'Kein CP – es ist nicht dein Zug.',
+  'Or, once per battle at the end of your Command phase: spend 1 CP to discard it and draw a new card.': 'Oder, einmal pro Schlacht am Ende deiner Command phase: 1 CP ausgeben, um sie abzuwerfen und eine neue Karte zu ziehen.',
+  'Discard & redraw already used this battle.': 'Abwerfen & neu ziehen in dieser Schlacht schon genutzt.', 'Card rule applied – new card drawn': 'Kartenregel angewendet – neue Karte gezogen',
+  'The card moves to your achieved pile and leaves your hand. Book its VP first – your end-of-turn scoring moves scored cards there by itself.': 'Die Karte kommt auf deinen Stapel der erfüllten Karten und verlässt deine Hand. Buche zuerst ihre VP – deine Wertung am Zugende legt gewertete Karten von selbst dorthin.',
+  // stratagem keyword chips / affected units
+  'None of your units is excluded.': 'Keine deiner Einheiten ist ausgeschlossen.', 'None of your units has this keyword.': 'Keine deiner Einheiten hat dieses Keyword.',
+  'Attached unit · acts as one unit': 'Angeschlossene Einheit · zählt als eine Einheit',
+  // army builder
+  'More than the points left': 'Mehr als die verbleibenden Punkte', 'Every change is saved on this device automatically': 'Jede Änderung wird automatisch auf diesem Gerät gespeichert',
+  'Not saved – tap to try again': 'Nicht gespeichert – tippen, um es erneut zu versuchen', 'Army saved': 'Armee gespeichert', 'Still not saved – storage full or blocked': 'Immer noch nicht gespeichert – Speicher voll oder blockiert',
+  'Could not save the army on this device (storage full or blocked) – nothing was created.': 'Die Armee konnte auf diesem Gerät nicht gespeichert werden (Speicher voll oder blockiert) – nichts wurde angelegt.',
+  'Could not save the army on this device – your changes are kept while the editor stays open. Free some storage and try again.': 'Die Armee konnte auf diesem Gerät nicht gespeichert werden – deine Änderungen bleiben erhalten, solange der Editor offen ist. Gib Speicher frei und versuche es erneut.',
+  'Could not save the copy on this device (storage full or blocked)': 'Die Kopie konnte auf diesem Gerät nicht gespeichert werden (Speicher voll oder blockiert)',
+  'Detachment Points (DP): every detachment costs DP (shown next to it); the battle size sets how many you can spend – Incursion 2, Strike Force 3.': 'Detachment Points (DP): Jedes Detachment kostet DP (daneben angezeigt); die Spielgröße legt fest, wie viele du ausgeben kannst – Incursion 2, Strike Force 3.',
+  'Fewer Detachment Points': 'Weniger Detachment Points', 'More Detachment Points': 'Mehr Detachment Points',
+  'Not shown – the data hides this unit behind a switch:': 'Nicht angezeigt – die Daten verbergen diese Einheit hinter einem Schalter:',
+  'Not shown – the data hides these units behind a switch:': 'Nicht angezeigt – die Daten verbergen diese Einheiten hinter einem Schalter:',
+  // setup
+  'One tap sets faction, Detachment and the army list.': 'Ein Tipp setzt Fraktion, Detachment und Armeeliste.', 'Or choose faction and Detachment by hand': 'Oder Fraktion und Detachment von Hand wählen',
+  // host handover (More → Move host to another device)
+  'The game runs on the device that created it. To move it to this tablet / PC or another one (e.g. when the phone that hosts it must leave the table):': 'Das Spiel läuft auf dem Gerät, das es erstellt hat. So verlegst du es auf dieses Tablet / diesen PC oder ein anderes Gerät (z. B. wenn das hostende Handy den Tisch verlassen muss):',
+  'On the device that should host the game, open Battle Report 40k (the app – Android or Windows).': 'Öffne auf dem Gerät, das das Spiel hosten soll, Battle Report 40k (die App – Android oder Windows).',
+  'All connected devices switch to the new host by themselves, in the same role. The old device keeps a read-only copy.': 'Alle verbundenen Geräte wechseln von selbst zum neuen Host, in derselben Rolle. Das alte Gerät behält eine schreibgeschützte Kopie.',
+  'Both devices must be in the same Wi-Fi. Nothing is lost: the whole history moves with the game.': 'Beide Geräte müssen im selben WLAN sein. Nichts geht verloren: der ganze Verlauf zieht mit dem Spiel um.',
+  'Join game': 'Spiel beitreten', 'Games nearby': 'Spiele in der Nähe',
+  // engine messages (toasts)
+  'This CP offer is no longer open': 'Dieses CP-Angebot ist nicht mehr offen', 'Nothing to correct': 'Nichts zu korrigieren', 'Round must be 1–5': 'Die Runde muss 1–5 sein',
+  'VP must not be negative': 'VP dürfen nicht negativ sein', 'Invalid turn': 'Ungültiger Zug', 'No battle in progress': 'Keine Schlacht im Gange'
+});
+PATTERNS.push(
+  // when labels ("End of Anna's turn", joined with +), sheet titles and lines built from them
+  ['^End of (.+)\'s turn$', (m, n) => 'Ende des Zuges von ' + n], ['^(End of .+ \\+ End of .+)$', (m, w) => whenDe(w) || m],
+['^Your scoring · (.+)$', (m, w) => 'Deine Wertung · ' + (whenDe(w) || w)],
+  ['^(End of .+?) · Round (\\d+)$', (m, w, r) => (whenDe(w) || w) + ' · Runde ' + r],
+  ['^End of (.+)\'s turn and end of the battle$', (m, n) => 'Ende des Zuges von ' + n + ' und Ende der Schlacht'],
+  ['^Missions that score at the end of (.+)\'s turn$', (m, n) => 'Missionen, die am Ende des Zuges von ' + n + ' werten'],
+  ['^(.+) can also confirm this part on their own phone\\.$', (m, n) => n + ' kann diesen Teil auch auf dem eigenen Handy bestätigen.'],
+  ['^Scoring confirmed: (.+)$', (m, x) => 'Wertung bestätigt: ' + x.replace(/(-?\d+) VP for /g, '$1 VP für ')],
+  ['^Correct the last scoring of (.+)$', (m, n) => 'Letzte Wertung von ' + n + ' korrigieren'], ['^Correct scoring – (.+)$', (m, n) => 'Wertung korrigieren – ' + n],
+  ['^Scoring of (.+) corrected$', (m, n) => 'Wertung von ' + n + ' korrigiert'], ['^Round (\\d+) · (.+)\'s turn$', (m, r, n) => 'Runde ' + r + ' · Zug von ' + n],
+  ['^(.+) has no confirmed scoring to correct yet – book points on the condition rows\\.$', (m, n) => n + ' hat noch keine bestätigte Wertung zum Korrigieren – buche Punkte über die Bedingungszeilen.'],
+  ['^(?:Your scoring is confirmed\\. )?Waiting for (.+) to confirm their scoring\\.$', (m, n) => (m.startsWith('Your') ? 'Deine Wertung ist bestätigt. ' : '') + 'Warten auf die Bestätigung der Wertung von ' + n.replace(/ & /g, ' & ') + '.'],
+  ['^Objective control · tap a marker: (.+?) → (.+?) → (nobody|none → auto) · stays set between turns and pre-fills the scoring$', (m, a, b, z) => 'Kontrolle der Missionsziele · Marker antippen: ' + a + ' → ' + b + ' → ' + (z === 'nobody' ? 'niemand' : 'keiner → auto') + ' · bleibt zwischen den Zügen gesetzt und füllt die Wertung vor'],
+  ['^From round (\\d+):$', (m, r) => 'Ab Runde ' + r + ':'], ['^Card text of (.+)$', (m, n) => 'Kartentext von ' + n], ['^Datasheet of (.+)$', (m, n) => 'Datenblatt von ' + n],
+  // "+1 CP" rule offers (tablet line, phone card)
+  ['^\\(only if your WARLORD \\((.+)\\) is on the battlefield\\)$', (m, n) => '(nur wenn dein WARLORD (' + n + ') auf dem Schlachtfeld ist)'],
+  ['^\\(only if (.+) is on the battlefield\\)$', (m, n) => '(nur wenn ' + n + ' auf dem Schlachtfeld ist)'],
+  ['^Only if your WARLORD \\((.+)\\) is on the battlefield\\.$', (m, n) => 'Nur wenn dein WARLORD (' + n + ') auf dem Schlachtfeld ist.'],
+  ['^Only if (.+) is on the battlefield\\.$', (m, n) => 'Nur wenn ' + n + ' auf dem Schlachtfeld ist.'], ['^Add (\\d+) CP$', (m, n) => n + ' CP hinzufügen'],
+  // Beacon / Burden of Trust picks, card rules, discards
+  ['^Beacon unit: (.+)$', (m, n) => 'Beacon-Einheit: ' + n], ['^Guards: (.+)$', (m, n) => 'Wachen: ' + n],
+  ['^(.+) – select the beacon unit$', (m, n) => n + ' – Beacon-Einheit wählen'], ['^(.+) – select the guards$', (m, n) => n + ' – Wachen wählen'],
+  ['^No unit in (.+)\'s army list qualifies\\.$', (m, n) => 'Keine Einheit in der Armeeliste von ' + n + ' kommt infrage.'],
+  ['^(.+) discarded · drew (.+)$', (m, a, b) => a + ' abgeworfen · gezogen: ' + b], ['^(.+) discarded · no card left to draw$', (m, a) => a + ' abgeworfen · keine Karte mehr zum Ziehen'],
+  ['^(.+) discarded( · \\+1 CP)?( at the end of your turn)?$', (m, a, cp, end) => a + ' abgeworfen' + (cp ? ' · +1 CP' + (end ? ' am Ende deines Zuges' : '') : '')],
+  ['^New card: (.+)$', (m, n) => 'Neue Karte: ' + n], ['^Discard “(.+)”\\?$', (m, n) => '„' + n + '“ abwerfen?'], ['^“(.+)” achieved\\?$', (m, n) => '„' + n + '“ erfüllt?'],
+  ['^Drawn: (.+)$', (m, n) => 'Gezogen: ' + n],
+  ['^\'s turn · Fixed Secondary Missions: (.+)$', (m, l) => '· Fixed Secondary Missions: ' + l],
+  // stratagems on the phone
+  ['^Not available: (.+)$', (m, r) => 'Nicht verfügbar: ' + r], ['^needs (\\d+) CP$', (m, n) => 'braucht ' + n + ' CP'], ['^used \\(R(\\d+)\\)$', (m, r) => 'genutzt (R' + r + ')'],
+  ['^Your units with (.+)$', (m, k) => 'Deine Einheiten mit ' + k],
+  ['^(?:\\(unless they are (.+)\\) )?cannot be selected for this Stratagem\\.$', (m, u) => (u ? '(außer sie sind ' + u.replace(/ or /g, ' oder ') + ') ' : '') + 'können für dieses Stratagem nicht gewählt werden.'],
+  // army builder / setup
+  ['^(.+) – other catalogues this army may include$', (m, l) => l + ' – weitere Kataloge, die diese Armee enthalten darf'],
+  ['^needs (\\d+) DP – (\\d+) of (\\d+) left(.*)$', (m, d, l, t, x) => 'braucht ' + d + ' DP – ' + l + ' von ' + t + ' übrig' + x],
+  ['^“(.+)”: units taken, but the faction / Detachment could not be set completely – check step 2 \\(Army\\)$', (m, n) => '„' + n + '“: Einheiten übernommen, aber Fraktion / Detachment konnten nicht vollständig gesetzt werden – prüfe Schritt 2 (Armee)'],
+  // host handover steps (text pieces around the bold labels)
+  ['^On a tablet or PC the home screen shows “Take over game (\\w{4})”; otherwise go to$', (m, c) => 'Auf einem Tablet oder PC zeigt der Startbildschirm „Spiel ' + c + ' übernehmen“; sonst gehe zu'],
+  ['^on game (\\w{4})\\.$', (m, c) => 'bei Spiel ' + c + '.'],
+  // log lines of the game engine
+  ['^Scoring (End of Command phase|End of turn|End of battle) for (.+): (\\d+) condition\\(s\\) to check$', (m, w, n, k) => 'Wertung ' + whenDe(w) + ' für ' + n + ': ' + k + ' Bedingung(en) zu prüfen'],
+  ['^(.+): scoring confirmed \\((-?\\d+) VP\\)$', (m, n, v) => n + ': Wertung bestätigt (' + v + ' VP)'],
+  ['^(.+): \\+(\\d+) CP – (.+) \\((.+), start of the (battle round|Command phase)\\), now (\\d+) CP$', (m, n, c, r, u, w, k) => n + ': +' + c + ' CP – ' + r + ' (' + u + ', Beginn der ' + (w === 'battle round' ? 'Schlachtrunde' : 'Command phase') + '), jetzt ' + k + ' CP'],
+  ['^(.+): scoring corrected \\(round (\\d+), (.+)\'s turn\\) – (.+)$', (m, n, r, t, x) => n + ': Wertung korrigiert (Runde ' + r + ', Zug von ' + t + ') – ' + (x === 'no change' ? 'keine Änderung' : x)],
+  ['^(.+): “(.+)” achieved \\((\\d+) VP\\) – discarded$', (m, n, c, v) => n + ': „' + c + '“ erfüllt (' + v + ' VP) – abgeworfen'],
+  ['^(.+): “(.+)” discarded and redrawn \\(1 CP, (\\d+) left\\)(?: – drew “(.+)”|( – no card left to draw))?$', (m, n, c, k, d, none) => n + ': „' + c + '“ abgeworfen und neu gezogen (1 CP, ' + k + ' übrig)' + (d ? ' – gezogen: „' + d + '“' : none ? ' – keine Karte mehr zum Ziehen' : '')],
+  ['^No pending scoring for (.+)$', (m, n) => 'Keine offene Wertung für ' + n]
+);
