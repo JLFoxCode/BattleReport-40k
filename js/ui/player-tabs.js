@@ -2,18 +2,19 @@
  * of tiles (≥ 900 px) and the Setup/Deploy/Over stages. Pure (ctx, ui) → HTML; interaction via data-action
  * (delegation in player.js). The page explains no core rules – the Rulebook view (#/g/CODE/rules) does that. */
 import { WH } from '../../data/rules.js';
-import { esc, btn, chip } from './components.js';
+import { esc, btn, chip, badge } from './components.js';
 import {
   pName, phaseOf, stepper, stratCard, stratWhose, matchUnitAny, armyOf, myUnits,
   detailsRule, detailsOpen, enhancementOf, leaderBuffs, origData, origMod, ensureOrig, cleanOrig, resShort, stratPhaseId, phasePill, turnBadge,
-  effectItems, resourceFor, thresholdActive, thresholdDerive, choicePicked, toggleOn, counterNow, effectsOf, optionCost
+  effectItems, resourceFor, thresholdActive, thresholdDerive, choicePicked, toggleOn, counterNow, effectsOf, optionCost,
+  headLabel, unitGroups, affectsLine, stratKwList, condRow, cpOnlyReason
 } from './player-common.js';
 import { DS, ensureDatasheets } from './player-common.js';
 import { ruleBoxes, roleSections, roleOf as bookRole } from './army-book.js';
 import { datasheetCard, datasheetMissing, datasheetGroupCard, memberWargearAbilities, abilityVisible, optionKeywords } from './datasheet.js';
 import { normName } from '../data/datasheets.js';
 
-export const TABS = [['army', 'Army'], ['strats', 'Stratagems'], ['units', 'Army list']];
+export const TABS = [['army', 'Army'], ['missions', 'Missions'], ['strats', 'Stratagems'], ['units', 'Army list']];
 const OWN_PHASES = ['command', 'movement', 'shooting', 'charge', 'fight', 'end'];
 
 // ---------------------------------------------------------------- Current game state (helper data)
@@ -40,23 +41,48 @@ export function renderHead(ctx, ui) {
       <div class="pl-kpis">
         <div class="kpi p${me}"><b>${cp}</b><small>CP</small></div>
         ${headResources(ctx)}
-        <div class="kpi vp"><b><span class="text-p${me}">${vp[me].total}</span><span class="muted">:</span><span class="text-p${opp}">${vp[opp].total}</span></b><small>VP</small></div>
+        <button type="button" class="kpi vp pl-vp" data-action="score.view" aria-label="Score breakdown"><b><span class="text-p${me}">${vp[me].total}</span><span class="muted">:</span><span class="text-p${opp}">${vp[opp].total}</span></b><small>VP</small></button>
       </div>
       <button class="btn ghost icon pl-more" type="button" data-action="more.open" aria-label="Settings, notes and links">⋯</button>
     </div>`;
 }
 
-/** Army resource counter(s) in the pinned head, next to CP: compact stepper + short name ("YP"). */
+/** Once-per-battle toggle of the army effects that a resource counter mirrors ("War Cry (Waaagh!) – once per battle", max 1,
+ *  ↔ toggle "Waaagh!"): the toggle drives the counter, the counter is not shown in the head. → effect item | null */
+export function linkedToggleOf(ctx, p, r) {
+  if (!r || !(r.max === 1 || /once per battle/i.test(r.name || ''))) return null;
+  const { status, items } = effectItems(ctx, p);
+  if (status !== 'ok') return null;
+  const rn = nk(r.name);
+  return items.find(it => it.e.kind === 'toggle' && it.e.limit === 'battle' && nk(it.e.name).length >= 4 && rn.includes(nk(it.e.name))) || null;
+}
+/** Resource index a toggle item drives, or -1. */
+export function linkedResourceOf(ctx, p, item) {
+  const list = (ctx.state.players[p] || {}).resources || [];
+  return list.findIndex(r => { const t = linkedToggleOf(ctx, p, r); return !!t && t.key === item.key; });
+}
+
+/** Army resource counter(s) in the pinned head, next to CP: compact stepper + readable short name ("YP", "Fate Dice").
+ *  A counter driven by a toggle (Waaagh!) stays out of the head – the toggle in Active effects sets it. */
 function headResources(ctx) {
   const { state, me } = ctx;
   const resources = (state.players[me] || {}).resources || [];
-  return resources.map((r, index) => `<div class="kpi res p${me} pl-hres" title="${esc(r.name)}${r.max != null ? ' / max ' + r.max : ''}">
+  return resources.map((r, index) => linkedToggleOf(ctx, me, r) ? '' : `<div class="kpi res p${me} pl-hres" title="${esc(r.name)}${r.max != null ? ' / max ' + r.max : ''}">
       ${stepper({ value: r.value || 0, min: 0, max: r.max, action: 'res.step', data: { index }, small: true, player: me, cls: 'hres' })}
-      <small>${esc(resShort(r.name))}</small></div>`).join('');
+      <small>${esc(headLabel(r.name))}</small></div>`).join('');
+}
+
+/** Missions tab needs attention: Tactical cards to draw, or the player's own scoring is waiting for confirmation. */
+export function missionsDue(ctx) {
+  const { state, me } = ctx;
+  if (state.stage !== 'battle' || ctx.spectator) return false;
+  const sec = (state.players[me] || {}).secondaries || {};
+  return (sec.mode === 'tactical' && (sec.toDraw || 0) > 0) || !!(state.pending && state.pending.kind === 'score' && state.pending.player === me);
 }
 
 export function renderTabs(ctx, ui) {
-  return TABS.map(([id, label]) => chip({ label, on: ui.tab === id, action: 'tab', data: { tab: id }, cls: 'tab' })).join('');
+  const due = missionsDue(ctx);
+  return TABS.map(([id, label]) => chip({ html: `${esc(label)}${id === 'missions' && due ? '<span class="tab-dot" aria-label="action needed"></span>' : ''}`, on: ui.tab === id, action: 'tab', data: { tab: id }, cls: 'tab' + (id === 'missions' && due ? ' due' : '') })).join('');
 }
 
 /* ═══════════════ Tab 1: Army – ONLY what currently changes the game (data/effects, SCHEMA.md) ═══════════════ */
@@ -68,7 +94,7 @@ export function fxUse(state, p, key, limit) { return abilityUseOf(state, p, { ke
 const rangeLabel = s => (s.min != null && s.max != null ? `${s.min}–${s.max}` : s.min != null ? `${s.min}+` : s.max != null ? `≤${s.max}` : '');
 
 /** One row per effect: only the active state / option(s). opts.readOnly → no controls (opponent); opts.compact → tile. */
-function fxRow(ctx, p, it, opts = {}) {
+export function fxRow(ctx, p, it, opts = {}) {
   const { state } = ctx;
   const e = it.e;
   const ro = !!opts.readOnly || !!opts.compact;
@@ -105,7 +131,10 @@ function fxRow(ctx, p, it, opts = {}) {
   if (e.kind === 'toggle') {
     const on = toggleOn(state, p, it);
     if (ro && !on) return '';
-    const used = !on && !!e.limit && !!fxUse(state, p, `tog:${it.key}`, e.limit);
+    const ri = e.limit === 'battle' ? linkedResourceOf(ctx, p, it) : -1;
+    const lr = ri >= 0 ? state.players[p].resources[ri] : null;
+    // used: its once-per-X use is booked – or the counter it drives already says so (counter set by hand in older games)
+    const used = !on && !!e.limit && (!!fxUse(state, p, `tog:${it.key}`, e.limit) || (!!lr && (Number(lr.value) || 0) >= (lr.max || 1)));
     const sw = ro ? '' : `<button type="button" class="fx-switch${on ? ' on' : ''}" role="switch" aria-checked="${on}" data-action="fx.toggle" data-p="${p}" data-key="${esc(it.key)}"${used || state.stage !== 'battle' ? ' disabled' : ''}><span class="knob"></span><span class="sw-l">${on ? 'On' : used ? 'Used' : 'Off'}</span></button>`;
     return `<div class="fx-row fx-toggle${on ? '' : ' idle'}" data-fx="${esc(it.key)}"><div class="fx-top"><span class="fx-name">${esc(e.name)}</span>${scopePill(e.scope)}${sw}${compact ? '' : fxInfoBtn(p, it.key, e.name)}</div>${on ? line(e.effect) : ''}${compact ? '' : hint([e.limit ? limitLabel(e.limit) : '', e.when, e.duration])}</div>`;
   }
@@ -137,6 +166,41 @@ export function fxList(ctx, p, opts = {}) {
   if (status === 'none') return fxFallback(ctx, p, opts);
   const rows = items.map(it => fxRow(ctx, p, it, opts)).filter(Boolean);
   return rows.length ? rows.join('') : '<p class="muted small empty">No army effect active.</p>';
+}
+
+/** Choices / toggles made at the start of a turn or battle round (Combat Doctrines, Waaagh!, Oath of Moment …) that are still
+ *  open now: own Command phase items on the active player's turn, battle-round items in the first turn of a round (both
+ *  players). Used for the start-of-turn prompt on the phone. → [item] */
+const START_CMD_RE = /^(?:start of (?:your |a |the |either player['’]s )?command phase|your command phase|either player['’]s command phase)/i;
+const START_ROUND_RE = /^start of (?:the |each )?(?:first )?battle rounds?\b/i;
+export function startPicks(ctx) {
+  const { state, me } = ctx;
+  if (state.stage !== 'battle' || state.phase !== 'command') return [];
+  const { status, items } = effectItems(ctx, me);
+  if (status !== 'ok') return [];
+  const first = state.mission && state.mission.first != null ? state.mission.first : 0;
+  const roundStart = state.turn === first;
+  return items.filter(it => {
+    const e = it.e, w = String(e.when || '');
+    if (e.kind !== 'choice' && e.kind !== 'toggle') return false;
+    const cmd = START_CMD_RE.test(w) && (state.turn === me || /either player/i.test(w));
+    let round = START_ROUND_RE.test(w) && roundStart;
+    if (round && /first battle round/i.test(w)) round = state.round === 1;
+    const listed = /battle rounds ([\d ,and]+)/i.exec(w);
+    if (round && listed) round = (listed[1].match(/\d/g) || []).map(Number).includes(state.round);
+    if (!cmd && !round) return false;
+    const stored = ((state.players[me].effects) || {})[it.key];
+    if (stored && stored.round === state.round && stored.turn === state.turn) return false;   // already decided this turn
+    if (e.kind === 'toggle') {
+      if (toggleOn(state, me, it)) return false;
+      if (e.limit && fxUse(state, me, `tog:${it.key}`, e.limit)) return false;
+      const ri = e.limit === 'battle' ? linkedResourceOf(ctx, me, it) : -1;
+      if (ri >= 0 && (Number(state.players[me].resources[ri].value) || 0) >= (state.players[me].resources[ri].max || 1)) return false;
+      return true;
+    }
+    // choice: something left to pick (options not used up)
+    return (e.options || []).some(o => !(o.limit === 'battle' && fxUse(state, me, `opt:${it.key}:${o.id}`, 'battle')));
+  });
 }
 
 /** Auto rule for threshold effects (mirrors "decided at the end of your Command phase"):
@@ -317,7 +381,34 @@ export function abilityTracker(ctx) {
       if (e && e.text) add(`enh:${keyOf(e.name)}`, e.name, e.text, `Enhancement · ${label}`, 'enhancement');
     });
   });
+  linkFx(ctx, out);
   return out;
+}
+/** Tracker entries that are also an option / toggle of Active effects (a Combat Doctrine, Waaagh!) take their state from
+ *  there: fx = effect key, fxUseKey/fxLimit = the use booked by the effect, fxOn = picked / on right now. */
+function linkFx(ctx, entries) {
+  const { status, items } = effectItems(ctx, ctx.me);
+  if (status !== 'ok' || !entries.length) return;
+  const { state, me } = ctx;
+  const map = new Map();
+  items.forEach(it => {
+    const e = it.e;
+    if (e.kind === 'toggle' && e.limit) {
+      const v = { key: it.key, useKey: `tog:${it.key}`, limit: e.limit, on: toggleOn(state, me, it) };
+      map.set(nk(e.name), v);
+      // the rule may carry the name of the counter it drives ("War Cry" ↔ toggle "Waaagh!" ↔ "War Cry (Waaagh!) – once per battle")
+      const ri = e.limit === 'battle' ? linkedResourceOf(ctx, me, it) : -1;
+      if (ri >= 0) { const r = state.players[me].resources[ri]; v.byRes = (Number(r.value) || 0) >= (r.max || 1); map.set(nk(headLabel(r.name)), v); }
+    }
+    if (e.kind === 'choice') {
+      const picked = choicePicked(state, me, it);
+      (e.options || []).forEach(o => { if (o.limit) map.set(nk(o.name), { key: it.key, useKey: `opt:${it.key}:${o.id}`, limit: o.limit, on: picked.includes(o.id) }); });
+    }
+  });
+  entries.forEach(en => {
+    const m = map.get(nk(en.name)) || map.get(nk(String(en.name || '').replace(/\(.*?\)/g, ' ')));   // "War Cry (Once per battle, per army)"
+    if (m) Object.assign(en, { fx: m.key, fxUseKey: m.useKey, fxLimit: m.limit, fxOn: m.on, fxUsed: !!m.byRes });
+  });
 }
 /** The abilityUses entry that blocks `entry` right now (battle: any; round: same round; turn/phase: same round+turn), or null. */
 export function abilityUseOf(state, me, entry) {
@@ -332,10 +423,51 @@ export function phaseUsesOf(state, me, entry) {
 const phaseNames = uses => uses.map(u => (WH.PHASES.find(p => p.id === u.phase) || { name: 'this turn' }).name).join(' · ');
 export function abilityByKey(ctx, key) { return abilityTracker(ctx).find(e => e.key === key) || null; }
 
+/** Tracker entries whose text reduces a Stratagem's CP cost; amount = CP reduction (Infinity = free / 0 CP).
+ * CP gains ("you gain 1CP", "roll one D6: on a 5+") and CP increases ("twice/three times that Stratagem's … CP cost") are not reductions.
+ * list: precomputed cpReductions(ctx) (all Stratagems) to filter for one Stratagem without rebuilding the tracker. */
+const CP_RED_RE = /\bCP\b|\dCP\b|regardless of any other uses/i;
+const CP_HOW_RE = /\bless\b|\breduc(?:e|ed|es|ing)\b|\binstead of\b|\bfor 0 ?CP\b|\b0 ?CP\b|\bcosts? 0\b|\bfree\b|[-−–]\s?1 ?CP\b|regardless of any other uses/i;
+const CP_GAIN_RE = /\bgain(?:s|ed)? (?:\d|one|D\d)\s?CP\b|\byou gain\b|\broll one D6[:,]? on a\b|\bregain\b/i;
+const CP_MORE_RE = /\b(?:twice|two times|three times|double)\b[^.]*?\bStratagem['’]?s?\b[^.]*?\bCP\b|\bincreas(?:e|ed|es)\b[^.]*?\bCP\b|\b(?:\d|one) ?CP more\b/i;
+export function cpReductions(ctx, strat = null, list = null) {
+  const norm = x => String(x || '').toLowerCase().replace(/[^a-z0-9]+/g, '');
+  const all = list || abilityTracker(ctx).filter(e => CP_RED_RE.test(e.text) && CP_HOW_RE.test(e.text) && !CP_GAIN_RE.test(e.text) && !CP_MORE_RE.test(e.text)).map(e => {
+    const t = e.text;
+    let amount = 1;
+    if (/\bfor 0 ?CP\b|\b0 ?CP\b|\bcosts? 0\b|\bfree\b|\binstead of\b/i.test(t) && !/\breduc|\bless\b|[-−–]\s?1 ?CP\b/i.test(t)) amount = Infinity;
+    const m = /(\d)\s*CP\s+less\b|\bby\s+(\d)\s*CP\b|\breduced?\b[^.]*?\bby\s+(\d)\b|[-−–]\s?(\d) ?CP\b/i.exec(t);
+    if (m) amount = Number(m[1] || m[2] || m[3] || m[4]) || 1;
+    // a price for the reduction ("spend 1YP") is paid with it
+    const pay = /\bspend (\d+) ?([A-Z]{2,4})\b/.exec(t);
+    return Object.assign({ amount, pay: pay ? { n: Number(pay[1]), res: pay[2] } : null }, e);
+  });
+  // "… with the Command Re-roll Stratagem …" / "… with the Rapid Ingress stratagem …" (Teleport Homer): only for that Stratagem
+  return all.filter(e => { const only = /\bthe ([A-Z][A-Za-z’'\- ]*?) [Ss]tratagem\b/.exec(e.text); return !strat || !only || norm(only[1]) === norm(strat.name); });
+}
+/** Could an unused CP reduction make the Stratagem affordable right now? */
+export function canReduceNow(ctx, s, list) {
+  const { state, me } = ctx;
+  const cp = (state.players[me] || {}).cp || 0, cost = Number(s.cost) || 0;
+  return cpReductions(ctx, s, list).some(e => !abilityUseOf(state, me, e) && Math.max(0, cost - (e.amount === Infinity ? cost : e.amount)) <= cp);
+}
+
 function abilityRows(ctx, entries) {
   const { state, me } = ctx;
   const inBattle = state.stage === 'battle';
   return `<ul class="abil-list">${entries.map(e => {
+    if (e.fx) {
+      // state from Active effects (picked there): active now / used / available
+      const use = abilityUseOf(state, me, { key: e.fxUseKey, limit: e.fxLimit }) || (e.fxUsed ? { round: '?' } : null);
+      const st = e.fxOn ? 'active now' : use ? (use.round === '?' ? 'used' : `used (R${use.round})`) : inBattle ? 'available' : 'in battle';
+      return `<li class="abil linked${e.fxOn ? ' on' : use ? ' used' : ''} kind-${esc(e.kind)}">
+      <button type="button" class="abil-toggle" data-action="ability.toggle" data-key="${esc(e.key)}" aria-label="${esc(e.name)}: ${esc(st)} – set under Active effects">
+        <span class="abil-main"><b class="abil-name">${esc(e.name)}</b><span class="abil-src muted xs">${esc(e.source)} · set under Active effects</span></span>
+        <span class="abil-right"><span class="badge lim">${esc(entryLabel(e))}</span><span class="abil-state ${e.fxOn ? 'on' : use ? 'used' : 'avail'}">${esc(st)}</span></span>
+      </button>
+      <button type="button" class="btn ghost icon ds-info abil-info" data-action="ability.info" data-key="${esc(e.key)}" aria-label="Show text of ${esc(e.name)}">i</button>
+    </li>`;
+    }
     const pUses = e.limit === 'phase' ? phaseUsesOf(state, me, e) : null;
     const use = abilityUseOf(state, me, e);
     const when = pUses ? phaseNames(pUses) : use ? (e.limit === 'battle' ? `R${use.round}` : `R${use.round} · ${use.turn === me ? 'your turn' : 'opp. turn'}`) : '';
@@ -386,10 +518,22 @@ export function renderStrats(ctx, ui) {
   const list = derived.stratagems[me] || [];
   effectsOf(ctx, (ctx.state.players[me] || {}).faction);   // stratagem add-ons (loads once, rerenders)
   const f = ui.sfilter || 'all';
-  const secs = stratSections().filter(sec => f === 'all' || sec.side === 'any' || sec.side === f);
+  let secs = stratSections().filter(sec => f === 'all' || sec.side === 'any' || sec.side === f);
   // tracked phases: only the current phase of the current turn is "now"; untracked: the whole turn side
   const tracked = ctx.state.opts && ctx.state.opts.phases === 'manual';
   const isNow = sec => now.battle && sec.side === now.side && (!tracked || sec.phase === now.phase);
+  // "Any time" (Command Re-roll …) sits right under the Now section (tracked) / above the current turn's sections (untracked)
+  if (now.battle) {
+    const any = secs.find(x => x.side === 'any');
+    const rest = secs.filter(x => x !== any);
+    const nowIdx = rest.findIndex(x => isNow(x) && stratsOf(list, x).length);
+    const at = nowIdx < 0 ? -1 : tracked ? nowIdx + 1 : nowIdx;
+    if (any && at >= 0) secs = [...rest.slice(0, at), any, ...rest.slice(at)];
+  }
+  // shared per render: unit groups (leader + bodyguard = one unit) and the army's CP reductions
+  const units = myUnits(ctx.state, me);
+  const groups = units.length ? unitGroups(units, resolveLeaders(units)) : null;
+  const reds = now.battle && list.some(s => cpOnlyReason(s)) ? cpReductions(ctx) : [];
   const html = secs.map(sec => {
     const cur = isNow(sec) || (now.battle && sec.side === 'any');
     const items = stratsOf(list, sec);
@@ -400,10 +544,115 @@ export function renderStrats(ctx, ui) {
     const nowTag = isNow(sec) ? '<span class="side-tag now">Now</span>' : '';
     return `<section class="phase card ph-${esc(phase)} side-${esc(sec.side)}${cur ? ' cur' : ''}" data-sec-id="${esc(sec.id)}" id="sec-${esc(sec.id.replace(':', '-'))}">
       <h2 class="phase-h"><span class="phase-title">${esc(title)}</span>${badge}${nowTag}<span class="muted xs cnt">${items.length}</span></h2>
-      <div class="strat-list">${items.map(s => stratCard(s, ctx, ui, { phase, sec: sec.id })).join('')}</div>
+      <div class="strat-list">${items.map(s => stratCard(s, ctx, ui, { phase, sec: sec.id, affects: affectsLine(s, stratKwList(s), ctx, groups), canReduce: reds.length > 0 && cpOnlyReason(s) && canReduceNow(ctx, s, reds) })).join('')}</div>
     </section>`;
   }).join('');
   return html || '<p class="muted center">No Stratagems.</p>';
+}
+
+/* ═══════════════ Tab: Missions – Primary + Secondary Missions of this turn and the player's own mission actions ═══════════════
+ * Draw (Tactical, highlighted until drawn), Achieved, Discard (+1 CP at the end of your turn, redraw), card-rule returns and the
+ * player's own scoring popup (score.open → player-sheets openScoreSheet). The score device only shows the result. */
+export const WHEN_LABEL = { cmd: 'End of Command phase', turn: 'End of turn', end: 'End of battle' };
+const MO = { mod: null, data: undefined, loading: false };
+/** Verbatim mission card texts (data/orig/missions.json) – loaded once, rerender on arrival. */
+export function ensureMissionsOrig(rerender) {
+  if (MO.data !== undefined || MO.loading) return;
+  MO.loading = true;
+  import('../data/orig.js').then(m => (m && m.loadMissionsOrig ? m.loadMissionsOrig().then(d => { MO.mod = m; MO.data = d || null; }) : (MO.data = null)))
+    .catch(() => { MO.data = null; }).then(() => { MO.loading = false; if (typeof rerender === 'function' && MO.data) rerender(); });
+}
+/** Original text of a Primary / Secondary Mission card (string) or null. */
+export function missionsOrig(src, card) {
+  if (!MO.data || !MO.mod) return null;
+  const o = src === 'primary' ? MO.mod.origPrimary(MO.data, card) : MO.mod.origSecondary(MO.data, card);
+  return o ? (typeof o === 'string' ? o : o.text || null) : null;
+}
+/** Conditions of a card for the current round: now (in its round window), later (from round N), at the end of the battle. */
+export function missionCondsNow(state, conds) {
+  const round = state.round || 1;
+  const first = state.mission && state.mission.first != null ? state.mission.first : 0;
+  const lastTurn = round >= 5 && state.turn !== first;
+  const inWindow = c => !Array.isArray(c.r) || (round >= c.r[0] && round <= c.r[1]);
+  const endOnly = c => (c.w || c.when) === 'end' && !lastTurn;
+  return { now: conds.filter(c => inWindow(c) && !endOnly(c)), later: conds.filter(c => !inWindow(c) && Array.isArray(c.r) && c.r[0] > round), atEnd: conds.filter(c => inWindow(c) && endOnly(c)) };
+}
+function condListHtml(state, conds) {
+  const { now, later, atEnd } = missionCondsNow(state, conds || []);
+  const vpTxt = c => `${c.vp != null ? esc(c.vp) + ' VP' : 'VP'}${c.k === 'per' ? ' each' : ''}`;
+  const notes = [...later.map(c => `From round ${esc(c.r[0])}: ${esc(c.text)} (${vpTxt(c)})`), ...atEnd.map(c => `End of the battle: ${esc(c.text)} (${vpTxt(c)})`)];
+  return `${now.length ? `<ul class="conds">${now.map(c => condRow(c, { markActive: state.stage === 'battle' })).join('')}</ul>` : '<p class="muted xs">Nothing to score with this card in this battle round.</p>'}
+    ${notes.length ? `<p class="muted xs mis-later">${notes.join(' · ')}</p>` : ''}`;
+}
+/** The card's own "when drawn" rule applies now (Tactical only; round-1 rules in round 1; conflict rules while the other card is active). */
+export function drawnHintShown(state, p, card) {
+  const def = WH.SECONDARY[card], sec = state.players[p].secondaries || {};
+  if (!def || !def.drawn || sec.mode !== 'tactical') return false;
+  const d = def.drawn;
+  if (d.kind === 'round1') return state.round === 1;
+  if (d.kind === 'conflict') return (sec.hand || []).includes(d.other);
+  return true;
+}
+export function canReturnCard(state, p, card) {
+  const def = WH.SECONDARY[card], sec = state.players[p].secondaries || {};
+  if (!def || !def.drawn || sec.mode !== 'tactical' || !(sec.hand || []).includes(card)) return false;
+  const d = def.drawn;
+  return (d.kind === 'round1' && state.round === 1) || (d.kind === 'conflict' && (sec.hand || []).includes(d.other)) || d.kind === 'target';
+}
+const misInfo = (src, card, name) => `<button type="button" class="btn ghost icon ds-info mis-info" data-action="mission.info" data-src="${esc(src)}" data-card="${esc(card)}" aria-label="Card text of ${esc(name)}">i</button>`;
+
+export function renderMissions(ctx, ui) {
+  const { state, derived, me } = ctx;
+  const opp = 1 - me;
+  ensureMissionsOrig(ctx.rerender);
+  const battle = state.stage === 'battle';
+  const act = battle && !ctx.spectator;
+  const sc = ((derived && derived.scoring) || [])[me] || { primary: { conds: [] }, secondaries: [] };
+  const sec = (state.players[me] || {}).secondaries || {};
+  const tactical = sec.mode === 'tactical';
+  const out = [];
+  const pend = battle && state.pending && state.pending.kind === 'score' ? state.pending : null;
+  if (pend && pend.player === me) {
+    out.push(`<div class="card p${me} mis-due"><div class="card-head"><div class="title">Your scoring is due</div><span class="badge warn">${esc(WHEN_LABEL[pend.when] || pend.when)}</span></div>
+      <p class="small">Mark what you achieved and confirm. The score device shows the result.</p>
+      ${act ? btn({ label: 'Score now', kind: `p${me}`, cta: true, action: 'score.open', cls: 'pulse-soft' }) : ''}</div>`);
+  } else if (pend) {
+    out.push(`<div class="card mis-wait"><p class="small muted">Waiting for ${esc(pName(state, pend.player))} to confirm their scoring (${esc(WHEN_LABEL[pend.when] || pend.when)}).</p></div>`);
+  }
+  if (battle && tactical && (sec.toDraw || 0) > 0) {
+    const n = sec.toDraw;
+    out.push(`<div class="card p${me} mis-due mis-draw"><div class="card-head"><div class="title">Draw ${n} Secondary Mission card${n === 1 ? '' : 's'}</div></div>
+      <p class="small muted">Start of your turn (Tactical Missions). Deck ${esc((sec.deck || []).length)} · discard pile ${esc((sec.discard || []).length)}.</p>
+      ${act ? btn({ label: `Draw ${n} card${n === 1 ? '' : 's'}`, kind: `p${me}`, cta: true, action: 'sec.draw', cls: 'pulse-soft' }) : ''}</div>`);
+  }
+  // Primary Mission
+  const pr = sc.primary || {};
+  out.push(`<div class="card p${me} mis-card mis-primary"><div class="card-head"><div class="title">${esc(pr.card ? pr.name : 'No Primary Mission')}</div>${badge('Primary', 'ok')}${pr.card ? misInfo('primary', pr.card, pr.name) : ''}</div>
+    ${pr.card ? condListHtml(state, pr.conds) : ''}</div>`);
+  // Secondary Missions
+  const list = sc.secondaries || [];
+  const tkey = `${state.round}:${state.turn}`;
+  const cpNote = battle && tactical && state.turn === me && sec.cpDiscardTurn !== tkey;
+  out.push(`<div class="mis-bar"><span class="title sm">Secondary Missions</span><span class="muted xs">${tactical ? `Tactical · hand ${esc((sec.hand || []).length)} · deck ${esc((sec.deck || []).length)} · achieved ${esc((sec.achieved || []).length)}${sec.redrawUsed ? ' · redraw used' : ''}` : sec.mode === 'fixed' ? 'Fixed – active all battle' : ''}</span></div>`);
+  if (!list.length) out.push(`<div class="card flat muted center small">${tactical ? ((sec.toDraw || 0) > 0 ? 'Draw your cards above.' : 'No cards in hand.') : 'No Secondary Missions.'}</div>`);
+  list.forEach(c => {
+    const hint = drawnHintShown(state, me, c.card) ? `<p class="xs text-warn mis-hint"><b>When drawn:</b> ${esc(c.drawn.text)}${act && canReturnCard(state, me, c.card) ? ' ' + btn({ label: WH.SECONDARY[c.card].drawn.kind === 'target' ? 'Discard & draw a new card' : 'Draw a new card & shuffle this back', kind: 'ghost', small: true, action: 'sec.return', data: { card: c.card } }) : ''}</p>` : '';
+    const foot = act && tactical ? `<div class="mis-foot">
+        ${btn({ label: 'Achieved', kind: 'ok', small: true, action: 'sec.achieve', data: { card: c.card } })}
+        ${btn({ label: cpNote ? 'Discard · +1 CP' : 'Discard', kind: 'ghost', small: true, action: 'sec.discard.open', data: { card: c.card } })}
+      </div>` : '';
+    out.push(`<div class="card p${me} mis-card mis-sec" data-card="${esc(c.card)}"><div class="card-head"><div class="title">${esc(c.name)}</div>${badge(sec.mode === 'fixed' ? 'Fixed' : 'Secondary', 'warn')}${misInfo('secondary', c.card, c.name)}</div>
+      ${hint}${condListHtml(state, c.conds)}${foot}</div>`);
+  });
+  if (battle && tactical && state.turn === me) out.push(`<p class="muted xs mis-rule">${cpNote ? 'Discarding a card in your turn gives +1 CP at the end of your turn (once per turn).' : 'You already discarded a card this turn – no further CP.'}${!sec.redrawUsed ? ' Once per battle, at the end of your Command phase, you can spend 1 CP to discard a card and draw a new one.' : ''}</p>`);
+  // Opponent (read-only)
+  const osc = ((derived && derived.scoring) || [])[opp] || { primary: {}, secondaries: [] };
+  const osec = (state.players[opp] || {}).secondaries || {};
+  const oppInner = `<p class="small"><b>Primary:</b> ${esc((osc.primary && osc.primary.card) ? osc.primary.name : '–')}</p>
+    <p class="small"><b>Secondary${osec.mode === 'fixed' ? ' (Fixed)' : osec.mode === 'tactical' ? ' (Tactical)' : ''}:</b> ${(osc.secondaries || []).length ? (osc.secondaries || []).map(c => esc(c.name)).join(', ') : '–'}</p>`;
+  out.push(`<div class="card p${opp} opp-card">${detailsRule(ui, 'mis:opp', `Opponent: ${pName(state, opp)} – active missions`, oppInner)}</div>`);
+  out.push(`<div class="row center">${btn({ label: 'Score breakdown', kind: 'ghost', small: true, action: 'score.view' })}</div>`);
+  return out.join('');
 }
 
 /* ═══════════════ Tab 3: Army list – datasheets like New Recruit, but better ═══════════════ */
@@ -655,7 +904,7 @@ export function renderUnitList(ctx, ui) {
     ${loose.length ? `<div class="card lead-info"><div class="lead-info-h">ⓘ ${loose.length} leader${loose.length === 1 ? '' : 's'} not attached yet</div>
       <p class="muted xs">${loose.length === 1 ? 'This character can' : 'These characters can'} lead a unit of your army – attach to give the unit the leader's abilities.</p>
       ${loose.map(L => attachPicker(L, sheets.get(L.id), units, sheets, links, data)).join('')}</div>` : ''}
-    <p class="muted xs ds-summary">${units.length} unit${units.length === 1 ? '' : 's'}${pts ? ` · ${pts} pts` : ''} · ${found}/${units.length} with a datasheet${data.version ? ` · data ${esc(String(data.version))}` : ''}${!data.units.length ? ' · no datasheets available for this faction' : ''}${q ? ` · ${shown.length} match${shown.length === 1 ? '' : 'es'}` : ''}</p>
+    <p class="muted xs ds-summary">${units.length} unit${units.length === 1 ? '' : 's'}${pts ? ` · ${pts} pts` : ''} · ${found}/${units.length} with a datasheet${!data.units.length ? ' · no datasheets available for this faction' : ''}${q ? ` · ${shown.length} match${shown.length === 1 ? '' : 'es'}` : ''}</p>
     ${q ? '' : ruleBoxes(book, k => ui.open.has(k))}
     ${cards.length ? `<div class="book-units">${roleSections(cards)}</div>` : '<p class="muted small center">No unit matches.</p>'}</div>`;
 }
@@ -676,8 +925,8 @@ export function renderSide(ctx, ui) {
     ${now.battle ? `<div class="pl-turn p${state.turn}">${now.side === 'own' ? 'Your turn' : "Opponent's turn"} · ${esc(pName(state, state.turn))}</div>` : ''}</div>`);
   tiles.push(`<div class="card tile tile-fx p${me}"><div class="tile-title">Active effects</div><div class="fx-list">${fxList(ctx, me, { compact: true })}</div></div>`);
   const resources = pl.resources || [];
-  if (resources.length) {
-    tiles.push(`<div class="card tile tile-res p${me}"><div class="tile-title">Resource</div>${resources.map((r, index) => `<div class="res"><div class="row between nowrap"><div class="res-name">${esc(r.name)}${r.max != null ? `<span class="muted xs"> / max ${r.max}</span>` : ''}</div>
+  if (resources.some(r => !linkedToggleOf(ctx, me, r))) {
+    tiles.push(`<div class="card tile tile-res p${me}"><div class="tile-title">Resource</div>${resources.map((r, index) => linkedToggleOf(ctx, me, r) ? '' : `<div class="res"><div class="row between nowrap"><div class="res-name">${esc(r.name)}${r.max != null ? `<span class="muted xs"> / max ${r.max}</span>` : ''}</div>
       ${stepper({ value: r.value || 0, min: 0, max: r.max, action: 'res.step', data: { index }, small: true, player: me })}</div></div>`).join('')}</div>`);
   }
   const abil = abilityTracker(ctx);
@@ -722,6 +971,6 @@ export function renderOver(ctx) {
     <div class="card"><table class="vp-table"><thead><tr><th></th><th class="text-p0">${esc(pName(state, 0))}</th><th class="text-p1">${esc(pName(state, 1))}</th></tr></thead>
       <tbody><tr><td>Primary</td><td>${vp[0].primary}</td><td>${vp[1].primary}</td></tr><tr><td>Secondary</td><td>${vp[0].secondary}</td><td>${vp[1].secondary}</td></tr>
       <tr><td>Modifier</td><td>${vp[0].bonus}</td><td>${vp[1].bonus}</td></tr><tr class="total"><td>Total</td><td>${vp[0].total}</td><td>${vp[1].total}</td></tr></tbody></table></div>
-    <div class="row">${btn({ label: 'Score (tablet)', kind: 'primary', action: 'nav', data: { href: ctx.roleHash(code, 'desktop', 'table') } })}${btn({ label: 'Lobby', kind: 'ghost', action: 'nav', data: { href: '#/' } })}</div>
+    <div class="row">${btn({ label: 'Score view (read-only)', kind: 'primary', action: 'nav', data: { href: `#/g/${code}/watch` } })}${btn({ label: 'Lobby', kind: 'ghost', action: 'nav', data: { href: '#/' } })}</div>
   </div>`;
 }

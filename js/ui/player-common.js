@@ -38,7 +38,7 @@ export function uiState(code, me) {
   if (!u) {
     const saved = lsLoad(key);
     u = {
-      key, tab: ['army', 'strats', 'units'].includes(saved.tab) ? saved.tab : 'army',
+      key, tab: ['army', 'missions', 'strats', 'units'].includes(saved.tab) ? saved.tab : 'army',
       sfilter: ['all', 'now', 'core', 'det'].includes(saved.sfilter) ? saved.sfilter : 'all',
       collapsed: !!saved.collapsed, open: new Set(), closed: new Set(), noteDraft: '', search: '', lastPhaseKey: null, ctx: null
     };
@@ -208,6 +208,16 @@ export function resShort(name) {
   const words = n.replace(/\(.*?\)/g, ' ').split(/[^A-Za-z0-9]+/).filter(Boolean);
   return words.length > 1 ? words.map(w => w[0]).join('').toUpperCase().slice(0, 4) : n.slice(0, 5);
 }
+/** Readable label of a resource for the pinned head: an abbreviation in brackets ("Yield Points (YP)" → "YP"), else the
+ *  name without its bracket / dash suffix ("War Cry (Waaagh!) – once per battle" → "War Cry") when short, else resShort. */
+export function headLabel(name) {
+  const n = String(name || '').trim();
+  if (/\(([A-Z]{1,4})\)/.test(n)) return resShort(n);
+  const base = n.replace(/\s*[–—-]\s.*$/, '').replace(/\(.*?\)/g, ' ').replace(/\s+/g, ' ').trim();
+  if (base && base.length <= 12) return base;
+  const words = base.split(/[^A-Za-z0-9]+/).filter(Boolean);
+  return words.length > 1 ? words.map(w => w[0]).join('').toUpperCase().slice(0, 4) : resShort(n);
+}
 
 /** Is a stratagem's unavailability only the CP shortage? Then "Use" stays open – an ability may reduce the cost. */
 export const cpOnlyReason = s => !s.available && /^Not enough CP/i.test(s.reason || '');
@@ -333,9 +343,44 @@ export function stratKwList(s) {
   const condKws = cond.flatMap(c => [c.kw, ...c.unless]);
   return [...base.filter(k => !excl.includes(k) && !condKws.includes(k)), ...excl.map(k => '!' + k), ...cond.map(c => `!${c.kw} (unless ${c.unless.join('/')})`)];
 }
+/** Tappable keyword line: [LETHAL HITS] opens the core-rule popup (data-kw, keywords.js), unit keywords ([INFANTRY],
+ *  NOT TITANIC) open the list of your units with that keyword (data-action="kw.units"). */
 export function kwLine(kws) {
   if (!kws || !kws.length) return '';
-  return `<div class="kws">${kws.map(k => k.startsWith('!') ? `<span class="kw not">NOT ${esc(k.slice(1))}</span>` : /^\[.*\]$/.test(k) ?`<span class="kw ab">${esc(k)}</span>` : `<span class="kw">[${esc(k)}]</span>`).join(' ')}</div>`;
+  return `<div class="kws">${kws.map(k => {
+    if (/^\[.*\]$/.test(k)) return `<button type="button" class="kw ab kw-btn" data-kw="${esc(k.slice(1, -1))}">${esc(k)}</button>`;
+    const not = k.startsWith('!');
+    const kw = not ? k.slice(1) : k;
+    return `<button type="button" class="kw kw-btn${not ? ' not' : ''}" data-action="kw.units" data-kwu="${esc(kw)}"${not ? ' data-not="1"' : ''}>${not ? 'NOT ' + esc(kw) : '[' + esc(kw) + ']'}</button>`;
+  }).join(' ')}</div>`;
+}
+/** Units of the list as the game sees them: a leader attached to a unit forms one unit with its bodyguard.
+ *  links = resolveLeaders(units) (player-tabs.js) → [{ id (bodyguard), units: [bodyguard, ...leaders], name, models, shocked }]. */
+export function unitGroups(units, links) {
+  const leaderOf = new Map();
+  units.forEach(u => { const l = links && links.get(u.id); if (l && l.leading && units.includes(l.leading)) { if (!leaderOf.has(l.leading.id)) leaderOf.set(l.leading.id, []); leaderOf.get(l.leading.id).push(u); } });
+  const merged = new Set([...leaderOf.values()].flat().map(u => u.id));
+  return units.filter(u => !merged.has(u.id)).map(u => {
+    const ls = leaderOf.get(u.id) || [];
+    const all = [u, ...ls];
+    return { id: u.id, units: all, name: all.map(x => x.name).join(' + '), models: all.reduce((a, x) => a + (Number(x.models) || 0), 0), shocked: all.some(x => x.status === 'shocked') };
+  });
+}
+/** Does the stratagem target one of your own units (TARGET names a friendly / your unit, not only an enemy one)? */
+export const targetsFriendly = s => { const t = String((s && s.target) || ''); return !t || /\bfriendly\b|\byour\b|\bfrom your army\b/i.test(t) || !/\benemy\b/i.test(t); };
+/** "Affects:" line of a stratagem card – the player's eligible units (attached units as one entry). '' when no list. */
+export function affectsLine(s, kws, ctx, groups) {
+  const units = myUnits(ctx.state, ctx.me);
+  if (!units.length || !targetsFriendly(s)) return '';
+  const plain = kws.filter(k => !/^[[!]/.test(k));
+  const cond = kws.some(k => /^!.+\(unless /.test(k));
+  if (!plain.length && !cond) return '';   // any unit (e.g. Fire Overwatch, Command Re-roll)
+  const hits = new Set(affectedUnits(units, kws, ctx).map(u => u.id));
+  const list = (groups || units.map(u => ({ id: u.id, units: [u], name: u.name }))).filter(g => g.units.some(u => hits.has(u.id)));
+  if (!list.length) return `<div class="affects xs muted"><b>Affects:</b> none of your units</div>`;
+  const MAX = 6;
+  const names = list.slice(0, MAX).map(g => esc(g.name)).join(', ');
+  return `<div class="affects xs"><b>Affects:</b> ${names}${list.length > MAX ? ` <span class="muted">+${list.length - MAX} more</span>` : ''}</div>`;
 }
 
 /** Owner of a stratagem in one of its phases: phw (per phase, from a WHEN that mixes owners – "Your Shooting phase or the
@@ -467,10 +512,15 @@ export function stratCard(s0, ctx, ui, opts = {}) {
   const addons = stratAddonsOf(ctx, s);
   const addonRes = [...new Set(addons.map(a => resShort(a.resource || '')).filter(Boolean))];
   const addonBadge = addons.length ? `<span class="badge xs addon-badge" title="${esc(addons.map(a => a.name).join(' · '))}">+${esc(addonRes.join('/') || 'add-on')}</span>` : '';
+  // short of CP: "Use" only when a CP reduction of the army could pay for it (opts.canReduce), else greyed "needs N CP";
+  // not usable for another reason: no Use button – the reason line says why (one message, no contradicting button)
+  const reducible = cpOnly && !!opts.canReduce;
   let foot = '';
   if (used) foot = `<span class="badge used">Used (${use.cost} CP)</span><button class="btn ghost sm undo" type="button" data-action="strat.undo" data-use="${esc(use.id)}">Undo</button>`;
-  else if (fits) foot = `<button class="btn sm${s.available ? ' primary' : ''}" type="button" ${open}${s.available || cpOnly ? '' : ' disabled'}>Use</button>`;
-  return `<article class="strat ph-${esc(phase)}${used ? ' used' : ''}${dim ? ' dim' : ''}" data-strat-card="${esc(s.id)}">
+  else if (fits && s.available) foot = `<button class="btn sm primary" type="button" ${open}>Use</button>`;
+  else if (fits && reducible) foot = `<button class="btn sm" type="button" ${open}>Use</button>`;
+  else if (fits && cpOnly) foot = `<button class="btn sm needs-cp" type="button" disabled>needs ${Number(s.cost) || 0} CP</button>`;
+  return `<article class="strat ph-${esc(phase)}${used ? ' used' : ''}${dim ? ' dim' : ''}${cpOnly && !reducible && !used ? ' short-cp' : ''}" data-strat-card="${esc(s.id)}">
     <div class="strat-top">
       <h3 class="strat-name"><button type="button" class="strat-name-btn" ${open}>${esc(s.name)}</button></h3>
       <button type="button" class="btn ghost icon ds-info strat-info" ${open} aria-label="Show rule and use ${esc(s.name)}">i</button>
@@ -479,20 +529,21 @@ export function stratCard(s0, ctx, ui, opts = {}) {
     <div class="strat-tags">${phasePill(phase)}${stratSrc(s)}${addonBadge}${s.once ? '<span class="badge xs">once per battle</span>' : ''}${s.notRound1 ? '<span class="badge xs">not in round 1</span>' : ''}</div>
     ${o.when ? `<p class="strat-orig"><b>WHEN</b> ${kwify(esc(cleanOrig(o.when)))}</p>` : ''}
     ${o.effect ? `<p class="strat-orig"><b>EFFECT</b> ${kwify(esc(cleanOrig(o.effect)))}</p>` : ''}
-    ${dim && s.reason ? `<div class="strat-reason xs text-warn">Not available: ${esc(s.reason)}</div>` : cpOnly && !used ? `<div class="strat-reason xs muted">${esc(s.reason)} – usable with a CP reduction</div>` : ''}
+    ${dim && s.reason ? `<div class="strat-reason xs text-warn">Not available: ${esc(s.reason)}</div>` : reducible && !used ? `<div class="strat-reason xs muted">${esc(s.reason)} – usable with a CP reduction</div>` : ''}
     ${kwLine(kws)}
+    ${opts.affects || ''}
     ${foot ? `<div class="strat-foot">${foot}</div>` : ''}
   </article>`;
 }
 
 /** Bedingungszeile einer Missionskarte (nur Anzeige, keine Buchung). */
 export function condRow(c, opts = {}) {
-  const vp = c.vp != null ? `${c.vp} VP` : (c.opts || []).map(o => `${o.vp} VP`).join(' / ');
+  const vp = c.vp != null ? `${c.vp} VP${c.k === 'per' ? ' each' : ''}${c.k === 'per' && c.max != null ? ` (max ${c.max})` : ''}` : (c.opts || []).map(o => `${o.vp} VP`).join(' / ');
   const rr = Array.isArray(c.r) && (c.r[0] !== 1 || c.r[1] !== 5) ? ` · R${c.r[0]}${c.r[1] !== c.r[0] ? '–' + c.r[1] : ''}` : '';
   return `<li class="cond${c.sub ? ' sub' : ''}${opts.markActive && c.active ? ' active' : ''}">
     <div class="cond-main"><div class="cond-text">${esc(c.text)}</div>
     ${c.opts ? `<div class="cond-opts muted xs">${c.opts.map(o => esc(o.t) + ' (' + o.vp + ' VP)').join(' · ')}</div>` : ''}
-    <div class="cond-when muted xs">${esc(opts.whenLabel || c.whenLabel || WH.TIMING_LABELS[c.when] || c.when || '')}${esc(rr)}${c.auto ? ' · automatic' : ''}</div></div>
+    <div class="cond-when muted xs">${esc(opts.whenLabel || c.whenLabel || WH.TIMING_LABELS[c.when] || c.when || '')}${esc(rr)}${c.auto ? ' · automatic' : ''}${opts.markActive && c.active ? ' · <span class="text-warn">due now</span>' : ''}${Number(c.scoredThisTurn) > 0 ? ` · <span class="text-ok">booked ${esc(c.scoredThisTurn)} VP this turn</span>` : ''}</div></div>
     <div class="cond-vp">${esc(vp)}</div>
   </li>`;
 }

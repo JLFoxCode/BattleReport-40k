@@ -7,7 +7,8 @@
  * Events: one delegation on root.
  * Layout: pinned head + tabs; ≥ 900 px a two-column grid with general-info tiles on the right (data-sec="side").
  */
-import { esc, toast, colorOf, autoNote } from './components.js';
+import { esc, toast, colorOf, autoNote, sheet, confirmSheet } from './components.js';
+import { WH } from '../../data/rules.js';
 import { guideHtml, bindGuide } from './tutorial.js';
 import { uiState, uiSave, fxItem, choicePicked, toggleOn, resourceFor, optionCost, switchCostOf } from './player-common.js';
 import * as T from './player-tabs.js';
@@ -29,7 +30,7 @@ export function render(root, ctx) {
   bind(root);
   setPlayerColors(state);
   const stage = state.stage;
-  if (!['army', 'strats', 'units'].includes(ui.tab)) ui.tab = 'army';
+  if (!['army', 'missions', 'strats', 'units'].includes(ui.tab)) ui.tab = 'army';
   const key = `${ctx.code}|${me}|${stage}|${ui.tab}`;
   if (root.dataset.plKey !== key) {
     root.dataset.plKey = key;
@@ -48,9 +49,13 @@ export function render(root, ctx) {
       put('tabs', T.renderTabs(ctx, ui));
       put('deploy', stage === 'deploy' ? T.renderDeploy(ctx, ui) : '');
       put('side', T.renderSide(ctx, ui));
-      put('guide', guideHtml(state, me));
+      put('guide', compactGuide(guideHtml(state, me)));
       bindGuide(root, ctx.rerender);
       switch (ui.tab) {
+        case 'missions':
+          put('filters', '');
+          put('body', T.renderMissions(ctx, ui));
+          break;
         case 'strats':
           put('filters', T.renderStratFilters(ctx, ui));
           put('body', T.renderStrats(ctx, ui));
@@ -70,10 +75,71 @@ export function render(root, ctx) {
       if (stage === 'battle') autoEffects(ctx, ui);
       if (stage === 'battle' && ui.tab === 'strats') followPhase(root, ctx, ui);
     }
+    syncSheets(ctx, ui);
   } catch (e) {
     console.error('player render', e);
     put('body', `<div class="card bad"><div class="title">Render error</div><pre class="muted xs">${esc(e && e.stack || e)}</pre></div>`);
   }
+}
+
+/** Phase guide on the phone: collapsed to its one-line summary unless the player opened it (remembered by tutorial.js). */
+function compactGuide(html) {
+  if (!html) return '';
+  let open = false;
+  try { open = localStorage.getItem('br40k.guideOpen') === '1'; } catch {}
+  return open ? html : html.replace(/ open data-guide>/, ' data-guide>');
+}
+
+/** Popups that follow the game state on the player's own phone:
+ *  – the player's own scoring (pending score of this player) opens once per scoring; closing it leaves "Score now" in Missions;
+ *  – at the start of the player's Command phase (or a battle round): the start-of-turn picks (Combat Doctrines, Waaagh! …). */
+function syncSheets(ctx, ui) {
+  const s = ctx.state;
+  if (!s) return;
+  const key = s.stage === 'battle' && s.pending && s.pending.kind === 'score' && s.pending.player === ctx.me ? S.pendingKey(s) : null;
+  if (ui.scoreSheet && ui.scoreSheet.key !== key) { const c = ui.scoreSheet.close; ui.scoreSheet = null; c(); }
+  if (key && !ctx.spectator && !ui.scoreSheet && ui.scoreDismissed !== key) S.openScoreSheet(ctx, ui);
+  if (ui.startSheet) { ui.startSheet.refresh(); return; }
+  if (ctx.spectator || s.stage !== 'battle' || key) return;
+  const skey = `${s.round}|${s.turn}`;
+  const lsKey = `sb40k.pl.start.${ui.key}`;
+  if (ui.startShown === undefined) { try { ui.startShown = localStorage.getItem(lsKey) || null; } catch { ui.startShown = null; } }
+  if (ui.startShown === skey) return;
+  const picks = T.startPicks(ctx);
+  if (!picks.length) return;
+  ui.startShown = skey;
+  try { localStorage.setItem(lsKey, skey); } catch {}
+  openStartSheet(ctx, ui, picks.map(it => it.key));
+}
+
+/** Start-of-turn prompt: the open choices / toggles with their normal controls (handled by H like in the Army tab). */
+function openStartSheet(ctx, ui, keys) {
+  const body = () => {
+    const c = ui.ctx || ctx;
+    const items = keys.map(k => fxItem(c, c.me, k)).filter(Boolean);
+    return `<p class="muted small">Start of your ${c.state.turn === c.me ? 'turn' : 'battle round'} · Round ${esc(c.state.round)} – choose now (you can change it later in the Army tab under Active effects).</p>
+      <div class="fx-list">${items.map(it => T.fxRow(c, c.me, it)).join('')}</div>`;
+  };
+  let el0 = null;
+  const close = sheet({
+    title: 'Start of turn',
+    cls: 'p' + ctx.me + ' start-sheet',
+    body: body(),
+    actions: [{ label: 'Done', kind: 'primary', cta: true }],
+    onOpen: el => {
+      el0 = el;
+      el.addEventListener('click', e => {
+        const a = e.target.closest('[data-action]');
+        if (!a || a.disabled || a.classList.contains('disabled')) return;
+        const fn = H[a.dataset.action];
+        if (!fn) return;
+        e.preventDefault();
+        Promise.resolve().then(() => fn(a, ui.ctx || ctx, ui)).catch(err => { console.error(err); toast(err && err.message ? err.message : String(err), 'bad'); });
+      });
+    },
+    onClose: () => { ui.startSheet = null; }
+  });
+  ui.startSheet = { close, refresh: () => { const b = el0 && el0.querySelector('.sheet-body'); if (b) b.innerHTML = body(); } };
 }
 
 /** Threshold effects follow the resource at the start of the own turn / during the own Command phase (T.fxAutoActions).
@@ -184,6 +250,7 @@ H['buff.info'] = (el, ctx, ui) => S.openBuffSheet(ctx, ui, el.dataset.leader, Nu
 H['ability.toggle'] = async (el, ctx, ui) => {
   const e = T.abilityByKey(ctx, el.dataset.key);
   if (!e) { toast('Ability not found', 'bad'); return; }
+  if (e.fx) { gotoEffect(ctx, ui, e.fx); return; }   // a Combat Doctrine / Waaagh!: chosen under Active effects
   if (e.limit === 'phase') { S.openPhaseUseSheet(ctx, e); return; }
   const use = T.abilityUseOf(ctx.state, ctx.me, e);
   if (use) {
@@ -195,6 +262,43 @@ H['ability.toggle'] = async (el, ctx, ui) => {
   }
 };
 H['ability.info'] = (el, ctx, ui) => S.openAbilitySheet(ctx, ui, el.dataset.key);
+/** Army tab: scroll to an Active effects row and flash it. */
+function gotoEffect(ctx, ui, key) {
+  if (ui.tab !== 'army') { ui.tab = 'army'; uiSave(ui); ctx.rerender(); }
+  setTimeout(() => {
+    const row = document.querySelector(`.pl [data-fx="${CSS.escape(key)}"]`);
+    if (!row) return;
+    const pin = document.querySelector('.pl-pin');
+    const top = row.getBoundingClientRect().top + window.scrollY - ((pin ? pin.offsetHeight : 0) + 8);
+    try { window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' }); } catch { window.scrollTo(0, Math.max(0, top)); }
+    row.classList.add('flash'); setTimeout(() => row.classList.remove('flash'), 1600);
+  }, 30);
+}
+/** Keyword chip of a stratagem card: your units with that keyword (or excluded by it). */
+H['kw.units'] = (el, ctx) => S.openKwUnitsSheet(ctx, el.dataset.kwu, !!el.dataset.not);
+
+/* ───────── Missions tab: the player's own mission actions ───────── */
+H['score.view'] = (el, ctx, ui) => S.openScoreView(ctx, ui);
+H['score.open'] = (el, ctx, ui) => { ui.scoreDismissed = null; S.openScoreSheet(ctx, ui); };
+H['mission.info'] = (el, ctx, ui) => S.openMissionInfo(ctx, ui, el.dataset.src, el.dataset.card);
+H['sec.draw'] = async (el, ctx) => {
+  const before = (ctx.state.players[ctx.me].secondaries.hand || []).slice();
+  const r = await ctx.dispatch({ type: 'sec.draw', player: ctx.me, cardRule: true });
+  if (!r) return;
+  const drawn = (r.players[ctx.me].secondaries.hand || []).filter(c => !before.includes(c));
+  toast(drawn.length ? `Drawn: ${drawn.map(c => (WH.SECONDARY[c] || {}).name || c).join(', ')}` : 'No card left to draw', drawn.length ? 'ok' : 'warn', 3000);
+};
+H['sec.achieve'] = async (el, ctx, ui) => {
+  const card = el.dataset.card, name = (WH.SECONDARY[card] || {}).name || card;
+  if (!await confirmSheet({ title: `“${name}” achieved?`, text: 'The card moves to your achieved pile and leaves your hand. Book its VP first – your end-of-turn scoring moves scored cards there by itself.', ok: 'Achieved', kind: 'primary' })) return;
+  const r = await (ui.ctx || ctx).dispatch({ type: 'sec.achieve', player: ctx.me, card });
+  if (r) toast(`${name} achieved`, 'ok', 2000);
+};
+H['sec.discard.open'] = (el, ctx, ui) => S.openDiscardSheet(ctx, ui, el.dataset.card);
+H['sec.return'] = async (el, ctx) => {
+  const r = await ctx.dispatch({ type: 'sec.discard', player: ctx.me, card: el.dataset.card, reason: 'return', cardRule: true });
+  if (r) toast('Card rule applied – new card drawn', 'ok', 2500);
+};
 H['res.step'] = (el, ctx, ui) => {
   const index = Number(el.dataset.index), delta = Number(el.dataset.delta);
   const r = (ctx.state.players[ctx.me].resources || [])[index];
@@ -268,9 +372,14 @@ H['fx.toggle'] = async (el, ctx, ui) => {
   if (!it) return;
   const e = it.e;
   const useKey = `tog:${it.key}`;
+  // a once-per-battle counter that mirrors this toggle ("War Cry (Waaagh!) – once per battle") follows it
+  const ri = e.limit === 'battle' ? T.linkedResourceOf(ctx, me, it) : -1;
+  const lr = ri >= 0 ? state.players[me].resources[ri] : null;
   if (toggleOn(state, me, it)) {
-    if (e.limit) { const u = T.fxUse(state, me, useKey, e.limit); if (sameTurn(u, state)) await ctx.dispatch({ type: 'ability.undo', player: me, useId: u.id }); }
+    let undone = false;
+    if (e.limit) { const u = T.fxUse(state, me, useKey, e.limit); if (sameTurn(u, state)) undone = !!await ctx.dispatch({ type: 'ability.undo', player: me, useId: u.id }); }
     await ctx.dispatch({ type: 'effect.set', player: me, key: it.key, value: null, label: e.name });
+    if (undone && lr && (Number(lr.value) || 0) > 0) await ctx.dispatch({ type: 'resource.set', player: me, index: ri, value: 0 });
     return;
   }
   if (e.limit) {
@@ -278,7 +387,9 @@ H['fx.toggle'] = async (el, ctx, ui) => {
     if (!r) return;
   }
   const r = await ctx.dispatch({ type: 'effect.set', player: me, key: it.key, value: true, label: e.name, display: 'on' });
-  if (r) autoNote(`${e.name} on`, e.limit ? [`${e.name} marked as used (${T.limitLabel(e.limit)})`] : []);
+  const auto = e.limit ? [`${e.name} marked as used (${T.limitLabel(e.limit)})`] : [];
+  if (r && lr && (Number(lr.value) || 0) < (lr.max || 1) && await ctx.dispatch({ type: 'resource.set', player: me, index: ri, value: lr.max || 1 })) auto.push(`${lr.name}: ${Number(lr.value) || 0} → ${lr.max || 1}`);
+  if (r) autoNote(`${e.name} on`, auto);
 };
 H['fx.info'] = (el, ctx, ui) => S.openEffectSheet(ctx, ui, Number(el.dataset.p), el.dataset.key);
 H['enh.info'] = (el, ctx, ui) => S.openEnhancementSheet(ctx, ui, el.dataset.name);

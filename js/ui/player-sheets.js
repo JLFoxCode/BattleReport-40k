@@ -4,33 +4,12 @@ import { WH } from '../../data/rules.js';
 import { esc, sheet, toast, chip, btn, autoNote } from './components.js';
 import {
   stepper, cpBadge, affectedUnits, myUnits, pName, cleanOrig, stratPhaseId, stratIn, phasePill, turnBadge, stratSrc, stratKwList, kwLine,
-  stratOrigBlock, stratUseState, stratAddonsOf, resourceFor, resShort, fxItem, armyOf, origData, origMod, ensureOrig, enhancementOf
+  stratOrigBlock, stratUseState, stratAddonsOf, resourceFor, resShort, fxItem, armyOf, origData, origMod, ensureOrig, enhancementOf,
+  unitGroups, srcBadge, cardName
 } from './player-common.js';
-import { buffsOfId, abilityTracker, abilityByKey, abilityUseOf, entryLabel, phaseUsesOf, PHASE_CHOICES } from './player-tabs.js';
-
-/** Tracker entries whose text reduces a Stratagem's CP cost; amount = CP reduction (Infinity = free / 0 CP).
- * CP gains ("you gain 1CP", "roll one D6: on a 5+") and CP increases ("twice/three times that Stratagem's … CP cost") are not reductions. */
-const CP_RED_RE = /\bCP\b|\dCP\b|regardless of any other uses/i;
-const CP_HOW_RE = /\bless\b|\breduc(?:e|ed|es|ing)\b|\binstead of\b|\bfor 0 ?CP\b|\b0 ?CP\b|\bcosts? 0\b|\bfree\b|[-−–]\s?1 ?CP\b|regardless of any other uses/i;
-const CP_GAIN_RE = /\bgain(?:s|ed)? (?:\d|one|D\d)\s?CP\b|\byou gain\b|\broll one D6[:,]? on a\b|\bregain\b/i;
-const CP_MORE_RE = /\b(?:twice|two times|three times|double)\b[^.]*?\bStratagem['’]?s?\b[^.]*?\bCP\b|\bincreas(?:e|ed|es)\b[^.]*?\bCP\b|\b(?:\d|one) ?CP more\b/i;
-export function cpReductions(ctx, strat = null) {
-  const norm = x => String(x || '').toLowerCase().replace(/[^a-z0-9]+/g, '');
-  return abilityTracker(ctx).filter(e => CP_RED_RE.test(e.text) && CP_HOW_RE.test(e.text) && !CP_GAIN_RE.test(e.text) && !CP_MORE_RE.test(e.text)).filter(e => {
-    // "… with the Command Re-roll Stratagem …" / "… with the Rapid Ingress stratagem …" (Teleport Homer): only for that Stratagem
-    const only = /\bthe ([A-Z][A-Za-z’'\- ]*?) [Ss]tratagem\b/.exec(e.text);
-    return !strat || !only || norm(only[1]) === norm(strat.name);
-  }).map(e => {
-    const t = e.text;
-    let amount = 1;
-    if (/\bfor 0 ?CP\b|\b0 ?CP\b|\bcosts? 0\b|\bfree\b|\binstead of\b/i.test(t) && !/\breduc|\bless\b|[-−–]\s?1 ?CP\b/i.test(t)) amount = Infinity;
-    const m = /(\d)\s*CP\s+less\b|\bby\s+(\d)\s*CP\b|\breduced?\b[^.]*?\bby\s+(\d)\b|[-−–]\s?(\d) ?CP\b/i.exec(t);
-    if (m) amount = Number(m[1] || m[2] || m[3] || m[4]) || 1;
-    // a price for the reduction ("spend 1YP") is paid with it
-    const pay = /\bspend (\d+) ?([A-Z]{2,4})\b/.exec(t);
-    return Object.assign({ amount, pay: pay ? { n: Number(pay[1]), res: pay[2] } : null }, e);
-  });
-}
+import { buffsOfId, abilityByKey, abilityUseOf, entryLabel, phaseUsesOf, PHASE_CHOICES, cpReductions, resolveLeaders, ensureMissionsOrig, missionsOrig, WHEN_LABEL } from './player-tabs.js';
+import { reduce } from '../../engine/index.js';
+export { cpReductions };
 
 /** Stratagem popup: name, cost, phase + turn, source, summary, verbatim original text, keywords – and the Use controls at the bottom. */
 export function openStratSheet(ctx, ui, stratId, secPhase) {
@@ -52,8 +31,10 @@ export function openStratSheet(ctx, ui, stratId, secPhase) {
   const units = myUnits(state, me);
   const kws = stratKwList(s);
   const hits = new Set(affectedUnits(units, kws, c0).map(u => u.id));
-  const sorted = units.slice().sort((a, b) => (hits.has(b.id) ? 1 : 0) - (hits.has(a.id) ? 1 : 0));
-  const unitOpts = sorted.map(u => `<option value="${esc(u.id)}"${u.status === 'shocked' ? ' disabled' : ''}>${esc(u.name)} (${u.models})${hits.has(u.id) ? ' ✓' : ''}${u.status === 'shocked' ? ' – Battle-shocked' : ''}</option>`).join('');
+  // attached units are one unit (leader + bodyguard, like the Army list): one entry, booked on the bodyguard
+  const groups = unitGroups(units, resolveLeaders(units)).map(g => Object.assign(g, { hit: g.units.some(u => hits.has(u.id)) }));
+  const sorted = groups.slice().sort((a, b) => (b.hit ? 1 : 0) - (a.hit ? 1 : 0));
+  const unitOpts = sorted.map(g => `<option value="${esc(g.id)}"${g.shocked ? ' disabled' : ''}>${esc(g.name)} (${g.models})${g.hit ? ' ✓' : ''}${g.shocked ? ' – Battle-shocked' : ''}</option>`).join('');
   const reds = fits && !used ? cpReductions(c0, s) : [];
   const cpOnly = st.cpOnly && reds.length > 0;   // short of CP: usable only when a reduction applies to this Stratagem
   // Stratagem add-ons bought with an army resource (data/effects stratAddons, e.g. +1 YP: [SUSTAINED HITS 1])
@@ -193,6 +174,12 @@ export function openStratSheet(ctx, ui, stratId, secPhase) {
       ${phaseRow}${useHtml}`,
     actions,
     onOpen: (el) => {
+      el.addEventListener('click', e => {
+        const k = e.target.closest('[data-action="kw.units"]');
+        if (!k) return;
+        e.preventDefault(); e.stopPropagation();
+        openKwUnitsSheet(ui.ctx || ctx, k.dataset.kwu, !!k.dataset.not);
+      });
       if (phaseRow) el.addEventListener('click', e => {
         const pc = e.target.closest('[data-action="strat.phase"]');
         if (!pc) return;
@@ -251,13 +238,13 @@ export function openAbilitySheet(ctx, ui, key) {
   const c = ui.ctx || ctx;
   const e = abilityByKey(c, key);
   if (!e) { toast('Ability not found', 'bad'); return; }
-  const use = abilityUseOf(c.state, c.me, e);
+  const use = e.fx ? abilityUseOf(c.state, c.me, { key: e.fxUseKey, limit: e.fxLimit }) : abilityUseOf(c.state, c.me, e);
   return sheet({
     title: e.name,
     cls: 'p' + c.me,
     body: `<div class="row between"><span class="muted small">${esc(e.source)}</span><span class="badge lim">${esc(entryLabel(e))}</span></div>
       <div class="orig-block"><div class="orig-label">Original text</div><div class="orig-text">${esc(cleanOrig(e.text))}</div></div>
-      <p class="muted small">${use ? `Used in battle round ${use.round}${e.limit !== 'battle' ? ` (${use.turn === c.me ? 'your' : "opponent's"} turn)` : ''}.` : 'Available.'}</p>`,
+      <p class="muted small">${e.fx && e.fxOn ? 'Active now (chosen under Active effects).' : use ? `Used in battle round ${use.round}${e.limit !== 'battle' ? ` (${use.turn === c.me ? 'your' : "opponent's"} turn)` : ''}.` : 'Available.'}${e.fx ? ' Set it in the Army tab under Active effects.' : ''}</p>`,
     actions: [{ label: 'Close', kind: 'ghost' }]
   });
 }
@@ -277,7 +264,7 @@ export function openMoreSheet(ctx, ui) {
     title: 'More',
     cls: 'p' + me,
     body: `<div class="more-sec"><div class="title sm">Views</div><div class="row wrap">
-        ${btn({ label: 'Score (tablet)', kind: 'ghost', small: true, action: 'nav', data: { href: ctx.roleHash(code, 'desktop', 'table') } })}
+        ${btn({ label: 'Score view (read-only)', kind: 'ghost', small: true, action: 'nav', data: { href: `#/g/${code}/watch` } })}
         ${btn({ label: 'Rulebook', kind: 'ghost', small: true, action: 'nav', data: { href: `#/g/${code}/rules` } })}
         ${btn({ label: 'Lobby', kind: 'ghost', small: true, action: 'nav', data: { href: '#/' } })}
         ${btn({ label: 'Setup', kind: 'ghost', small: true, action: 'nav', data: { href: ctx.roleHash(code, me, 'setup') } })}
@@ -392,5 +379,247 @@ export function openPhaseUseSheet(ctx, e) {
                   : await ctx.dispatch({ type: 'ability.use', player: ctx.me, key: e.key, name: e.name, limit: 'phase', source: e.source, phase: b.dataset.phase });
       if (r) { st = r; el.querySelector('.sheet-body').innerHTML = body(); }
     })
+  });
+}
+
+/* ───────── Keyword chip of a stratagem: the player's units with (or excluded by) that keyword ───────── */
+export function openKwUnitsSheet(ctx, kw, not) {
+  const units = myUnits(ctx.state, ctx.me);
+  const m = /^(.+?)(?: \(unless (.+)\))?$/.exec(String(kw || '')) || [];
+  const base = (m[1] || String(kw || '')).trim();
+  const unless = m[2] ? m[2].split('/').map(x => x.trim()).filter(Boolean) : [];
+  const groups = unitGroups(units, resolveLeaders(units));
+  const withKw = new Set(affectedUnits(units, [base], ctx).map(u => u.id));
+  const unlessSet = new Set(unless.length ? affectedUnits(units, unless, ctx).map(u => u.id) : []);
+  let list = groups.filter(g => g.units.some(u => withKw.has(u.id)));
+  if (not) list = list.filter(g => !g.units.some(u => unlessSet.has(u.id)));
+  const ul = list.length ? `<ul class="kwu-list">${list.map(g => `<li><b>${esc(g.name)}</b> <span class="muted xs">(${esc(g.models)})</span></li>`).join('')}</ul>` : '';
+  const body = !units.length ? '<p class="muted small">No army list imported – add it in the Army list tab.</p>'
+    : not ? `<p class="small">Units with the keyword <b>${esc(base)}</b>${unless.length ? ` (unless they are ${esc(unless.join(' or '))})` : ''} cannot be selected for this Stratagem.</p>${list.length ? `<div class="label">Your units excluded</div>${ul}` : '<p class="muted small">None of your units is excluded.</p>'}`
+    : `<div class="label">Your units with ${esc(base)}</div>${ul || '<p class="muted small">None of your units has this keyword.</p>'}`;
+  return sheet({ title: not ? `NOT ${base}` : `[${base}]`, cls: 'p' + ctx.me + ' kwu-sheet', body, actions: [{ label: 'Close', kind: 'ghost' }] });
+}
+
+/* ───────── Missions ───────── */
+/** Full card text: verbatim original when available, else the condition list of the data. */
+export function openMissionInfo(ctx, ui, src, card) {
+  const c = ui.ctx || ctx;
+  const def = src === 'primary' ? WH.PRIMARY[card] : WH.SECONDARY[card];
+  if (!def) return null;
+  ensureMissionsOrig();
+  const o = missionsOrig(src, card);
+  const mode = ((c.state.players[c.me] || {}).secondaries || {}).mode;
+  const vpT = v => (v && typeof v === 'object' ? (mode === 'fixed' ? v.F : v.T) : v);
+  const conds = (def.c || []).filter(x => !x.mode || (x.mode === 'F') === (mode === 'fixed')).map(x => `<li class="${x.sub ? 'sub' : ''}"><b>${x.k === 'choice' ? esc((x.opts || []).map(q => vpT(q.vp)).join('/')) : esc(vpT(x.vp))} VP${x.k === 'per' ? ' each' : ''}${x.max != null ? ', max. ' + esc(x.max) : ''}</b> · ${esc(x.t)}<span class="muted xs"> · ${esc(WH.TIMING_LABELS[x.w] || x.w)}</span></li>`).join('');
+  return sheet({
+    title: def.name,
+    cls: 'p' + c.me + ' mis-sheet',
+    body: `${o ? `<div class="orig-block"><div class="orig-label">Original card text</div><div class="orig-text">${esc(cleanOrig(o))}</div></div>` : ''}
+      <div class="label">Scoring</div><ul class="info-conds">${conds}</ul>
+      ${def.note ? `<p class="small"><b>Note:</b> ${esc(def.note)}</p>` : ''}
+      ${def.drawn ? `<p class="small text-warn"><b>When drawn:</b> ${esc(def.drawn.text)}</p>` : ''}`,
+    actions: [{ label: 'Close', kind: 'ghost' }]
+  });
+}
+
+/** Discard a Tactical card: at the end of your turn (+1 CP once per turn, in your own turn) or – once per battle, end of your
+ *  Command phase – for 1 CP with a new card drawn. */
+export function openDiscardSheet(ctx, ui, card) {
+  const c = ui.ctx || ctx;
+  const { state, me } = c;
+  const sec = state.players[me].secondaries || {};
+  const name = cardName('secondary', card);
+  const own = state.turn === me;
+  const cpGain = own && sec.cpDiscardTurn !== `${state.round}:${state.turn}`;
+  const canRedraw = !sec.redrawUsed && own && state.phase === 'command' && (state.players[me].cp || 0) >= 1;
+  const run = reason => (closeFn) => {
+    (ui.ctx || ctx).dispatch({ type: 'sec.discard', player: me, card, reason }).then(r => {
+      if (!r) return;
+      toast(reason === 'redraw' ? `${name} discarded – draw a new card` : `${name} discarded${cpGain ? (state.phase === 'end' ? ' · +1 CP' : ' · +1 CP at the end of your turn') : ''}`, 'ok', 2500);
+      closeFn();
+    }).catch(err => toast(err && err.message ? err.message : String(err), 'bad'));
+    return false;
+  };
+  const actions = [{ label: 'Cancel', kind: 'ghost' }];
+  if (canRedraw) actions.push({ label: 'Discard & redraw (1 CP)', kind: 'ghost', onClick: run('redraw') });
+  actions.push({ label: cpGain ? 'Discard · +1 CP' : 'Discard', kind: 'primary', cta: true, onClick: run('end') });
+  return sheet({
+    title: `Discard “${name}”?`,
+    cls: 'p' + me,
+    body: `<p class="small">${cpGain ? (state.phase === 'end' ? 'You gain 1 CP now (once per turn).' : 'You gain 1 CP at the end of your turn (once per turn).') : own ? 'No CP – you already discarded a card this turn.' : 'No CP – it is not your turn.'}</p>
+      ${canRedraw ? '<p class="small muted">Or, once per battle at the end of your Command phase: spend 1 CP to discard it and draw a new card.</p>' : sec.redrawUsed ? '<p class="muted xs">Discard &amp; redraw already used this battle.</p>' : ''}`,
+    actions
+  });
+}
+
+/** Key of the pending scoring (same as the score device). */
+export function pendingKey(s) { const p = s && s.pending; return p ? (p.key || `${s.round}:${s.turn}:${p.when}:${p.player}`) : null; }
+const SRC_LABEL = { primary: 'Primary', secondary: 'Secondary', bonus: 'Bonus' };
+
+/** The player's own scoring popup (pending score of this player): toggles for achieved conditions, counters for "X VP each",
+ *  a modifier, the total after the caps; confirm books score.confirm (achieve: Tactical cards that scored are discarded).
+ *  The phone never changes the phase – the score device continues the turn when the scoring is confirmed. */
+export function openScoreSheet(ctx, ui) {
+  const c0 = ui.ctx || ctx;
+  const s = c0.state, me = c0.me;
+  const pend = s.pending;
+  if (!pend || pend.kind !== 'score' || pend.player !== me) { toast('No scoring pending for you', 'warn'); return null; }
+  const key = pendingKey(s);
+  if (ui.scoreSheet && ui.scoreSheet.key === key) return null;
+  if (ui.scoreSheet) { ui.scoreSheet.close(); ui.scoreSheet = null; }
+  const player = me;
+  const sc = ((c0.derived || {}).scoring || [])[player] || null;
+  const condOf = it => {
+    if (!sc) return null;
+    if (it.src === 'primary') return sc.primary && sc.primary.card === it.card ? (sc.primary.conds || []).find(x => x.ci === it.ci) || null : null;
+    const sec = (sc.secondaries || []).find(x => x.card === it.card);
+    return sec ? (sec.conds || []).find(x => x.ci === it.ci) || null : null;
+  };
+  // already booked this turn (tapped on the score device) counts as pre-selected – only the difference is booked
+  const items = pend.items.map(it => {
+    const c = condOf(it);
+    const already = c ? Number(c.scoredThisTurn) || 0 : 0;
+    const unit = c && c.vp != null ? Number(c.vp) : it.unit != null ? Number(it.unit) : (it.vp != null && it.k !== 'per' ? Number(it.vp) : 0);
+    return Object.assign({}, it, { vp: already, already, unit, n: unit > 0 ? Math.round(already / unit) : 0, opts: c && c.opts ? c.opts : null, max: c && c.max != null ? Number(c.max) : (it.max != null ? Number(it.max) : null) });
+  });
+  const maxOf = it => (it.max != null ? Number(it.max) : 15);
+  const mod = { vp: 0 };
+  const yesNo = (vp, on) => `<button type="button" class="score-tog${on ? ' on' : ''}" data-opt="${esc(vp)}" aria-pressed="${on}">${on ? '✓ Achieved' : 'Not achieved'}</button>`;
+  const rowHtml = (it, i) => {
+    let ctl, sub = '';
+    if (it.opts) {
+      ctl = `<div class="score-stages">${it.opts.map(o => { const v = Number(o.vp) || 0;
+        return `<div class="score-stage"><span class="score-stage-t">${esc(o.t)} <b class="score-stage-vp">· ${esc(v)} VP</b></span>${yesNo(v, it.vp === v)}</div>`; }).join('')}</div>`;
+    } else if (it.k === 'per') {
+      sub = `${esc(it.unit)} VP each${it.max != null ? ` · max. ${esc(it.max)} VP` : ''}`;
+      ctl = `<div class="score-count"><div class="stepper sm p${player}">
+          <button type="button" data-n="-1" ${it.n <= 0 ? 'disabled' : ''} aria-label="Fewer">−</button>
+          <span class="stepper-value">${esc(it.n)}</span>
+          <button type="button" data-n="1" ${it.vp >= maxOf(it) ? 'disabled' : ''} aria-label="More">+</button>
+        </div><span class="score-eq">= <b>${esc(it.vp)} VP</b></span></div>`;
+    } else {
+      sub = `${esc(it.unit)} VP`;
+      ctl = yesNo(it.unit, it.vp > 0);
+    }
+    return `<div class="score-item" data-i="${i}">
+      <div class="score-main">
+        <div class="score-card"><span class="badge ${it.src === 'primary' ? 'ok' : 'warn'}">${esc(SRC_LABEL[it.src] || it.src)}</span> <b>${esc(it.name)}</b></div>
+        <div class="score-text">${esc(it.text || '')}</div>
+        ${sub || it.already ? `<div class="score-sub muted xs">${sub}${it.already ? (sub ? ' · ' : '') + '<span class="text-ok">' + esc(it.already) + ' VP already booked</span>' : ''}</div>` : ''}
+      </div>
+      <div class="score-ctl2">${ctl}</div>
+    </div>`;
+  };
+  const plan = () => {
+    const delta = items.map(it => Object.assign({}, it, { vp: it.vp - (it.already || 0) }));
+    return { dec: delta.filter(it => it.vp < 0), add: delta.filter(it => it.vp > 0).concat(mod.vp ? [{ src: 'bonus', card: 'modifier', ci: null, vp: mod.vp }] : []) };
+  };
+  const unbookIds = (st, list) => {
+    const ids = [];
+    for (const it of list) {
+      let need = -it.vp;
+      const entries = (st.scores || []).filter(x => x.player === player && x.src === it.src && x.card === it.card && x.ci === it.ci && x.round === st.round && x.turn === st.turn).reverse();
+      for (const e of entries) { if (need <= 0) break; ids.push(e.id); need -= e.vp; }
+    }
+    return ids;
+  };
+  const sum = st => (st.scores || []).filter(x => x.player === player).reduce((a, x) => a + (Number(x.vp) || 0), 0);
+  // VP actually booked after the caps: the same steps on a copy of the state (null = cannot tell)
+  const cappedVp = () => {
+    try {
+      const st0 = (ui.ctx || ctx).state;
+      if (!st0 || !st0.pending || pendingKey(st0) !== key) return null;
+      const { dec, add } = plan();
+      let st = st0;
+      for (const id of unbookIds(st0, dec)) st = reduce(st, { type: 'score.remove', scoreId: id });
+      st = reduce(st, { type: 'score.confirm', player, items: add.map(it => ({ src: it.src, card: it.card, ci: it.ci, vp: it.vp })), achieve: true });
+      return items.reduce((a, i) => a + (i.already || 0), 0) + sum(st) - sum(st0);
+    } catch { return null; }
+  };
+  const totalVp = () => items.reduce((a, i) => a + i.vp, 0) + mod.vp;
+  const bodyHtml = () => `<p class="muted small">${esc(WHEN_LABEL[pend.when] || pend.when)} · Round ${esc(s.round)}${pend.when === 'turn' && player !== s.turn ? ` · end of ${esc(pName(s, s.turn))}'s turn` : ''}</p>
+      <div class="score-list">${items.map(rowHtml).join('') || '<p class="muted small">Nothing to score right now.</p>'}</div>
+      <div class="score-item score-mod">
+        <div class="score-main"><div class="score-card"><b>Modifier</b></div><div class="score-text muted small">Manual correction for anything the list above cannot express (booked as a separate entry).</div></div>
+        <div class="score-ctl"><div class="stepper sm p${player}">
+          <button type="button" data-mod="-1" ${mod.vp <= -15 ? 'disabled' : ''} aria-label="Less">−</button>
+          <span class="stepper-value">${mod.vp > 0 ? '+' : ''}${esc(mod.vp)}</span>
+          <button type="button" data-mod="1" ${mod.vp >= 15 ? 'disabled' : ''} aria-label="More">+</button>
+        </div></div>
+      </div>`;
+  const totalHtml = () => {
+    const raw = totalVp(), capped = cappedVp();
+    const shown = capped == null ? raw : capped;
+    return `<span>Total</span><span class="score-total-v">${capped != null && capped !== raw ? `<small class="muted score-uncapped">(${raw} VP before the caps)</small> ` : ''}<b>${shown} VP</b></span>`;
+  };
+  const close = sheet({
+    title: 'Your scoring · ' + (WHEN_LABEL[pend.when] || pend.when),
+    cls: 'tbl-score pl-score p' + player,
+    body: bodyHtml(),
+    actions: [{ label: 'Confirm scoring', kind: 'primary', cta: true, onClick: (closeFn) => {
+      (async () => {
+        const c = ui.ctx || ctx;
+        if (!c.state.pending || pendingKey(c.state) !== key) { toast('This scoring was already confirmed', 'warn'); closeFn(); return; }
+        const { dec, add } = plan();
+        const shown = cappedVp();   // before unbooking (the preview runs the same steps on the current state)
+        for (const id of unbookIds(c.state, dec)) await c.dispatch({ type: 'score.remove', scoreId: id });
+        const r = await (ui.ctx || c).dispatch({ type: 'score.confirm', player, items: add.map(it => ({ src: it.src, card: it.card, ci: it.ci, vp: it.vp })), achieve: true });
+        if (!r) return;
+        toast(`Scoring confirmed${shown != null ? `: ${shown} VP` : ''}`, 'ok');
+        closeFn();
+      })().catch(err => toast(err && err.message ? err.message : String(err), 'bad'));
+      return false;
+    } }],
+    onOpen: el => {
+      const foot = el.querySelector('.sheet-foot');
+      const tot = document.createElement('div'); tot.className = 'score-total foot-total'; tot.innerHTML = totalHtml();
+      if (foot) foot.parentNode.insertBefore(tot, foot);
+      el.addEventListener('click', e => {
+        const m = e.target.closest('[data-mod]');
+        if (m) { mod.vp = Math.max(-15, Math.min(15, mod.vp + Number(m.dataset.mod))); el.querySelector('.sheet-body').innerHTML = bodyHtml(); tot.innerHTML = totalHtml(); return; }
+        const n = e.target.closest('[data-n]');
+        const o = e.target.closest('[data-opt]');
+        if (!n && !o) return;
+        const row = e.target.closest('.score-item');
+        const it = row ? items[Number(row.dataset.i)] : null;
+        if (!it) return;
+        if (n) { it.n = Math.max(0, it.n + Number(n.dataset.n)); it.vp = Math.min(maxOf(it), it.n * it.unit); if (Number(n.dataset.n) > 0 && it.vp >= maxOf(it)) it.n = Math.ceil(it.vp / it.unit); }
+        else { const v = Number(o.dataset.opt) || 0; it.vp = it.vp === v ? 0 : v; }
+        el.querySelector('.sheet-body').innerHTML = bodyHtml();
+        tot.innerHTML = totalHtml();
+      });
+    },
+    onClose: () => { if (ui.scoreSheet && ui.scoreSheet.key === key) { ui.scoreSheet = null; ui.scoreDismissed = key; } }
+  });
+  ui.scoreSheet = { key, close };
+  return close;
+}
+
+/** Read-only score breakdown ("0:0 VP" in the head): totals by source and VP per battle round for both players. */
+export function openScoreView(ctx, ui) {
+  const c = ui.ctx || ctx;
+  const { state, derived, me } = c;
+  const vp = (derived && derived.vp) || [{ total: 0, primary: 0, secondary: 0, bonus: 0 }, { total: 0, primary: 0, secondary: 0, bonus: 0 }];
+  const scores = state.scores || [];
+  const sumOf = list => list.reduce((a, x) => a + (Number(x.vp) || 0), 0);
+  const per = (p, r) => sumOf(scores.filter(x => x.player === p && x.round === r && x.when !== 'end'));
+  const rounds = [1, 2, 3, 4, 5].filter(r => r <= Math.max(1, state.round || 1));
+  const endRow = scores.some(x => x.when === 'end') ? `<tr><td>End of battle</td><td>${sumOf(scores.filter(x => x.player === 0 && x.when === 'end'))}</td><td>${sumOf(scores.filter(x => x.player === 1 && x.when === 'end'))}</td></tr>` : '';
+  const caps = (((derived && derived.scoring) || [])[me] || {}).caps;
+  const head = `<thead><tr><th></th><th class="text-p0">${esc(pName(state, 0))}</th><th class="text-p1">${esc(pName(state, 1))}</th></tr></thead>`;
+  const mine = scores.filter(x => x.player === me).slice().reverse().slice(0, 12);
+  return sheet({
+    title: 'Score',
+    cls: 'p' + me + ' score-view',
+    body: `<table class="vp-table">${head}<tbody>
+        <tr><td>Primary</td><td>${vp[0].primary}</td><td>${vp[1].primary}</td></tr>
+        <tr><td>Secondary</td><td>${vp[0].secondary}</td><td>${vp[1].secondary}</td></tr>
+        <tr><td>Modifier / bonus</td><td>${vp[0].bonus}</td><td>${vp[1].bonus}</td></tr>
+        <tr class="total"><td>Total</td><td>${vp[0].total}</td><td>${vp[1].total}</td></tr></tbody></table>
+      <div class="label">By battle round</div>
+      <table class="vp-table">${head}<tbody>${rounds.map(r => `<tr><td>Round ${r}</td><td>${per(0, r)}</td><td>${per(1, r)}</td></tr>`).join('')}${endRow}</tbody></table>
+      ${caps && state.stage === 'battle' ? `<p class="muted xs">You can still score this round: Primary ${esc(caps.left.primaryRound)} VP · Secondary ${esc(caps.left.secRound)} VP (battle: ${esc(caps.left.primaryBattle)} / ${esc(caps.left.secBattle)} VP left).</p>` : ''}
+      ${mine.length ? `<div class="label">Your latest entries</div><ul class="score-log">${mine.map(x => `<li><span class="muted xs">R${esc(x.round)}</span> ${srcBadge(x.src)} ${esc(cardName(x.src, x.card))} <b>${x.vp > 0 ? '+' : ''}${esc(x.vp)} VP</b></li>`).join('')}</ul>` : ''}`,
+    actions: [{ label: 'Close', kind: 'ghost' }]
   });
 }
