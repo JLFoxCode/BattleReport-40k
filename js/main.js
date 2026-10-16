@@ -234,9 +234,11 @@ async function route() {
   updateStatusbar();
   render();
   if (newScreen) try { window.scrollTo(0, 0); } catch {}
+  startHello();
 }
 
 function disconnect() {
+  clearInterval(helloTimer); helloTimer = null;
   if (unsubState) { unsubState(); unsubState = null; }
   if (unsubStatus) { unsubStatus(); unsubStatus = null; }
   if (net) { try { net.close(); } catch {} net = null; }
@@ -256,6 +258,7 @@ async function connect(code) {
   const unsubClosed = net.onSignal(sig => {
     // The game was handed over to another device (it hosts it now) → continue there in the same role
     if (sig && sig.type === 'game.moved' && sig.code === code) { followMove(code, sig); return; }
+    if (sig && sig.type === 'who') { sendHello(true); return; }
     if (!sig || sig.type !== 'game.closed' || store.code !== code) return;
     toast('Game ' + code + ' was closed by the host – it is saved on this device.', 'ok', 5000);
     const href = archiveHref(code);
@@ -293,19 +296,65 @@ function followMove(code, to) {
   }, 800);
 }
 
-/** Battle over → store the final state + full action log on THIS device (once per game code and device). */
-const archived = new Set();
+/** Battle over → store the final state + full action log on THIS device. Saved again whenever the finished game changes
+ *  (a correction) or is finished anew after an undo – the archive always holds the last result (code → saved seq). */
+const archived = new Map();
 function archiveIfOver(s) {
-  if (!s || s.stage !== 'over' || archived.has(s.code)) return;
-  archived.add(s.code);
+  if (!s || !s.code) return;
+  if (s.stage !== 'over') { archived.delete(s.code); return; }
+  const prev = archived.get(s.code);
+  if (prev === s.seq) return;
+  archived.set(s.code, s.seq);
   api.getLog(s.code).then(log => {
+    if (archived.get(s.code) !== s.seq) return;   // a newer state is on its way
     const ok = saveFinished({ code: s.code, savedAt: new Date().toISOString(), state: s, actions: (log && log.actions) || [] });
-    if (ok) toast('Battle over – the game is saved on this device (Lobby → Finished games).', 'ok', 5000);
-  }).catch(e => { archived.delete(s.code); console.warn('archive', e); });
+    if (ok && prev == null) toast('Battle over – the game is saved on this device (Lobby → Finished games).', 'ok', 5000);
+  }).catch(e => { if (archived.get(s.code) === s.seq) archived.delete(s.code); console.warn('archive', e); });
+}
+
+/* Seamless routing: a phone that joins a game still in setup (QR code → its player view) goes straight to its own setup;
+ * when the setup ends ("Go to deployment") player devices go to their player view and the shared device to Score. */
+const routedSetup = new Set();
+function redirect(hash) {
+  whenSheetsSettled(() => {
+    if (location.hash === hash) return;
+    try { history.replaceState(null, '', hash); } catch { location.hash = hash; return; }
+    route();
+  });
+}
+function autoRoute(prevStage, s) {
+  if (store.spectator || !s || s.code !== store.code) return;
+  const me = store.me, code = store.code;
+  if (store.view === 'player' && typeof me === 'number' && s.stage === 'setup' && !routedSetup.has(code + '|' + me)) {
+    routedSetup.add(code + '|' + me);
+    redirect(roleHash(code, me, 'setup'));
+    return;
+  }
+  if (prevStage === 'setup' && s.stage === 'deploy' && store.view === 'setup') {
+    nav(typeof me === 'number' ? roleHash(code, me, 'player') : roleHash(code, 'desktop', 'table'));
+  }
+}
+
+/* Presence: a player's device says "hello" (volatile signal) so the shared device can fold away QR codes of phones that
+ * are already connected; the shared device asks "who" when it connects. */
+let helloTimer = null;
+function sendHello(force) {
+  if (net && !store.spectator && typeof store.me === 'number' && (store.view === 'player' || store.view === 'setup') && (force || document.visibilityState === 'visible')) {
+    net.signal({ type: 'hello', me: store.me, view: store.view });
+  }
+}
+function startHello() {
+  clearInterval(helloTimer);
+  helloTimer = null;
+  if (!net || store.spectator || typeof store.me !== 'number' || (store.view !== 'player' && store.view !== 'setup')) return;
+  sendHello(true);
+  helloTimer = setInterval(() => sendHello(), 20000);
 }
 
 function pushState(s) {
   archiveIfOver(s);
+  const prevStage = store.state && store.state.code === s.code ? store.state.stage : null;
+  autoRoute(prevStage, s);
   store.state = s;
   try { store.derived = derive(s); }
   catch (e) { console.error('derive() fehlgeschlagen', e); store.derived = store.derived || {}; }

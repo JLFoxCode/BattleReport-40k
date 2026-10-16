@@ -313,3 +313,38 @@
 .score-tog { min-height: 40px; min-width: 128px; padding: 0 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); color: var(--muted); font: 700 15px/1 var(--font-body); cursor: pointer; white-space: nowrap; flex: none; transition: background .12s, box-shadow .12s; }
 .score-tog.on { background: var(--ok); border-color: var(--ok); color: #05210F; box-shadow: 0 0 14px color-mix(in srgb, var(--ok) 55%, transparent); }
 .score-stage-vp { white-space: nowrap; }
+
+/* Toasts sit above the footer button (End turn / Next phase) – never on top of it */
+body[data-view="table"] .toasts { bottom: calc(100px + var(--sa-bottom)); }
+@media (max-height: 560px) { body[data-view="table"] .toasts { bottom: calc(80px + var(--sa-bottom)); } }
+.toast.has-act { display: flex; align-items: center; gap: 12px; pointer-events: auto; }
+.toast .toast-act { flex: none; white-space: nowrap; }
+
+/* Footer while the players confirm their scoring on their phones */
+.tbl-cta .cta-wait { flex: 1 1 auto; min-width: 0; display: flex; align-items: center; min-height: 64px; padding: 0 14px; border: 1px dashed var(--line); border-radius: 12px; font-size: 18px; }
+.tbl-cta .cta-wait .text-p0 { color: var(--p0); } .tbl-cta .cta-wait .text-p1 { color: var(--p1); }
+
+/* Scoring sheet: one section per player */
+.sheet.tbl-score .score-sec { border-left: 4px solid var(--pc, var(--line)); padding-left: 10px; margin-bottom: 14px; }
+.sheet.tbl-score .score-sec.p0 { --pc: var(--p0); } .sheet.tbl-score .score-sec.p1 { --pc: var(--p1); }
+.sheet.tbl-score .score-sec-h { margin: 4px 0 6px; font-size: 18px; }
+.sheet.tbl-score .score-sec-note { margin: 0 0 6px; }
+.sheet.tbl-score .foot-total .score-total-p b { min-width: 0; margin-left: 4px; }
+.sheet.tbl-score .foot-total .score-total-p .text-p0 { color: var(--p0); } .sheet.tbl-score .foot-total .score-total-p .text-p1 { color: var(--p1); }
+
+/* VP in the head: tap → correct the last scoring */
+.head-vp .vp-btn { all: unset; box-sizing: border-box; cursor: pointer; display: flex; flex-direction: column; align-items: center; border-radius: 10px; padding: 0 4px; }
+.head-vp .vp-btn:focus-visible { outline: 2px solid var(--text); }
+.head-vp .vp-btn:active { filter: brightness(1.15); }
+
+/* Lines above the score: CP offers, Fixed Missions */
+.tbl-notes { display: flex; flex-direction: column; gap: 8px; margin: 0 0 10px; }
+.tbl-note { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; padding: 8px 12px; border: 1px solid var(--line); border-left: 4px solid var(--pc, var(--line)); border-radius: var(--radius-sm); background: var(--panel2); font-size: 15px; }
+.tbl-note.p0 { --pc: var(--p0); } .tbl-note.p1 { --pc: var(--p1); }
+.tbl-note-t { min-width: 0; flex: 1 1 240px; }
+.tbl-note-act { display: flex; gap: 8px; flex: none; }
+
+/* Deployment: a phone that is connected folds its QR code away */
+.dep-list .qr-card.qr-done { justify-content: center; min-height: 80px; }
+.sec-hint .btn, .sec-full .btn { margin-left: 6px; }
+.pick-list { gap: 8px; }

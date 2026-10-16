@@ -83,3 +83,7 @@
 .lobby .join-form .btn { flex: none; }
 .lang-card .lang-terms { display: flex; align-items: center; gap: 8px; margin: 12px 0 4px; text-transform: none; letter-spacing: 0; font-size: 15px; color: var(--text); }
 .lang-card .lang-terms input { width: 22px; height: 22px; }
+/* tablet / PC home: take over a game hosted by a phone nearby */
+.takeover-banner { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin: 0 0 12px; border-left: 4px solid var(--warn); }
+.takeover-banner .tb-text { min-width: 0; flex: 1 1 260px; }
+.takeover-banner .pname.p0 { color: var(--p0); } .takeover-banner .pname.p1 { color: var(--p1); }

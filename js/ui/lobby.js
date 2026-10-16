@@ -94,6 +94,7 @@ function homeHtml(last, lastExists) {
     ${lastExists ? `<button type="button" class="continue-card" data-action="continue">
         <span class="cont-text"><span class="cont-kicker">Continue game</span><span class="cont-code">${esc(last.code)}</span></span>
         <span class="cont-role">${esc(roleLabel(last))}</span><span class="cont-go" aria-hidden="true">›</span></button>` : ''}
+    ${takeoverBanners(nearbyL)}
     <nav class="menu-grid" aria-label="Main menu">
       ${tile({ action: 'new', icon: 'play', label: 'New game', sub: 'Host a battle on this device', main: true })}
       ${tile({ href: '#/play/join', icon: 'join', label: 'Join game', sub: nearby ? `${nearby} game${nearby === 1 ? '' : 's'} nearby` : 'Nearby or by code' })}
@@ -145,6 +146,13 @@ function pageHtml(page) {
   </div>`;
 }
 
+/** The game's own player colours on its card – without them the defaults (player 1 / player 2), never the colours the
+ *  last opened game left on :root. */
+function gameColors(colors) {
+  const c = Array.isArray(colors) ? colors : [];
+  return [0, 1].map(i => `--p${i}:${colorOf(Number.isInteger(c[i]) ? c[i] : i)};`).join('');
+}
+
 /* ───────── App only: games hosted by other devices on the same Wi-Fi (window.BR = Android bridge, DNS-SD) ───────── */
 let nearbyTimer = null, nearbyKey = '';
 function nearbyList() { try { return JSON.parse(window.BR.nearby()) || []; } catch { return []; } }
@@ -164,7 +172,7 @@ function nearbySection() {
     <section class="card nearby">
       <div class="title">Games nearby</div>
       ${list.length ? `<div class="grid game-grid">${list.map(g => `
-        <article class="card game" data-host="${esc(g.host)}" data-port="${esc(g.port)}" data-ncode="${esc(g.code)}">
+        <article class="card game" data-host="${esc(g.host)}" data-port="${esc(g.port)}" data-ncode="${esc(g.code)}" style="${gameColors([g.c0, g.c1])}">
           <div class="row between game-head"><div class="code">${esc(g.code)}</div>${badge(STAGE_LABEL[g.stage] || g.stage || '–', STAGE_KIND[g.stage] || '')}</div>
           <div class="game-players"><span class="pname p0">${esc(g.p0 || 'Player 1')}</span><span class="muted vs">vs</span><span class="pname p1">${esc(g.p1 || 'Player 2')}</span></div>
           <div class="row roles">
@@ -178,6 +186,18 @@ function nearbySection() {
       : '<p class="muted small">Searching the Wi-Fi … A game appears here as soon as a device in the same network creates one with this app.</p>'}
       <p class="muted hint">A game you create on this device is hosted by it – the other devices find it automatically, or scan the QR codes shown at "Roll off for the first turn".</p>
     </section>`;
+}
+
+/** Tablet / PC home screen: a game hosted by another device nearby (usually the phone it was started on) can move here. */
+function takeoverBanners(list) {
+  const big = Math.min(screen.width || 0, screen.height || 0) >= 600;
+  if (!window.BR || !big || games === null) return '';
+  return list.filter(canTakeOver).map(g => `
+    <div class="card takeover-banner" data-host="${esc(g.host)}" data-port="${esc(g.port)}" data-ncode="${esc(g.code)}" style="${gameColors([g.c0, g.c1])}">
+      <div class="tb-text"><b>Take over game ${esc(g.code)} from ${esc(g.dev || g.host)}</b>
+        <div class="muted small"><span class="pname p0">${esc(g.p0 || 'Player 1')}</span> vs <span class="pname p1">${esc(g.p1 || 'Player 2')}</span> · ${esc(STAGE_LABEL[g.stage] || g.stage || '–')} – this device then hosts the game, all devices switch over by themselves.</div></div>
+      ${btn({ label: 'Take over', kind: 'primary', action: 'takeover' })}
+    </div>`).join('');
 }
 
 /* Handover: a game hosted by another device (e.g. the phone it was started on) moves to this device, which has its own
@@ -210,7 +230,7 @@ function finishedSection() {
   return `<section class="games finished">
       <div class="title">Finished games <span class="muted xs">saved on this device</span></div>
       <div class="grid game-grid">${list.map(g => `
-        <a class="card game" href="#/archive/${esc(g.code)}">
+        <a class="card game" href="#/archive/${esc(g.code)}" style="${gameColors(g.colors)}">
           <div class="row between game-head"><div class="code">${esc(g.code)}</div>${badge('Finished', '')}</div>
           <div class="game-players"><span class="pname p0">${esc(g.players[0] || 'Player 1')}</span> <b>${esc(g.vp[0] ?? '')}</b><span class="muted vs">:</span><b>${esc(g.vp[1] ?? '')}</b> <span class="pname p1">${esc(g.players[1] || 'Player 2')}</span></div>
           <div class="muted small">${g.savedAt ? fmtDate(g.savedAt) : ''}</div>
@@ -273,7 +293,7 @@ function renderList(host) {
   // a game handed over to another device: read-only here, the role buttons open it on the new host
   const mv = g => g.movedTo && g.movedTo.host && g.movedTo.port ? g.movedTo : null;
   return `<div class="grid game-grid">${games.map(g => `
-    <article class="card game${mv(g) ? ' moved' : ''}" data-code="${esc(g.code)}"${mv(g) ? ` data-ncode="${esc(g.code)}" data-host="${esc(mv(g).host)}" data-port="${esc(mv(g).port)}"` : ''}${Array.isArray(g.colors) ? ` style="${g.colors.map((c, i) => (c == null ? '' : `--p${i}:${colorOf(c)};`)).join('')}"` : ''}>
+    <article class="card game${mv(g) ? ' moved' : ''}" data-code="${esc(g.code)}"${mv(g) ? ` data-ncode="${esc(g.code)}" data-host="${esc(mv(g).host)}" data-port="${esc(mv(g).port)}"` : ''} style="${gameColors(g.colors)}">
       <div class="row between game-head">
         <div class="code">${esc(g.code)}</div>
         ${mv(g) ? badge('Moved', 'warn') : badge(STAGE_LABEL[g.stage] || g.stage || '–', STAGE_KIND[g.stage] || '')}

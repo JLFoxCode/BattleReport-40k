@@ -137,7 +137,18 @@
 .ready-btn { min-height: 72px; flex-direction: column; gap: 2px; }
 .ready-btn .ready-lbl { font-size: 14px; font-weight: 600; opacity: .85; }
 .ready-btn .ready-state { font-size: 22px; }
+.ready-btn .ready-sub { font-size: 12px; font-weight: 500; opacity: .75; }
 .btn.not-yet { opacity: .75; }
+/* "X is waiting for you" under the step chips */
+.ready-banner { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-top: 8px; padding: 10px 12px;
+  border: 1px solid var(--line); border-left: 4px solid var(--pc, var(--ok)); border-radius: var(--radius-sm); background: var(--panel2); font-size: 15px; }
+.ready-banner.p0 { --pc: var(--p0); } .ready-banner.p1 { --pc: var(--p1); }
+/* step 2: saved lists first, the faction grid folded below */
+.saved-lists { margin-bottom: 10px; }
+.saved-lists .arm-pick { margin-bottom: 0; }
+.fac-manual { margin-top: 6px; }
+.fac-manual > summary { cursor: pointer; padding: 10px 2px; font-weight: 600; color: var(--muted); }
+.same-primary { margin: 10px 0 6px; }
 @media (min-width: 600px) { .ready-row { grid-template-columns: 1fr 1fr; } }
 
 /* ───────── Zusammenfassung ───────── */

@@ -51,8 +51,47 @@ function openTextSheet(title, bodyHtml, cls = '') {
 
 const UI = {};
 function uiFor(code) {
-  return UI[code] || (UI[code] = { tab: 'score', sheet: null, ctx: null, dismissed: null, checks: {}, logN: 60 });
+  return UI[code] || (UI[code] = { tab: 'score', sheet: null, ctx: null, dismissed: null, checks: {}, logN: 60, drafts: {}, waitKey: null, seen: {}, qrOpen: {}, presNet: null });
 }
+const scoreKey = it => it.src + '|' + it.card + '|' + (it.ci == null ? null : it.ci);
+
+/** A toast with one action button (e.g. "Correct last scoring"); the toast never blocks the buttons underneath. */
+function toastAction(msg, kind, label, fn, ms = 7000) {
+  const kill = toast(msg, kind, ms);
+  const host = document.querySelector('.toasts');
+  const el = host && host.lastElementChild;
+  if (el) {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'btn ghost sm toast-act'; b.textContent = label;
+    b.addEventListener('click', ev => { ev.stopPropagation(); kill(); fn(); });
+    el.appendChild(b);
+    el.classList.add('has-act');
+  }
+  return kill;
+}
+
+/* Presence: the players' devices say "hello" (js/main.js) – their QR codes fold away on this device. */
+function watchPresence(ctx) {
+  const ui = cur.ui;
+  if (!ctx.net || ui.presNet === ctx.net || typeof ctx.net.onSignal !== 'function') return;
+  ui.presNet = ctx.net;
+  ctx.net.onSignal(sig => {
+    if (!sig || sig.type !== 'hello' || !(sig.me === 0 || sig.me === 1)) return;
+    const was = Date.now() - (ui.seen[sig.me] || 0) < 60000;
+    ui.seen[sig.me] = Date.now();
+    ui.presSig = [0, 1].map(p => connected(ui, p)).join();
+    if (!was && cur && cur.ui === ui && document.body.dataset.view === 'table') paint();
+  });
+  if (typeof ctx.net.signal === 'function') ctx.net.signal({ type: 'who' });
+  // a phone that went quiet counts as gone after 60 s: the scoring sheet then opens here again
+  if (!ui.presTimer) ui.presTimer = setInterval(() => {
+    const sig = [0, 1].map(p => connected(ui, p)).join();
+    if (sig === ui.presSig) return;
+    ui.presSig = sig;
+    if (cur && cur.ui === ui && document.body.dataset.view === 'table') { paint(); syncSheet(); }
+  }, 5000);
+}
+const connected = (ui, p) => Date.now() - (ui.seen[p] || 0) < 60000;
 let cur = null; // { root, ctx, ui }
 
 const pName = (s, i) => (s && s.players && s.players[i] && s.players[i].name) || `Player ${Number(i) + 1}`;
@@ -68,6 +107,7 @@ export function render(root, ctx) {
   cur = { root, ctx, ui };
   bind(root);
   applyColors(ctx.state);
+  if (!ctx.spectator) watchPresence(ctx);
   paint();
   syncSheet();
 }
@@ -167,7 +207,9 @@ function deployStage(ctx, ui) {
               <div class="name">Roll off for the first turn ${infoBtn('dep-info', { key: 'first' }, 'Rules text')}</div>
               <div class="sub">Roll off: both players roll, the winner takes the first turn. Pre-battle rules (e.g. Scouts) are resolved alternately afterwards, starting with the player taking the first turn.${first != null ? ` First turn: <b class="text-p${first}">${esc(pName(s, first))}</b>` : ''}</div>
               <div class="row first-row">${[0, 1].map(p => btn({ label: pName(s, p), kind: `p${p}`, cls: first === p ? '' : 'ghost', action: 'first', data: { p } })).join('')}</div>
-              <div class="row qr-row">${[0, 1].map(p => `<div class="qr-card p${p}">${qrReady() ? qrSvg(joinUrl(code, p)) : '<div class="qr-wait xs muted">QR code loading…</div>'}<div class="xs muted">Scan to open the rules of <b class="text-p${p}">${esc(pName(s, p))}</b></div></div>`).join('')}</div>
+              <div class="row qr-row">${[0, 1].map(p => connected(ui, p) && !ui.qrOpen[p]
+                ? `<div class="qr-card p${p} qr-done"><div class="small"><b class="text-p${p}">✓ ${esc(pName(s, p))}</b>'s phone is connected</div>${btn({ label: 'Show QR code', kind: 'ghost', small: true, action: 'qr-show', data: { p } })}</div>`
+                : `<div class="qr-card p${p}">${qrReady() ? qrSvg(joinUrl(code, p)) : '<div class="qr-wait xs muted">QR code loading…</div>'}<div class="xs muted">Scan to open the rules of <b class="text-p${p}">${esc(pName(s, p))}</b></div></div>`).join('')}</div>
             </div>
           </li>
         </ul>
@@ -209,7 +251,7 @@ function head(ctx) {
   return `
     <header class="tbl-head p${t}">
       <div class="head-vp p0">
-        <div class="kpi lg p0"><span class="kpi-value">${esc(vp[0].total)}</span><span class="kpi-label">${esc(pName(s, 0))}</span></div>
+        <button type="button" class="kpi lg p0 vp-btn" data-action="correct" data-p="0" title="Correct the last scoring of ${esc(pName(s, 0))}"><span class="kpi-value">${esc(vp[0].total)}</span><span class="kpi-label">${esc(pName(s, 0))}</span></button>
         <button class="cpbox" type="button" data-action="cp-sheet" data-p="0" aria-label="Adjust CP ${esc(pName(s, 0))}"><b>${esc(cp[0])}</b><span>CP</span></button>
       </div>
       <button type="button" class="head-mid" data-action="phase-info" title="Rules for the current phase">
@@ -219,7 +261,7 @@ function head(ctx) {
       </button>
       <div class="head-vp p1">
         <button class="cpbox" type="button" data-action="cp-sheet" data-p="1" aria-label="Adjust CP ${esc(pName(s, 1))}"><b>${esc(cp[1])}</b><span>CP</span></button>
-        <div class="kpi lg p1"><span class="kpi-value">${esc(vp[1].total)}</span><span class="kpi-label">${esc(pName(s, 1))}</span></div>
+        <button type="button" class="kpi lg p1 vp-btn" data-action="correct" data-p="1" title="Correct the last scoring of ${esc(pName(s, 1))}"><span class="kpi-value">${esc(vp[1].total)}</span><span class="kpi-label">${esc(pName(s, 1))}</span></button>
       </div>
     </header>`;
 }
@@ -266,9 +308,10 @@ async function endTurn(cont) {
   if (!cont || !ui.group) ui.group = newGroup();
   const startRound = s.round, startTurn = s.turn;
   for (let i = 0; i < 8; i++) {
-    const r = await c().dispatch(grouped({ type: 'phase.next', endTurn: true, track: true })); // Command-phase scoring joins the end-of-turn popup
+    // Command-phase scoring joins the end-of-turn sheet; both players' end-of-turn scoring in one sheet (merge)
+    const r = await c().dispatch(grouped({ type: 'phase.next', endTurn: true, track: true, merge: true }));
     if (!r) { ui.endingTurn = false; ui.group = null; return; }
-    if (r.pending) return;                      // scoring sheet opens via syncSheet; confirmScore continues the turn
+    if (r.pending) { ui.waitKey = pendingKey(r); return; }   // scoring sheet opens via syncSheet; maybeContinue() goes on
     if (r.stage !== 'battle' || r.round !== startRound || r.turn !== startTurn) break;
   }
   ui.endingTurn = false;
@@ -279,7 +322,13 @@ function ctaHtml(ctx) {
   const s = ctx.state;
   if (s.stage !== 'battle') return '';
   if (s.pending && s.pending.kind === 'score') {
-    return btn({ label: `Confirm scoring – ${pName(s, s.pending.player)}`, kind: `p${s.pending.player}`, cta: true, action: 'open-score', cls: 'pulse-soft' });
+    const ps = openParts(s).map(x => x.player).filter((p, i, a) => a.indexOf(p) === i);
+    // the players' phones are connected: they confirm there – the tablet waits (and can still confirm here)
+    if (!ctx.spectator && phonesConfirm(s)) {
+      return `<div class="cta-row"><div class="cta-wait">Waiting for ${ps.map(p => `<b class="text-p${p}">${esc(pName(s, p))}</b>`).join(' & ')} to confirm on ${ps.length > 1 ? 'their phones' : 'their phone'}</div>
+        ${btn({ label: 'Confirm here', kind: 'ghost', action: 'open-score', cls: 'cta-side' })}</div>`;
+    }
+    return btn({ label: `Confirm scoring – ${ps.map(p => pName(s, p)).join(' & ')}`, kind: ps.length === 1 ? `p${ps[0]}` : 'primary', cta: true, action: 'open-score', cls: 'pulse-soft' });
   }
   const lastTurn = s.round >= 5 && s.turn !== (s.mission.first == null ? 0 : s.mission.first);
   const label = lastTurn ? 'End battle – final scoring' : `End turn of ${pName(s, s.turn)} – scoring, then ${pName(s, 1 - s.turn)}`;
@@ -302,15 +351,45 @@ async function nextPhase() {
   if (s.pending) return openScoreSheet();
   ui.endingTurn = false;
   ui.group = newGroup();
-  const r = await (ui.ctx || ctx).dispatch(grouped({ type: 'phase.next', track: true }));
-  if (!r || !r.pending) ui.group = null;      // a scoring that blocks the step keeps the group for confirmScore
+  const r = await (ui.ctx || ctx).dispatch(grouped({ type: 'phase.next', track: true, merge: true }));
+  if (!r || !r.pending) ui.group = null;      // a scoring that blocks the step keeps the group for the continuation
+  else ui.waitKey = pendingKey(r);
   return r;
+}
+
+/** The open parts of the pending scoring: merged (pending.parts) or the single classic one. */
+function openParts(s) {
+  const pend = s && s.pending;
+  if (!pend || pend.kind !== 'score') return [];
+  if (Array.isArray(pend.parts)) return pend.parts.filter(x => !x.done);
+  return [{ player: pend.player, when: pend.when, key: pend.key, items: pend.items || [] }];
+}
+const partsSig = s => openParts(s).map(x => x.key).join('+');
+/** Every player with an open part has their phone connected → they confirm there; the tablet does not push its sheet. */
+const phonesConfirm = s => { const ps = openParts(s).map(x => x.player); return ps.length > 0 && ps.every(p => connected(cur.ui, p)); };
+
+/** The pending scoring the tablet waits for (after End turn / Next phase) is resolved – by the tablet's Confirm or by the
+ *  players on their phones: go on with the step (the whole turn, or one phase). Runs once per scoring. */
+function maybeContinue() {
+  const { ui } = cur;
+  const c = ui.ctx || cur.ctx;
+  const s = c.state;
+  if (!ui.waitKey || !s || (s.pending && pendingKey(s) === ui.waitKey)) return;
+  ui.waitKey = null;
+  if (s.stage !== 'battle') { ui.group = null; ui.endingTurn = false; return; }
+  if (s.pending) { ui.waitKey = pendingKey(s); return; }   // a new scoring followed (e.g. end of battle) – its own sheet
+  if (ui.endingTurn) { endTurn(true); return; }
+  c.dispatch(grouped({ type: 'phase.next', track: true, merge: true })).then(r => {
+    if (r && r.pending) ui.waitKey = pendingKey(r); else ui.group = null;
+  });
 }
 
 /* ───────── Reiter Score ───────── */
 function scoreTab(ctx, ui) {
-  // Objective-marker tiles removed on request: control is scored via the condition rows / scoring popup
+  // Objective strip: who holds which marker – persists between turns and pre-fills the objective rows of the scoring sheet
   return `
+    ${noticesHtml(ctx)}
+    ${objectivesHtml(ctx)}
     <section class="tbl-cols">
       ${[0, 1].map(p => `<div class="pcol p${p}" data-p="${p}">${playerColumn(ctx, p)}</div>`).join('')}
     </section>`;
@@ -322,15 +401,16 @@ function objectivesHtml(ctx) {
   if (!objs.length) return `<div class="card flat muted center">No objective markers (deployment map missing).</div>`;
   const ctrl = d.control || {};
   const twist = s.mission.twist ? WH.TWISTS.find(t => t.id === s.mission.twist) : null;
+  const pos = anyPositions(s);
   return `
-    <div class="objs-head"><span class="xs muted">Objective markers · tap cycles ${esc(pName(s, 0))} → ${esc(pName(s, 1))} → none → auto</span>${infoBtn('obj-info', {}, 'Objective control rules')}
+    <div class="objs-head"><span class="xs muted">Objective control · tap a marker: ${esc(pName(s, 0))} → ${esc(pName(s, 1))} → ${pos ? 'none → auto' : 'nobody'} · stays set between turns and pre-fills the scoring</span>${infoBtn('obj-info', {}, 'Objective control rules')}
       ${twist ? `<span class="spacer"></span><span class="xs"><b>Twist:</b> ${esc(twist.name)}</span>${infoBtn('twist-info', { id: twist.id }, 'Twist')}` : ''}</div>
     <section class="tbl-objs">
       ${objs.map(o => {
         const c = ctrl[o.id] ? ctrl[o.id].ctrl : o.ctrl;
         const who = c === 0 || c === 1 ? c : null;
         const label = o.kind === 'home' ? `Home ${o.home != null ? pName(s, o.home) : ''}` : o.kind === 'exp' ? (o.id === 'o3' ? 'Exp. 1' : 'Exp. 2') : 'Centre';
-        const mode = o.override == null ? 'Auto' : o.override === 'none' ? 'None' : 'Manual';
+        const mode = !pos ? '' : o.override == null ? 'Auto' : o.override === 'none' ? 'None' : 'Manual';
         return `<button type="button" class="obj ${who != null ? 'p' + who + ' held' : 'free'} ${o.override == null ? 'auto' : ''}" data-action="obj" data-id="${esc(o.id)}" title="${esc(o.name)}">
           <span class="obj-label">${esc(label)}</span>
           <span class="obj-who">${who != null ? esc(pName(s, who)) : 'free'}</span>
@@ -338,6 +418,25 @@ function objectivesHtml(ctx) {
         </button>`;
       }).join('')}
     </section>`;
+}
+
+/** Units placed on a battlefield map (map view): only then does "auto" control mean anything. */
+const anyPositions = s => (s.players || []).some(pl => (pl.units || []).some(u => u.pos));
+
+/** Non-modal lines above the score: "+1 CP" rule offers (Add / Skip – never booked by themselves) and, after round 1,
+ *  the active player's Fixed Missions instead of a popup. */
+function noticesHtml(ctx) {
+  const s = ctx.state, out = [];
+  for (const o of s.cpOffers || []) {
+    const cond = o.req === 'warlord' ? `only if your WARLORD (${o.unitName}) is on the battlefield` : `only if ${o.unitName} is on the battlefield`;
+    out.push(`<div class="tbl-note p${o.player}"><span class="tbl-note-t"><b class="text-p${o.player}">${esc(pName(s, o.player))}</b> · ${esc(o.name)}: +${esc(o.cp)} CP? <span class="muted">(${esc(cond)})</span></span>
+      <span class="tbl-note-act">${btn({ label: 'Add', kind: `p${o.player}`, small: true, action: 'cp-offer', data: { p: o.player, id: o.id, ok: 1 } })}${btn({ label: 'Skip', kind: 'ghost', small: true, action: 'cp-offer', data: { p: o.player, id: o.id, ok: 0 } })}</span></div>`);
+  }
+  const p = s.turn, sec = (s.players[p] && s.players[p].secondaries) || {};
+  if (s.stage === 'battle' && sec.mode === 'fixed' && s.round > 1 && s.phase === 'command' && (sec.fixed || []).length) {
+    out.push(`<div class="tbl-note p${p}"><span class="tbl-note-t">Start of <b class="text-p${p}">${esc(pName(s, p))}</b>'s turn · Fixed Secondary Missions: ${esc(sec.fixed.map(id => (WH.SECONDARY[id] || { name: id }).name).join(' · '))}</span></div>`);
+  }
+  return out.length ? `<div class="tbl-notes">${out.join('')}</div>` : '';
 }
 
 function playerColumn(ctx, p) {
@@ -388,7 +487,7 @@ function secondariesHtml(ctx, p, sc) {
     if (!list.length && !canDraw) out += `<div class="card flat muted center small">No cards in hand.</div>`;
   }
   for (const c of list) {
-    const drawnHint = drawnHintShown(s, p, c.card) ? `<div class="xs text-warn sec-hint">${esc(c.drawn.text)}${returnBtn(s, p, c.card)}</div>` : '';
+    const drawnHint = drawnHintShown(s, p, c.card) ? `<div class="xs text-warn sec-hint">${esc(c.drawn.text)}${drawnExtra(s, p, c.card)}</div>` : '';
     out += `
       <div class="card scard secondary p${p}" data-card="${esc(c.card)}">
         <div class="card-head">
@@ -500,6 +599,8 @@ function moreTab(ctx, ui) {
           ${btn({ label: 'Undo (last action)', kind: 'ghost', action: 'undo' })}
           ${btn({ label: 'Set phase', kind: 'ghost', action: 'phase-set' })}
           ${btn({ label: 'End battle', kind: 'danger', action: 'end-game' })}
+          ${btn({ label: 'Correct last scoring', kind: 'ghost', action: 'correct' })}
+          ${btn({ label: 'Move host to another device…', kind: 'ghost', action: 'move-host' })}
           ${btn({ label: 'Back to setup', kind: 'ghost', action: 'go', data: { hash: `#/g/${ctx.code}/setup` } })}
           <a class="btn ghost" href="#/">Lobby</a>
         </div>
@@ -571,7 +672,8 @@ function overStage(ctx, ui) {
 }
 
 /* ═══════════════ Sheets ═══════════════ */
-function pendingKey(s) { const p = s.pending; return p ? (p.key || `${s.round}:${s.turn}:${p.when}:${p.player}`) : null; }
+/** Key of the pending scoring: the merged set (mkey) stays the same while the players confirm their parts. */
+function pendingKey(s) { const p = s.pending; return p ? (p.mkey || p.key || `${s.round}:${s.turn}:${p.when}:${p.player}`) : null; }
 
 /** Nach jedem State-Push: Wertungs-Sheet öffnen/schließen. */
 function syncSheet() {
@@ -579,9 +681,12 @@ function syncSheet() {
   if (ctx.spectator) return;   // spectators never get the scoring / draw popups
   const s = ctx.state;
   const key = s && s.pending && s.pending.kind === 'score' && s.stage === 'battle' ? pendingKey(s) : null;
-  if (ui.sheet && ui.sheet.kind === 'score' && ui.sheet.key !== key) { ui.sheet.close(); ui.sheet = null; }
-  if (key && ui.sheet && ui.sheet.kind === 'draw') { ui.sheet.close(); ui.sheet = null; }   // scoring takes precedence
-  if (key && !ui.sheet && ui.dismissed !== key) { openScoreSheet(); return; }
+  const closeSheet = () => { const sh = ui.sheet; ui.sheet = null; sh.close(); };   // not a dismissal by the user
+  // closed when resolved; rebuilt when a player confirmed their part on the phone (edits of the rest are kept)
+  if (ui.sheet && ui.sheet.kind === 'score' && (ui.sheet.key !== key || ui.sheet.sig !== partsSig(s))) closeSheet();
+  if (key && ui.sheet && ui.sheet.kind === 'draw') closeSheet();   // scoring takes precedence
+  // the sheet opens by itself only when a player of the scoring has no phone connected (else "Waiting for … / Confirm here")
+  if (key && !ui.sheet && ui.dismissed !== key && !phonesConfirm(s)) { openScoreSheet(); return; }
   // New turn with Tactical Missions: ask to draw the cards right away (once per turn), showing them in full
   if (!key && s && s.stage === 'battle' && !ui.sheet) {
     const p = s.turn, sec = s.players[p].secondaries || {};
@@ -593,9 +698,11 @@ function syncSheet() {
     if (startOfTurn && ui.drawShown !== dkey) {
       ui.drawShown = dkey;
       try { localStorage.setItem('br40k-drawShown', dkey); } catch { /* private mode */ }
-      openDrawSheet(p);
+      // Fixed Missions: the popup only in round 1 – later a line above the score (noticesHtml)
+      if (!(sec.mode === 'fixed' && s.round > 1)) openDrawSheet(p);
     }
   }
+  maybeContinue();
 }
 
 /** Full text of a Secondary Mission card: verbatim original if available, else the condition list from the data. */
@@ -610,7 +717,7 @@ function secCardHtml(s, p, card, o) {
     ${origBlock(o && (o.text || o), 'Original card text')}
     ${!o ? `<ul class="info-conds" data-no-i18n>${conds}</ul>` : ''}
     ${def.note ? `<p class="small"><b>Action:</b> ${esc(def.note)}</p>` : ''}
-    ${drawnHintShown(s, p, card) ? `<p class="small text-warn"><b>When drawn:</b> ${esc(def.drawn.text)}${returnBtn(s, p, card)}</p>` : ''}
+    ${drawnHintShown(s, p, card) ? `<p class="small text-warn"><b>When drawn:</b> ${esc(def.drawn.text)}${drawnExtra(s, p, card)}</p>` : ''}
   </div>`;
 }
 /** May this hand card be shuffled back / discarded per its own card rule right now? ("active" = in the hand) */
@@ -630,10 +737,79 @@ function drawnHintShown(s, p, card) {
   if (d.kind === 'conflict') return (sec.hand || []).includes(d.other);
   return true;
 }
-function returnBtn(s, p, card) {
+function returnBtn(s, p, card, strong) {
   if (!canReturnCard(s, p, card)) return '';
   const discard = WH.SECONDARY[card].drawn.kind === 'target';
-  return ' ' + btn({ label: discard ? 'Discard & draw a new card' : 'Draw a new card & shuffle this back', kind: 'ghost', small: true, action: 'sec-return', data: { p, card } });
+  return ' ' + btn({ label: discard ? 'Discard & draw a new card' : 'Draw a new card & shuffle this back', kind: strong ? `p${p}` : 'ghost', small: true, action: 'sec-return', data: { p, card } });
+}
+/** A Grievous Blow / Bring It Down without a target in the opponent's army list: suggested (the players decide – the
+ *  list does not say what is on the battlefield). null = cannot tell (no list). */
+function noTarget(s, p, card) {
+  const d = (WH.SECONDARY[card] || {}).drawn;
+  if (!d || d.kind !== 'target') return null;
+  const opp = (s.players[1 - p].units || []).filter(u => u.status !== 'destroyed');
+  if (!opp.length) return null;
+  if (card === 'grievous_blow') return !opp.some(u => Number(u.modelsStart || u.models) >= 13);
+  if (card === 'bring_it_down') return !opp.some(u => Number(u.wounds) >= 10);
+  return null;
+}
+/** Picked units of Beacon / Burden of Trust (stored as player effects 'sec:<card>'). */
+function pickedText(s, p, card) {
+  const e = ((s.players[p].effects || {})['sec:' + card] || {}).value;
+  if (e == null) return '';
+  const unit = id => ((s.players[p].units || []).find(u => u.id === id) || { name: '?' }).name;
+  if (card === 'beacon') return 'Beacon unit: ' + unit(String(e));
+  const objName = id => { const o = (s.objectives || []).find(x => x.id === id); return o ? objLabel(s, o) : id; };
+  const list = (Array.isArray(e) ? e : []).map(x => String(x).split(':')).map(([o, u]) => objName(o) + ' – ' + unit(u));
+  return list.length ? 'Guards: ' + list.join(' · ') : '';
+}
+/** What the "when drawn" rule asks for, as buttons: discard / shuffle back, select the beacon unit / the guards. */
+function drawnExtra(s, p, card) {
+  const d = (WH.SECONDARY[card] || {}).drawn || {};
+  const nt = noTarget(s, p, card);
+  let out = nt ? `<span class="sec-nt"> No unit in ${esc(pName(s, 1 - p))}'s army list qualifies.</span>` : '';
+  out += returnBtn(s, p, card, nt);
+  if ((d.kind === 'unit' || d.kind === 'guard') && (s.players[p].units || []).length) {
+    const pick = pickedText(s, p, card);
+    out += `${pick ? `<span class="sec-picked"> ${esc(pick)}.</span>` : ''} ` + btn({ label: d.kind === 'unit' ? (pick ? 'Change beacon unit' : 'Select beacon unit') : (pick ? 'Change guards' : 'Select guards'), kind: pick ? 'ghost' : `p${p}`, small: true, action: 'sec-pick', data: { p, card } });
+  }
+  return out;
+}
+const objLabel = (s, o) => (o.kind === 'home' ? `Home ${o.home != null ? pName(s, o.home) : ''}` : o.kind === 'exp' ? (o.id === 'o3' ? 'Expansion 1' : 'Expansion 2') : 'Centre');
+
+/** Beacon: one friendly unit; Burden of Trust: one friendly unit per objective (player effect 'sec:<card>'). */
+function openPickSheet(p, card, after) {
+  const c = cur.ui.ctx || cur.ctx;
+  const s = c.state;
+  const units = (s.players[p].units || []).filter(u => u.status !== 'destroyed');
+  const cur0 = ((s.players[p].effects || {})['sec:' + card] || {}).value;
+  const def = WH.SECONDARY[card] || { name: card };
+  const done = async value => {
+    const display = value == null ? null : card === 'beacon' ? (units.find(u => u.id === value) || {}).name : value.map(x => { const [o, u] = x.split(':'); const ob = (s.objectives || []).find(y => y.id === o); return (ob ? objLabel(s, ob) : o) + ': ' + ((units.find(y => y.id === u) || {}).name || u); }).join(', ');
+    const r = await c.dispatch({ type: 'effect.set', player: p, key: 'sec:' + card, value, label: def.name + (card === 'beacon' ? ' – beacon unit' : ' – guards'), display });
+    if (r && after) after();
+  };
+  if (card === 'beacon') {
+    sheet({
+      title: `${def.name} – select the beacon unit`, cls: 'p' + p,
+      body: `<p class="small muted">${esc(def.drawn ? def.drawn.text : '')}</p><div class="col pick-list">${units.map(u => `<button type="button" class="btn ${cur0 === u.id ? `p${p}` : 'ghost'} cta" data-unit="${esc(u.id)}">${esc(u.name)}</button>`).join('')}</div>`,
+      actions: [{ label: 'Cancel', kind: 'ghost' }],
+      onOpen: (el, close) => el.addEventListener('click', e => { const b = e.target.closest('[data-unit]'); if (!b) return; close(); done(b.dataset.unit); })
+    });
+    return;
+  }
+  const have = {};
+  for (const x of Array.isArray(cur0) ? cur0 : []) { const [o, u] = String(x).split(':'); have[o] = u; }
+  const objs = (s.objectives || []);
+  sheet({
+    title: `${def.name} – select the guards`, cls: 'p' + p,
+    body: `<p class="small muted">${esc(def.drawn ? def.drawn.text : '')}</p>
+      ${objs.map(o => `<label class="field"><span>${esc(objLabel(s, o))}</span><select name="${esc(o.id)}"><option value="">– no guard –</option>${units.map(u => `<option value="${esc(u.id)}"${have[o.id] === u.id ? ' selected' : ''}>${esc(u.name)}</option>`).join('')}</select></label>`).join('') || '<p class="muted small">No objective markers (deployment map missing).</p>'}`,
+    actions: [{ label: 'Cancel', kind: 'ghost' }, { label: 'Save', kind: 'primary', onClick: (close, el) => {
+      const v = objs.map(o => { const sel = el.querySelector(`select[name="${o.id}"]`); return sel && sel.value ? o.id + ':' + sel.value : null; }).filter(Boolean);
+      done(v.length ? v : null);
+    } }]
+  });
 }
 
 /** Popup at the start of a turn: draw the Tactical cards, read them in full, then the rest of the hand in full. */
@@ -667,6 +843,8 @@ async function openDrawSheet(p) {
     actions: [{ label: 'Close', kind: 'ghost' }],
     onOpen: el => {
       el.addEventListener('click', async e => {
+        const pk = e.target.closest('[data-action="sec-pick"]');
+        if (pk) { openPickSheet(p, pk.dataset.card, () => { if (el.isConnected) el.querySelector('.sheet-body').innerHTML = body(); }); return; }
         const rb = e.target.closest('[data-action="sec-return"]');
         if (rb) {
           rb.disabled = true;
@@ -690,150 +868,183 @@ async function openDrawSheet(p) {
   ui.sheet = { kind: 'draw', key, close };
 }
 
+/* ───────── Scoring editor (shared by the end-of-turn sheet and the correction sheet) ─────────
+ * Two kinds of input only (user decision): a toggle that lights up when the condition is met – named stages (e.g.
+ * Cleanse "one objective" / "two or more") get one toggle each – and "X VP each" as a counter (− n +) up to the max.
+ * A section = one player: { player, label, note, items: [{ src, card, ci, name, text, k, unit, opts, max, vp, n, already, when }], mod }. */
+const maxOf = it => (it.max != null ? Number(it.max) : 15);
+function condOfItem(ctx, p, it) {
+  const sc = ((ctx.derived || {}).scoring || [])[p];
+  if (!sc) return null;
+  if (it.src === 'primary') return sc.primary && sc.primary.card === it.card ? (sc.primary.conds || []).find(c => c.ci === it.ci) || null : null;
+  const sec = (sc.secondaries || []).find(x => x.card === it.card);
+  return sec ? (sec.conds || []).find(c => c.ci === it.ci) || null : null;
+}
+function editorRow(sec, si, it, i) {
+  const yesNo = (vp, on) => `<button type="button" class="score-tog${on ? ' on' : ''}" data-opt="${esc(vp)}" aria-pressed="${on}">${on ? '✓ Achieved' : 'Not achieved'}</button>`;
+  let ctl, sub = '';
+  if (it.opts) {
+    ctl = `<div class="score-stages">${it.opts.map(o => { const v = Number(o.vp) || 0;
+      return `<div class="score-stage"><span class="score-stage-t">${esc(o.t)} <b class="score-stage-vp">· ${esc(v)} VP</b></span>${yesNo(v, it.vp === v)}</div>`; }).join('')}</div>`;
+  } else if (it.k === 'per') {
+    sub = `${esc(it.unit)} VP each${it.max != null ? ` · max. ${esc(it.max)} VP` : ''}`;
+    ctl = `<div class="score-count"><div class="stepper sm p${sec.player}">
+        <button type="button" data-n="-1" ${it.n <= 0 ? 'disabled' : ''} aria-label="Fewer">−</button>
+        <span class="stepper-value">${esc(it.n)}</span>
+        <button type="button" data-n="1" ${it.vp >= maxOf(it) ? 'disabled' : ''} aria-label="More">+</button>
+      </div><span class="score-eq">= <b>${esc(it.vp)} VP</b></span></div>`;
+  } else {
+    sub = `${esc(it.unit)} VP`;
+    ctl = yesNo(it.unit, it.vp > 0);
+  }
+  const hints = [sub, it.already && !sec.absolute ? `<span class="text-ok">${esc(it.already)} VP already booked</span>` : '', it.prefill ? '<span class="text-warn">pre-filled from the objective strip – check</span>' : ''].filter(Boolean);
+  return `<div class="score-item" data-s="${si}" data-i="${i}">
+    <div class="score-main">
+      <div class="score-card">${badge(SRC_LABEL[it.src] || it.src, it.src === 'primary' ? 'ok' : 'warn')} <b>${esc(it.name)}</b></div>
+      <div class="score-text">${esc(it.text || '')}</div>
+      ${hints.length ? `<div class="score-sub muted xs">${hints.join(' · ')}</div>` : ''}
+    </div>
+    <div class="score-ctl2">${ctl}</div>
+  </div>`;
+}
+function editorHtml(sections) {
+  return sections.map((sec, si) => `<section class="score-sec p${sec.player}">
+    ${sections.length > 1 || sec.label ? `<h3 class="score-sec-h"><b class="text-p${sec.player}">${esc(sec.pname)}</b> <span class="muted small">· ${esc(sec.label || '')}</span></h3>` : ''}
+    ${sec.note ? `<p class="muted xs score-sec-note">${sec.note}</p>` : ''}
+    <div class="score-list">${sec.items.map((it, i) => editorRow(sec, si, it, i)).join('') || '<p class="muted small">Nothing to score right now.</p>'}</div>
+    <div class="score-item score-mod" data-s="${si}">
+      <div class="score-main"><div class="score-card"><b>Modifier</b></div><div class="score-text muted small">Manual correction for anything the list above cannot express (booked as a separate entry).</div></div>
+      <div class="score-ctl"><div class="stepper sm p${sec.player}">
+        <button type="button" data-mod="-1" ${sec.mod.vp <= -15 ? 'disabled' : ''} aria-label="Less">−</button>
+        <span class="stepper-value">${sec.mod.vp > 0 ? '+' : ''}${esc(sec.mod.vp)}</span>
+        <button type="button" data-mod="1" ${sec.mod.vp >= 15 ? 'disabled' : ''} aria-label="More">+</button>
+      </div></div>
+    </div>
+  </section>`).join('');
+}
+/** A tap in the editor → true when something changed. */
+function editorClick(sections, e) {
+  const row = e.target.closest('.score-item');
+  if (!row || row.dataset.s == null) return false;
+  const sec = sections[Number(row.dataset.s)];
+  if (!sec) return false;
+  const m = e.target.closest('[data-mod]');
+  if (m) { sec.mod.vp = Math.max(-15, Math.min(15, sec.mod.vp + Number(m.dataset.mod))); return true; }
+  const n = e.target.closest('[data-n]'), o = e.target.closest('[data-opt]');
+  if (!n && !o) return false;
+  const it = sec.items[Number(row.dataset.i)];
+  if (!it) return false;
+  if (n) { it.n = Math.max(0, it.n + Number(n.dataset.n)); it.vp = Math.min(maxOf(it), it.n * it.unit); if (Number(n.dataset.n) > 0 && it.vp >= maxOf(it)) it.n = Math.ceil(it.vp / it.unit); }
+  else if (it.opts) { const v = Number(o.dataset.opt) || 0; it.vp = it.vp === v ? 0 : v; }
+  else it.vp = it.vp > 0 ? 0 : it.unit;
+  it.prefill = false;
+  return true;
+}
+/** Editor row from a pending / logged item: VP unit from the card, stages, max; vp = the value to show. */
+function editorItem(ctx, p, it, vp, already) {
+  let c = condOfItem(ctx, p, it);
+  if (!c && it.src !== 'bonus') {
+    // card no longer active (e.g. achieved and discarded): VP, stages and max straight from the card data
+    const def = (it.src === 'primary' ? WH.PRIMARY : WH.SECONDARY)[it.card];
+    const d = def && (def.c || [])[it.ci];
+    const fixed = ctx.state.players[p].secondaries.mode === 'fixed';
+    const vpT = v => (v && typeof v === 'object' ? Number(fixed ? v.F : v.T) : Number(v));
+    if (d) c = { vp: d.k === 'choice' ? null : vpT(d.vp), opts: d.k === 'choice' ? (d.opts || []).map(o => ({ t: o.t, vp: vpT(o.vp) })) : null, max: d.max };
+  }
+  const unit = c && c.vp != null ? Number(c.vp) : it.unit != null ? Number(it.unit) : (it.max != null && it.k !== 'per' && it.src === 'bonus' ? Number(it.max) : (it.vp != null && it.k !== 'per' ? Number(it.vp) : 0));
+  return Object.assign({}, it, { vp, already, unit, n: unit > 0 ? Math.round(vp / unit) : 0, opts: c && c.opts ? c.opts : (it.opts || null), max: c && c.max != null ? Number(c.max) : (it.max != null ? Number(it.max) : null) });
+}
+
 function openScoreSheet() {
   const { ctx, ui } = cur;
   const s = ctx.state;
   const pend = s.pending;
   if (!pend || pend.kind !== 'score') { toast('No scoring pending', 'warn'); return; }
-  const key = pendingKey(s);
-  if (ui.sheet && ui.sheet.kind === 'score' && ui.sheet.key === key) return;
-  if (ui.sheet) { ui.sheet.close(); ui.sheet = null; }
-  const player = pend.player;
-  const sc = ((ctx.derived || {}).scoring || [])[player] || null;
-  // Popup for the player whose turn it is NOT (their cards that score at the end of the opponent's turn)
-  const oppScoring = pend.when === 'turn' && player !== s.turn;
-  const condOf = it => {
-    if (!sc) return null;
-    if (it.src === 'primary') return sc.primary && sc.primary.card === it.card ? (sc.primary.conds || []).find(c => c.ci === it.ci) || null : null;
-    const sec = (sc.secondaries || []).find(x => x.card === it.card);
-    return sec ? (sec.conds || []).find(c => c.ci === it.ci) || null : null;
-  };
-  // Bereits per Tipp gebuchte VP dieses Zuges vom Vorschlag abziehen (sonst doppelt)
-  const items = pend.items.map(it => {
-    const c = condOf(it);
-    const already = c ? Number(c.scoredThisTurn) || 0 : 0;
-    // No automation: the players select what was achieved; VP follow from the card
-    const unit = c && c.vp != null ? Number(c.vp) : it.unit != null ? Number(it.unit) : (it.vp != null && it.k !== 'per' ? Number(it.vp) : 0);
-    // Pre-select what was already booked on the score page this turn – the popup shows the total, only the difference is booked
-    return Object.assign({}, it, { vp: already, suggest: already, already, auto: false, unit, n: unit > 0 ? Math.round(already / unit) : 0, opts: c && c.opts ? c.opts : null, max: c && c.max != null ? Number(c.max) : (it.max != null ? Number(it.max) : null) });
+  const key = pendingKey(s), sig = partsSig(s);
+  if (ui.sheet && ui.sheet.kind === 'score' && ui.sheet.key === key && ui.sheet.sig === sig) return;
+  if (ui.sheet) { const sh = ui.sheet; ui.sheet = null; sh.close(); }
+  const parts = openParts(s);
+  const merged = Array.isArray(pend.parts);
+  const players = parts.map(x => x.player).filter((p, i, a) => a.indexOf(p) === i);
+  const WHEN = { cmd: 'End of Command phase', turn: 'End of turn', end: 'End of the battle' };
+  // one section per player (their end-of-turn / reactive / end-of-battle parts together)
+  const sections = players.map(p => {
+    const mine = parts.filter(x => x.player === p);
+    const whens = mine.map(x => x.when);
+    const label = whens.includes('turn') && whens.includes('end') ? (p === s.turn ? 'End of turn and end of the battle' : `End of ${pName(s, s.turn)}'s turn and end of the battle`)
+      : whens[0] === 'end' ? 'End of the battle' : whens[0] === 'cmd' ? 'End of Command phase'
+      : p === s.turn ? 'End of your turn' : `Missions that score at the end of ${pName(s, s.turn)}'s turn`;
+    const draft = ui.drafts[key + '|' + p];
+    const items = mine.flatMap(part => part.items.map(it => {
+      const c = condOfItem(ctx, p, it);
+      const already = c ? Number(c.scoredThisTurn) || 0 : 0;
+      // objective control (strip) pre-fills; kills, actions and markers stay at "nothing" until tapped
+      const pre = it.obj && Number(it.suggest) > 0;
+      const vp = draft && draft.vp[scoreKey(it)] != null ? draft.vp[scoreKey(it)] : (pre ? already + Number(it.suggest) : already);
+      return Object.assign(editorItem(ctx, p, it, vp, already), { when: part.when, prefill: !draft && pre });
+    }));
+    return { player: p, pname: pName(s, p), label: merged || players.length > 1 ? label : (WHEN[pend.when] || pend.when) + ' · Round ' + s.round, items, mod: { vp: draft ? draft.mod : 0 },
+      note: merged ? `${esc(pName(s, p))} can also confirm this part on their own phone.` : '' };
   });
-  const autoScore = false;
-  const maxOf = it => (it.max != null ? Number(it.max) : 15);
-  const mod = { vp: 0 };   // manual modifier (corrections, rules the card list cannot express)
-  let edited = false;
-  // Two kinds of input only (user decision): a toggle button that lights up when the condition is met – named stages
-  // (e.g. Cleanse "one objective" / "two or more") get one toggle each, lighting one clears the others – and
-  // "X VP each" as a counter (− n +) that stops at the max.
-  const yesNo = (vp, on) => `<button type="button" class="score-tog${on ? ' on' : ''}" data-opt="${esc(vp)}" aria-pressed="${on}">${on ? '✓ Achieved' : 'Not achieved'}</button>`;
-  const rowHtml = (it, i) => {
-    let ctl, sub = '';
-    if (it.opts) {
-      ctl = `<div class="score-stages">${it.opts.map(o => { const v = Number(o.vp) || 0;
-        return `<div class="score-stage"><span class="score-stage-t">${esc(o.t)} <b class="score-stage-vp">· ${esc(v)} VP</b></span>${yesNo(v, it.vp === v)}</div>`; }).join('')}</div>`;
-    } else if (it.k === 'per') {
-      const cap = maxOf(it);
-      sub = `${esc(it.unit)} VP each${it.max != null ? ` · max. ${esc(it.max)} VP` : ''}`;
-      ctl = `<div class="score-count"><div class="stepper sm p${player}">
-          <button type="button" data-n="-1" ${it.n <= 0 ? 'disabled' : ''} aria-label="Fewer">−</button>
-          <span class="stepper-value">${esc(it.n)}</span>
-          <button type="button" data-n="1" ${it.vp >= cap ? 'disabled' : ''} aria-label="More">+</button>
-        </div><span class="score-eq">= <b>${esc(it.vp)} VP</b></span></div>`;
-    } else {
-      sub = `${esc(it.unit)} VP`;
-      ctl = yesNo(it.unit, it.vp > 0);
-    }
-    return `<div class="score-item" data-i="${i}">
-      <div class="score-main">
-        <div class="score-card">${badge(SRC_LABEL[it.src] || it.src, it.src === 'primary' ? 'ok' : 'warn')} <b>${esc(it.name)}</b></div>
-        <div class="score-text">${esc(it.text || '')}</div>
-        ${sub || it.already ? `<div class="score-sub muted xs">${sub}${it.already ? (sub ? ' · ' : '') + '<span class="text-ok">' + esc(it.already) + ' VP already booked</span>' : ''}</div>` : ''}
-      </div>
-      <div class="score-ctl2">${ctl}</div>
-    </div>`;
-  };
-  const totalVp = () => items.reduce((a, i) => a + i.vp, 0) + mod.vp;
-  // What the confirm books: only the difference to the score page; lowered rows unbook their entries first
-  const plan = () => {
-    const delta = items.map(it => Object.assign({}, it, { vp: it.vp - (it.already || 0) }));
-    return { dec: delta.filter(it => it.vp < 0), add: delta.filter(it => it.vp > 0).concat(mod.vp ? [{ src: 'bonus', card: 'modifier', ci: null, vp: mod.vp }] : []) };
-  };
-  // The VP actually booked after the caps (15 per round, 45 Primary / Secondary, 20 per Fixed card – 100 in all):
-  // the same steps run through the engine on a copy of the state. null = cannot tell (scoring no longer pending).
+  const saveDrafts = () => { for (const sec of sections) ui.drafts[key + '|' + sec.player] = { vp: Object.fromEntries(sec.items.map(it => [scoreKey(it), it.vp])), mod: sec.mod.vp }; };
+  // What the confirm books per player: only the difference to the score page; lowered rows unbook their entries first
+  const plans = () => sections.map(sec => {
+    const delta = sec.items.map(it => Object.assign({}, it, { vp: it.vp - (it.already || 0) }));
+    return { player: sec.player, dec: delta.filter(it => it.vp < 0), add: delta.filter(it => it.vp > 0).concat(sec.mod.vp ? [{ src: 'bonus', card: 'modifier', ci: null, vp: sec.mod.vp }] : []) };
+  });
+  const strip = list => list.map(it => ({ src: it.src, card: it.card, ci: it.ci, vp: it.vp }));
+  const confirmAction = pl => (merged
+    ? { type: 'score.confirm', parts: pl.map(x => ({ player: x.player, items: strip(x.add) })), achieve: true }
+    : { type: 'score.confirm', player: pl[0].player, items: strip(pl[0].add), achieve: true });
+  // VP actually booked after the caps (15 per round, 45 Primary / Secondary, 20 per Fixed card – 100 in all): the same
+  // steps run through the engine on a copy of the state. null = cannot tell.
   const cappedVp = () => {
     try {
       const st0 = (cur.ui.ctx || cur.ctx).state;
       if (!st0 || !st0.pending || pendingKey(st0) !== key) return null;
-      const sum = st => (st.scores || []).filter(x => x.player === player).reduce((a, x) => a + (Number(x.vp) || 0), 0);
-      const { dec, add } = plan();
+      const sum = (st, p) => (st.scores || []).filter(x => x.player === p).reduce((a, x) => a + (Number(x.vp) || 0), 0);
+      const pl = plans();
       let st = st0;
-      for (const id of unbookIds(st0, player, dec)) st = reduce(st, { type: 'score.remove', scoreId: id });
-      st = reduce(st, { type: 'score.confirm', player, items: add.map(it => ({ src: it.src, card: it.card, ci: it.ci, vp: it.vp })), achieve: true });
-      return items.reduce((a, i) => a + (i.already || 0), 0) + sum(st) - sum(st0);
+      for (const x of pl) for (const id of unbookIds(st0, x.player, x.dec)) st = reduce(st, { type: 'score.remove', scoreId: id });
+      st = reduce(st, confirmAction(pl));
+      return sections.map(sec => sec.items.reduce((a, i) => a + (i.already || 0), 0) + sum(st, sec.player) - sum(st0, sec.player));
     } catch { return null; }
   };
-  const bodyHtml = () => `${oppScoring
-      ? `<p class="score-banner p${player}"><b class="text-p${player}">${esc(pName(s, player))}</b> scores now – missions that count at the end of <b class="text-p${s.turn}">${esc(pName(s, s.turn))}</b>'s turn · Round ${esc(s.round)}</p>`
-      : `<p class="muted small">${esc(WHEN_LABEL[pend.when] || pend.when)} · Round ${esc(s.round)}</p>`}
-      <div class="score-list">${items.map(rowHtml).join('') || '<p class="muted small">Nothing to score right now.</p>'}</div>
-      <div class="score-item score-mod">
-        <div class="score-main"><div class="score-card"><b>Modifier</b></div><div class="score-text muted small">Manual correction for anything the list above cannot express (booked as a separate entry).</div></div>
-        <div class="score-ctl"><div class="stepper sm p${player}">
-          <button type="button" data-mod="-1" ${mod.vp <= -15 ? 'disabled' : ''} aria-label="Less">−</button>
-          <span class="stepper-value">${mod.vp > 0 ? '+' : ''}${esc(mod.vp)}</span>
-          <button type="button" data-mod="1" ${mod.vp >= 15 ? 'disabled' : ''} aria-label="More">+</button>
-        </div></div>
-      </div>
-`;
   const totalHtml = () => {
-    const raw = totalVp(), capped = cappedVp();
-    const shown = capped == null ? raw : capped;
-    return `<div class="score-total"><span>Total</span><span class="score-total-v">${capped != null && capped !== raw ? `<small class="muted score-uncapped">(${raw} VP before the caps)</small> ` : ''}<b>${shown} VP</b></span></div>`;
+    const capped = cappedVp();
+    return sections.map((sec, i) => {
+      const raw = sec.items.reduce((a, it) => a + it.vp, 0) + sec.mod.vp;
+      const shown = capped == null ? raw : capped[i];
+      return `<span class="score-total-p"><span class="text-p${sec.player}">${esc(sec.pname)}</span> ${capped != null && shown !== raw ? `<small class="muted score-uncapped">(${raw} before the caps)</small> ` : ''}<b>${shown} VP</b></span>`;
+    }).join('<span class="muted"> · </span>');
   };
-  const labelFor = () => (autoScore && !edited ? 'Apply suggestions' : 'Confirm scoring');
   const close = sheet({
-    title: oppScoring
-      ? `Scoring – ${pName(s, player)} (opponent) · End of ${pName(s, s.turn)}'s turn`
-      : 'Scoring – ' + pName(s, player) + ' · ' + ({ cmd: 'End of Command phase', turn: 'End of turn', end: 'End of battle' }[pend.when] || pend.when),
-    cls: 'tbl-score p' + player,
-    body: bodyHtml(),
+    title: players.length > 1 ? `Scoring – ${players.map(p => pName(s, p)).join(' & ')} · Round ${s.round}` : `Scoring – ${pName(s, players[0])} · ${sections[0].label}`,
+    cls: 'tbl-score' + (players.length === 1 ? ' p' + players[0] : ''),
+    body: editorHtml(sections),
     actions: [
-      { label: labelFor(), kind: 'primary', cta: true, onClick: async () => {
-        // Book only what is new compared with the score page; lowering below the booked value removes those entries first
-        const { dec, add } = plan();
-        if (dec.length) await unbookFor(player, dec);
-        await confirmScore(player, add);
+      { label: players.length > 1 ? 'Confirm scoring (both players)' : 'Confirm scoring', kind: 'primary', cta: true, onClick: async () => {
+        const pl = plans();
+        for (const x of pl) if (x.dec.length) await unbookFor(x.player, x.dec);
+        for (const sec of sections) delete ui.drafts[key + '|' + sec.player];
+        if (!ui.waitKey) ui.waitKey = key;   // reopened after a reload: go on by one step afterwards
+        await confirmScore(pl, confirmAction);
       } }
     ],
     onOpen: el => {
-      // Total sits directly above the confirm button (sheet footer)
       const foot = el.querySelector('.sheet-foot');
-      const tot = document.createElement('div'); tot.className = 'score-total foot-total'; tot.innerHTML = totalHtml();
+      const tot = document.createElement('div'); tot.className = 'score-total foot-total'; tot.innerHTML = `<span>Total</span><span class="score-total-v">${totalHtml()}</span>`;
       if (foot) foot.parentNode.insertBefore(tot, foot);
-      const refreshTotal = () => { tot.innerHTML = totalHtml(); };
       el.addEventListener('click', e => {
-        const m = e.target.closest('[data-mod]');
-        if (m) { mod.vp = Math.max(-15, Math.min(15, mod.vp + Number(m.dataset.mod))); el.querySelector('.sheet-body').innerHTML = bodyHtml(); refreshTotal(); return; }
-        const n = e.target.closest('[data-n]');
-        const o = e.target.closest('[data-opt]');
-        const a = e.target.closest('[data-ach]');
-        if (!n && !o && !a) return;
-        const row = e.target.closest('.score-item');
-        if (!row) return;
-        const it = items[Number(row.dataset.i)];
-        if (!it) return;
-        if (n) { it.n = Math.max(0, it.n + Number(n.dataset.n)); it.vp = Math.min(maxOf(it), it.n * it.unit); if (Number(n.dataset.n) > 0 && it.vp >= maxOf(it)) it.n = Math.ceil(it.vp / it.unit); }
-        else if (o) { const v = Number(o.dataset.opt) || 0; it.vp = it.vp === v ? 0 : v; }
-        else it.vp = it.vp > 0 ? 0 : it.unit;
-        edited = items.some(x => x.vp !== x.suggest);
-        el.querySelector('.sheet-body').innerHTML = bodyHtml();
-        refreshTotal();
-        const ok = el.querySelector('[data-sheet-action="1"]');
-        if (ok) ok.textContent = labelFor();
+        if (!editorClick(sections, e)) return;
+        saveDrafts();
+        el.querySelector('.sheet-body').innerHTML = editorHtml(sections);
+        tot.innerHTML = `<span>Total</span><span class="score-total-v">${totalHtml()}</span>`;
       });
     },
     onClose: () => { if (ui.sheet && ui.sheet.key === key) { ui.sheet = null; ui.dismissed = key; } }
   });
-  ui.sheet = { kind: 'score', key, close };
+  ui.sheet = { kind: 'score', key, sig, close };
 }
 
 /** Score-page bookings of this turn to remove for conditions the popup lowered (newest entries first). */
@@ -851,19 +1062,85 @@ async function unbookFor(player, list) {
   for (const id of unbookIds(c.state, player, list)) await c.dispatch(grouped({ type: 'score.remove', scoreId: id }));
 }
 
-async function confirmScore(player, items) {
+/** One Confirm for all sections; the step goes on via maybeContinue() (also when the phones confirmed). */
+async function confirmScore(plans, actionOf) {
   const c = cur.ui.ctx || cur.ctx;
-  const payload = items.map(it => ({ src: it.src, card: it.card, ci: it.ci, vp: it.vp }));
   // the VP actually booked (after the caps), not the sum asked for
-  const booked = st => (st.scores || []).filter(x => x.player === player).reduce((a, x) => a + (Number(x.vp) || 0), 0);
-  const before = booked(c.state);
-  const s = await c.dispatch(grouped({ type: 'score.confirm', player, items: payload, achieve: true }));
+  const booked = (st, p) => (st.scores || []).filter(x => x.player === p).reduce((a, x) => a + (Number(x.vp) || 0), 0);
+  const st0 = c.state;
+  const before = plans.map(x => booked(st0, x.player));
+  const s = await c.dispatch(grouped(actionOf(plans)));
   if (!s) return;
-  toast(`Scoring confirmed: ${booked(s) - before} VP for ${pName(s, player)}`, 'ok');
-  if (s.stage !== 'battle' || s.pending) { if (s.stage !== 'battle') cur.ui.group = null; return; }
-  // The scoring blocked the phase change: continue – the whole turn if the tablet is ending it, otherwise just one phase
-  if (cur.ui.endingTurn) await endTurn(true);
-  else { const r = await (cur.ui.ctx || c).dispatch(grouped({ type: 'phase.next', track: true })); if (!r || !r.pending) cur.ui.group = null; }
+  const msg = plans.map((x, i) => `${booked(s, x.player) - before[i]} VP for ${pName(s, x.player)}`).join(' · ');
+  const who = plans.map(x => x.player);
+  toastAction(`Scoring confirmed: ${msg}`, 'ok', 'Correct last scoring', () => openCorrectSheet(who.length === 1 ? who[0] : null), 6000);
+  maybeContinue();
+}
+
+/** The last scoring a player confirmed (from the log: the checkpoint entry lists its conditions) → { round, turn, when, items }. */
+function lastScoringOf(s, p) {
+  const log = s.log || [];
+  for (let i = log.length - 1; i >= 0; i--) {
+    const l = log[i];
+    if (l.player !== p || !l.data || !Array.isArray(l.data.items) || !l.data.when) continue;
+    // all checkpoint entries of that player in the same round / turn (end of turn + end of battle)
+    const same = log.filter(x => x.player === p && x.data && Array.isArray(x.data.items) && x.data.when && x.round === l.round && x.turn === l.turn);
+    const items = [];
+    for (const x of same) for (const it of x.data.items) if (!items.some(y => scoreKey(y) === scoreKey(it))) items.push(Object.assign({}, it, { when: x.data.when }));
+    return { round: l.round, turn: l.turn, items };
+  }
+  return null;
+}
+
+/** Correct a confirmed scoring (a forgotten / wrong tick): the sheet of that turn pre-filled with what is booked; Save
+ *  books only the corrections (score.correct) – no undo of the whole End-turn step. p = null → choose the player. */
+function openCorrectSheet(p) {
+  const c = cur.ui.ctx || cur.ctx;
+  const s = c.state;
+  if (p == null) {
+    sheet({ title: 'Correct last scoring', body: `<div class="col">${[0, 1].map(q => `<button type="button" class="btn p${q} cta" data-q="${q}">${esc(pName(s, q))}</button>`).join('')}</div>`,
+      actions: [{ label: 'Cancel', kind: 'ghost' }],
+      onOpen: (el, close) => el.addEventListener('click', e => { const b = e.target.closest('[data-q]'); if (b) { close(); openCorrectSheet(Number(b.dataset.q)); } }) });
+    return;
+  }
+  if (openParts(s).some(x => x.player === p)) { cur.ui.dismissed = null; openScoreSheet(); return; }   // still open: just score
+  const last = lastScoringOf(s, p);
+  if (!last) { toast(`${pName(s, p)} has no confirmed scoring to correct yet – book points on the condition rows.`, 'warn', 4000); return; }
+  const have = it => (s.scores || []).filter(x => x.player === p && x.src === it.src && x.card === it.card && (x.ci == null ? null : x.ci) === (it.ci == null ? null : it.ci) && x.round === last.round && x.turn === last.turn).reduce((a, x) => a + x.vp, 0);
+  const items = last.items.map(it => { const v = have(it); return Object.assign(editorItem(cur.ctx, p, it, v, v), { when: it.when }); });
+  const modNow = have({ src: 'bonus', card: 'modifier', ci: null });
+  const sec = { player: p, pname: pName(s, p), label: `Round ${last.round} · ${pName(s, last.turn)}'s turn`, items, mod: { vp: modNow }, absolute: true,
+    note: 'Shows what is booked for that turn. Change what was wrong – only the difference is booked.' };
+  const sections = [sec];
+  sheet({
+    title: `Correct scoring – ${pName(s, p)}`, cls: 'tbl-score p' + p,
+    body: editorHtml(sections),
+    actions: [{ label: 'Cancel', kind: 'ghost' }, { label: 'Save correction', kind: 'primary', onClick: async () => {
+      const changed = items.filter(it => it.vp !== it.already);
+      const byWhen = {};
+      for (const it of changed) (byWhen[it.when] || (byWhen[it.when] = [])).push({ src: it.src, card: it.card, ci: it.ci, vp: it.vp });
+      if (sec.mod.vp !== modNow) (byWhen.turn || (byWhen.turn = [])).push({ src: 'bonus', card: 'modifier', ci: null, vp: sec.mod.vp });
+      const whens = Object.keys(byWhen);
+      if (!whens.length) { toast('No change', 'ok', 1500); return; }
+      let ok = true;
+      for (const w of whens) ok = !!(await (cur.ui.ctx || c).dispatch({ type: 'score.correct', player: p, round: last.round, turn: last.turn, when: w, items: byWhen[w], achieve: true })) && ok;
+      if (ok) toast(`Scoring of ${pName(s, p)} corrected`, 'ok');
+    } }],
+    onOpen: el => el.addEventListener('click', e => { if (editorClick(sections, e)) el.querySelector('.sheet-body').innerHTML = editorHtml(sections); })
+  });
+}
+
+/** Shared device: how to move the host role (the server) to another device – e.g. from the phone the game was started on. */
+function openMoveHostSheet() {
+  const code = cur.ctx.code;
+  openTextSheet('Move host to another device', `
+    <p class="small">The game runs on the device that created it. To move it to this tablet / PC or another one (e.g. when the phone that hosts it must leave the table):</p>
+    <ol class="info-ol">
+      <li>On the device that should host the game, open Battle Report 40k (the app – Android or Windows).</li>
+      <li>On a tablet or PC the home screen shows “Take over game ${esc(code)}”; otherwise go to <b>Join game</b> → <b>Games nearby</b> and tap <b>Take over as host</b> on game ${esc(code)}.</li>
+      <li>All connected devices switch to the new host by themselves, in the same role. The old device keeps a read-only copy.</li>
+    </ol>
+    <p class="xs muted">Both devices must be in the same Wi-Fi. Nothing is lost: the whole history moves with the game.</p>`);
 }
 
 async function openInfoSheet(p, src, card) {
@@ -1053,7 +1330,9 @@ function openDiscardSheet(p, card) {
         const b = e.target.closest('[data-reason]');
         if (!b) return;
         close();
-        (cur.ui.ctx || ctx).dispatch({ type: 'sec.discard', player: p, card, reason: b.dataset.reason });
+        // discard and redraw: the new card is drawn right away
+        (cur.ui.ctx || ctx).dispatch(Object.assign({ type: 'sec.discard', player: p, card, reason: b.dataset.reason }, b.dataset.reason === 'redraw' ? { drawNow: true } : {}))
+          .then(r => { if (r && b.dataset.reason === 'redraw') { const nw = (r.players[p].secondaries.hand || []).find(x => !sec.hand.includes(x)); toast(nw ? `New card: ${(WH.SECONDARY[nw] || { name: nw }).name}` : 'No card left to draw', 'ok', 4000); } });
       });
     }
   });
@@ -1093,7 +1372,7 @@ function openEndSheet() {
       { label: 'Cancel', kind: 'ghost' },
       { label: 'End battle', kind: 'danger', cls: 'solid', onClick: () => {
         ui.dismissed = null;
-        (cur.ui.ctx || ctx).dispatch({ type: 'game.end' }).then(r => {
+        (cur.ui.ctx || ctx).dispatch({ type: 'game.end', merge: true }).then(r => {
           if (!r) return;
           if (r.pending && r.pending.kind === 'score' && r.pending.when !== 'end') toast('Confirm the open scoring first – the end-of-battle scoring follows.', 'warn', 5000);
           else if (r.pending && r.pending.kind === 'score') toast('Confirm the end-of-battle scoring – the game ends automatically afterwards.', 'warn', 5000);
@@ -1138,9 +1417,16 @@ async function onClick(e) {
     case 'obj': {
       const o = (s.objectives || []).find(x => x.id === d.id);
       if (!o) return;
-      const next = o.override == null ? 0 : o.override === 0 ? 1 : o.override === 1 ? 'none' : null;
+      // without unit positions "auto" means nobody: p0 → p1 → nobody; with a battlefield map also "none" and "auto"
+      const next = !anyPositions(s) ? (o.override === 0 ? 1 : o.override === 1 ? null : 0)
+        : o.override == null ? 0 : o.override === 0 ? 1 : o.override === 1 ? 'none' : null;
       return ctx.dispatch({ type: 'objective.override', objectiveId: o.id, override: next });
     }
+    case 'correct': return openCorrectSheet(p);
+    case 'cp-offer': return ctx.dispatch({ type: 'cp.offer', player: p, offerId: d.id, accept: d.ok === '1' });
+    case 'qr-show': ui.qrOpen[p] = true; return paint();
+    case 'sec-pick': return openPickSheet(p, d.card);
+    case 'move-host': return openMoveHostSheet();
     case 'cond-bool': {
       const ci = Number(d.ci);
       const entries = bookedEntries(s, p, d.src, d.card, ci);

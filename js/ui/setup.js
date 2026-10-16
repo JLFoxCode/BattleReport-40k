@@ -4,12 +4,12 @@
  * Events: einmalige Delegation auf root (root.__setupBound), Aktionen über data-action / data-field. */
 import { esc, btn, chip, badge, confirmSheet, toast, colorOf, playerLabel } from './components.js';
 import { prepareQr, qrReady, joinUrl } from './qr.js';
-import { armyStep, unitsStep, missionStep, secStep, facListHtml, openUnitSheet, openImportSheet, dpLimit, dpOf, SIZE_LABEL } from './setup-steps.js';
+import { armyStep, unitsStep, missionStep, secStep, facListHtml, openUnitSheet, openImportSheet, importSavedArmy, dpLimit, dpOf, SIZE_LABEL } from './setup-steps.js';
 
 const STEPS = [
   { id: 'players', label: 'Players' },
   { id: 'army', label: 'Army' },
-  { id: 'units', label: 'Army list (optional)' },
+  { id: 'units', label: 'Army list' },
   { id: 'mission', label: 'Mission' },
   { id: 'secondary', label: 'Secondary' },
   { id: 'check', label: 'Review & start' }
@@ -19,7 +19,7 @@ const DEBOUNCE_MS = 600;
 
 const UI = {};
 function uiFor(code) {
-  return UI[code] || (UI[code] = { step: 0, tab: 0, search: ['', ''], secMode: [null, null], fixedSel: [[], []], pending: false, timers: {} });
+  return UI[code] || (UI[code] = { step: 0, tab: 0, search: ['', ''], secMode: [null, null], fixedSel: [[], []], facOpen: [false, false], pending: false, timers: {} });
 }
 let cur = null; // { root, ctx, ui }
 
@@ -123,7 +123,19 @@ function header(ctx, ui) {
         return `<button type="button" class="step-chip ${i === ui.step ? 'cur' : ''} ${d}" data-action="step" data-i="${i}" aria-current="${i === ui.step ? 'step' : 'false'}">
           <span class="step-dot">${d === 'ok' ? '✓' : i + 1}</span><span class="step-label">${esc(st.label)}</span></button>`;
       }).join('')}</nav>
+      ${waitBanner(ctx, ui)}
     </header>`;
+}
+
+/** "X is waiting for you": one player is ready, the other (this phone's player) is not yet. */
+function waitBanner(ctx, ui) {
+  const s = ctx.state, me = typeof ctx.me === 'number' ? ctx.me : null;
+  const ready = [0, 1].filter(p => s.players[p].ready);
+  if (ready.length !== 1) return '';
+  const r = ready[0], o = 1 - r;
+  if (me === r) return `<div class="ready-banner p${r}"><span>✓ You are ready – waiting for <b class="text-p${o}">${esc(playerLabel(s, o))}</b></span></div>`;
+  const toCheck = ui.step !== STEPS.length - 1 ? btn({ label: 'Review & start', kind: `p${o}`, small: true, action: 'step', data: { i: STEPS.length - 1 } }) : '';
+  return `<div class="ready-banner p${o}"><span><b class="text-p${r}">${esc(playerLabel(s, r))}</b> is ready and waiting for ${me === o ? 'you' : `<b class="text-p${o}">${esc(playerLabel(s, o))}</b>`}</span>${toCheck}</div>`;
 }
 
 /** 'ok' | 'warn' | '' je Schritt (für die Chips und die Checkliste). */
@@ -134,7 +146,7 @@ function stepDone(ctx, ui, i) {
   switch (STEPS[i].id) {
     case 'players': return all(p => !!s.players[p].name) ? 'ok' : 'warn';
     case 'army': { const f = p => !!s.players[p].faction && s.players[p].detachments.length > 0; return all(f) ? 'ok' : any(f) ? 'warn' : ''; }
-    case 'units': return 'ok';   // optional – nur für die Keyword-Zuordnung der Stratageme am Handy
+    case 'units': return all(p => s.players[p].units.length > 0) ? 'ok' : 'warn';   // not required to start, but it powers the phone
     case 'mission': return missionState(s) === 'ok' ? 'ok' : missionState(s);
     case 'secondary': return all(p => secOk(ctx, ui, p)) ? 'ok' : 'warn';
     case 'check': return all(p => s.players[p].ready) ? 'ok' : any(p => s.players[p].ready) ? 'warn' : '';
@@ -227,7 +239,7 @@ function checkStep(ctx, ui) {
     items.push([!!pl.name, `${name}: Name`, pl.name]);
     items.push([!!fac && pl.detachments.length > 0, `${name}: Army`, fac ? `${fac.name} – ${pl.detachments.map(id => (fac.detachments.find(d => d.id === id) || { name: id }).name).join(', ')} (${dpOf(fac, pl.detachments)}/${dpLimit(s, fac, pl.detachments)} DP)` : 'no faction chosen']);
     const pts = pl.units.reduce((a, u) => a + (Number(u.points) || 0), 0);
-    items.push([true, `${name}: Army list (optional)`, pl.units.length ? `${pl.units.length} units · ${pts}/${s.opts.points} points` : 'no list – Stratagems without “Affects” matching']);
+    items.push([true, `${name}: Army list`, pl.units.length ? `${pl.units.length} units · ${pts}/${s.opts.points} points` : 'no list yet – the phone then has no datasheets, Stratagem targets or automatic army rules']);
     const sec = pl.secondaries;
     items.push([secOk(ctx, ui, p), `${name}: Secondary`, sec.mode === 'fixed' ? `Fixed – ${(sec.fixed || []).map(id => (WH.SECONDARY[id] || { name: id }).name).join(', ') || 'no cards yet'}` : 'Tactical (deck will be shuffled)']);
   }
@@ -242,7 +254,9 @@ function checkStep(ctx, ui) {
     </div>
     <div class="ready-row">${ps.map(p => {
       const r = s.players[p].ready;
-      return btn({ html: `<span class="ready-lbl">${esc(playerLabel(s, p))}</span><span class="ready-state">${r ? '✓ Ready' : 'Not ready'}</span>`, kind: r ? 'ok' : `p${p}`, cta: true, cls: `ready-btn ${r ? 'is-ready' : ''}`, action: 'ready', data: { p, on: r ? 0 : 1 } });
+      // an action, not a status: "I'm ready" – once tapped it shows the state and how to take it back
+      const lbl = ps.length > 1 ? `<span class="ready-lbl">${esc(playerLabel(s, p))}</span>` : '';
+      return btn({ html: `${lbl}<span class="ready-state">${r ? '✓ Ready' : 'I’m ready'}</span>${r ? '<span class="ready-sub">tap to take it back</span>' : ''}`, kind: r ? 'ok' : `p${p}`, cta: true, cls: `ready-btn ${r ? 'is-ready' : ''}`, action: 'ready', data: { p, on: r ? 0 : 1 } });
     }).join('')}</div>
     <div class="mt">
       ${btn({ label: 'Go to deployment', kind: 'primary', cta: true, action: 'deploy', cls: allOk ? '' : 'not-yet' })}
@@ -301,6 +315,8 @@ function bind(root) {
   });
   root.addEventListener('input', onInput);
   root.addEventListener('change', onChange);
+  // "choose faction by hand" stays open across re-renders
+  root.addEventListener('toggle', e => { const d = e.target; if (d && d.dataset && d.dataset.facDetails != null && cur) cur.ui.facOpen[Number(d.dataset.facDetails)] = d.open; }, true);
   root.addEventListener('focusout', () => { const ui = cur && cur.ui; if (ui && ui.pending) setTimeout(() => { if (ui.pending && cur && !(cur.root.contains(document.activeElement) && isTyping(document.activeElement))) { ui.pending = false; paint(); } }, 0); });
 }
 
@@ -365,6 +381,14 @@ async function onClick(e) {
       const dp = dpOf(fac, list), limit = dpLimit(s, fac, list);
       if (dp > limit) return toast(`Too many Detachment Points: ${dp} > ${limit}`, 'warn');
       return ctx.dispatch({ type: 'player.army', player: p, faction: pl.faction, detachments: list });
+    }
+    case 'army-pick': {
+      // one tap: faction, Detachment, army list (and the game size) from a saved list
+      el.disabled = true;
+      try { await importSavedArmy(ctx, p, d.army); } finally { el.disabled = false; }
+      const st = (cur && cur.ctx.state) || s;
+      if (typeof ctx.me === 'number' && ui.step === 1 && st.players[p].faction && st.players[p].units.length) goStep(3);   // faction + list done → Mission
+      return;
     }
     case 'unit-add': return openUnitSheet(ctx, p, null);
     case 'unit-edit': return openUnitSheet(ctx, p, s.players[p].units.find(u => u.id === d.id) || null);

@@ -380,6 +380,7 @@ const SECONDARY = {
   burden_of_trust: {
     name: 'Burden of Trust',
     note: 'When drawn and at the start of each of your turns: for each objective, you can select one friendly unit on the battlefield to guard it. The objective is guarded while that unit is within range of it and you control it.',
+    drawn: { kind: 'guard', text: 'When drawn and at the start of each of your turns: for each objective, you can select one friendly unit on the battlefield to guard it.' },
     c: [{ w: 'opp', r: ALL, k: 'per', vp: 2, max: 5, t: 'For each objective guarded by your army' }]
   }
 };
@@ -760,4 +761,12 @@ const DEPLOYMENT_MAPS = {
 };
 const MAP_SIZE = [44, 60];
 
-export const WH = { DISPOSITIONS, MATRIX, PRIMARY, SECONDARY, DEPLOYMENTS, TWISTS, MIRRORED, STRATAGEMS, PHASES, PHASE_TIPS, PHASE_GUIDE, KILL_TAGS, STRAT_LOCK, TIMING_LABELS, WHOSE_LABELS, TIMING_WORDS, RES_PRESETS, COLORS, DEPLOYMENT_MAPS, MAP_SIZE };
+/* Datasheet rules that give CP without a roll – offered by the engine at the right moment (unit.cpRules, set at the
+ * army import → s.cpOffers, confirmed by the player with cp.offer; never booked by themselves): army rules a unit has as
+ * a faction ability (Da Boss, Transhuman Strategist) and unit abilities. Matched against the BSData text without markup. */
+const CP_RULES = [
+  { scope: 'army', when: 'roundStart', req: 'warlord', cp: 1, re: /^At the start of the battle round, if a model with this ability is your WARLORD, gain 1 ?CP\.?$/i },
+  { scope: 'unit', when: 'commandStart', req: 'onField', cp: 1, re: /^At the start of your Command phase, if this model is on the battlefield, you gain 1 ?CP\.?$/i }
+];
+
+export const WH = { DISPOSITIONS, MATRIX, PRIMARY, SECONDARY, DEPLOYMENTS, TWISTS, MIRRORED, STRATAGEMS, PHASES, PHASE_TIPS, PHASE_GUIDE, KILL_TAGS, STRAT_LOCK, TIMING_LABELS, WHOSE_LABELS, TIMING_WORDS, RES_PRESETS, COLORS, DEPLOYMENT_MAPS, MAP_SIZE, CP_RULES };

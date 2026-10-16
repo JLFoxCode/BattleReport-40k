@@ -17,7 +17,7 @@ export const ACTIONS = {
   PHASE_NEXT: 'phase.next', PHASE_SET: 'phase.set', CP_ADJUST: 'cp.adjust', STRAT_USE: 'strat.use', STRAT_UNDO: 'strat.undo',
   SEC_DRAW: 'sec.draw', SEC_DISCARD: 'sec.discard', SEC_ACHIEVE: 'sec.achieve',
   OBJECTIVE_OVERRIDE: 'objective.override', OBJECTIVE_MARK: 'objective.mark', OBJECTIVE_STICKY: 'objective.sticky',
-  SCORE_ADD: 'score.add', SCORE_REMOVE: 'score.remove', SCORE_CONFIRM: 'score.confirm',
+  SCORE_ADD: 'score.add', SCORE_REMOVE: 'score.remove', SCORE_CONFIRM: 'score.confirm', SCORE_CORRECT: 'score.correct', CP_OFFER: 'cp.offer',
   RESOURCE_SET: 'resource.set', NOTE_ADD: 'note.add', GAME_END: 'game.end', GAME_RESET: 'game.reset',
   ABILITY_USE: 'ability.use', ABILITY_UNDO: 'ability.undo', EFFECT_SET: 'effect.set'
 };
@@ -156,8 +156,32 @@ function normalizeUnit(s, raw, p, keepId) {
     leading: u.leading ? String(u.leading) : null,
     attachedTo: u.attachedTo ? String(u.attachedTo) : null,
     // profile changes from the army builder (enhancements, wargear) – shown on the datasheets
-    mods: u.mods && typeof u.mods === 'object' ? u.mods : null
+    mods: u.mods && typeof u.mods === 'object' ? u.mods : null,
+    // "+1 CP at the start of the battle round / your Command phase" rules of this unit (found in its datasheet at import)
+    cpRules: Array.isArray(u.cpRules) ? u.cpRules.filter(r => r && CP_WHEN.includes(r.when)).slice(0, 8).map(r => ({
+      name: String(r.name || 'Rule').slice(0, 60), when: r.when, req: r.req === 'warlord' ? 'warlord' : 'onField', cp: Math.max(1, Math.min(3, Math.floor(num(r.cp, 1))))
+    })) : []
   };
+}
+const CP_WHEN = ['roundStart', 'commandStart'];
+
+/** Start of a battle round / of a Command phase: the units' "+1 CP" rules (Da Boss, Transhuman Strategist: your WARLORD
+ *  has the ability; Grand Strategist …: the model is on the battlefield) become OFFERS (s.cpOffers) – the app cannot know
+ *  whether the model is still on the battlefield, so the player confirms each one (cp.offer). Offers of the previous turn
+ *  expire. Old games' units have no cpRules → no offers. */
+function offerCpRules(s, p, roundStart) {
+  const offers = [];
+  s.players.forEach((pl, i) => {
+    const seen = new Set();
+    for (const u of pl.units) for (const r of u.cpRules || []) {
+      if (u.status === 'destroyed' || seen.has(r.name)) continue;   // marked destroyed: certainly not
+      if (!(r.when === 'roundStart' ? roundStart : (r.when === 'commandStart' && i === p))) continue;
+      if (r.req === 'warlord' && !u.warlord) continue;
+      seen.add(r.name);
+      offers.push({ id: nid(s, 'co'), player: i, name: r.name, unitId: u.id, unitName: u.name, cp: r.cp, when: r.when, req: r.req, round: s.round, turn: s.turn });
+    }
+  });
+  if (offers.length || (s.cpOffers && s.cpOffers.length)) s.cpOffers = offers;
 }
 
 function buildObjectives(s) {
@@ -220,25 +244,27 @@ function enterCommand(s, action) {
   const sec = s.players[p].secondaries;
   if (sec.mode === 'tactical') { ensureDeck(s, p); sec.toDraw = (sec.toDraw || 0) + 2; }
   log(s, action, 'Battle round ' + s.round + ', ' + pName(s, p) + '\'s turn: Command phase. Both players gain 1 CP.' + (sec.mode === 'tactical' ? ' ' + pName(s, p) + ' draws 2 Secondary Mission cards.' : '') + (unshocked ? ' Battle-shock removed from ' + unshocked + ' unit(s).' : ''), p, { round: s.round, turn: p });
+  offerCpRules(s, p, p === (isIdx(s.mission.first) ? s.mission.first : 0));
   if (unshocked) recalcControl(s);
 }
 
 /** Wertung eintragen (mit Caps). Gibt den Eintrag zurück (oder null bei 0 SP). */
-function addScore(s, action, { player, src, card, ci, vp, when, auto }) {
+function addScore(s, action, { player, src, card, ci, vp, when, auto, round, turn }) {
   const p = player;
   pIdx(s, p);
   if (!['primary', 'secondary', 'bonus'].includes(src)) fail('Invalid score source');
   let v = Math.round(num(vp, 0));
   let note = '';
+  const r = round == null ? s.round : round, t = turn == null ? s.turn : turn;   // score.correct books into an earlier turn
   if (v > 0) {
-    const capped = applyCaps(s, p, { src, card, vp: v, when });
+    const capped = applyCaps(s, p, { src, card, vp: v, when, round: r });
     if (capped.clamped) {
       note = ' (capped: ' + capped.reason + ', ' + v + ' → ' + capped.vp + ')';
       v = capped.vp;
     }
   }
   const cardName = src === 'primary' ? ((WH.PRIMARY[card] || {}).name || card) : src === 'secondary' ? ((WH.SECONDARY[card] || {}).name || card) : (card === 'modifier' ? 'Modifier' : card === 'battle-ready' ? 'Battle Ready' : 'Bonus');
-  const entry = { id: nid(s, 's'), player: p, round: s.round, turn: s.turn, when: when || 'manual', src, card: card || null, ci: ci == null ? null : ci, vp: v, auto: !!auto };
+  const entry = { id: nid(s, 's'), player: p, round: r, turn: t, when: when || 'manual', src, card: card || null, ci: ci == null ? null : ci, vp: v, auto: !!auto };
   if (v !== 0) s.scores.push(entry);
   recalcVp(s);
   if (v !== 0 || note) log(s, action, pName(s, p) + ': ' + (v >= 0 ? '+' : '') + v + ' VP ' + (src === 'primary' ? 'Primary' : src === 'secondary' ? 'Secondary' : 'Bonus') + ' – ' + cardName + (ci != null ? ' [' + (ci + 1) + ']' : '') + note, p, { score: entry, clamped: !!note });
@@ -265,9 +291,37 @@ function runCheckpoint(s, action, base, p, when, withCmd) {
   return true;
 }
 
+/** Several checkpoints in ONE pending scoring (tablet: one sheet per end of turn with a section per player – the
+ *  active player's end of turn and the opponent's reactive missions, in the last turn also the end of the battle).
+ *  list = [{ p, when, withCmd }]. pending.parts = [{ player, when, key, items, done }]; each player confirms their part
+ *  (score.confirm { player } on their phone) or the tablet confirms all at once (score.confirm { parts }).
+ *  pending.player / when / key / items mirror the first open part (older clients). */
+function runMerged(s, action, base, list) {
+  const parts = [];
+  for (const { p, when, withCmd } of list) {
+    const key = checkpointKey(s, when, p);
+    if (s.checkpointsDone.includes(key)) continue;
+    s.checkpointsDone.push(key);
+    let items = checkpointItems(s, base, p, when);
+    const cmdKey = checkpointKey(s, 'cmd', p);
+    if (withCmd && !s.checkpointsDone.includes(cmdKey)) {
+      s.checkpointsDone.push(cmdKey);
+      items = checkpointItems(s, base, p, 'cmd').concat(items);
+      delete s.cmdDeferred;
+    }
+    if (items.length) parts.push({ player: p, when, key, items, done: false });
+  }
+  if (!parts.length) return false;
+  s.pending = { kind: 'score', player: parts[0].player, when: parts[0].when, key: parts[0].key, items: parts[0].items, mkey: parts.map(x => x.key).join('+'), parts };
+  const label = { cmd: 'End of Command phase', turn: 'End of turn', end: 'End of battle' };
+  for (const part of parts) log(s, action, 'Scoring ' + (label[part.when] || part.when) + ' for ' + pName(s, part.player) + ': ' + part.items.length + ' condition(s) to check', part.player, { when: part.when, items: part.items, merged: true });
+  return true;
+}
+
 function finishBattle(s, action) {
   s.stage = 'over';
   s.pending = null;
+  delete s.cpOffers;
   log(s, action, 'Battle over. Final score: ' + s.players.map(pl => pl.name + ' ' + (pl.vp.primary + pl.vp.secondary + pl.vp.bonus) + ' VP').join(' – ') + '.', null);
 }
 
@@ -566,6 +620,8 @@ H['army.import'] = (s, a) => {
       if (u.keywords.includes('CHARACTER')) u.character = true;
       for (const k of ['oc', 'move', 'wounds']) { const v = a.keywords[i][k]; if (typeof v === 'number' && Number.isFinite(v) && v >= 0 && v < 100) u[k] = v; }
       u.support = a.keywords[i].support === true;
+      // "+1 CP at the start of …" rules found in the unit's datasheet (normalizeUnit validates them)
+      if (Array.isArray(a.keywords[i].cpRules)) u.cpRules = a.keywords[i].cpRules;
       // profile changes of the list (enhancements, wargear: S / A / AP / D, InSv …) for the datasheets – plain data, size-capped
       const mods = a.keywords[i].mods;
       if (mods && typeof mods === 'object' && JSON.stringify(mods).length < 20000) u.mods = JSON.parse(JSON.stringify(mods));
@@ -795,11 +851,19 @@ H['phase.next'] = (s, a) => {
     else if (runCheckpoint(s, a, base, active, 'cmd')) return;
   }
   if (s.phase === 'end') {
-    for (const p of [active, other]) if (runCheckpoint(s, a, base, p, 'turn', p === active && s.cmdDeferred)) return;
-    delete s.cmdDeferred;
     const lastTurn = s.round >= 5 && s.turn !== first;
+    if (a.merge) {
+      // a.merge (tablet): both players' end-of-turn scoring – and in the last turn the end of the battle – in one sheet
+      s.mergeScore = true;
+      const list = [{ p: active, when: 'turn', withCmd: !!s.cmdDeferred }, { p: other, when: 'turn' }];
+      if (lastTurn) list.push({ p: active, when: 'end' }, { p: other, when: 'end' });
+      if (runMerged(s, a, base, list)) return;
+    } else {
+      for (const p of [active, other]) if (runCheckpoint(s, a, base, p, 'turn', p === active && s.cmdDeferred)) return;
+    }
+    delete s.cmdDeferred;
     if (lastTurn) {
-      for (const p of [active, other]) if (runCheckpoint(s, a, base, p, 'end')) return;
+      if (!a.merge) for (const p of [active, other]) if (runCheckpoint(s, a, base, p, 'end')) return;
       finishBattle(s, a);
       return;
     }
@@ -841,6 +905,19 @@ H['phase.set'] = (s, a) => {
   });
   const ph = WH.PHASES.find(p => p.id === phase);
   log(s, a, 'Warning – manual jump: round ' + round + ', ' + pName(s, turn) + '\'s turn, ' + ph.full + ' (previously R' + prev.round + ' ' + pName(s, prev.turn) + ' ' + prev.phase + ')', null, { prev, warning: true });
+};
+
+/* cp.offer { player, offerId, accept } – answer a "+1 CP" rule offer (s.cpOffers): Add books the CP and logs it, Skip
+ * only removes the offer (nothing logged). Either the player's own device or the tablet answers. */
+H['cp.offer'] = (s, a) => {
+  const pl = pIdx(s, a.player);
+  const list = s.cpOffers || [];
+  const o = list.find(x => x.id === a.offerId && x.player === a.player);
+  if (!o) fail('This CP offer is no longer open');
+  s.cpOffers = list.filter(x => x !== o);
+  if (!a.accept) return;
+  pl.cp = (pl.cp || 0) + o.cp;
+  log(s, a, pl.name + ': +' + o.cp + ' CP – ' + o.name + ' (' + o.unitName + (o.req === 'warlord' ? ', WARLORD' : '') + ', ' + (o.when === 'roundStart' ? 'start of the battle round' : 'start of the Command phase') + '), now ' + pl.cp + ' CP', a.player, { cpOffer: { name: o.name, unitId: o.unitId, cp: o.cp } });
 };
 
 H['cp.adjust'] = (s, a) => {
@@ -961,8 +1038,14 @@ H['sec.discard'] = (s, a) => {
     if (pl.cp < 1) fail('Not enough CP (1 needed)');
     pl.cp -= 1;
     sec.redrawUsed = true;
-    sec.toDraw += 1;
     sec.hand.splice(i, 1); sec.discard.push(a.card);
+    // a.drawNow: the new card is drawn right away (else it waits as "1 to draw" – older logs)
+    if (a.drawNow) {
+      const nw = drawCard(s, a, a.player);
+      log(s, a, pl.name + ': “' + name + '” discarded and redrawn (1 CP, ' + pl.cp + ' left)' + (nw ? ' – drew “' + WH.SECONDARY[nw].name + '”' : ' – no card left to draw'), a.player, { card: a.card, reason, drew: nw });
+      return;
+    }
+    sec.toDraw += 1;
     log(s, a, pl.name + ': “' + name + '” discarded and redrawn (1 CP, ' + pl.cp + ' left)', a.player, { card: a.card, reason });
     return;
   }
@@ -1031,9 +1114,77 @@ H['score.remove'] = (s, a) => {
   log(s, a, pName(s, e.player) + ': score ' + e.vp + ' VP (' + e.src + ' ' + (e.card || '') + ') removed', e.player, { score: e });
 };
 
+const scoreKey = it => it.src + '|' + it.card + '|' + (it.ci == null ? null : it.ci);
+
+/** Tactical: a Secondary Mission that scored VP this turn is achieved and discarded (core rules "Achieving Secondary Missions"). */
+function achieveScored(s, a, p) {
+  const sec = s.players[p].secondaries;
+  if (sec.mode !== 'tactical') return;
+  for (const card of [...sec.hand]) {
+    const got = (s.scores || []).filter(x => x.player === p && x.src === 'secondary' && x.card === card && x.round === s.round && x.turn === s.turn).reduce((t, x) => t + x.vp, 0);
+    if (got <= 0) continue;
+    sec.hand.splice(sec.hand.indexOf(card), 1);
+    sec.achieved.push(card);
+    log(s, a, s.players[p].name + ': “' + (WH.SECONDARY[card] || {}).name + '” achieved (' + got + ' VP) – discarded', p, { card });
+  }
+}
+
+/** End-of-battle request (game.end) after a confirmed scoring: the remaining end-of-battle scoring, then the end. */
+function continueEnd(s, a, hadEnd, player) {
+  if (s.stage !== 'battle' || !s.endRequested) return;
+  const base = deriveBase(s);
+  if (s.mergeScore) {
+    if (runMerged(s, a, base, [{ p: s.turn, when: 'end' }, { p: 1 - s.turn, when: 'end' }])) return;
+  } else if (hadEnd) {
+    if (runCheckpoint(s, a, base, 1 - player, 'end')) return;
+  } else {
+    for (const p of [s.turn, 1 - s.turn]) if (runCheckpoint(s, a, base, p, 'end')) return;
+  }
+  delete s.endRequested;
+  finishBattle(s, a);
+}
+
+/** score.confirm on a merged pending scoring (pending.parts):
+ *   { player, items }          → that player's part(s) (their own phone)
+ *   { parts: [{ player, items }] } → several parts at once (the tablet's single Confirm)
+ *   { items } without player   → all open parts (items matched by item.player, else by card)
+ *  items omitted → the part's suggestions. Items go to the part of that player listing the same condition (else its first part). */
+function confirmParts(s, a, pend) {
+  const open = pend.parts.filter(x => !x.done);
+  const req = [];
+  if (Array.isArray(a.parts)) {
+    for (const r of a.parts) { if (!r || !isIdx(r.player)) fail('Invalid player'); req.push({ player: r.player, items: Array.isArray(r.items) ? r.items : null }); }
+  } else if (a.player != null) req.push({ player: a.player, items: Array.isArray(a.items) ? a.items : null });
+  else for (const p of [...new Set(open.map(x => x.player))]) req.push({ player: p, items: Array.isArray(a.items) ? a.items.filter(it => it && (it.player == null || it.player === p)) : null });
+  for (const r of req) {
+    const mine = open.filter(x => x.player === r.player);
+    if (!mine.length) fail('No pending scoring for ' + pName(s, r.player));
+    const plan = r.items == null ? mine.flatMap(part => part.items.map(it => ({ part, it }))) : r.items.filter(Boolean).map(it => ({ part: mine.find(pt => pt.items.some(x => scoreKey(x) === scoreKey(it))) || mine[0], it }));
+    let total = 0;
+    for (const { part, it } of plan) {
+      if (!['primary', 'secondary', 'bonus'].includes(it.src)) continue;
+      const sug = (part.items.find(x => scoreKey(x) === scoreKey(it)) || {}).suggest;
+      const vp = Math.round(num(it.vp, 0));
+      const e = addScore(s, a, { player: r.player, src: it.src, card: it.card, ci: it.ci, vp, when: part.when, auto: it.auto != null ? !!it.auto : (sug != null && vp === sug) });
+      if (e) total += e.vp;
+    }
+    mine.forEach(part => { part.done = true; });
+    log(s, a, pName(s, r.player) + ': scoring confirmed (' + total + ' VP)', r.player, { when: mine[0].when, total, parts: mine.map(x => x.when) });
+    if (a.achieve) achieveScored(s, a, r.player);
+  }
+  const left = pend.parts.filter(x => !x.done);
+  if (left.length) {
+    Object.assign(pend, { player: left[0].player, when: left[0].when, key: left[0].key, items: left[0].items });
+    return;
+  }
+  s.pending = null;
+  continueEnd(s, a, pend.parts.some(x => x.when === 'end'), pend.parts[pend.parts.length - 1].player);
+}
+
 H['score.confirm'] = (s, a) => {
   const pend = s.pending;
   if (!pend || pend.kind !== 'score') fail('No pending scoring');
+  if (Array.isArray(pend.parts)) return confirmParts(s, a, pend);
   if (a.player != null && a.player !== pend.player) fail('Pending scoring belongs to ' + pName(s, pend.player));
   const items = Array.isArray(a.items) ? a.items : pend.items;
   const suggested = {};
@@ -1050,33 +1201,56 @@ H['score.confirm'] = (s, a) => {
   }
   s.pending = null;
   log(s, a, pName(s, pend.player) + ': scoring confirmed (' + total + ' VP)', pend.player, { when: pend.when, total });
-  // Tactical: a Secondary Mission that scored VP this turn is achieved and discarded (core rules "Achieving Secondary
-  // Missions"). Only with a.achieve – older logged confirmations replay unchanged.
-  if (a.achieve) {
-    const p = pend.player, sec = s.players[p].secondaries;
-    if (sec.mode === 'tactical') {
-      for (const card of [...sec.hand]) {
-        const got = (s.scores || []).filter(x => x.player === p && x.src === 'secondary' && x.card === card && x.round === s.round && x.turn === s.turn).reduce((t, x) => t + x.vp, 0);
-        if (got <= 0) continue;
-        sec.hand.splice(sec.hand.indexOf(card), 1);
-        sec.achieved.push(card);
-        log(s, a, s.players[p].name + ': “' + (WH.SECONDARY[card] || {}).name + '” achieved (' + got + ' VP) – discarded', p, { card });
-      }
+  // Tactical: scored Secondary Missions are achieved and discarded. Only with a.achieve – older logged confirmations
+  // replay unchanged.
+  if (a.achieve) achieveScored(s, a, pend.player);
+  // Battle ended early via game.end: after the last end-of-battle confirmation, finish the battle automatically; if
+  // game.end arrived while a turn scoring was open: now the end-of-battle scoring of both players
+  continueEnd(s, a, pend.when === 'end', pend.player);
+};
+
+/* score.correct { player, round, turn, when?, items: [{ src, card, ci, vp }], achieve? } – sets the VP booked for these
+ * conditions in that round / turn to exactly vp (a forgotten or wrong tick after the scoring was confirmed – no undo of
+ * the whole End-turn step). The entries of the condition in that turn are replaced by one entry (caps of that round). */
+H['score.correct'] = (s, a) => {
+  const p = a.player;
+  pIdx(s, p);
+  if (!['battle', 'over'].includes(s.stage)) fail('No battle in progress');
+  const round = Math.floor(num(a.round, s.round));
+  const turn = a.turn == null ? s.turn : a.turn;
+  if (round < 1 || round > 5) fail('Round must be 1–5');
+  if (!isIdx(turn)) fail('Invalid turn');
+  if (!Array.isArray(a.items) || !a.items.length) fail('Nothing to correct');
+  const when = ['cmd', 'turn', 'end', 'manual'].includes(a.when) ? a.when : 'manual';
+  const changes = [];
+  const touched = new Set();
+  for (const it of a.items) {
+    if (!it || !['primary', 'secondary', 'bonus'].includes(it.src)) continue;
+    const card = it.card == null ? null : String(it.card);
+    const ci = it.ci == null ? null : Math.floor(num(it.ci, 0));
+    const target = Math.round(num(it.vp, 0));
+    if (target < 0 && !(it.src === 'bonus' && card === 'modifier')) fail('VP must not be negative');
+    const mine = s.scores.filter(x => x.player === p && x.src === it.src && x.card === card && (x.ci == null ? null : x.ci) === ci && x.round === round && x.turn === turn);
+    const have = mine.reduce((t, x) => t + x.vp, 0);
+    if (target === have) continue;
+    s.scores = s.scores.filter(x => !mine.includes(x));
+    const e = target !== 0 ? addScore(s, a, { player: p, src: it.src, card, ci, vp: target, when: mine.length ? mine[0].when : when, round, turn }) : null;
+    const now = e ? e.vp : 0;
+    const name = it.src === 'primary' ? ((WH.PRIMARY[card] || {}).name || card) : it.src === 'secondary' ? ((WH.SECONDARY[card] || {}).name || card) : (card === 'modifier' ? 'Modifier' : card === 'battle-ready' ? 'Battle Ready' : 'Bonus');
+    changes.push(name + (ci != null ? ' [' + (ci + 1) + ']' : '') + ' ' + have + ' → ' + now + ' VP');
+    if (it.src === 'secondary') touched.add(card);
+  }
+  recalcVp(s);
+  // Tactical: a card that now scored in that turn is achieved; one whose only score was taken away goes back to the hand
+  const sec = s.players[p].secondaries;
+  if (a.achieve && sec.mode === 'tactical') {
+    for (const card of touched) {
+      const got = s.scores.filter(x => x.player === p && x.src === 'secondary' && x.card === card).reduce((t, x) => t + x.vp, 0);
+      if (got > 0 && sec.hand.includes(card)) { sec.hand.splice(sec.hand.indexOf(card), 1); sec.achieved.push(card); }
+      else if (got <= 0 && sec.achieved.includes(card)) { sec.achieved.splice(sec.achieved.indexOf(card), 1); sec.hand.push(card); }
     }
   }
-  // Battle ended early via game.end: after the last end-of-battle confirmation, finish the battle automatically
-  if (pend.when === 'end' && s.stage === 'battle' && s.endRequested) {
-    const base = deriveBase(s);
-    if (runCheckpoint(s, a, base, 1 - pend.player, 'end')) return;
-    delete s.endRequested;
-    finishBattle(s, a);
-  } else if (pend.when !== 'end' && s.stage === 'battle' && s.endRequested) {
-    // game.end arrived while this scoring was open: now the end-of-battle scoring of both players
-    const base = deriveBase(s);
-    for (const p of [s.turn, 1 - s.turn]) if (runCheckpoint(s, a, base, p, 'end')) return;
-    delete s.endRequested;
-    finishBattle(s, a);
-  }
+  log(s, a, pName(s, p) + ': scoring corrected (round ' + round + ', ' + pName(s, turn) + '\'s turn)' + (changes.length ? ' – ' + changes.join(', ') : ' – no change'), p, { round, turn, changes });
 };
 
 H['resource.set'] = (s, a) => {
@@ -1151,7 +1325,11 @@ H['game.end'] = (s, a) => {
   }
   const base = deriveBase(s);
   s.endRequested = true;
-  for (const p of [s.turn, 1 - s.turn]) if (runCheckpoint(s, a, base, p, 'end')) return;
+  if (a.merge) {
+    // tablet: both players' end-of-battle scoring in one sheet
+    s.mergeScore = true;
+    if (runMerged(s, a, base, [{ p: s.turn, when: 'end' }, { p: 1 - s.turn, when: 'end' }])) return;
+  } else for (const p of [s.turn, 1 - s.turn]) if (runCheckpoint(s, a, base, p, 'end')) return;
   delete s.endRequested;
   finishBattle(s, a);
 };
@@ -1160,6 +1338,7 @@ H['game.reset'] = (s, a) => {
   s.stage = 'setup';
   s.round = 0; s.turn = isIdx(s.mission.first) ? s.mission.first : 0; s.phase = 'command';
   s.scores = []; s.kills = []; s.moves = []; s.stratUses = []; s.pending = null; s.ctrlAtTurnStart = {}; s.checkpointsDone = [];
+  delete s.cpOffers;
   s.players.forEach(pl => {
     pl.ready = false; pl.cp = 0; pl.vp = { primary: 0, secondary: 0, bonus: 0 };
     const mode = pl.secondaries.mode, fixed = pl.secondaries.fixed;
@@ -1198,5 +1377,9 @@ export function reduce(state, action) {
   if (s.unitSeq == null) s.unitSeq = 0;
   const out = h(s, action) || s;
   recalcVp(out);
+  // undo group of the tablet step that is waiting for a scoring: a phone's score.confirm can send the same group
+  // (state.pendingGroup), so one Undo on the tablet takes back the whole End-turn step including that confirmation
+  if (out.pending && typeof action.group === 'string' && action.group) out.pendingGroup = action.group;
+  else if (!out.pending && out.pendingGroup) delete out.pendingGroup;
   return out;
 }

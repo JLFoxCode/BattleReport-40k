@@ -2,10 +2,11 @@
  * HostService (NsdManager.registerService) + Discovery (NsdManager.discoverServices/resolveService).
  *
  *   const md = createMdns({ type: '_br40k._tcp', log })
- *   md.setGames(port, summaries)   // advertise every unfinished game hosted here (not moved away) as "Battle Report <CODE>" (TXT code/p0/p1/stage);
+ *   md.setGames(port, summaries)   // advertise every unfinished game hosted here (not moved away) as "Battle Report <CODE>" (TXT code/p0/p1/stage,
+ *                                  // c0/c1 = player colour indices, dev = device name);
  *                                  // games that are finished / gone are unadvertised (goodbye, TTL 0)
  *   md.startBrowse()               // find games of other devices
- *   md.list()                      // → [{ name, host, port, code, p0, p1, stage }] (own IPs excluded unless includeSelf)
+ *   md.list()                      // → [{ name, host, port, code, p0, p1, stage, c0, c1, dev }] (own IPs excluded unless includeSelf)
  *   md.stop()                      // goodbye for everything, close sockets
  *
  * One UDP socket per LAN interface, all bound to 0.0.0.0:5353 (reuseAddr) and joined to 224.0.0.251 on that interface;
@@ -137,6 +138,7 @@ export function createMdns(opts = {}) {
   const log = opts.log || { log() {}, error() {} };
   const host = (opts.hostname || ('br40k-' + os.hostname().replace(/[^A-Za-z0-9-]/g, '-').slice(0, 40) + '-' + Math.random().toString(36).slice(2, 6))) + '.local';
   const includeSelf = !!opts.includeSelf;
+  const deviceName = String(opts.deviceName || os.hostname() || '').slice(0, 40);   // TXT "dev" (handover banner)
 
   /** code → { instance, port, txt } */
   const services = new Map();
@@ -335,7 +337,9 @@ export function createMdns(opts = {}) {
       const ip = ips.find(a => ifs.some(i => sameSubnet(a, i.address, i.netmask))) || ips[0];
       if (!includeSelf && ips.some(a => own.has(a))) continue;
       const kv = (txts.get(key) || {}).kv || {};
-      out.push({ name: pt.name, host: ip, port: s.port, code: kv.code || '', p0: kv.p0 || '', p1: kv.p1 || '', stage: kv.stage || '' });
+      // c0 / c1 = the players' colour indices, dev = the hosting device's name (missing from older hosts)
+      const col = v => (v != null && /^\d+$/.test(String(v)) ? Number(v) : null);
+      out.push({ name: pt.name, host: ip, port: s.port, code: kv.code || '', p0: kv.p0 || '', p1: kv.p1 || '', stage: kv.stage || '', c0: col(kv.c0), c1: col(kv.c1), dev: kv.dev || '' });
     }
     return out;
   }
@@ -356,7 +360,10 @@ export function createMdns(opts = {}) {
       if (!g || g.stage === 'over' || !g.code || g.movedTo) continue;   // a game handed over to another device is advertised there
       const players = g.players || [];
       const cut = s => String(s || '').slice(0, 40);
-      want.set(g.code, { code: g.code, instance: 'Battle Report ' + g.code, port, txt: { code: g.code, p0: cut(players[0]), p1: cut(players[1]), stage: g.stage || '' } });
+      const colors = Array.isArray(g.colors) ? g.colors : [];
+      const txt = { code: g.code, p0: cut(players[0]), p1: cut(players[1]), stage: g.stage || '', dev: cut(deviceName) };
+      colors.forEach((c, i) => { if (Number.isInteger(c) && i < 2) txt['c' + i] = String(c); });
+      want.set(g.code, { code: g.code, instance: 'Battle Report ' + g.code, port, txt });
     }
     const gone = [];
     for (const [code, s] of services) {

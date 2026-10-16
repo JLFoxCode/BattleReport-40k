@@ -7,6 +7,7 @@ import { radiusFor, parseArmyText } from '../../engine/reduce.js';
 import { loadOrig, origArmyRules, origDetachmentRule } from '../data/orig.js';
 import { loadDatasheets, matchUnit, normName, ALLY_PACKS } from '../data/datasheets.js';
 import { armyChoices, armyForGame } from './armies.js';
+import { WH } from '../../data/rules.js';
 
 /* Army rule + detachment rules: BSData (New Recruit) only – one source for everything about the army. */
 const BS = new Map(); // factionId → loaded data | null (loading) | false (none)
@@ -35,11 +36,30 @@ const facOf = (ctx, p) => { const id = ctx.state.players[p].faction; return id ?
 const norm = s => String(s || '').toLowerCase().replace(/[^a-z0-9äöüß]+/g, '');
 
 /* ═══════════════ Schritt 2: Armee ═══════════════ */
+/** Saved lists of "My armies" – one tap sets faction, Detachment and the army list (army-pick → importSavedArmy). */
+export function savedListsHtml(p, title = 'From My armies') {
+  let saved = [];
+  try { saved = armyChoices(); } catch { saved = []; }
+  if (!saved.length) return '';
+  return `<div class="card p${p} saved-lists">
+      <div class="card-head"><div class="title">${esc(title)}</div></div>
+      <p class="muted small">One tap sets faction, Detachment and the army list.</p>
+      <div class="arm-pick">${saved.map(a => `<button type="button" class="arm-pickrow" data-action="army-pick" data-p="${p}" data-army="${esc(a.id)}">
+        <span><b>${esc(a.name)}</b><span class="muted xs"> ${esc(a.label)}</span></span><span class="muted xs">${esc(a.points)} pts${a.errors ? ' · ⚠ ' + esc(a.errors) : ''}</span></button>`).join('')}</div>
+    </div>`;
+}
+
 export function armyStep(ctx, ui, p) {
   const { state } = ctx;
   const pl = state.players[p];
   const fac = facOf(ctx, p);
-  if (!fac) return facPicker(ctx, ui, p);
+  if (!fac) {
+    const saved = savedListsHtml(p);
+    if (!saved) return facPicker(ctx, ui, p);
+    const open = ui.facOpen && ui.facOpen[p];
+    return `${saved}
+      <details class="fac-manual" data-fac-details="${p}"${open ? ' open' : ''}><summary>Or choose faction and Detachment by hand</summary>${facPicker(ctx, ui, p)}</details>`;
+  }
   const limit = dpLimit(state, fac, pl.detachments);
   const dp = dpOf(fac, pl.detachments);
   const kind = dp > limit ? 'bad' : dp === limit ? 'ok' : pl.detachments.length ? 'warn' : '';
@@ -119,7 +139,8 @@ export function unitsStep(ctx, ui, p) {
   const limit = Number(state.opts.points) || 0;
   const kind = total > limit ? 'bad' : total === 0 ? '' : 'ok';
   return `
-    <p class="muted small units-note">Optional: the army list is only used for keyword matching (“Affects: …” on Stratagems on the phone). The game works the same without it – points and objective markers are tracked on the tablet.</p>
+    <p class="muted small units-note">Your army list brings the datasheets, the Stratagem targets and the army rules to your phone (e.g. Da Boss offers its +1 CP at the start of each battle round). Take it from My armies or import an export from New Recruit / the GW app.</p>
+    ${pl.units.length ? '' : savedListsHtml(p)}
     <div class="row between units-head">
       <div class="kpi left ${kind ? 'text-' + kind : ''}"><b>${total}<span class="muted"> / ${limit}</span></b><small>points · ${pl.units.length} unit${pl.units.length === 1 ? '' : 's'}</small></div>
       <div class="row">
@@ -165,7 +186,7 @@ export function openUnitSheet(ctx, p, unit) {
         <label class="field"><span>Token radius (inches)</span><input type="number" name="r" value="${rAuto ? '' : esc(u.r)}" placeholder="${radiusFor(u.models)}" min="0.3" step="0.1" inputmode="decimal"></label>
       </div>
       <label class="field"><span>Reserve</span>
-        <select name="reserve">${Object.entries(RESERVE_LABEL).map(([k, v]) => `<option value="${k}" ${u.reserve === k ? 'selected' : ''}>${esc(v)}</option>`).join('')}</select>
+        <select name="reserve">${Object.entries(RESERVE_LABEL).map(([k, v]) => `<option value="${k}" data-i18n ${u.reserve === k ? 'selected' : ''}>${esc(v)}</option>`).join('')}</select>
       </label>
       <p class="muted xs">Token radius: automatic by number of models as long as the field is left empty.</p>
     </form>`;
@@ -258,10 +279,26 @@ export function openImportSheet(ctx, p) {
 }
 
 /** A list from "My armies" into the game: faction + detachment (before the battle) and the units. */
-async function importSavedArmy(ctx, p, id) {
+export async function importSavedArmy(ctx, p, id) {
   let a;
   try { a = await armyForGame(id); } catch (e) { toast(e.message || String(e), 'bad'); return; }
   let st0 = ctx.state;
+  let sizeNote = '', armyFailed = false;
+  // the game size follows the lists (limit of the saved list, else its points; the other player's list counts too) –
+  // unless the points limit was set by hand
+  if (st0.stage === 'setup') {
+    const SIZE_PTS = { strike: 2000, incursion: 1000 };
+    let listPts = Number(a.limit) || 0;
+    if (!listPts) { try { listPts = Number((armyChoices().find(x => x.id === id) || {}).points) || 0; } catch { listPts = 0; } }
+    const otherPts = st0.players[1 - p].units.reduce((t, u) => t + (Number(u.points) || 0), 0);
+    if (listPts > 0) {
+      const want = Math.max(listPts, otherPts) <= 1000 ? 'incursion' : 'strike';
+      if (want !== st0.opts.size && Number(st0.opts.points) === SIZE_PTS[st0.opts.size]) {
+        const st = await ctx.dispatch({ type: 'opts.set', key: 'size', value: want });
+        if (st) { st0 = st; sizeNote = ` · game size ${SIZE_LABEL[want]} (${st.opts.points} points)`; }
+      }
+    }
+  }
   if (st0.stage !== 'battle' && st0.stage !== 'over' && a.faction) {
     const fac = (ctx.data.FACTIONS || []).find(f => f.id === a.faction);
     const norm = s => String(s || '').normalize('NFD').replace(/\p{M}/gu, '').toLowerCase().replace(/[^a-z0-9]+/g, '');
@@ -272,7 +309,9 @@ async function importSavedArmy(ctx, p, id) {
     // the Force Dispositions its detachments make available (written by the builder's list text)
     const avail = /^\+\s*FORCE DISPOSITIONS AVAILABLE:\s*(.+?)\s*$/im.exec(a.text || '');
     const dispositions = avail ? avail[1].split(',').map(n => (ctx.data.WH.DISPOSITIONS || []).find(d => norm(d.name) === norm(n))).filter(Boolean).map(d => d.id) : [];
-    st0 = (await ctx.dispatch({ type: 'player.army', player: p, faction: a.faction, detachments: [...new Set(dets)], dispositions })) || st0;
+    const sa = await ctx.dispatch({ type: 'player.army', player: p, faction: a.faction, detachments: [...new Set(dets)], dispositions });
+    if (sa) st0 = sa; else armyFailed = true;
+    if (sa && a.detachments.length && dets.length < a.detachments.length) armyFailed = true;   // a Detachment of the list is unknown here
     // the list's Force Disposition (chosen in My armies) is this player's Disposition for the mission
     const fd = /^\+\s*FORCE DISPOSITION:\s*(.+?)\s*$/im.exec(a.text || '');
     const disp = fd && (ctx.data.WH.DISPOSITIONS || []).find(d => norm(d.name) === norm(fd[1].replace(/^\d+\.\s*/, '')));
@@ -288,7 +327,9 @@ async function importSavedArmy(ctx, p, id) {
     for (const u of pl.units.slice()) await ctx.dispatch({ type: 'unit.remove', player: p, unitId: u.id });
   }
   const st = await ctx.dispatch({ type: 'army.import', player: p, text: a.text, keywords: await importEntries(a.faction, a.text, a.keywords) });
-  if (st && st.players) toast(`“${a.name}” taken into the game`, 'ok');
+  if (!st || !st.players) { toast(`“${a.name}” could not be taken into the game – nothing was imported`, 'bad'); return; }
+  if (armyFailed) toast(`“${a.name}”: units taken, but the faction / Detachment could not be set completely – check step 2 (Army)`, 'warn', 6000);
+  else toast(`“${a.name}” taken into the game${sizeNote}`, 'ok', sizeNote ? 4500 : undefined);
 }
 
 const statNum = v => { const m = /\d+(?:\.\d+)?/.exec(String(v == null ? '' : v)); return m ? Number(m[0]) : 0; };
@@ -303,17 +344,39 @@ function datasheetStats(ds, lu) {
   }
   return { oc: statNum(pr.OC), move: statNum(pr.M), wounds: Math.max(1, statNum(pr.W)) };
 }
+/** "+1 CP at the start of …" rules of a datasheet without a roll (WH.CP_RULES): its faction abilities that are army rules
+ *  (Da Boss, Transhuman Strategist – WARLORD) and its own abilities (Grand Strategist – on the battlefield). */
+function cpRulesOf(ds, pack) {
+  const clean = t => String(t || '').replace(/\*\*|\^\^/g, '').replace(/\s+/g, ' ').trim();
+  const rules = WH.CP_RULES || [];
+  const out = [];
+  const ab = (ds && ds.abilities) || {};
+  const army = (pack && pack.armyRules) || [];
+  for (const f of ab.faction || []) {
+    const r = army.find(x => normName(x.name) === normName(f));
+    const m = r && rules.find(x => x.scope === 'army' && x.re.test(clean(r.text)));
+    if (m) out.push({ name: r.name, when: m.when, req: m.req, cp: m.cp });
+  }
+  for (const a of ab.unit || []) {
+    const m = rules.find(x => x.scope === 'unit' && x.re.test(clean(a.text)));
+    if (m) out.push({ name: String(a.name || '').replace(/\s*\(.*\)\s*$/, ''), when: m.when, req: m.req, cp: m.cp });
+  }
+  return out;
+}
+
 /** army.import entries, one per unit of the list (in list order): the unit's datasheet values OC / M / W and – for a
  *  pasted list – its datasheet keywords; `given` = the army builder's entries (keywords, profile changes) for the list. */
 export async function importEntries(factionId, text, given) {
   const units = parseArmyText(text);
   const data = factionId ? await loadDatasheets(factionId) : null;
   let allies = null;   // allied packs (Imperial Agents / Knights, Chaos Daemons / Knights) – loaded only when needed
+  let pack = data;   // the datasheet file the last unit was found in (its army rules belong to that unit)
   const find = async name => {
     const own = data && Array.isArray(data.units) ? matchUnit(data.units, name) : null;
+    pack = data;
     if (own || !factionId) return own;
     if (!allies) allies = (await Promise.all(ALLY_PACKS.filter(id => id !== factionId).map(id => loadDatasheets(id)))).filter(Boolean);
-    for (const d of allies) { const hit = matchUnit(d.units, name); if (hit) return hit; }
+    for (const d of allies) { const hit = matchUnit(d.units, name); if (hit) { pack = d; return hit; } }
     return null;
   };
   const key = s => String(s || '').normalize('NFD').replace(/\p{M}/gu, '').toLowerCase().replace(/[^a-z0-9]+/g, '');
@@ -328,6 +391,8 @@ export async function importEntries(factionId, text, given) {
       Object.assign(e, datasheetStats(ds, lu));
       if (j < 0) e.keywords = (ds.keywords || []).slice();
       if (ds.support) e.support = true;   // SUPPORT unit: may join a bodyguard unit next to its leader (core 24.22)
+      const cp = cpRulesOf(ds, pack);
+      if (cp.length) e.cpRules = cp;
     }
     out.push(e);
   }
@@ -351,6 +416,7 @@ export function missionStep(ctx, ui) {
   const m = state.mission;
   const att = m.attacker === 1 ? 1 : 0;
   const twist = WH.TWISTS.find(t => t.id === m.twist) || null;
+  const samePrimary = !!m.primary[0] && m.primary[0] === m.primary[1];   // one card, not the same text twice
   return `
     <h3 class="title">Deployment</h3>
     <div class="dep-grid">${WH.DEPLOYMENTS.map(name => `
@@ -370,8 +436,9 @@ export function missionStep(ctx, ui) {
       <div class="pcol p${p}" data-p="${p}">
         <div class="pcol-head"><span class="dot"></span>${esc(playerLabel(state, p))}</div>
         <div class="chips disp-chips">${WH.DISPOSITIONS.filter(d => { const ok = dispAllowed(ctx, p); return !ok || ok.has(d.id) || m.dispositions[p] === d.id; }).map(d => chip({ html: `<b>${esc(d.name)}</b>`, cls: `p${p} disp`, on: m.dispositions[p] === d.id, action: 'disp', data: { p, id: d.id } })).join('')}</div>
-        ${primaryCard(WH, m.primary[p], p)}
+        ${samePrimary ? '' : primaryCard(WH, m.primary[p], p)}
       </div>`).join('')}</div>
+    ${samePrimary ? `<p class="small muted same-primary">Both players have the same Primary Mission:</p>${primaryCard(WH, m.primary[0], m.attacker === 1 ? 1 : 0)}` : ''}
 
     <h3 class="title mt">Twist</h3>
     <div class="grid twist-row">

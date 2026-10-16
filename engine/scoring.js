@@ -104,6 +104,23 @@ export function autoContext(state, base, p) {
   return new Proxy(ctx, { get: (t, k) => (k in t ? t[k] : 0) });
 }
 
+/* Conditions that only read objective control (held objectives, home objective, "more than your opponent" …): the
+ * scoring sheet pre-fills them from the objective strip; kill counts, markers and actions are never pre-filled.
+ * Found by running the condition against a probe that records which context fields it reads. */
+const OBJ_KEYS = new Set(['myObjs', 'oppObjs', 'myNonHome', 'ownHome', 'oppHome', 'central', 'inOppTerr', 'newNonHome', 'anyExp', 'allExp', 'nml', 'tempting', 'round', 'turn', 'player']);
+const objMemo = new WeakMap();
+export function objectiveBased(c) {
+  if (!c || typeof c.a !== 'function') return false;
+  if (objMemo.has(c)) return objMemo.get(c);
+  const used = new Set();
+  const fn = () => 0;
+  const probe = new Proxy({}, { get: (t, k) => { used.add(k); return ['kills', 'trk', 'markOn', 'marksCtrl'].includes(k) ? fn : 0; } });
+  try { c.a(probe); } catch { /* treated as not objective-based */ }
+  const ok = [...used].some(k => !['round', 'turn', 'player'].includes(k)) && [...used].every(k => OBJ_KEYS.has(k));
+  objMemo.set(c, ok);
+  return ok;
+}
+
 /** Siegpunkte aus vp (Zahl oder {F,T}) je Modus. */
 export function vpOf(v, mode) {
   if (v && typeof v === 'object') return Number(mode === 'fixed' ? v.F : v.T) || 0;
@@ -183,7 +200,7 @@ export function evalCard(state, base, p, entry, when, ctx) {
       opts: c.k === 'choice' ? (c.opts || []).map(o => ({ t: o.t, vp: vpOf(o.vp, mode) })) : null,
       max: condMax(c, mode),
       active, suggest: active ? res.vp : 0, suggestRaw: res.vp, count: res.count, choice: res.choice,
-      auto: typeof c.a === 'function',
+      auto: typeof c.a === 'function', obj: objectiveBased(c),
       scoredThisTurn: scoredThisTurn(state, p, entry.src, entry.card, ci)
     });
   });
@@ -201,7 +218,7 @@ export function checkpointItems(state, base, p, when) {
       // bereits in diesem Zug manuell gebuchte SP (z. B. am Tablet angetippt) nicht erneut vorschlagen
       const already = c.scoredThisTurn || 0;
       const open = Math.max(0, (c.suggest || 0) - already);
-      items.push({ src: entry.src, card: entry.card, name: entry.def.name, ci: c.ci, vp: open, suggest: open, already, auto: !!c.auto, text: c.text, k: c.k, count: c.count, choice: c.choice, max: c.max, sub: c.sub });
+      items.push({ src: entry.src, card: entry.card, name: entry.def.name, ci: c.ci, vp: open, suggest: open, already, auto: !!c.auto, obj: !!c.obj, text: c.text, k: c.k, count: c.count, choice: c.choice, max: c.max, sub: c.sub });
     }
   }
   // end of the battle: 10 VP for a Battle Ready army (the players decide – never suggested)
@@ -212,10 +229,11 @@ export function checkpointItems(state, base, p, when) {
 }
 
 /** Bereits gebuchte Summen für die Caps. */
-export function capUsage(state, p) {
+export function capUsage(state, p, round) {
   const sc = (state.scores || []).filter(s => s.player === p);
   const sum = arr => arr.reduce((a, s) => a + s.vp, 0);
-  const inRound = s => s.round === state.round && s.when !== 'end';
+  const r = round == null ? state.round : round;   // a correction of an earlier turn counts against that round
+  const inRound = s => s.round === r && s.when !== 'end';
   return {
     primaryRound: sum(sc.filter(s => s.src === 'primary' && inRound(s))),
     primaryBattle: sum(sc.filter(s => s.src === 'primary')),
@@ -228,7 +246,7 @@ export function capUsage(state, p) {
 
 /** Wendet die Caps aus SPEC §5 auf einen neuen Eintrag an → { vp, clamped, reason }. */
 export function applyCaps(state, p, entry) {
-  const u = capUsage(state, p);
+  const u = capUsage(state, p, entry.round);
   let vp = Number(entry.vp) || 0;
   const orig = vp;
   const reasons = [];

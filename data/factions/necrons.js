@@ -102,7 +102,7 @@ X.push({
           effect: 'Your unit can make a surge move of up to D6".',
           restr: '' }
       ] },
-    { id: 'necrons--canoptek-court', name: 'Canoptek Court', dp: 3,
+    { id: 'necrons--canoptek-court', name: 'Canoptek Court', dp: 2,
       rule: 'POWER MATRIX: Certain areas of the battlefield are considered to be within your army\'s Power Matrix, as follows:\n- Your deployment zone is always within your army\'s Power Matrix.\n- At the start of any phase, if you control at least half of the objective markers within No Man\'s Land, until the end of that phase, No Man\'s Land is within your army\'s Power Matrix.\n- At the start of any phase, if you control at least half of the objective markers within your opponent\'s deployment zone, until the end of that phase, your opponent\'s deployment zone is within your army\'s Power Matrix.\nEach time a model in a CRYPTEK or CANOPTEK unit from your army makes an attack, re-roll a Hit roll of 1. If such a unit is wholly within your Power Matrix, you can re-roll the Hit roll instead.',
       strats: [
         { name: 'Curse of the Cryptek', cost: 1, ph: ['shooting', 'fight'], whose: 'either', phw: { shooting: 'opp', fight: 'either' }, timing: 'during', kw: ['CRYPTEK'],
