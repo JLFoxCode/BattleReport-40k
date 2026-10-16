@@ -18,11 +18,25 @@ export function listArmies() {
   return out.filter(a => a && a.id).sort((a, b) => String(b.updatedAt || '').localeCompare(String(a.updatedAt || '')));
 }
 export function loadArmy(id) { return listArmies().find(a => a.id === id) || null; }
-export function saveArmy(army) {
+/** Saves the list; returns the saved list, or null when it could not be stored (bridge error, storage full / blocked).
+ *  opt.verify: read it back afterwards (the app's bridge does not report write errors) – for a new list, before the
+ *  editor opens it. */
+export function saveArmy(army, opt = {}) {
   const a = Object.assign({}, army, { updatedAt: new Date().toISOString() });
-  const json = JSON.stringify(a);
-  try { if (bridge('saveArmy')) { window.BR.saveArmy(a.id, json); return a; } } catch (e) { console.warn('BR.saveArmy', e); }
-  try { localStorage.setItem(LS_PREFIX + a.id, json); } catch (e) { console.warn('localStorage', e); }
+  let json;
+  try { json = JSON.stringify(a); } catch (e) { console.warn('saveArmy', e); return null; }
+  if (bridge('saveArmy')) {
+    try { window.BR.saveArmy(a.id, json); } catch (e) { console.warn('BR.saveArmy', e); return null; }
+    if (opt.verify) {
+      const back = loadArmy(a.id);
+      if (!back || back.updatedAt !== a.updatedAt) { console.warn('BR.saveArmy: not found after saving', a.id); return null; }
+    }
+    return a;
+  }
+  try {
+    localStorage.setItem(LS_PREFIX + a.id, json);
+    if (localStorage.getItem(LS_PREFIX + a.id) !== json) return null;
+  } catch (e) { console.warn('localStorage', e); return null; }
   return a;
 }
 export function deleteArmy(id) {

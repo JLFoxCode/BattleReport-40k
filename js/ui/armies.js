@@ -7,7 +7,7 @@ import { playableCatalogues, systemFor, ALLIANCES } from '../builder/load.js';
 import * as E from '../builder/bs-engine.js';
 import { summarize, armyText } from '../builder/export.js';
 import { importArmyFile, importText, switchOn } from '../builder/import.js';
-import { loadDatasheets, normName } from '../data/datasheets.js';
+import { loadDatasheets, normName, ALLY_PACKS } from '../data/datasheets.js';
 import { datasheetCard, datasheetGroupCard } from './datasheet.js';
 import { leaderBuffs } from './player-common.js';
 import { leaderTargets } from './player-tabs.js';
@@ -37,6 +37,7 @@ const byRole = (a, b) => ((CAT_ORDER.indexOf(a) + 1 || 99) - (CAT_ORDER.indexOf(
 const LEAD_RE = /\b(Sergeant|Superior|Exarch|Watchmaster|Theyn|Hesyr|Shas'(ui|vre)|Sybarite|Acothyst|Hekatrix|Kill-broker|Tempestor|Justicar|Aspiring Champion|Sword Brother|Nob|Pack Leader|Huntmaster|Alpha|Alphus|Champion|Spotter|Fire Coordinator)\b/i;
 const HIDE_ROOT = /^(Show\/Hide|Show Legends|Show Unaligned|Show Crucible|Order of Battle|Experience Points|Legendary Veterans|Weapon Modifications)/i;
 const SIZES = [{ pts: 1000, name: 'Incursion' }, { pts: 2000, name: 'Strike Force' }];
+const NOT_READY = /NOT READY/i;   // placeholder entries of the data: hidden in the choices (the data stays as it is)
 
 let lastRoot = null, lastCtx = null;
 const ed = { id: null, army: null, sys: null, loading: false, error: null, openUnit: null, cfgOpen: false, modelPick: {} };
@@ -52,7 +53,7 @@ export function render(root, ctx) {
   const id = id0 || null;
   ed.mode = mode || null;
   if (!id) { ed.id = null; root.innerHTML = listHtml(); return; }
-  if (ed.id !== id) { ed.id = id; ed.army = loadArmy(id); ed.sys = null; ed.error = null; }
+  if (ed.id !== id) { ed.id = id; ed.army = loadArmy(id); ed.sys = null; ed.error = null; ed.saveOk = null; }
   if (!ed.army) { root.innerHTML = `<div class="card"><div class="title">Army not found</div><p><a class="btn ghost" href="#/armies">Back to My armies</a></p></div>`; return; }
   if (!ed.sys) {
     root.innerHTML = `<div class="card center muted">${ed.error ? `<div class="title">Could not load the data</div><p>${esc(ed.error)}</p>` : `<div class="title">Loading ${esc(ed.army.catalogueName || '')} …</div>`}</div>`;
@@ -198,7 +199,8 @@ async function newArmy() {
       const limit = sv === 'custom' ? Math.floor(Number(el.querySelector('input[name=custom]').value)) : Number(sv) || 2000;
       if (!(limit >= 100)) { toast('Enter a points limit for the custom game', 'warn'); return false; }
       const name = el.querySelector('input[name=name]').value.trim() || `${pick.label} ${limit}`;
-      createArmy(pick, name, limit);
+      createArmy(pick, name, limit);   // closes the sheet once the army is saved (it stays open if saving fails)
+      return false;
     } }]
   });
 }
@@ -234,7 +236,7 @@ function dismissImport(id = ed.id) {
   if (!a || !a.importNotes) return;
   delete a.importNotes;
   const saved = saveArmy(a);
-  if (ed.id === id) ed.army = saved;
+  if (ed.id === id) { ed.army = saved || a; savedState(!!saved); }
   rerender();
 }
 /** Import from New Recruit: a file (.txt text export, .ros/.rosz roster) or pasted text → a new army, opened in the editor. */
@@ -250,8 +252,9 @@ function openImport(fallbackCat = null) {
       if (!file && !text.trim()) { toast('Choose a file or paste the export', 'warn'); return false; }
       toast('Importing …', 'ok', 1500);
       (file ? importArmyFile(file) : importText(text, { catalogueId: fallbackCat })).then(res => {
+        const saved = saveWithSummary(res.sys, res.army, { verify: true });
+        if (!saved) { toast(SAVE_FAIL, 'bad', 7000); return; }   // the sheet stays open with the pasted list
         close();
-        const saved = saveWithSummary(res.sys, res.army);
         lastCtx.nav('#/armies/' + saved.id);
         whenSheetsSettled(() => openImportReport(saved, true));
       }).catch(err => toast('Import failed: ' + (err && err.message ? err.message : err), 'bad', 6000));
@@ -278,9 +281,13 @@ async function createArmy(cat, name, limit) {
   r = setBattleSize(sys, r, limit);
   // Chaos Daemons: the units of the four gods are behind Show/Hide switches in the data – on for a Daemons army
   if (/Chaos Daemons/i.test(cat.label || cat.name || '')) r = switchOn(sys, r, /^Show (Khorne|Nurgle|Slaanesh|Tzeentch) Daemons$/i);
-  saveWithSummary(sys, r);
+  // not stored: no editor for a list that does not exist ("Army not found")
+  if (!saveWithSummary(sys, r, { verify: true })) { toast(SAVE_FAIL, 'bad', 7000); return false; }
+  closeNew();
   lastCtx.nav('#/armies/' + r.id);
+  return true;
 }
+const SAVE_FAIL = 'Could not save the army on this device (storage full or blocked) – nothing was created.';
 function setBattleSize(sys, r, limit) {
   const V = E.view(sys, r);
   const bs = V.force.ch.find(w => w.node && w.node.name === 'Battle Size');
@@ -427,15 +434,31 @@ function problems(V) {
   }
   return out;
 }
-function saveWithSummary(sys, r) {
+function saveWithSummary(sys, r, opt = {}) {
   try { r = Object.assign({}, r, { sel: E.nameSels(sys, r).sel }); } catch {}   // names kept for later data updates
   const V = E.view(sys, r);
   const s = summarize(sys, r);
   r.summary = { points: E.totalPoints(V), errors: problems(V).length, detachments: s.detachments, size: s.size };
-  const saved = saveArmy(r);
-  if (ed.id === r.id) ed.army = saved;
+  const saved = saveArmy(r, opt);
+  // not stored: the editor keeps the change in memory (nothing is lost while it stays open) and says so in its bar
+  if (ed.id === r.id) { ed.army = saved || Object.assign({}, r); savedState(!!saved); }
   return saved;
 }
+/** The "Saved" mark in the editor bar (there is no Save button: every change is stored on this device right away). */
+function savedState(ok) {
+  const was = ed.saveOk;
+  ed.saveOk = ok;
+  if (!ok && was !== false) toast('Could not save the army on this device – your changes are kept while the editor stays open. Free some storage and try again.', 'bad', 7000);
+  // a short flash after each save (the editor re-renders right after a change – the flag carries it over)
+  clearTimeout(savedState.t);
+  ed.saveFlash = ok;
+  if (ok) savedState.t = setTimeout(() => { ed.saveFlash = false; }, 600);
+  const el = document.querySelector('.arm-saved');
+  if (el) el.outerHTML = savedHtml();
+}
+const savedHtml = () => (ed.saveOk === false
+  ? '<button type="button" class="arm-saved bad" data-action="arm-resave" title="Not saved – tap to try again">⚠ Not saved</button>'
+  : `<span class="arm-saved${ed.saveFlash ? ' flash' : ''}" title="Every change is saved on this device automatically" aria-live="polite">✓ Saved</span>`);
 const rootOf = (V, id) => { let w = V.byId.get(id); while (w && w.parent && w.parent.kind === 'sel') w = w.parent; return w; };
 const catName = (sys, w) => sys.categoryNames.get(w.node && w.node.primaryCategory) || 'Other';
 
@@ -461,7 +484,7 @@ function editorHtml() {
     <header class="arm-bar">
       <a class="btn ghost sm" href="#/armies" aria-label="Back to My armies">‹</a>
       <button type="button" class="arm-title" data-action="arm-rename"><span class="arm-name">${esc(army.name)}</span><span class="arm-sub muted">${esc(army.catalogueLabel || army.catalogueName || '')}</span></button>
-      <div class="arm-total${over ? ' bad' : ''}"><b>${pts}</b><small>/ ${esc(army.limit || '–')} pts</small></div>
+      <div class="arm-total-box"><div class="arm-total${over ? ' bad' : ''}"><b>${pts}</b><small>/ ${esc(army.limit || '–')} pts</small></div>${savedHtml()}</div>
       <button type="button" class="arm-prob ${probs.length ? 'warn' : 'ok'}" data-action="arm-problems" aria-label="Problems">${probs.length ? '⚠ ' + probs.length : '✓'}</button>
     </header>
     ${viewToggle(army.id, false)}
@@ -509,7 +532,7 @@ function configHtml(V, list, byUnit) {
     <div class="row between"><div class="arm-sec-h">Army configuration</div>${bad ? '' : btn({ label: 'Done', kind: 'ghost', small: true, action: 'arm-cfg' })}</div>
     ${items.map(w => {
       const probs = byUnit.get(w.s.id) || [];
-      return `<div class="arm-cfg${probs.length ? ' has-prob' : ''}"><div class="arm-cfg-h">${esc(E.effective(V, w.node, w, w.parent).name)}${probs.length ? `<button type="button" class="arm-tri" data-action="arm-probs" data-ids="${esc(w.s.id)}" aria-label="Show problems" title="Show problems">⚠</button>` : ''}</div>
+      return `<div class="arm-cfg${probs.length ? ' has-prob' : ''}" data-cfg="${esc(w.s.id)}"><div class="arm-cfg-h">${esc(E.effective(V, w.node, w, w.parent).name)}${probs.length ? `<button type="button" class="arm-tri" data-action="arm-probs" data-ids="${esc(w.s.id)}" aria-label="Show problems" title="Show problems">⚠</button>` : ''}</div>
         ${/^Detachments?$/.test(w.node.name) ? dpRow(V) + `<div class="arm-det-cmp"><button type="button" class="arm-cmp" data-action="arm-detcmp" data-id="${esc(w.s.id)}">All detachments: rules, enhancements, stratagems</button></div>` : ''}
         ${/^Code Chivalric$/i.test(w.node.name) ? '<div class="muted xs arm-cfg-note">The Oath (one Deed and one Quality) is chosen or rolled at the start of the battle – in the game under “Active effects”.</div>' : ''}
         ${optionsHtml(V, w, true)}
@@ -518,6 +541,17 @@ function configHtml(V, list, byUnit) {
     }).join('')}
     ${showHideHtml(V)}
   </section>`;
+}
+
+/** Opens the army configuration and scrolls to one of its entries (from the problems list). */
+function jumpToConfig(id) {
+  ed.cfgOpen = true;
+  rerender();
+  const root = lastRoot;
+  const el = root && ((id && root.querySelector(`.arm-cfg[data-cfg="${CSS.escape(id)}"]`)) || root.querySelector('.arm-config'));
+  if (!el) return;
+  try { el.scrollIntoView({ block: 'start', behavior: 'smooth' }); } catch { el.scrollIntoView(); }
+  el.classList.remove('arm-jumped'); void el.offsetWidth; el.classList.add('arm-jumped');
 }
 
 /* "Show/Hide Options" of the data: switches that make more units selectable (Chaos Daemons' four gods, Legends,
@@ -545,7 +579,11 @@ function toggleShow(t) {
     const root = showHideRoot(V);
     if (!root) return null;
     let w = V.force.ch.find(x => x.node && x.node.token === root.token);
-    if (!w) { r = E.addSel(ed.sys, r, null, root.token); w = E.view(ed.sys, r).force.ch.find(x => x.node && x.node.token === root.token); }
+    if (!w) {
+      // the entry comes with the data's default switches (Legends, Titans …): a switch among them is on now – done
+      r = E.addSel(ed.sys, r, null, root.token); w = E.view(ed.sys, r).force.ch.find(x => x.node && x.node.token === root.token);
+      if (w && w.ch.some(c => c.s.t === t)) return r;
+    }
     const on = w.ch.find(c => c.s.t === t);
     if (on) { r = E.removeSel(r, on.s.id); if (w.ch.length === 1) r = E.removeSel(r, w.s.id); }
     else r = E.addSel(ed.sys, r, w.s.id, t);
@@ -559,7 +597,27 @@ function dpRow(V) {
     <div class="arm-dp-main"><span class="arm-dp-val"><b>${used}</b> / ${lim} DP</span><span class="muted xs">${auto ? sizeName(ed.army.limit) + (sizeName(ed.army.limit) === 'Custom' ? ' ' + ed.army.limit + ' pts' : '') + ': ' + lim + ' Detachment Points' : 'Set by hand'}</span></div>
     <div class="stepper sm"><button type="button" data-action="arm-dp" data-d="-1"${lim <= 0 ? ' disabled' : ''} aria-label="Fewer Detachment Points">−</button><span class="stepper-value">${lim}</span><button type="button" data-action="arm-dp" data-d="1"${lim >= 9 ? ' disabled' : ''} aria-label="More Detachment Points">+</button></div>
     ${auto ? '' : `<button type="button" class="chip sm" data-action="arm-dp-auto">By battle size</button>`}
+    <div class="muted xs arm-dp-help">Detachment Points (DP): every detachment costs DP (shown next to it); the battle size sets how many you can spend – Incursion 2, Strike Force 3.</div>
   </div>`;
+}
+
+/** Why a detachment option does not fit: "needs 3 DP – 2 left (Incursion)", '' if it fits (or costs no DP). With the
+ *  limit from the data, the option is tried on a copy – the data may raise the limit for it (Incursion: 3 DP for a
+ *  single 3-DP detachment). */
+function dpShort(V, x, pw, t) {
+  const d = E.nodeCost(V, x, null, pw, DP);
+  if (!d || !pw || pw.kind !== 'sel') return '';
+  const used = dpUsed(V), lim = dpLimitOf(ed.army);
+  if (used + d <= lim) return '';
+  if (ed.army.dp == null) {
+    try {
+      const V2 = E.view(ed.sys, E.addSel(ed.sys, ed.army, pw.s.id, t));
+      const lim2 = E.rosterMax(V2, DP);
+      if (lim2 != null && dpUsed(V2) <= lim2) return '';
+    } catch {}
+  }
+  const size = ed.army.dp == null ? ` (${sizeName(ed.army.limit)})` : '';
+  return `needs ${d} DP – ${Math.max(0, lim - used)} of ${lim} left${size}`;
 }
 
 /** The faction's army rule(s) on top, collapsed – to read again at any time. */
@@ -621,16 +679,17 @@ async function openDetCompare(detSelId) {
     if (!w) return '<p class="muted">No detachment choice in this army.</p>';
     const g = sys.children(w.node).find(k => k.group);
     if (!g) return '';
-    const kids = sys.children(g).filter(x => !E.limits(V, x, null, w).hidden);
+    const kids = sys.children(g).filter(x => !E.limits(V, x, null, w).hidden && (!NOT_READY.test(x.name) || w.ch.some(c => c.s.t === g.token + '>' + x.token)));
     const rich = t => kwify(esc(String(t || '').replace(/\^\^/g, '').replace(/\*\*/g, ''))).replace(/\n/g, '<br>');
-    return `<p class="muted xs">${dpUsed(V)} / ${dpLimitOf(ed.army)} Detachment Points used. Tap a detachment to take it or drop it; open the sections to read everything.</p>` + kids.map(x => {
+    return `<p class="muted xs">${dpUsed(V)} / ${dpLimitOf(ed.army)} Detachment Points (DP) used – every detachment costs DP, the battle size sets how many you can spend. Tap a detachment to take it or drop it; open the sections to read everything.</p>` + kids.map(x => {
       const t = g.token + '>' + x.token;
       const on = w.ch.find(c => c.s.t === t);
       const name = E.limits(V, x, on || null, w).name;
       const dp = E.nodeCost(V, x, on || null, w, DP);
       const parts = detParts(name, orig, pack);
-      return `<div class="cmp-opt det-opt${on ? ' on' : ''}" style="--oc:${optColor('det', t)}">
-        <div class="cmp-opt-h" role="button" tabindex="0" data-dtok="${esc(t)}"><span class="arm-dot" aria-hidden="true"></span><b>${esc(name)}</b> <span class="arm-cost arm-dpc">${dp} DP</span>${on ? ' <span class="badge ok">chosen</span>' : '<span class="cmp-pick">Tap to take</span>'}</div>
+      const why = on ? '' : dpShort(V, x, w, t);
+      return `<div class="cmp-opt det-opt${on ? ' on' : ''}${why ? ' arm-dp-over' : ''}" style="--oc:${optColor('det', t)}">
+        <div class="cmp-opt-h" role="button" tabindex="0" data-dtok="${esc(t)}"><span class="arm-dot" aria-hidden="true"></span><b>${esc(name)}</b> <span class="arm-cost arm-dpc">${dp} DP</span>${on ? ' <span class="badge ok">chosen</span>' : why ? `<span class="cmp-pick arm-why">${esc(why)}</span>` : '<span class="cmp-pick">Tap to take</span>'}</div>
         <div class="det-body">
           ${detPartsHtml(parts)}
         </div></div>`;
@@ -734,6 +793,23 @@ function effectsOf(node, depth = 0) {
     const min = k.constraints.filter(c => c.type === 'min' && c.field === 'selections' && c.scope === 'parent').reduce((x, c) => Math.max(x, Number(c.value) || 0), 0);
     if (min > 0) out.push(...effectsOf(k, depth + 1));
   }
+  // one effect once: an option's own profile and the shared entry inside it can both carry it with different texts
+  // ("…and 1 Relic Shield": "Wounds characteristic of 6" + the shared Relic Shield's "Add 1 to … Wounds") – the
+  // option's own (found first) is the one for this option
+  const seen = new Set();
+  return out.filter(e => { const k = e.name.toLowerCase(); if (seen.has(k)) return false; seen.add(k); return true; });
+}
+/** What a bundle option holds when it brings no profile itself ("Pistol and Melee Weapon"): its parts, each choice with
+ *  its options – [{ name, opts: [names] }]. */
+function bundleOf(x) {
+  const out = [];
+  for (const k of ed.sys.children(x)) {
+    if (/^(Crusade\b|Weapon Modifications|Weapon Upgrades)/i.test(k.name)) continue;
+    if (k.group) {
+      const opts = ed.sys.children(k).filter(o => !o.group).map(o => o.name);
+      if (opts.length) out.push({ name: k.name, opts });
+    } else out.push({ name: k.name, opts: [] });
+  }
   return out;
 }
 const effectHtml = list => list.map(e => `<div class="arm-effect"><b>${esc(e.name)}:</b> ${kwify(esc(e.text))}</div>`).join('');
@@ -772,7 +848,18 @@ function openCompare(pid, gtok) {
     return `<div class="cmp-opt${on ? ' on' : ''}" style="--oc:${color}" role="button" tabindex="0" data-tok="${esc(x.token)}" aria-pressed="${on}" aria-label="Equip ${label}">
       <div class="cmp-opt-h"><span class="arm-dot" aria-hidden="true"></span><b>${n > 1 ? `(${n}×) ` : ''}${label}</b>${cost ? ` <span class="arm-cost">+${cost} pts</span>` : ''}${tag}${ws.length > 1 ? ` <span class="muted xs">${ws.length} profiles</span>` : ''}</div>
       ${ws.length ? `<div class="cmp-scroll"><table class="cmp-table"><thead><tr><th>Weapon</th><th>Range</th><th>A</th><th>BS/WS</th><th>S</th><th>AP</th><th>D</th></tr></thead><tbody>${ws.map(w => row(w, color)).join('')}</tbody></table></div>` : ''}
-      ${(() => { const fx = effectsOf(x); return fx.length ? `<div class="cmp-fx">${effectHtml(fx)}</div>` : ws.length ? '' : '<p class="muted xs">No profile in the data.</p>'; })()}
+      ${(() => {
+        const fx = effectsOf(x);
+        if (fx.length) return `<div class="cmp-fx">${effectHtml(fx)}</div>`;
+        if (ws.length) return '';
+        // a bundle ("Pistol and Melee Weapon"): its parts, and the weapons it can hold
+        const parts = bundleOf(x);
+        if (!parts.length) return '<p class="muted xs">No profile in the data.</p>';
+        const seen = new Set();
+        const inner = sys.children(x).flatMap(k => (k.group ? sys.children(k).filter(o => !o.group) : [k])).flatMap(o => weaponsOf(o)).filter(w0 => { const k0 = w0.name + '|' + w0.ch.Range + '|' + w0.ch.S; if (seen.has(k0)) return false; seen.add(k0); return true; });
+        return `<div class="cmp-fx cmp-bundle">${parts.map(p => `<div><b>${esc(p.name)}</b>${p.opts.length ? ` – choose: ${esc(p.opts.join(' / '))}` : ''}</div>`).join('')}</div>`
+          + (inner.length ? `<div class="cmp-scroll"><table class="cmp-table"><thead><tr><th>Weapon</th><th>Range</th><th>A</th><th>BS/WS</th><th>S</th><th>AP</th><th>D</th></tr></thead><tbody>${inner.map(w0 => row(Object.assign({}, w0, { n: 1 }), color)).join('')}</tbody></table></div>` : '');
+      })()}
     </div>`;
   }).join('');
   };
@@ -800,6 +887,8 @@ function openCompare(pid, gtok) {
           if (on) apply(r => E.removeSel(r, on.s.id));
           else apply(r => E.chooseInGroup(ed.sys, r, pid || null, gtok, t));
           toast(`${name} ${on ? 'removed' : 'equipped'}`, 'ok', 1500);
+          // one option of a single choice: done – back to the unit, which shows the new wargear
+          if (!on) { close(); return; }
         }
         redraw();
       };
@@ -894,6 +983,7 @@ function block(V, pw, nodes, prefix, depth, compact, caps = []) {
       const altOf = new Map();   // option → selection to take back so it comes again
       let kids = sys.children(k).filter(x => {
         if (inGroup.some(c => c.s.t === tok + '>' + x.token || c.s.t.startsWith(tok + '>' + x.token + '>'))) return true;
+        if (NOT_READY.test(x.name)) return false;   // a placeholder of the data ("Deathwatch Support (ITS NOT READY)") – not offered
         // a sub-group whose options are all hidden (another detachment's enhancements) shows nothing: no empty heading
         const anyVisible = (y, d) => !E.limits(V, y, null, pw).hidden && (!y.group || (d < 4 && sys.children(y).some(z => anyVisible(z, d + 1))));
         if (anyVisible(x, 0)) return true;
@@ -931,6 +1021,7 @@ function block(V, pw, nodes, prefix, depth, compact, caps = []) {
         // several of the group, but each option only once ("up to two drones, but no duplicates")
         const noDup = multi && lim.max > 1 ? ` <span class="muted xs">· up to ${lim.max}, max 1 of each</span>` : '';
         const headTxt = `${same ? '' : esc(lim.name)}${lim.min ? '' : ' <span class="muted xs">optional</span>'}${noDup}${eachTag}`;
+        const whys = [];   // detachments that need more DP than are left – said below the choices (outside the data names)
         html += `<div class="arm-grp">${same && lim.min && !cmp ? '' : `<div class="arm-gh">${headTxt}${cmp}</div>`}<div class="arm-choices">${kids.map((x, xi) => {
           const t = tok + '>' + x.token;
           const on = inGroup.find(c => c.s.t === t);
@@ -939,8 +1030,14 @@ function block(V, pw, nodes, prefix, depth, compact, caps = []) {
           const back = altOf.get(x);
           // one more of a multi-choice group: not beyond the group's (or an enclosing group's) maximum
           const full = multi && !on && !back && ((lim.max >= 0 && total >= lim.max) || capRoom <= 0);
+          const dpWhy = on ? '' : dpShort(V, x, pw, t);   // a detachment that costs more DP than are left
+          if (dpWhy) {
+            const nm = E.limits(V, x, null, pw).name;
+            whys.push(`<li><span data-no-i18n>${esc(nm)}</span>: ${esc(dpWhy)}</li>`);
+            return `<button type="button" class="arm-opt arm-dp-over" data-action="arm-op" data-op="${multi ? 'add' : 'choose'}" data-p="${esc(pid)}" data-g="${esc(tok)}" data-t="${esc(t)}" title="${esc(dpWhy)}">${multi ? '<span class="arm-box" aria-hidden="true"></span>' : ''}${dot}${esc(nm)} <span class="arm-cost arm-dpc">${E.nodeCost(V, x, null, pw, DP)} DP ⚠</span></button>`;
+          }
           return `<button type="button" class="arm-opt${on ? ' on' : ''}" data-action="arm-op" data-op="${back ? 'rm' : on ? (lim.min && !multi ? 'noop' : 'rm') : multi ? 'add' : 'choose'}" data-p="${esc(pid)}" data-g="${esc(tok)}" data-t="${esc(t)}"${back ? ` data-id="${esc(back.s.id)}"` : on ? ` data-id="${esc(on.s.id)}"` : ''}${full ? ' disabled' : ''}>${multi ? `<span class="arm-box" aria-hidden="true">${on ? '✓' : ''}</span>` : ''}${dot}${esc(E.limits(V, x, on || null, pw).name)}${cost ? ` <span class="arm-cost">+${cost}</span>` : ''}${(() => { const d = E.nodeCost(V, x, on || null, pw, DP); return d ? ` <span class="arm-cost arm-dpc">${d} DP</span>` : ''; })()}</button>`;
-        }).join('')}</div>${shown.map(c => effectHtml(c.node ? effectsOf(c.node) : [])).join('')}${shown.map(c => nested(V, c, depth, compact)).join('')}</div>`;
+        }).join('')}</div>${whys.length ? `<ul class="arm-why-list">${whys.join('')}</ul>` : ''}${shown.map(c => effectHtml(c.node ? effectsOf(c.node) : [])).join('')}${shown.map(c => nested(V, c, depth, compact)).join('')}</div>`;
       } else {
         const hasModels = kids.some(x => x.type === 'model' || (x.group && sys.children(x).some(y => y.type === 'model')));
         const sub = lim.max >= 0 ? [...caps, { tok, max: lim.max, total, name: lim.name }] : caps;
@@ -1171,9 +1268,29 @@ function refreshUnitSheet(el) {
   ed.cmpUnit = types.length > 1 ? w.s.id : null;
   sh.querySelector('.arm-usheet').innerHTML = `
     <div class="arm-u-head"><span class="muted">${esc(catName(ed.sys, w))}</span><span class="arm-u-total"><b>${E.totalCost(V, w)}</b> pts</span></div>
+    ${sizeHtml(V, w)}
     ${leadHtml(V, w)}
     ${optionsHtml(V, w, false)}
     ${dsHtml(V, w)}`;
+}
+
+/* Unit size in one tap: the datasheet's sizes (5 / 10, 10 / 20 …) as chips instead of tapping '+' five times. Only for
+   units whose models sit directly in the unit (a unit whose size is an option of the data has that option as its choice);
+   the standard model stack (not the Sergeant / Nob …) grows or shrinks. */
+function sizeMain(w) {
+  if (w.ch.some(c => c.node && c.node.type !== 'model' && c.ch.some(k => k.node && k.node.type === 'model'))) return null;
+  return w.ch.filter(c => c.node && c.node.type === 'model' && !LEAD_RE.test(c.node.name)).sort((a, b) => b.n - a.n)[0] || null;
+}
+function sizeHtml(V, w) {
+  const ds = sheetOf(dsPack(), unitName(V, w));
+  const sizes = [...new Set(((ds && ds.points) || []).map(p => Number(p.models)).filter(n => n > 1))].sort((a, b) => a - b);
+  const main = sizes.length > 1 && sizeMain(w);
+  if (!main) return '';
+  const cur = countModels(w);
+  return `<div class="arm-size"><span class="arm-gh">Unit size</span><div class="arm-choices">${sizes.map(n => {
+    const want = main.n + n - cur;
+    return `<button type="button" class="chip${n === cur ? ' on' : ''}" data-action="arm-op" data-op="size" data-id="${esc(main.s.id)}" data-n="${want}"${want < 1 ? ' disabled' : ''}>${n} models</button>`;
+  }).join('')}</div></div>`;
 }
 
 /** Leader: which unit of the list it leads (taken into the game as "Leading …"). */
@@ -1181,13 +1298,18 @@ function leadHtml(V, w) {
   const cands = leaderCands(V, w, dsPack());
   if (!cands || !cands.length) return '';
   const cur = w.s.lead && V.byId.get(w.s.lead) ? w.s.lead : '';
-  const nth = x => { const same = cands.filter(y => unitName(V, y) === unitName(V, x)); return same.length > 1 ? ` (${same.indexOf(x) + 1})` : ''; };
+  const nth = x => { const same = cands.filter(y => unitName(V, y) === unitName(V, x)); return same.length > 1 ? ` #${same.indexOf(x) + 1}` : ''; };
   // a bodyguard that already has as many leaders as its datasheet allows is not offered (only shown, with who leads it)
   const full = x => { const ls = leadersOf(V, x).filter(y => y !== w); return cur !== x.s.id && ls.length && leaderLimit(V, x, [...ls, w], dsPack()) ? ls : null; };
   const support = (attachRule(sheetOf(dsPack(), unitName(V, w))) || {}).kind === 'support';
+  // every candidate with its model count and who leads it already ("Necron Warriors (10) – led by Technomancer"),
+  // so two units of the same name can be told apart
   return `<div class="arm-grp arm-lead"><div class="arm-gh">${support ? 'Supports' : 'Leads'}${cur ? '' : ' <span class="arm-loose">not attached</span>'}</div><div class="arm-choices">
     <button type="button" class="arm-opt${cur ? '' : ' on'}" data-action="arm-op" data-op="lead" data-id="${esc(w.s.id)}" data-to="">None</button>
-    ${cands.map(x => { const ls = full(x); return `<button type="button" class="arm-opt${cur === x.s.id ? ' on' : ''}" data-action="arm-op" data-op="lead" data-id="${esc(w.s.id)}" data-to="${esc(x.s.id)}"${ls ? ' disabled' : ''}>${esc(unitName(V, x) + nth(x))}${ls ? ` <span class="arm-ledby">led by ${esc(ls.map(y => unitName(V, y)).join(', '))}</span>` : ''}</button>`; }).join('')}</div></div>`;
+    ${cands.map(x => {
+      const ls = full(x), others = leadersOf(V, x).filter(y => y !== w), m = countModels(x);
+      return `<button type="button" class="arm-opt${cur === x.s.id ? ' on' : ''}" data-action="arm-op" data-op="lead" data-id="${esc(w.s.id)}" data-to="${esc(x.s.id)}"${ls ? ' disabled' : ''}>${esc(unitName(V, x) + nth(x))}${m ? ` <span class="arm-cost">(${m})</span>` : ''}${others.length ? ` <span class="arm-ledby">– led by ${esc(others.map(y => unitName(V, y)).join(', '))}</span>` : ''}</button>`;
+    }).join('')}</div></div>`;
 }
 
 /** Datasheet of the unit (profiles, weapons, abilities) below its options – with the chosen wargear. */
@@ -1298,47 +1420,118 @@ function enhOf(V, w) {
 }
 
 /* ───────── Add unit ───────── */
-function openAdd() {
+/** Catalogue each root entry comes from (entry id → catalogue name): the army's own units vs. allies. */
+const ownerCache = new WeakMap();
+function ownerOf(sys, n) {
+  let m = ownerCache.get(sys);
+  if (!m) {
+    m = new Map();
+    for (const c of sys.cats.values()) for (const k of ['selectionEntries', 'sharedSelectionEntries', 'sharedSelectionEntryGroups']) for (const e of c[k] || []) if (e && e.id && !m.has(e.id)) m.set(e.id, c.name);
+    ownerCache.set(sys, m);
+  }
+  return m.get(n.id) || '';
+}
+/** Is catalogue `src` part of the army's own faction (the army's catalogue, its library, the Space Marines codex of a
+ *  chapter, the Heresy Legends of its faction)? Everything else – Agents of the Imperium, Imperial Knights, Titans,
+ *  daemons for a Chaos Space Marine army, unaligned forces – is an ally. */
+const OWN_FAMILY = { 'Space Marines': /Adeptus Astartes/i, Titans: /Titanicus/i, Aeldari: /Aeldari|Drukhari/i };
+function ownCatalogue(src, army) {
+  if (!src || src === army || /Astartes Heresy Legends/i.test(src)) return true;
+  const key = allyLabel(src);
+  if (OWN_FAMILY[key] && OWN_FAMILY[key].test(army)) return true;
+  // "Chaos - Daemons Library" → Chaos Daemons, "Imperium - Astra Militarum - Library" → Astra Militarum
+  return army.split(' - ').some(s => s.trim() === key || s.trim().endsWith(' ' + key));
+}
+const allyLabel = src => (/Warhammer 40,000/i.test(src) ? 'Core rules' : src.split(' - ').map(s => s.replace(/\s*\bLibrary\b\s*/i, '').trim()).filter(s => s && !/^(Imperium|Chaos|Xenos|Library)$/i.test(s)).pop() || src);
+/** Search text: lower case, accents off ("Attachés" → "attaches"), punctuation as spaces. */
+const fold = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[’'`]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+/** Every word of the query is found inside the name ("attach" → Regimental Attachés, "loota" → Lootas, "big mek" → Big Mek in Mega Armour). */
+const matches = (hay, q) => { const ws = fold(q).split(' ').filter(Boolean); return ws.every(w => hay.includes(w)); };
+function openAdd(q0 = '') {
   const sys = ed.sys;
   const V = E.view(sys, ed.army);
+  const armyCat = (sys.cats.get(ed.army.catalogueId) || {}).name || ed.army.catalogueName || '';
   const roots = sys.rootNodes(ed.army.catalogueId).filter(n => ['unit', 'model'].includes(n.type) && !HIDE_ROOT.test(n.name));
+  // units the data hides behind a Show/Hide switch (Legends, Crucible …): found by the search too, with the switch
+  const sw = showHideRoot(V), swOn = sw && V.force.ch.find(x => x.node && x.node.token === sw.token);
+  const switches = sw ? sys.children(sw).filter(k => !k.group && !(swOn && swOn.ch.some(c => c.s.t === k.token))) : [];
+  const hiddenHits = [];
   const rows = roots.map(n => {
     const l = E.limits(V, n, null, V.force);
-    if (l.hidden) return null;
-    return { n, l, ...addInfo(V, n), cat: sys.categoryNames.get(n.primaryCategory) || 'Other' };
+    if (l.hidden) {
+      const tag = (/\[(Legends|Crucible)\]/i.exec(l.name) || [])[1];
+      const s = tag && switches.find(k => new RegExp('^Show ' + tag, 'i').test(k.name));
+      hiddenHits.push({ name: l.name, key: fold(l.name), sw: s || null });
+      return null;
+    }
+    const src = ownerOf(sys, n);
+    return { n, l, ...addInfo(V, n), cat: sys.categoryNames.get(n.primaryCategory) || 'Other', src, ally: !ownCatalogue(src, armyCat) };
   }).filter(Boolean);
-  const cats = [...new Set(rows.map(r => r.cat))].sort(byRole);
   rows.sort((a, b) => a.l.name.localeCompare(b.l.name));
-  const body = `<div class="arm-add-top"><input type="search" class="arm-search" placeholder="Search units" autocomplete="off">
-    <div class="arm-roles">${cats.map(c => `<button type="button" class="chip sm" data-jump="${esc(c)}">${esc(c)}</button>`).join('')}</div></div>
-    <div class="arm-addlist">${cats.map(c => `<div class="arm-sec-h" data-role="${esc(c)}">${esc(c)}</div>${rows.filter(r => r.cat === c).map(r => `
-      <button type="button" class="arm-addrow" data-tok="${esc(r.n.token)}" data-name="${esc(r.l.name.toLowerCase())}"${r.max >= 0 && r.have >= r.max ? ' disabled' : ''}>
-        <span>${esc(r.l.name)}</span><span class="arm-have muted xs">${haveTxt(r)}</span><span class="arm-u-pts">${r.pts}</span><span class="arm-plus" aria-hidden="true">+</span></button>`).join('')}`).join('')}</div>`;
+  // the same name twice (Ministorum Priest of the Astra Militarum at 35 pts and of the Agents of the Imperium at 40):
+  // each row says where it comes from (and Legends)
+  const dupName = new Set(rows.map(r => r.l.name).filter((x, i, a) => a.indexOf(x) !== i));
+  const rest = ed.army.limit ? Number(ed.army.limit) - E.totalPoints(V) : Infinity;   // points left
+  const rowHtml = r => {
+    const full = r.max >= 0 && r.have >= r.max;
+    const over = !full && r.pts > rest;
+    const tag = dupName.has(r.l.name) ? ` <span class="arm-src muted xs">${esc(allyLabel(r.src))}</span>` : '';
+    return `<div class="arm-addline" data-name="${esc(fold(r.l.name))}">
+      <button type="button" class="arm-addrow${over ? ' over' : ''}" data-tok="${esc(r.n.token)}"${full ? ' disabled' : ''}${over ? ' title="More than the points left"' : ''}>
+        <span class="arm-add-n">${esc(r.l.name)}${tag}</span><span class="arm-have muted xs">${haveTxt(r)}</span><span class="arm-u-pts">${r.pts}</span><span class="arm-plus" aria-hidden="true">+</span></button>
+      <button type="button" class="arm-info" data-info="${esc(r.n.token)}" aria-label="Datasheet of ${esc(r.l.name)}" title="Datasheet">i</button></div>`;
+  };
+  const own = rows.filter(r => !r.ally), allies = rows.filter(r => r.ally);
+  const cats = [...new Set(own.map(r => r.cat))].sort(byRole);
+  const allySrc = [...new Set(allies.map(r => allyLabel(r.src)))].sort();
+  const body = `<div class="arm-add-top"><input type="search" class="arm-search" placeholder="Search units" autocomplete="off" enterkeyhint="go" aria-label="Search units">
+    <div class="arm-roles">${cats.map(c => `<button type="button" class="chip sm" data-jump="${esc(c)}">${esc(c)}</button>`).join('')}${allies.length ? `<button type="button" class="chip sm" data-jump="__allies">Allies</button>` : ''}</div></div>
+    <div class="arm-addlist">${cats.map(c => `<div class="arm-sec-h" data-role="${esc(c)}">${esc(c)}</div>${own.filter(r => r.cat === c).map(rowHtml).join('')}`).join('')}
+    ${allies.length ? `<details class="arm-allies" data-role="__allies"><summary><span class="arm-sec-h">Allies</span> <span class="muted xs">${esc(allySrc.join(' · '))} – other catalogues this army may include</span> <span class="badge">${allies.length}</span></summary>
+      ${allySrc.map(s => `<div class="arm-ally-h" data-role="ally:${esc(s)}">${esc(s)}</div>${allies.filter(r => allyLabel(r.src) === s).map(rowHtml).join('')}`).join('')}</details>` : ''}
+    <p class="arm-noresult muted" hidden>No units found</p><div class="arm-hidden-hits" hidden></div></div>`;
   let added = 0;
+  const touch = matchMedia('(pointer: coarse)').matches;
   sheet({
-    title: 'Add units', body, cls: 'arm-add-sheet wide', focus: false,
-    onOpen: el => {
+    title: 'Add units', body, cls: 'arm-add-sheet wide', focus: !touch,
+    onOpen: (el, closeAdd) => {
       const q = el.querySelector('.arm-search');
-      q.addEventListener('input', () => {
-        const s = q.value.trim().toLowerCase();
-        el.querySelectorAll('.arm-addrow').forEach(b => { b.hidden = !!s && !b.dataset.name.includes(s); });
-        el.querySelectorAll('.arm-addlist [data-role]').forEach(h => { let n = h.nextElementSibling, any = false; while (n && !n.dataset.role) { if (!n.hidden) any = true; n = n.nextElementSibling; } h.hidden = !any; });
-      });
-      el.addEventListener('click', e => {
-        const j = e.target.closest('[data-jump]');
-        if (j) {
-          const h = el.querySelector(`.arm-addlist [data-role="${CSS.escape(j.dataset.jump)}"]`);
-          const body = el.querySelector('.sheet-body');
-          if (h && body) body.scrollTo({ top: h.offsetTop - el.querySelector('.arm-add-top').offsetHeight - 4, behavior: 'smooth' });
-          return;
+      const allyBox = el.querySelector('.arm-allies');
+      let allyWasOpen = false;
+      const filter = () => {
+        const s = q.value.trim();
+        el.querySelectorAll('.arm-addline').forEach(b => { b.hidden = !!s && !matches(b.dataset.name, s); });
+        // headings without a visible row go away
+        el.querySelectorAll('.arm-addlist .arm-sec-h[data-role], .arm-ally-h').forEach(h => { let n = h.nextElementSibling, any = false; while (n && n.classList.contains('arm-addline')) { if (!n.hidden) any = true; n = n.nextElementSibling; } h.hidden = !any; });
+        if (allyBox) {
+          const any = !!allyBox.querySelector('.arm-addline:not([hidden])');
+          allyBox.hidden = !any;
+          if (s && any) { if (!allyBox.dataset.auto) { allyWasOpen = allyBox.open; allyBox.dataset.auto = '1'; } allyBox.open = true; }
+          else if (!s && allyBox.dataset.auto) { allyBox.open = allyWasOpen; delete allyBox.dataset.auto; }
         }
-        const b = e.target.closest('.arm-addrow');
-        if (!b || b.disabled) return;
-        // add and stay in the list: first all units, then set them up
-        apply(r => E.addSel(ed.sys, r, null, b.dataset.tok));
+        el.querySelector('.arm-noresult').hidden = !s || !!el.querySelector('.arm-addline:not([hidden])');
+        // matches the data hides behind a switch: named, with the switch to show them
+        const hh = el.querySelector('.arm-hidden-hits');
+        const hits = s ? hiddenHits.filter((h, i, a) => h.sw && matches(h.key, s) && a.findIndex(y => y.name === h.name) === i) : [];
+        hh.hidden = !hits.length;
+        hh.innerHTML = hits.length ? `<p class="muted xs">Not shown – the data hides ${hits.length === 1 ? 'this unit' : 'these units'} behind a switch:</p><ul>${hits.slice(0, 8).map(h => `<li>${esc(h.name)}</li>`).join('')}</ul>${[...new Map(hits.map(h => [h.sw.token, h.sw])).values()].map(k => `<button type="button" class="btn ghost sm" data-show-sw="${esc(k.token)}">${esc(k.name)}</button>`).join(' ')}` : '';
+      };
+      q.addEventListener('input', filter);
+      if (q0) { q.value = q0; filter(); }
+      // Enter adds the only / top hit
+      q.addEventListener('keydown', e => {
+        if (e.key !== 'Enter') return;
+        e.preventDefault();
+        if (!q.value.trim()) return;
+        const top = el.querySelector('.arm-addline:not([hidden]) .arm-addrow:not(:disabled)');
+        if (top) add(top);
+      });
+      const refresh = (b) => {
         const V2 = E.view(ed.sys, ed.army);
-        // every row: copies and limits (a shared category limit changes with any unit), the next copy's price on this one
+        // every row: copies and limits (a shared category limit changes with any unit), the next copy's price on this
+        // one, and whether it still fits into the points left
         const all = ed.sys.rootNodes(ed.army.catalogueId);
+        const rest = ed.army.limit ? Number(ed.army.limit) - E.totalPoints(V2) : Infinity;
         el.querySelectorAll('.arm-addrow').forEach(x => {
           const node = all.find(n => n.token === x.dataset.tok);
           if (!node) return;
@@ -1347,14 +1540,61 @@ function openAdd() {
           hv.textContent = haveTxt(info);
           if (x === b) { hv.classList.toggle('added', info.have > 0); x.querySelector('.arm-u-pts').textContent = info.pts; }
           x.disabled = info.max >= 0 && info.have >= info.max;
+          const over = !x.disabled && Number(x.querySelector('.arm-u-pts').textContent) > rest;
+          x.classList.toggle('over', over);
+          if (over) x.title = 'More than the points left'; else x.removeAttribute('title');
         });
+        return V2;
+      };
+      const add = b => {
+        // add and stay in the list: first all units, then set them up
+        apply(r => E.addSel(ed.sys, r, null, b.dataset.tok));
+        const V2 = refresh(b);
         b.classList.remove('flash'); void b.offsetWidth; b.classList.add('flash');
         added++;
         const t = el.querySelector('.sheet-head .title');
         if (t) t.textContent = `Add units · ${added} added · ${E.totalPoints(V2)} pts`;
+        // with a keyboard the search stays ready for the next unit (text selected: type over it)
+        if (!touch && q.value.trim()) { try { q.focus({ preventScroll: true }); q.select(); } catch {} }
+      };
+      el.addEventListener('click', e => {
+        const j = e.target.closest('[data-jump]');
+        if (j) {
+          const h = el.querySelector(`.arm-addlist [data-role="${CSS.escape(j.dataset.jump)}"]`);
+          const body = el.querySelector('.sheet-body');
+          if (h && h.tagName === 'DETAILS') h.open = true;
+          if (h && body) body.scrollTo({ top: h.offsetTop - el.querySelector('.arm-add-top').offsetHeight - 4, behavior: 'smooth' });
+          return;
+        }
+        const shw = e.target.closest('[data-show-sw]');
+        if (shw) { const s = q.value; closeAdd(); toggleShow(shw.dataset.showSw); toast(`${shw.textContent}: on`, 'ok', 1500); openAdd(s); return; }
+        const inf = e.target.closest('[data-info]');
+        if (inf) { const r = rows.find(x => x.n.token === inf.dataset.info); if (r) openAddInfo(r); return; }
+        const b = e.target.closest('.arm-addrow');
+        if (!b || b.disabled) return;
+        add(b);
       });
     },
     actions: [{ label: 'Done', kind: 'primary' }]
+  });
+}
+/** The datasheet of a unit before it is added (the 'i' of a row in Add units): the faction's own datasheets, then the
+ *  ally packs (Agents of the Imperium, Imperial Knights, daemons …). */
+async function openAddInfo(r) {
+  const name = r.l.name;
+  let ds = null;
+  try {
+    ds = sheetOf(await loadDatasheets(ed.army.faction), name);
+    for (const p of ALLY_PACKS) { if (ds) break; ds = sheetOf(await loadDatasheets(p), name); }
+  } catch {}
+  const src = `<p class="muted xs">${esc(r.cat)} · ${r.pts} pts${r.ally ? ' · ' + esc(allyLabel(r.src)) : ''}</p>`;
+  sheet({
+    title: name, cls: 'arm-addinfo-sheet wide',
+    body: src + (ds ? datasheetCard(ds, { open: true, noInfo: true }) : '<p class="muted">No datasheet in the data for this unit.</p>'),
+    actions: [{ label: 'Close', kind: 'ghost' }, { label: `+ Add ${name}`, kind: 'primary', disabled: r.max >= 0 && addInfo(E.view(ed.sys, ed.army), r.n, false).have >= r.max, onClick: () => {
+      const row = document.querySelector(`.arm-add-sheet .arm-addrow[data-tok="${CSS.escape(r.n.token)}"]`);
+      if (row && !row.disabled) row.click(); else apply(x => E.addSel(ed.sys, x, null, r.n.token));
+    } }]
   });
 }
 /** A row of the Add units list: copies in the army, how many are allowed (the entry's own limit and the catalogue's
@@ -1492,6 +1732,7 @@ function op(b) {
     case 'rm': return apply(r => E.removeSel(r, d.id));
     case 'choose': return apply(r => E.chooseInGroup(sys, r, d.p || null, d.g, d.t));
     case 'split': return apply(r => E.splitSel(r, d.id));
+    case 'size': return apply(r => (E.findSel(r.sel, d.id) ? E.setCount(r, d.id, Math.max(1, Number(d.n) || 1)) : r), unitOf(d.id));
     case 'lead': return apply(r => { const c = JSON.parse(JSON.stringify(r)); const x = E.findSel(c.sel, d.id); if (x) { if (d.to) x.lead = d.to; else delete x.lead; } return c; });
     case 'count': return apply(r => {
       const s = E.findSel(r.sel, d.id);
@@ -1521,7 +1762,7 @@ async function onClick(e) {
   }
   if (a === 'arm-dup') {
     const ar = loadArmy(b.dataset.id);
-    if (ar) { saveArmy(Object.assign({}, ar, { id: armyId(), name: ar.name + ' (copy)' })); rerender(); }
+    if (ar) { if (!saveArmy(Object.assign({}, ar, { id: armyId(), name: ar.name + ' (copy)' }), { verify: true })) toast('Could not save the copy on this device (storage full or blocked)', 'bad', 6000); rerender(); }
     return;
   }
   if (a === 'arm-probs') {
@@ -1538,6 +1779,7 @@ async function onClick(e) {
   if (a === 'arm-impdone') { const r = Object.assign({}, ed.army); delete r.importNotes; saveWithSummary(ed.sys, r); return rerender(); }
   if (a === 'arm-print') { try { window.print(); } catch {} return; }
   if (a === 'arm-show') return toggleShow(b.dataset.t);
+  if (a === 'arm-resave') { if (saveWithSummary(ed.sys, ed.army)) toast('Army saved', 'ok', 1500); else toast('Still not saved – storage full or blocked', 'bad', 5000); return; }
   if (a === 'arm-dp' || a === 'arm-dp-auto') {
     const dp = a === 'arm-dp-auto' ? null : Math.max(0, Math.min(9, dpLimitOf(ed.army) + Number(b.dataset.d)));
     saveWithSummary(ed.sys, Object.assign({}, ed.army, { dp }));
@@ -1546,7 +1788,7 @@ async function onClick(e) {
   if (a === 'arm-add') return openAdd();
   if (a === 'arm-rename') {
     const n = await promptSheet({ title: 'Rename army', label: 'Name', value: ed.army.name, ok: 'Save' });
-    if (n && n.trim()) { saveArmy(Object.assign({}, ed.army, { name: n.trim() })); ed.army = loadArmy(ed.army.id); rerender(); }
+    if (n && n.trim()) { const a2 = Object.assign({}, ed.army, { name: n.trim() }); const s = saveArmy(a2); ed.army = s || a2; savedState(!!s); rerender(); }
     return;
   }
   if (a === 'arm-problems') {
@@ -1556,12 +1798,24 @@ async function onClick(e) {
     let notes = [];
     try { notes = E.validate(V, { warnings: true }).filter(p => p.warn); } catch {}
     const imp = (ed.army.importNotes || []).length;
+    // each line jumps to what it is about: a unit opens its sheet, a configuration entry (detachment, battle size …)
+    // opens the army configuration there; general lines about detachments go to the detachment choice
+    const detW = V.force.ch.find(w => w.node && /^Detachments?$/.test(w.node.name));
     const item = p => {
       const u = p.sel ? rootOf(V, p.sel) : null; const nm = u ? E.effective(V, u.node, u, u.parent).name : '';
       let msg = p.msg; while (nm && msg.startsWith(nm + ': ')) msg = msg.slice(nm.length + 2);   // the unit name only once
-      return `<li>${u ? `<b>${esc(nm)}</b>: ` : ''}${esc(msg)}</li>`;
+      const txt = `${u ? `<b>${esc(nm)}</b>: ` : ''}${esc(msg)}`;
+      const to = u && isUnitSel(u) ? `data-junit="${esc(u.s.id)}"` : u ? `data-jcfg="${esc(u.s.id)}"` : detW && /Detachment/i.test(p.msg) ? `data-jcfg="${esc(detW.s.id)}"` : '';
+      return to ? `<li><button type="button" class="arm-plink" ${to}>${txt} <span class="arm-plink-go" aria-hidden="true">›</span></button></li>` : `<li>${txt}</li>`;
     };
     sheet({
+      onOpen: (el, close) => el.addEventListener('click', ev => {
+        const j = ev.target.closest('[data-junit], [data-jcfg]');
+        if (!j) return;
+        close();
+        if (j.dataset.junit) return openUnit(j.dataset.junit);
+        jumpToConfig(j.dataset.jcfg);
+      }),
       title: probs.length ? `${probs.length} problem${probs.length === 1 ? '' : 's'}` : 'No problems',
       body: (probs.length ? `<ul class="arm-problist">${probs.map(item).join('')}</ul>` : '<p>The list is valid.</p>')
         + (notes.length ? `<div class="arm-notes"><b>Notes from the data</b> <span class="muted xs">no rule problem</span><ul class="arm-problist arm-notelist">${notes.map(item).join('')}</ul></div>` : '')

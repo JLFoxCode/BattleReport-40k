@@ -312,3 +312,59 @@
 .arm-file-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; min-width: 0; }
 .arm-file-btn { cursor: pointer; }
 .arm-file-name { min-width: 0; overflow-wrap: anywhere; }
+
+/* "Saved" mark under the points (no Save button: every change is stored right away) */
+.arm-total-box { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; flex: none; }
+.arm-saved { font: 600 11px/1.1 var(--font-body); color: var(--muted); white-space: nowrap; }
+button.arm-saved { all: unset; font: 700 11px/1.1 var(--font-body); color: var(--bad); cursor: pointer; white-space: nowrap; padding: 2px 0; }
+@keyframes arm-saved { from { color: var(--ok); } to { color: var(--muted); } }
+.arm-saved.flash { animation: arm-saved .9s ease-out; }
+
+/* problems list: each line jumps to what it is about */
+.arm-plink { all: unset; box-sizing: border-box; display: block; width: 100%; padding: 4px 22px 4px 0; position: relative; cursor: pointer; line-height: 1.35; }
+.arm-plink:hover, .arm-plink:focus-visible { text-decoration: underline; text-underline-offset: 3px; }
+.arm-plink-go { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); color: var(--muted); font-weight: 800; }
+.arm-cfg, .arm-config { scroll-margin-top: 76px; }
+@keyframes arm-jumped { from { box-shadow: 0 0 0 3px var(--warn); } to { box-shadow: 0 0 0 0 transparent; } }
+.arm-jumped { animation: arm-jumped 1.4s ease-out; }
+
+/* add units: a row adds, its 'i' shows the datasheet first; allies collapsed below the army's own units */
+.arm-addline { display: flex; align-items: stretch; border-bottom: 1px solid var(--line); }
+.arm-addline[hidden] { display: none; }
+.arm-addline .arm-addrow { flex: 1; min-width: 0; border-bottom: 0; }
+.arm-add-n { flex: 1; min-width: 0; font-size: 15px; }
+.arm-addrow > .arm-add-n:first-child { flex: 1; }
+.arm-src { display: block; font-weight: 600; }
+.arm-addrow.over:not(:disabled) { opacity: .55; }
+.arm-addrow.over .arm-u-pts { color: var(--bad); }
+.arm-info { flex: none; align-self: center; width: 36px; height: 36px; margin: 0 2px 0 4px; border-radius: 50%; border: 1px solid var(--line); background: var(--panel); color: var(--text);
+  font: italic 700 16px/1 Georgia, 'Times New Roman', serif; cursor: pointer; }
+.arm-info:active { background: var(--panel2); }
+.arm-allies { margin: 14px 0 6px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); }
+.arm-allies[hidden] { display: none; }
+.arm-allies > summary { cursor: pointer; padding: 10px 12px; list-style: none; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; }
+.arm-allies > summary::-webkit-details-marker { display: none; }
+.arm-allies > summary::after { content: '▾'; margin-left: auto; color: var(--muted); }
+.arm-allies[open] > summary::after { content: '▴'; }
+.arm-allies > summary .arm-sec-h { margin: 0; }
+.arm-allies .arm-addline { padding: 0 6px; }
+.arm-ally-h { font: 700 12px/1.2 var(--font-body); letter-spacing: .06em; text-transform: uppercase; color: var(--warn); padding: 10px 12px 4px; }
+.arm-ally-h[hidden], .arm-sec-h[hidden] { display: none; }
+.arm-noresult { text-align: center; padding: 18px 8px; }
+.arm-noresult[hidden], .arm-hidden-hits[hidden] { display: none; }
+.arm-hidden-hits { margin: 10px 0; padding: 10px 12px; border: 1px dashed var(--line); border-radius: 10px; font-size: 14px; }
+.arm-hidden-hits p { margin: 0 0 4px; }
+.arm-hidden-hits ul { margin: 0 0 8px; padding-left: 18px; }
+
+/* unit size chips */
+.arm-size { margin: 4px 0 8px; }
+.arm-size .arm-gh { margin-bottom: 4px; }
+
+/* detachment points: why an option does not fit */
+.arm-dp-help { flex-basis: 100%; line-height: 1.35; }
+.arm-dp-over { opacity: .7; }
+.arm-why-list { margin: 6px 0 0; padding-left: 18px; font-size: 12px; color: var(--warn); line-height: 1.35; }
+.cmp-pick.arm-why { color: var(--warn); }
+
+/* wargear comparison: what a bundle option holds */
+.cmp-bundle > div { margin: 2px 0; font-size: 13px; line-height: 1.4; }

@@ -245,7 +245,15 @@ function importNotes(sys, r, report, made, listTotal, hasWarlord, dets = []) {
     const m = modelsOf(w);
     // a single-model unit (Doomsday Ark, Knight Castellan): "• 2x Gauss Flayer Array" lines are its weapons, not models
     const single = w.node.type === 'model' && m === 1;
-    if (u.models > 0 && m > 0 && m !== u.models && !single) add('warn', `${u.name}: ${u.models} model${u.models === 1 ? '' : 's'} in the list, ${m} imported`);
+    if (u.models > 0 && m > 0 && m !== u.models && !single) {
+      // a model line of the list that is wargear in the data ("1x Plasmacyte" of Skorpekh Destroyers: an upgrade of the
+      // unit, no model of its own) – said so, it is no lost model
+      const types = new Set(); (function f(x) { for (const c of x.ch) { if (!c.node) continue; if (c.node.type === 'model') types.add(norm(c.node.name)); f(c); } })(w);
+      const gear = (u.modelLines || []).filter(ml => !types.has(norm(ml.name)) && hasNamed(w, ml.name));
+      const asGear = gear.reduce((x, ml) => x + (Number(ml.count) || 1), 0);
+      const why = gear.length ? ` – ${gear.map(ml => `${ml.count > 1 ? ml.count + '× ' : ''}${ml.name}`).join(', ')} ${gear.length === 1 && !(gear[0].count > 1) ? 'is' : 'are'} wargear of the unit in the data, not a model (taken as wargear)` : '';
+      add(gear.length && m + asGear === u.models ? 'info' : 'warn', `${u.name}: ${u.models} model${u.models === 1 ? '' : 's'} in the list, ${m} imported${why}`);
+    }
   }
   // total of the units that were imported: the list's points against the current data (the list's header total is often
   // the battle size, so the units' own points are compared)
@@ -262,6 +270,13 @@ function importNotes(sys, r, report, made, listTotal, hasWarlord, dets = []) {
 }
 
 const onlyOne = a => (a.length === 1 ? a[0] : undefined);
+/** Is there a (non-model) selection of that name anywhere in the unit? */
+function hasNamed(w, name) {
+  const k = norm(name);
+  let hit = false;
+  (function f(x) { for (const c of x.ch) { if (!c.node) continue; if (c.node.type !== 'model' && norm(c.node.name) === k) hit = true; f(c); } })(w);
+  return hit;
+}
 
 /** Model types of the unit from the export lines ("9x Hearthkyn Warrior w/ bolter"). */
 function setModels(sys, r, id, u, report) {
@@ -283,14 +298,29 @@ function setModels(sys, r, id, u, report) {
   const chosen = sizes.filter(s => E.view(sys, r).byId.get(id).ch.some(c => c.s.t === s.tok));
   const types = [...entriesBelow(sys, w.node), ...chosen.flatMap(s => entriesBelow(sys, s.node, 1, s.tok))].filter(x => x.node.type === 'model');
   if (!types.length) return r;
-  const lines = (u.modelLines || []).map(m => ({ m, t: types.find(x => norm(x.node.name) === norm(m.name)) || onlyOne(types.filter(x => norm(x.node.name).startsWith(norm(m.name) + ' w '))) })).filter(x => x.t);
+  const all = (u.modelLines || []).map(m => ({ m, t: types.find(x => norm(x.node.name) === norm(m.name)) || onlyOne(types.filter(x => norm(x.node.name).startsWith(norm(m.name) + ' w '))) }));
+  const lines = all.filter(x => x.t);
+  // a model line that is wargear of the unit in the data ("1x Plasmacyte" of Skorpekh Destroyers is an upgrade of the
+  // unit, no model): taken as that wargear – the import report explains the lower model count
+  const gear = all.filter(x => !x.t).map(x => ({ m: x.m, e: entriesBelow(sys, w.node).find(e => e.node.type !== 'model' && norm(e.node.name) === norm(x.m.name)) })).filter(x => x.e);
+  const asGear = rr => {
+    for (const { m, e } of gear) {
+      try {
+        const V2 = E.view(sys, rr), h = V2.byId.get(id);
+        if (!h || h.ch.some(c => c.s.t === e.tok)) continue;
+        rr = e.group && E.limits(V2, e.group.node, null, h).max === 1 ? E.chooseInGroup(sys, rr, id, e.group.tok, e.tok) : E.addSel(sys, rr, id, e.tok, Math.max(1, Number(m.count) || 1));
+      } catch {}
+    }
+    return rr;
+  };
   if (!lines.length) {
     // no model lines: grow the biggest stack to the unit's model count
     const stacks = []; (function f(x) { for (const c of x.ch) { if (c.node && c.node.type === 'model') stacks.push(c); else f(c); } })(E.view(sys, r).byId.get(id));
     const cur = stacks.reduce((a, c) => a + c.n, 0);
     const big = stacks.sort((a, b) => b.n - a.n)[0];
-    if (big && u.models > cur) r = E.setCount(r, big.s.id, big.n + u.models - cur);
-    return r;
+    const want = u.models - gear.reduce((a, x) => a + (Number(x.m.count) || 1), 0);
+    if (big && want > cur) r = E.setCount(r, big.s.id, big.n + want - cur);
+    return asGear(r);
   }
   const seen = new Set();
   for (const { m, t } of lines) {
@@ -311,7 +341,7 @@ function setModels(sys, r, id, u, report) {
   V = E.view(sys, r);
   const uw = V.byId.get(id);
   for (const c of uw.ch) if (c.node && c.node.type === 'model' && !seen.has(c.s.id) && E.limits(V, c.node, c, uw).min === 0) r = E.removeSel(r, c.s.id);   // mandatory models stay
-  return r;
+  return asGear(r);
 }
 
 /** Wargear by name: as many models as the export says get it – chosen in the group of their model stack. */

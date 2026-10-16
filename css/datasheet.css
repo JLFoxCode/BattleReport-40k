@@ -55,6 +55,9 @@
 .ds-attach { font-size: .82rem; margin-top: 2px; color: var(--muted); }
 .ds-attach b { color: var(--text); }
 .ds-attach.leader::before { content: '\2191'; margin-right: 4px; }
+/* the group card's label: own class – .ds-attach is skipped by the German layer (it holds unit names) */
+.ds-attach-label { font-size: .82rem; margin-top: 2px; color: var(--muted); }
+.ds-attach-label.leader::before { content: '\2191'; margin-right: 4px; }
 .ds-attach.bodyguard::before { content: '\2193'; margin-right: 4px; }
 .ds-attach.unresolved b { color: var(--muted); text-decoration: line-through; }
 .ds-wcount { font-weight: 700; color: var(--ok); font-size: .78rem; }
