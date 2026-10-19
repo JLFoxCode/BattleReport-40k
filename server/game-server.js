@@ -10,7 +10,8 @@
  * Without auth (dev server, Windows app) nothing changes. staticAllow: top-level names the static files may come from.
  *
  *   const srv = await startGameServer({ root, gamesDir, overlayDir, bsdataDir, port, host, onGamesChanged, log, extraApi, info, engine, auth, staticAllow })
- *   → { port, stop(), summaries() }
+ *   → { port, stop(), summaries(), stats(), drain(), sync() }   (drain / sync: rolling restart, see server/online-supervisor.mjs)
+ * Static files are read from disk on every request (no cache) – a web update needs no restart.
  */
 import http from 'node:http';
 import fs from 'node:fs';
@@ -85,7 +86,7 @@ export async function startGameServer(opts = {}) {
   let PORT = opts.port == null ? 8417 : Number(opts.port);
   const auth = opts.auth || null;
   const STATIC_ALLOW = Array.isArray(opts.staticAllow) ? new Set(opts.staticAllow) : null;
-  const SEC_HEADERS = auth ? securityHeaders(ROOT) : null;
+  const secHeaders = auth ? securityHeaders(ROOT) : null;   // () → headers; re-hashed when index.html changes (web update without restart)
   // shown on the other devices when a game moves here ("moved to <name>")
   const DEVICE_NAME = String((opts.info && opts.info.name) || os.hostname() || 'host').slice(0, 60);
 
@@ -103,6 +104,8 @@ export async function startGameServer(opts = {}) {
   /** @type {Map<string, { code: string, actions: object[], state: object, clients: Set<http.ServerResponse> }>} */
   const games = new Map();
   let stopped = false;
+  let draining = false;        // rolling restart (online-supervisor.mjs): no new connections, every response closes its connection
+  let lastActionAt = null;     // time of the last game action / undo (the supervisor restarts only when the table is quiet)
 
   function newCode() {
     for (let tries = 0; tries < 1000; tries++) {
@@ -144,6 +147,9 @@ export async function startGameServer(opts = {}) {
   async function loadGames() {
     await fsp.mkdir(GAMES_DIR, { recursive: true });
     const files = (await fsp.readdir(GAMES_DIR)).filter(f => /^[A-Z]{4}\.json$/.test(f));
+    clearTimers();
+    for (const g of games.values()) for (const c of g.clients) { try { c.end(); } catch {} }
+    games.clear();
     let ok = 0;
     for (const f of files) {
       const code = f.slice(0, 4);
@@ -168,6 +174,7 @@ export async function startGameServer(opts = {}) {
     game.actions.push(a);
     game.state = next;
     game.state.seq = game.actions.length;
+    lastActionAt = Date.now();
     return a;
   }
 
@@ -528,6 +535,7 @@ export async function startGameServer(opts = {}) {
         catch (e) { return sendJson(res, 400, { error: 'Undo failed: ' + (e && e.message ? e.message : e) }); }
         g.actions = actions;
         g.state = state;
+        lastActionAt = Date.now();
         await persist(g);
         broadcastState(g);
         changed();
@@ -544,7 +552,7 @@ export async function startGameServer(opts = {}) {
           'Connection': 'keep-alive',
           'X-Accel-Buffering': 'no'
         });
-        res.write(': verbunden\n\n');
+        res.write(': connected\nretry: 1500\n\n');   // retry: quick automatic reconnect after a rolling restart (server.reload)
         res.write(`event: state\ndata: ${JSON.stringify(g.state)}\n\n`);
         // a device that missed the handover (offline, opened an old link) switches to the new host right away
         if (g.movedTo) res.write(`event: signal\ndata: ${JSON.stringify(Object.assign({ type: 'game.moved', code, ts: Date.now() }, g.movedTo))}\n\n`);
@@ -718,8 +726,9 @@ export async function startGameServer(opts = {}) {
   async function handler(req, res) {
     const url = new URL(req.url || '/', 'http://localhost');
     try {
+      if (draining) res.setHeader('Connection', 'close');   // keep-alive connections end after this response, the new server takes over
       if (auth) {
-        for (const [k, v] of SEC_HEADERS) res.setHeader(k, v);
+        for (const [k, v] of secHeaders()) res.setHeader(k, v);
         if (auth.isHttps(req)) res.setHeader('Strict-Transport-Security', 'max-age=15552000');
         if (auth.cors(req, res)) return;                    // preflight of the installed apps (Bearer token)
         if (await auth.handle(req, res, url)) return;       // session, login, register, armies, archive, admin page
@@ -743,6 +752,8 @@ export async function startGameServer(opts = {}) {
     }
   }
 
+  function clearTimers() { for (const g of games.values()) if (g.closeTimer) { clearTimeout(g.closeTimer); g.closeTimer = null; } }
+
   await loadGames();
   const server = http.createServer(handler);
   server.on('clientError', (err, socket) => {
@@ -750,8 +761,6 @@ export async function startGameServer(opts = {}) {
   });
   const sockets = new Set();
   server.on('connection', s => { sockets.add(s); s.on('close', () => sockets.delete(s)); });
-
-  function clearTimers() { for (const g of games.values()) if (g.closeTimer) { clearTimeout(g.closeTimer); g.closeTimer = null; } }
 
   try {
     await new Promise((resolve, reject) => {
@@ -767,19 +776,57 @@ export async function startGameServer(opts = {}) {
   server.on('error', e => log.error('server error:', e));
   changed();
 
+  let closing = null;
+  const closeServer = () => closing || (closing = new Promise(resolve => server.close(() => resolve())));
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+
   return {
     port: PORT,
     server,
     summaries,
+    /** For the supervisor's status / quiet-time check. */
+    stats: () => ({ games: games.size, clients: [...games.values()].reduce((n, g) => n + g.clients.size, 0), connections: sockets.size, lastActionAt }),
+    /** Rolling restart, step 1 (the server that is going away): stop accepting, tell every SSE client 'server.reload'
+     *  (they reconnect to the successor), let in-flight requests finish, wait for all writes, flush the account data.
+     *  Afterwards nothing is served any more – the process should exit. */
+    async drain(timeoutMs = 8000) {
+      if (draining) return;
+      draining = true; stopped = true;
+      clearTimers();
+      for (const g of games.values()) {
+        sseSend(g, 'signal', { type: 'server.reload', ts: Date.now() });
+        for (const c of g.clients) { try { c.end(); } catch {} }
+        g.clients.clear();
+      }
+      // Phase 1: nothing new arrives on this port any more (the supervisor forwards elsewhere); requests still coming in on
+      // open keep-alive connections are answered with Connection: close – so the clients close them themselves.
+      const t0 = Date.now();
+      while (sockets.size && Date.now() - t0 < Math.min(1500, timeoutMs)) await sleep(25);
+      // Phase 2: close what is left (idle connections right away, busy ones after their response).
+      closeServer();
+      while (sockets.size && Date.now() - t0 < timeoutMs) {
+        if (typeof server.closeIdleConnections === 'function') server.closeIdleConnections();
+        await sleep(50);
+      }
+      await Promise.all([...games.values()].map(g => g.persisting || null));
+      if (auth && typeof auth.stop === 'function') auth.stop();
+      for (const s of sockets) { try { s.destroy(); } catch {} }
+      await closeServer();
+    },
+    /** Rolling restart, step 2 (the successor, before it gets traffic): the predecessor has finished all its writes –
+     *  take the games and account data over from disk once more. Only meaningful while no client is connected. */
+    async sync() {
+      await loadGames();
+      if (auth && typeof auth.init === 'function') await auth.init();
+    },
     stop() {
       stopped = true;
       clearTimers();
       if (auth && typeof auth.stop === 'function') auth.stop();
       for (const g of games.values()) for (const c of g.clients) { try { c.end(); } catch {} }
-      return new Promise(resolve => {
-        server.close(() => resolve());
-        for (const s of sockets) { try { s.destroy(); } catch {} }
-      });
+      const p = closeServer();
+      for (const s of sockets) { try { s.destroy(); } catch {} }
+      return p;
     }
   };
 }
@@ -829,23 +876,37 @@ const isH = H => Array.isArray(H) && H.length === 9 && H.every(Number.isFinite);
 const RULE_PAGES = ['core-rules', 'rules-appendix'];
 
 /** Headers of the online server: the app's inline scripts in index.html are allowed by their hash (no 'unsafe-inline'
- *  for scripts); inline styles are used throughout the UI. GitHub only for the release / data checks of the apps. */
+ *  for scripts); inline styles are used throughout the UI. GitHub only for the release / data checks of the apps.
+ *  → getter; the hashes are computed again when index.html changes on disk (web update without a restart). */
 function securityHeaders(root) {
-  const hashes = [];
-  try {
-    const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
-    for (const m of html.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/gi)) hashes.push(`'sha256-${crypto.createHash('sha256').update(m[1].replace(/\r\n?/g, '\n')).digest('base64')}'`);   // the HTML parser turns CRLF into LF before hashing
-  } catch {}
-  const csp = [
-    "default-src 'self'", `script-src 'self' ${hashes.join(' ')}`.trim(), "style-src 'self' 'unsafe-inline'",
-    "img-src 'self' data: blob:", "font-src 'self'", "connect-src 'self' https://api.github.com https://raw.githubusercontent.com",
-    "media-src 'self' blob:", "worker-src 'self'", "manifest-src 'self'", "object-src 'none'", "base-uri 'self'",
-    "form-action 'self'", "frame-ancestors 'none'"
-  ].join('; ');
-  return [
-    ['Content-Security-Policy', csp], ['X-Content-Type-Options', 'nosniff'], ['Referrer-Policy', 'same-origin'],
-    ['X-Frame-Options', 'DENY'], ['Cross-Origin-Opener-Policy', 'same-origin'], ['Permissions-Policy', 'camera=(self), microphone=(), geolocation=()']
-  ];
+  const file = path.join(root, 'index.html');
+  let cached = null, mtime = -1, checked = 0;
+  function build() {
+    const hashes = [];
+    try {
+      const html = fs.readFileSync(file, 'utf8');
+      for (const m of html.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/gi)) hashes.push(`'sha256-${crypto.createHash('sha256').update(m[1].replace(/\r\n?/g, '\n')).digest('base64')}'`);   // the HTML parser turns CRLF into LF before hashing
+    } catch {}
+    const csp = [
+      "default-src 'self'", `script-src 'self' ${hashes.join(' ')}`.trim(), "style-src 'self' 'unsafe-inline'",
+      "img-src 'self' data: blob:", "font-src 'self'", "connect-src 'self' https://api.github.com https://raw.githubusercontent.com",
+      "media-src 'self' blob:", "worker-src 'self'", "manifest-src 'self'", "object-src 'none'", "base-uri 'self'",
+      "form-action 'self'", "frame-ancestors 'none'"
+    ].join('; ');
+    return [
+      ['Content-Security-Policy', csp], ['X-Content-Type-Options', 'nosniff'], ['Referrer-Policy', 'same-origin'],
+      ['X-Frame-Options', 'DENY'], ['Cross-Origin-Opener-Policy', 'same-origin'], ['Permissions-Policy', 'camera=(self), microphone=(), geolocation=()']
+    ];
+  }
+  return () => {
+    const t = Date.now();
+    if (cached && t - checked < 2000) return cached;   // one stat every 2 s at most
+    checked = t;
+    let m = 0;
+    try { m = fs.statSync(file).mtimeMs; } catch { m = 0; }
+    if (!cached || m !== mtime) { cached = build(); mtime = m; }
+    return cached;
+  };
 }
 
 export function sendJson(res, status, obj) {

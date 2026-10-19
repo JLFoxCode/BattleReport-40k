@@ -16,7 +16,13 @@
  * api = { listGames(), createGame(names), deleteGame(code), getState(code), getLog(code, since), takeOver(code, host, port), listPhotos(code) }
  */
 
-async function request(method, url, body) {
+/* Reconnect behaviour (online server, rolling restarts – server/online-supervisor.mjs): the event stream ends with the
+ * signal 'server.reload' (or simply drops); EventSource reconnects by itself, the server sends the full state on every
+ * (re)connect, and the "connection lost" bar only appears when nothing came back for OFFLINE_GRACE_MS. */
+const OFFLINE_GRACE_MS = 30000;
+const RETRY_DELAYS = [300, 900];   // a GET that fails on the network level is tried again (a request during a restart)
+
+async function request(method, url, body, attempt = 0) {
   let res;
   try {
     res = await fetch(url, {
@@ -26,6 +32,11 @@ async function request(method, url, body) {
       cache: 'no-store'
     });
   } catch (e) {
+    // only reads are repeated: a write could have reached the server already
+    if ((method === 'GET' || method === 'HEAD') && attempt < RETRY_DELAYS.length) {
+      await new Promise(r => setTimeout(r, RETRY_DELAYS[attempt]));
+      return request(method, url, body, attempt + 1);
+    }
     throw new Error('No connection to the server');
   }
   let data = null;
@@ -70,9 +81,17 @@ export function createNet(code, opts = {}) {
   if (typeof opts.onStatus === 'function') statusSubs.add(opts.onStatus);
 
   function setOnline(v) {
+    if (v && offlineTimer) { clearTimeout(offlineTimer); offlineTimer = null; }
     if (online === v) return;
     online = v;
     for (const fn of statusSubs) { try { fn(online); } catch (e) { console.error(e); } }
+  }
+  // The stream dropped: reconnect quietly first; the bar "connection lost" comes only after the grace period.
+  let offlineTimer = null, dropped = false;
+  function connectionLost() {
+    dropped = true;
+    if (!online || offlineTimer || closed) return;
+    offlineTimer = setTimeout(() => { offlineTimer = null; if (!closed) setOnline(false); }, OFFLINE_GRACE_MS);
   }
   function pushState(s) {
     if (!s || typeof s !== 'object') return;
@@ -111,7 +130,12 @@ export function createNet(code, opts = {}) {
       scheduleReconnect();
       return;
     }
-    es.addEventListener('open', () => { retry = 0; setOnline(true); });
+    es.addEventListener('open', () => {
+      retry = 0; setOnline(true);
+      // back after a drop / a server restart: the server sends the state on connect, but fetch it as well – a stale
+      // view must never stay (the stream could be buffered by a proxy)
+      if (dropped) { dropped = false; request('GET', base).then(pushState).catch(() => {}); }
+    });
     es.addEventListener('state', ev => {
       sseSeen = true; stopPolling();
       try { pushState(JSON.parse(ev.data)); } catch (e) { console.error('SSE state ungültig', e); }
@@ -129,10 +153,12 @@ export function createNet(code, opts = {}) {
     es.addEventListener('signal', ev => {
       let p = null;
       try { p = JSON.parse(ev.data); } catch { return; }
+      // rolling restart of the online server: the stream ends right after this, EventSource reconnects to the successor
+      if (p && p.type === 'server.reload') { dropped = true; return; }
       for (const fn of signalSubs) { try { fn(p); } catch (e) { console.error(e); } }
     });
     es.addEventListener('error', () => {
-      if (!pollTimer) setOnline(false);
+      if (!pollTimer) connectionLost();
       // EventSource reconnectet selbst, aber bei 404/geschlossen (readyState 2) nicht – dann selbst mit Backoff.
       if (es && es.readyState === EventSource.CLOSED) scheduleReconnect();
     });
@@ -145,8 +171,9 @@ export function createNet(code, opts = {}) {
   }
 
   // Bei Rückkehr in den Vordergrund / Netz wieder da: sofort neu verbinden.
-  const onVisible = () => { if (!closed && document.visibilityState === 'visible' && !online) { retry = 0; connect(); } };
-  const onNetUp = () => { if (!closed && !online) { retry = 0; connect(); } };
+  const notConnected = () => !online || !es || es.readyState !== EventSource.OPEN;
+  const onVisible = () => { if (!closed && document.visibilityState === 'visible' && notConnected()) { retry = 0; connect(); } };
+  const onNetUp = () => { if (!closed && notConnected()) { retry = 0; connect(); } };
   document.addEventListener('visibilitychange', onVisible);
   window.addEventListener('online', onNetUp);
 
@@ -214,6 +241,7 @@ export function createNet(code, opts = {}) {
       closed = true;
       if (timer) { clearTimeout(timer); timer = null; }
       if (sseCheck) { clearTimeout(sseCheck); sseCheck = null; }
+      if (offlineTimer) { clearTimeout(offlineTimer); offlineTimer = null; }
       stopPolling();
       if (es) { try { es.close(); } catch {} es = null; }
       document.removeEventListener('visibilitychange', onVisible);

@@ -25,6 +25,7 @@ const INVITE_RE = /^[A-Z0-9]{4}-[A-Z0-9]{4}$/;
 const SESSION_DAYS = 30;
 const SESSION_MS = SESSION_DAYS * 24 * 3600 * 1000;
 const TOUCH_MS = 3600 * 1000;           // sliding expiry: renewed at most once an hour
+const PURGE_MS = 15 * 60 * 1000;        // expired sessions / stale rate-limit counters are dropped this often
 const COOKIE = 'br_session';
 const SCRYPT = { N: 16384, r: 8, p: 1, maxmem: 64 * 1024 * 1024 };
 const KEYLEN = 64;
@@ -107,14 +108,29 @@ export function createAuth(opts = {}) {
     } catch (e) { log.error('Saving account data failed', e); }
   }
 
+  /** Loads sessions / members from disk (again – a successor server calls it once more right before it takes over). */
   async function init() {
     fs.mkdirSync(DIR, { recursive: true });
     sessions = readJsonFile(F.sessions, {});
     members = readJsonFile(F.members, {});
     ready = true;
-    const t = now();
-    for (const [k, s] of Object.entries(sessions)) if (!s || s.expires < t) { delete sessions[k]; dirty.sessions = true; }
+    purge();
     flush();
+    if (!purgeTimer) { purgeTimer = setInterval(purge, PURGE_MS); if (purgeTimer.unref) purgeTimer.unref(); }
+  }
+  /** Memory hygiene: expired sessions and stale rate-limit counters go (also called periodically). → counts */
+  let purgeTimer = null;
+  function purge() {
+    const t = now();
+    let sess = 0, counters = 0;
+    for (const [k, s] of Object.entries(sessions)) if (!s || !(s.expires > t)) { delete sessions[k]; sess++; }
+    if (sess) dirty.sessions = true;
+    const windowMs = Math.max(L.loginWindowMs, L.registerWindowMs);
+    for (const [k, arr] of hits) {
+      const keep = arr.filter(x => t - x < windowMs);
+      if (keep.length) hits.set(k, keep); else { hits.delete(k); counters++; }
+    }
+    return { sessions: sess, counters, sessionsLeft: Object.keys(sessions).length, countersLeft: hits.size };
   }
 
   // ------------------------------------------------------------ passwords
@@ -524,10 +540,10 @@ export function createAuth(opts = {}) {
     throw httpError(404, 'Not found');
   }
 
-  function stop() { flush(); }
+  function stop() { if (purgeTimer) { clearInterval(purgeTimer); purgeTimer = null; } flush(); }
 
   return {
-    init, stop, flush, handle, cors, identify, requireUser, clientIp, isHttps, isLocalAdmin, tunneled,
+    init, stop, flush, purge, handle, cors, identify, requireUser, clientIp, isHttps, isLocalAdmin, tunneled,
     onGameCreated, onGameSeen, canList, isCreator, onGameRemoved, onGameClosed,
     createInvites, listInvites, revokeInvite, listUsers, setPassword, deleteUser, tempPassword
   };
