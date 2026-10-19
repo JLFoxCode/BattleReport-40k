@@ -756,6 +756,9 @@ export async function startGameServer(opts = {}) {
 
   await loadGames();
   const server = http.createServer(handler);
+  // behind the online supervisor's forwarder the child never closes idle keep-alive connections by itself (the
+  // forwarder / the tunnel decide), so a request reusing a connection cannot race against its close
+  if (opts.auth) server.keepAliveTimeout = 0;
   server.on('clientError', (err, socket) => {
     try { socket.end('HTTP/1.1 400 Bad Request\r\n\r\n'); } catch {}
   });

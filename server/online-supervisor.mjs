@@ -150,12 +150,14 @@ export async function startSupervisor(o = {}) {
    *  While a child drains every request is replayed (it never closes a connection mid-request); otherwise (a crash) only
    *  GET / HEAD, which cannot have changed anything. */
   function forward(socket, target) {
-    let up = null, pending = [], pendingBytes = 0, replayable = true, dead = false;
+    let up = null, connected = false, pending = [], pendingBytes = 0, replayable = true, dead = false, replays = 0;
     const PENDING_MAX = 1024 * 1024;
+    // bytes are written to the child only once: while the upstream connection is still connecting they wait in
+    // `pending` and go out on 'connect'; afterwards they are written directly (and kept in `pending` for a replay)
     const attach = t => {
       const u = net.connect({ host: '127.0.0.1', port: t.port });
-      up = u;
-      u.on('connect', () => { for (const b of pending) u.write(b); });
+      up = u; connected = false;
+      u.on('connect', () => { if (up !== u) return; connected = true; for (const b of pending) u.write(b); });
       u.on('data', d => {
         pending = []; pendingBytes = 0; replayable = true;        // the answer started: nothing to replay any more
         if (!socket.write(d)) { u.pause(); socket.once('drain', () => u.resume()); }
@@ -163,18 +165,21 @@ export async function startSupervisor(o = {}) {
       u.on('error', () => {});
       u.on('close', hadError => {
         if (up !== u || dead) return;
-        up = null;
+        up = null; connected = false;
         const method = pending.length ? /^(\w+) /.exec(pending[0].toString('latin1', 0, 12)) : null;
         const idempotent = !!method && (method[1] === 'GET' || method[1] === 'HEAD');
-        const canReplay = pending.length && replayable && current && current !== t && !current.exited && (t.retiring && !hadError || idempotent);
-        if (canReplay) { attach(current); return; }
+        // an unanswered request: sent again (the keep-alive race – the child closed an idle connection the client was
+        // just reusing; while a child drains every request is safe to repeat, otherwise only GET / HEAD), at most twice
+        const canReplay = pending.length && replayable && replays < 2 && current && !current.exited && (t.retiring && !hadError || idempotent);
+        if (canReplay) { replays++; attach(current); return; }
         dead = true; socket.end();
       });
     };
     socket.on('data', d => {
       pending.push(d); pendingBytes += d.length;
       if (pendingBytes > PENDING_MAX) { pending = []; pendingBytes = 0; replayable = false; }   // uploads are not replayed
-      if (up && !up.destroyed) { if (!up.write(d)) { socket.pause(); up.once('drain', () => socket.resume()); } }
+      if (up && connected && !up.destroyed) { if (!up.write(d)) { socket.pause(); up.once('drain', () => socket.resume()); } }
+      else if (up && !up.destroyed) { /* still connecting – goes out on 'connect' */ }
       else if (!dead && current && !current.exited) attach(current);   // detached (the child closed an idle connection): continue on the current child
       else { dead = true; socket.end(); }
     });
