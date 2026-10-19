@@ -35,7 +35,7 @@ const DRAIN_TIMEOUT_MS = 12 * 1000;
 const HOLD_TIMEOUT_MS = 15 * 1000;        // held connections are answered 503 if the switch takes longer
 
 const arg = name => { const i = process.argv.indexOf('--' + name); return i > 0 ? process.argv[i + 1] : undefined; };
-const defaultDataDir = () => path.join(process.env.APPDATA || path.join(os.homedir(), 'AppData', 'Roaming'), 'BattleReport40k-online');
+const defaultDataDir = () => 'B:/BattleReportServer/data';
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const mb = n => (n / 1048576).toFixed(1) + ' MB';
 
@@ -250,6 +250,31 @@ export async function startSupervisor(o = {}) {
   }
   const memTimer = setInterval(logMemory, MEM_LOG_MS); memTimer.unref();
 
+  // ------------------------------------------------------------ daily backup (accounts, armies, archive, games) → <data>/../backups
+  // one zip-less copy per day, kept for 30 days; the running child keeps writing, every file is copied in one read
+  const backupDir = o.backupDir || path.join(path.dirname(dataDir), 'backups');
+  function backup() {
+    const day = new Date().toISOString().slice(0, 10);
+    const dest = path.join(backupDir, day);
+    if (fs.existsSync(dest)) return;
+    fs.mkdirSync(dest, { recursive: true });
+    const skip = new Set(['supervisor.json']);
+    const copy = (src, dst) => {
+      for (const n of fs.readdirSync(src)) {
+        if (skip.has(n) || n.endsWith('.tmp')) continue;
+        const s = path.join(src, n), d = path.join(dst, n);
+        if (fs.statSync(s).isDirectory()) { fs.mkdirSync(d, { recursive: true }); copy(s, d); } else fs.copyFileSync(s, d);
+      }
+    };
+    copy(dataDir, dest);
+    const keep = 30, old = fs.readdirSync(backupDir).filter(n => /^\d{4}-\d{2}-\d{2}$/.test(n)).sort().slice(0, -keep);
+    for (const n of old) fs.rmSync(path.join(backupDir, n), { recursive: true, force: true });
+    log.log('Backup written: ' + dest);
+  }
+  const backupTick = () => { try { backup(); } catch (e) { log.error('Backup:', e.message); } };
+  backupTick();
+  const backupTimer = setInterval(backupTick, 60 * 60 * 1000); backupTimer.unref();
+
   // ------------------------------------------------------------ scheduled rolling restart (memory hygiene)
   let nextRestartAt = nextTimeOfDay(restartAt);
   async function scheduledTick() {
@@ -295,7 +320,7 @@ export async function startSupervisor(o = {}) {
     get nextRestartAt() { return nextRestartAt; },
     async stop() {
       stopping = true;
-      clearInterval(memTimer); clearInterval(schedTimer); clearTimeout(restartTimer);
+      clearInterval(memTimer); clearInterval(schedTimer); clearInterval(backupTimer); clearTimeout(restartTimer);
       if (reloading) { try { await reloading; } catch {} }
       try { fs.unlinkSync(controlFile); } catch {}
       const closed = Promise.all([new Promise(r => control.close(() => r())), new Promise(r => server.close(() => r()))]);

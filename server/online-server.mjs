@@ -3,7 +3,7 @@
 // (invite code from the admin): army lists and finished games live in the account, games are hosted here.
 //
 //   node server/online-server.mjs [--port 8420] [--data <dir>]       (or Online-Server.cmd in the repo root)
-//   env: BR_ONLINE_PORT, BR_ONLINE_DATA (default %APPDATA%\BattleReport40k-online)
+//   env: BR_ONLINE_PORT, BR_ONLINE_DATA (default B:\BattleReportServer\data)
 //   admin: node server/online-admin.mjs invite | users | reset-password <user> | delete-user <user> | status | reload | update
 //          or http://127.0.0.1:<port>/admin on this PC (never through the tunnel)
 // Normally started by server/online-supervisor.mjs (Online-Server.cmd) as a child with an IPC channel: the supervisor
@@ -17,7 +17,7 @@ import { createAuth } from './auth.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const arg = name => { const i = process.argv.indexOf('--' + name); return i > 0 ? process.argv[i + 1] : undefined; };
-export const defaultDataDir = () => path.join(process.env.APPDATA || path.join(os.homedir(), 'AppData', 'Roaming'), 'BattleReport40k-online');
+export const defaultDataDir = () => 'B:/BattleReportServer/data';
 
 /** Starts the online server → { port, dataDir, stop() }. Used by the CLI below and by the tests. */
 export async function startOnlineServer(o = {}) {

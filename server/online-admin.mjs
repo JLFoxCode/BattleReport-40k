@@ -7,7 +7,7 @@
 //   node server/online-admin.mjs status                   running supervisor + server (memory, games, next restart)
 //   node server/online-admin.mjs reload                   rolling restart now (no downtime for the players)
 //   node server/online-admin.mjs update                   git pull --ff-only in the repo; reload only if server code changed
-//   --data <dir> / env BR_ONLINE_DATA: data directory (default %APPDATA%\BattleReport40k-online)
+//   --data <dir> / env BR_ONLINE_DATA: data directory (default B:\BattleReportServer\data)
 //   --repo <dir>: repository for `update` (default: this checkout)
 import path from 'node:path';
 import os from 'node:os';
@@ -19,7 +19,7 @@ import { CONTROL_FILE } from './online-supervisor.mjs';
 
 const args = process.argv.slice(2);
 const opt = name => { const i = args.indexOf('--' + name); return i >= 0 ? args.splice(i, 2)[1] : undefined; };
-const dataDir = opt('data') || process.env.BR_ONLINE_DATA || path.join(process.env.APPDATA || path.join(os.homedir(), 'AppData', 'Roaming'), 'BattleReport40k-online');
+const dataDir = opt('data') || process.env.BR_ONLINE_DATA || 'B:/BattleReportServer/data';
 const repoDir = path.resolve(opt('repo') || path.join(path.dirname(fileURLToPath(import.meta.url)), '..'));
 const [cmd, a1, a2] = args;
 const auth = createAuth({ dataDir, log: { log() {}, info() {}, warn: console.warn, error: console.error } });
