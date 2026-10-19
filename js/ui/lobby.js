@@ -7,6 +7,10 @@ import { askDataUpdate, checkForUpdates } from './update-popup.js';
 import { armyChoices } from './armies.js';
 import { getLang, setLang, keepTerms, setKeepTerms } from '../i18n.js';
 import { guideOn, setGuideOn } from './tutorial.js';
+import { accountInfo } from '../account.js';
+
+// the page comes from the online server (account session, games hosted there for players apart)
+const online = () => accountInfo().mode === 'same';
 
 let games = null;      // zuletzt geladene Liste
 let loading = false;
@@ -37,6 +41,7 @@ const ICON = {
   learn: '<path d="M22 10 12 5 2 10l10 5 10-5z"/><path d="M6 12v5c3 2 9 2 12 0v-5"/><path d="M22 10v6"/>',
   rules: '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><path d="M9 7h7"/><path d="M9 11h5"/>',
   history: '<path d="M8 21h8"/><path d="M12 17v4"/><path d="M7 4h10v5a5 5 0 0 1-10 0V4z"/><path d="M17 5h3v2a3 3 0 0 1-3 3"/><path d="M7 5H4v2a3 3 0 0 0 3 3"/>',
+  account: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
   app: '<circle cx="12" cy="12" r="3"/><path d="M12 2v3"/><path d="M12 19v3"/><path d="m4.93 4.93 2.12 2.12"/><path d="m16.95 16.95 2.12 2.12"/><path d="M2 12h3"/><path d="M19 12h3"/><path d="m4.93 19.07 2.12-2.12"/><path d="m16.95 7.05 2.12-2.12"/>'
 };
 const icon = k => `<svg class="menu-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON[k]}</svg>`;
@@ -80,6 +85,7 @@ function homeHtml(last, lastExists) {
   const finished = listFinished().length;
   let armies = 0;
   try { armies = armyChoices().length; } catch {}
+  const acct = accountInfo();
   const tile = o => {
     const inner = `${icon(o.icon)}<span class="menu-label">${esc(o.label)}</span><span class="menu-sub">${esc(o.sub)}</span>`;
     return o.href ? `<a href="${o.href}" class="menu-tile${o.main ? ' main' : ''}">${inner}</a>`
@@ -96,12 +102,13 @@ function homeHtml(last, lastExists) {
         <span class="cont-role">${esc(roleLabel(last))}</span><span class="cont-go" aria-hidden="true">›</span></button>` : ''}
     ${takeoverBanners(nearbyL)}
     <nav class="menu-grid" aria-label="Main menu">
-      ${tile({ action: 'new', icon: 'play', label: 'New game', sub: 'Host a battle on this device', main: true })}
+      ${tile({ action: 'new', icon: 'play', label: 'New game', sub: online() ? 'Host a battle on the online server' : 'Host a battle on this device', main: true })}
       ${tile({ href: '#/play/join', icon: 'join', label: 'Join game', sub: nearby ? `${nearby} game${nearby === 1 ? '' : 's'} nearby` : 'Nearby or by code' })}
       ${tile({ href: '#/armies', icon: 'army', label: 'My armies', sub: armies ? `${armies} list${armies === 1 ? '' : 's'}` : 'Build your army lists' })}
       ${tile({ href: '#/learn', icon: 'learn', label: 'Learn to play', sub: 'Step by step, phase by phase' })}
       ${tile({ href: '#/rules', icon: 'rules', label: 'Rulebook', sub: 'Core rules & missions' })}
       ${tile({ href: '#/play/history', icon: 'history', label: 'Finished games', sub: finished ? `${finished} saved` : 'Results & battle logs' })}
+      ${tile({ href: '#/account', icon: 'account', label: 'Account', sub: acct.user ? 'Signed in as ' + acct.user : 'Sync your lists across devices' })}
       ${tile({ href: '#/play/app', icon: 'app', label: 'App & data', sub: 'Updates & unit data' })}
     </nav>
   </div>`;
@@ -125,7 +132,7 @@ function pageHtml(page) {
       ${window.BR ? '' : `<p class="muted hint">Battle Report 40k is an app for <b>Android</b> and <b>Windows</b>: <a class="apk" href="https://github.com/JLFoxCode/BattleReport-40k/releases/latest" target="_blank" rel="noopener">download the latest release</a>. Devices without the app (e.g. iPhone) can still join a game by scanning its QR code.</p>${devServerHtml()}`}
     </section>
     <section class="games">
-      <div class="title">${onHost() ? 'Games on this device' : 'Games on the host device'}</div>
+      <div class="title">${online() ? 'Your games on the online server' : onHost() ? 'Games on this device' : 'Games on the host device'}</div>
       ${renderList(host)}
     </section>
   </div>`;
@@ -289,7 +296,7 @@ function roleLabel(last) {
 function renderList(host) {
   if (loadErr) return `<div class="card bad"><p>Could not load the list: ${esc(loadErr)}</p></div>`;
   if (games === null) return `<div class="card muted">Loading …</div>`;
-  if (!games.length) return `<div class="card muted empty">${onHost() ? 'No games on this device yet.' : 'No games on the host device yet.'}</div>`;
+  if (!games.length) return `<div class="card muted empty">${online() ? 'No games yet – create one, or join a game by its code.' : onHost() ? 'No games on this device yet.' : 'No games on the host device yet.'}</div>`;
   // a game handed over to another device: read-only here, the role buttons open it on the new host
   const mv = g => g.movedTo && g.movedTo.host && g.movedTo.port ? g.movedTo : null;
   return `<div class="grid game-grid">${games.map(g => `
@@ -311,8 +318,8 @@ function renderList(host) {
           : btn({ label: r.label, kind: r.kind, cls: r.cls, small: true, action: 'open', data: { view: r.view, me: r.me == null ? '' : r.me } }))).join('')}
       </div>
       <div class="row between game-foot">
-        <span class="muted tiny">http://${esc(mv(g) ? mv(g).host + ':' + mv(g).port : host)}/#/g/${esc(g.code)}/table</span>
-        ${onHost() ? btn({ label: 'Delete', kind: 'danger', small: true, action: 'delete' }) : ''}
+        <span class="muted tiny">${online() ? esc(location.origin) : 'http://' + esc(mv(g) ? mv(g).host + ':' + mv(g).port : host)}/#/g/${esc(g.code)}/table</span>
+        ${(online() ? g.own : onHost()) ? btn({ label: 'Delete', kind: 'danger', small: true, action: 'delete' }) : ''}
       </div>
     </article>`).join('')}</div>`;
 }

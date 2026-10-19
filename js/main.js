@@ -38,9 +38,11 @@ import * as photo from './ui/photo.js';
 import * as rulebook from './ui/rulebook.js';
 import * as armies from './ui/armies.js';
 import * as tutorial from './ui/tutorial.js';
+import * as account from './ui/account.js';
+import { initAccount, needsLogin, onAccount } from './account.js';
 
 const LS_KEY = 'sb40k.last';
-const MODULES = { lobby, setup, player, desktop, map, table, camera, markers, photo, rules: rulebook, archive: archiveView, armies, learn: tutorial };
+const MODULES = { lobby, setup, player, desktop, map, table, camera, markers, photo, rules: rulebook, archive: archiveView, armies, learn: tutorial, account };
 const data = Object.freeze({ WH, FACTIONS, TERRAIN_LAYOUTS });
 
 // ---------------------------------------------------------------- Store
@@ -161,6 +163,7 @@ export function parseHash(hash = location.hash) {
   // Learn to play: chapter list / one step (#/learn/<chapter>/<step>)
   if (parts[0] === 'learn') return { view: 'learn', code: null, me: parts[1] ? parts.slice(1, 3).join('/') : null };
   if (parts[0] === 'play') return { view: 'lobby', code: null, me: parts[1] || null };
+  if (parts[0] === 'account') return { view: 'account', code: null, me: null };
   if (parts[0] === 'armies') return { view: 'armies', code: null, me: parts[1] ? decodeURIComponent(parts[1]) + (parts[2] ? '/' + parts[2] : '') : null };   // #/armies/<id>/view = play view
   // finished game stored on this device (no server needed)
   if (parts[0] === 'archive' && parts[1]) return { view: 'archive', code: null, me: null, archive: String(parts[1]).toUpperCase() };
@@ -213,6 +216,15 @@ export function forgetGame(code) {
 let routeSeq = 0;
 async function route() {
   const my = ++routeSeq;
+  // online server without a session: the sign-in screen first – the hash stays, so a join link continues afterwards
+  if (needsLogin()) {
+    disconnect();
+    Object.assign(store, { code: null, state: null, derived: null, view: 'account', me: null, spectator: false, archive: null });
+    lastRoute = null;
+    updateStatusbar();
+    render();
+    return;
+  }
   const r = parseHash();
   const codeChanged = r.code !== store.code;
   store.view = r.view;
@@ -480,7 +492,14 @@ installKeywordInfo();   // [KEYWORD] tags everywhere open their rule
 tutorial.installTutorialLinks();   // [data-tut-ref] chips open the original core rule section
 startI18n();           // German interface (js/i18n.js)
 window.addEventListener('hashchange', () => { route(); });
-route();
+// account (online server / sync of lists and finished games): signed in or out → route again; lists pulled from the
+// account → redraw the screens that show them
+account.installAccountPrompts();
+onAccount(ev => {
+  if (ev === 'login' || ev === 'logout') route();
+  else if (ev === 'sync' && ['lobby', 'armies', 'rules'].includes(store.view)) render();
+});
+initAccount().catch(e => console.warn('account', e)).then(() => route());
 // App start (Android app only, with internet): offer new unit data / a new app version in a popup
 setTimeout(() => { checkOnOpen().catch(e => console.warn('update check', e)); }, 1200);
 

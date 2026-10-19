@@ -87,3 +87,12 @@
 .takeover-banner { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin: 0 0 12px; border-left: 4px solid var(--warn); }
 .takeover-banner .tb-text { min-width: 0; flex: 1 1 260px; }
 .takeover-banner .pname.p0 { color: var(--p0); } .takeover-banner .pname.p1 { color: var(--p1); }
+/* account (online server): sign-in screen and the Account page */
+.acct-gate { max-width: 520px; }
+.acct-card { display: flex; flex-direction: column; gap: 12px; }
+.acct-form { display: flex; flex-direction: column; gap: 12px; }
+.acct-tabs { margin: 0; }
+.acct-err { color: var(--bad); margin: 0; }
+.acct-actions { flex-wrap: wrap; gap: 10px; }
+.acct-status { margin: 0; }
+.acct-user { color: var(--text); }

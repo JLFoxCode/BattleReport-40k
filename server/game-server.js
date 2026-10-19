@@ -5,8 +5,11 @@
  * Handover: another device with its own server takes a game over (POST /api/games/import with from → it fetches the log
  * and calls POST /api/games/CODE/moved here); this server then sends "game.moved" and keeps a read-only copy.
  * No npm dependencies.
+ * auth (server/auth.js, online server only): every /api route needs a signed-in account, games are listed per account,
+ * handover / import are off, a game is deleted only by its creator, security headers + CSP on every response.
+ * Without auth (dev server, Windows app) nothing changes. staticAllow: top-level names the static files may come from.
  *
- *   const srv = await startGameServer({ root, gamesDir, overlayDir, bsdataDir, port, host, onGamesChanged, log, extraApi, info, engine })
+ *   const srv = await startGameServer({ root, gamesDir, overlayDir, bsdataDir, port, host, onGamesChanged, log, extraApi, info, engine, auth, staticAllow })
  *   → { port, stop(), summaries() }
  */
 import http from 'node:http';
@@ -14,6 +17,7 @@ import fs from 'node:fs';
 import fsp from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
+import crypto from 'node:crypto';
 import { pathToFileURL } from 'node:url';
 
 const HEARTBEAT_MS = 15000;
@@ -79,6 +83,9 @@ export async function startGameServer(opts = {}) {
   const onGamesChanged = typeof opts.onGamesChanged === 'function' ? opts.onGamesChanged : null;
   const extraApi = typeof opts.extraApi === 'function' ? opts.extraApi : null;
   let PORT = opts.port == null ? 8417 : Number(opts.port);
+  const auth = opts.auth || null;
+  const STATIC_ALLOW = Array.isArray(opts.staticAllow) ? new Set(opts.staticAllow) : null;
+  const SEC_HEADERS = auth ? securityHeaders(ROOT) : null;
   // shown on the other devices when a game moves here ("moved to <name>")
   const DEVICE_NAME = String((opts.info && opts.info.name) || os.hostname() || 'host').slice(0, 60);
 
@@ -197,6 +204,7 @@ export async function startGameServer(opts = {}) {
     games.delete(code);
     try { await fsp.unlink(path.join(GAMES_DIR, code + '.json')); } catch {}
     try { await fsp.rm(path.join(GAMES_DIR, code), { recursive: true, force: true }); } catch {}
+    if (auth) { try { auth.onGameClosed(code, g.state, g.actions); } catch (e) { log.error('archive for accounts', e); } }
     log.log('Game ' + code + ' finished and closed.');
     changed();
   }
@@ -279,6 +287,7 @@ export async function startGameServer(opts = {}) {
     const parts = rel.split('/').filter(Boolean);
     if (!parts.length) return false;
     if (FORBIDDEN_TOP.has(parts[0])) return true;
+    if (STATIC_ALLOW && !STATIC_ALLOW.has(parts[0])) return true;
     return parts.some(p => p.startsWith('.') || p.startsWith('_backup-'));
   }
   /** Regular file below base for rel ("/x/y.json") – a directory serves its index.html – or null. */
@@ -331,6 +340,10 @@ export async function startGameServer(opts = {}) {
     // Host-specific routes (e.g. the dev manifest); return true when handled
     if (extraApi && (await extraApi(req, res, url)) === true) return;
 
+    // /api/session – this server needs no account (the online server answers this in server/auth.js)
+    if (!auth && parts.length === 2 && parts[1] === 'session' && m === 'GET') return sendJson(res, 200, { auth: false, user: null });
+    const user = req.user || null;   // signed-in account (online server only)
+
     // /api/rules-page?p=core-rules – the free 11th-edition rules page from Wahapedia, fetched for the device (tutorial
     // originals, js/rules-orig.js); the page sends no CORS headers. Only these fixed pages, nothing else is proxied.
     if (parts.length === 2 && parts[1] === 'rules-page' && m === 'GET') {
@@ -347,12 +360,17 @@ export async function startGameServer(opts = {}) {
 
     // /api/info – LAN addresses, so devices can build join links / QR codes
     if (parts.length === 2 && parts[1] === 'info' && m === 'GET') {
-      return sendJson(res, 200, Object.assign({ port: PORT, lan: lanIps() }, opts.info || {}));
+      // online server: no LAN addresses to the internet – join links use the page's own (tunnel) address
+      return sendJson(res, 200, Object.assign({ port: PORT, lan: auth ? [] : lanIps() }, opts.info || {}, auth ? { online: true } : {}));
     }
 
     // /api/games
     if (parts.length === 2 && parts[1] === 'games') {
-      if (m === 'GET') return sendJson(res, 200, summaries());
+      if (m === 'GET') {
+        if (!auth) return sendJson(res, 200, summaries());
+        // online server: only the games this account created or joined
+        return sendJson(res, 200, summaries().filter(s => auth.canList(user, s.code)).map(s => Object.assign(s, { own: auth.isCreator(user, s.code) })));
+      }
       if (m === 'POST') {
         const body = await readJson(req);
         const code = newCode();
@@ -369,12 +387,16 @@ export async function startGameServer(opts = {}) {
           return sendJson(res, 400, { error: e && e.message ? e.message : String(e) });
         }
         games.set(code, game);
+        if (auth) auth.onGameCreated(user, code);
         await persist(game);
         changed();
         return sendJson(res, 201, { code, state: game.state });
       }
       throw httpError(405, 'Method not allowed');
     }
+
+    // online server: every request through the tunnel comes from 127.0.0.1 – the loopback-only device routes are off
+    if (auth && parts[1] === 'games' && (parts[2] === 'import' || parts[3] === 'moved')) throw httpError(403, 'Not available on the online server');
 
     // /api/games/import – take over a game hosted by another device (only from this device itself = loopback):
     //   { code, actions }                → create the game here from this action log
@@ -421,6 +443,8 @@ export async function startGameServer(opts = {}) {
     if (parts.length >= 3 && parts[1] === 'games') {
       const code = String(parts[2]).toUpperCase();
       const sub = parts[3] || null;
+      // online server: opening a game by its code joins it (it then shows up in this account's game list)
+      if (auth && isCode(code) && games.has(code)) auth.onGameSeen(user, code);
 
       // The game was handed over to another device: the old host only keeps a read-only copy
       if (sub && sub !== 'moved' && m !== 'GET' && m !== 'HEAD') {
@@ -453,8 +477,10 @@ export async function startGameServer(opts = {}) {
         if (m === 'GET') return sendJson(res, 200, getGame(code).state);
         if (m === 'DELETE') {
           // only the device hosting the game (its own app/browser = loopback) may delete it – not a guest phone on the Wi-Fi
-          if (!isLoopback(req)) throw httpError(403, 'Only the device hosting the game can delete it');
+          // online server: only the account that created the game
+          if (auth ? !auth.isCreator(user, code) : !isLoopback(req)) throw httpError(403, auth ? 'Only the player who created the game can delete it' : 'Only the device hosting the game can delete it');
           const g = getGame(code);
+          if (auth) auth.onGameRemoved(code);
           sseSend(g, 'signal', { type: 'game.deleted', code, ts: Date.now() });
           for (const c of g.clients) { try { c.end(); } catch {} }
           if (g.closeTimer) { clearTimeout(g.closeTimer); g.closeTimer = null; }
@@ -692,6 +718,17 @@ export async function startGameServer(opts = {}) {
   async function handler(req, res) {
     const url = new URL(req.url || '/', 'http://localhost');
     try {
+      if (auth) {
+        for (const [k, v] of SEC_HEADERS) res.setHeader(k, v);
+        if (auth.isHttps(req)) res.setHeader('Strict-Transport-Security', 'max-age=15552000');
+        if (auth.cors(req, res)) return;                    // preflight of the installed apps (Bearer token)
+        if (await auth.handle(req, res, url)) return;       // session, login, register, armies, archive, admin page
+        if (url.pathname === '/api' || url.pathname.startsWith('/api/')) {
+          const user = auth.requireUser(req, res);           // sends 401 / 403 itself
+          if (!user) return;
+          req.user = user;
+        }
+      }
       if (url.pathname === '/api' || url.pathname.startsWith('/api/')) {
         await handleApi(req, res, url);
         return;
@@ -737,6 +774,7 @@ export async function startGameServer(opts = {}) {
     stop() {
       stopped = true;
       clearTimers();
+      if (auth && typeof auth.stop === 'function') auth.stop();
       for (const g of games.values()) for (const c of g.clients) { try { c.end(); } catch {} }
       return new Promise(resolve => {
         server.close(() => resolve());
@@ -789,6 +827,26 @@ const clampInt = (v, d = null) => { if (v == null || v === '') return d; const n
 const isH = H => Array.isArray(H) && H.length === 9 && H.every(Number.isFinite);
 
 const RULE_PAGES = ['core-rules', 'rules-appendix'];
+
+/** Headers of the online server: the app's inline scripts in index.html are allowed by their hash (no 'unsafe-inline'
+ *  for scripts); inline styles are used throughout the UI. GitHub only for the release / data checks of the apps. */
+function securityHeaders(root) {
+  const hashes = [];
+  try {
+    const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
+    for (const m of html.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/gi)) hashes.push(`'sha256-${crypto.createHash('sha256').update(m[1].replace(/\r\n?/g, '\n')).digest('base64')}'`);   // the HTML parser turns CRLF into LF before hashing
+  } catch {}
+  const csp = [
+    "default-src 'self'", `script-src 'self' ${hashes.join(' ')}`.trim(), "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' data: blob:", "font-src 'self'", "connect-src 'self' https://api.github.com https://raw.githubusercontent.com",
+    "media-src 'self' blob:", "worker-src 'self'", "manifest-src 'self'", "object-src 'none'", "base-uri 'self'",
+    "form-action 'self'", "frame-ancestors 'none'"
+  ].join('; ');
+  return [
+    ['Content-Security-Policy', csp], ['X-Content-Type-Options', 'nosniff'], ['Referrer-Policy', 'same-origin'],
+    ['X-Frame-Options', 'DENY'], ['Cross-Origin-Opener-Policy', 'same-origin'], ['Permissions-Policy', 'camera=(self), microphone=(), geolocation=()']
+  ];
+}
 
 export function sendJson(res, status, obj) {
   const body = JSON.stringify(obj);

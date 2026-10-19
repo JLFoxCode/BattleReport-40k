@@ -32,6 +32,8 @@ async function request(method, url, body) {
   const text = await res.text();
   if (text) { try { data = JSON.parse(text); } catch { data = null; } }
   if (!res.ok) {
+    // online server: the session expired → js/account.js shows the sign-in screen
+    if (res.status === 401 && data && data.login) { try { window.dispatchEvent(new CustomEvent('br-auth-required')); } catch {} }
     const msg = (data && data.error) || `Server error ${res.status}`;
     const err = new Error(msg);
     err.status = res.status;

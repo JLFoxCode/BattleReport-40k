@@ -167,6 +167,30 @@ export const PHRASES = {
   'A custom game uses the rules of the nearest standard size (up to 1000 pts Incursion, above that Strike Force); the Detachment Points can be set by hand.': 'Ein eigenes Spiel nutzt die Regeln der nächsten Standardgröße (bis 1000 Pkt. Incursion, darüber Strike Force); die Detachment Points lassen sich von Hand setzen.',
   'Set by hand': 'Von Hand gesetzt', 'Led by': 'Angeführt von', 'what a leader adds is shown in its colour.': 'was ein Leader beisteuert, ist in seiner Farbe markiert.',
   'Back to My armies': 'Zurück zu Meine Armeen', 'Army not found': 'Armee nicht gefunden', 'Loading datasheet …': 'Datasheet wird geladen …', 'Loading': 'Lädt',
+  // ── account (online server, js/ui/account.js)
+  'Sync your lists across devices': 'Listen auf allen Geräten synchronisieren', 'Host a battle on the online server': 'Eine Schlacht auf dem Online-Server austragen',
+  'Your games on the online server': 'Deine Spiele auf dem Online-Server', 'No games yet – create one, or join a game by its code.': 'Noch keine Spiele – lege eins an oder tritt einem Spiel per Code bei.',
+  'Online server – sign in with your account. New here? Create an account with the invite code you got from the host.': 'Online-Server – melde dich mit deinem Konto an. Neu hier? Erstelle ein Konto mit dem Einladungscode, den du vom Gastgeber bekommen hast.',
+  'With an account on the online server your army lists and finished games are kept in the account and synced to every device you sign in on – build a list on the PC, use it on your phone. Games at the table still run on this device as before.': 'Mit einem Konto auf dem Online-Server liegen deine Armeelisten und beendeten Spiele im Konto und werden mit jedem Gerät synchronisiert, auf dem du angemeldet bist – Liste am PC bauen, am Handy nutzen. Spiele am Tisch laufen weiter wie bisher auf diesem Gerät.',
+  'Signed in as': 'Angemeldet als', 'Online server:': 'Online-Server:', 'Sync now': 'Jetzt synchronisieren', 'Synced': 'Synchronisiert', 'Syncing …': 'Synchronisiere …',
+  'Not synced yet': 'Noch nicht synchronisiert', 'Sync failed:': 'Synchronisieren fehlgeschlagen:', 'Upload lists from this device': 'Listen von diesem Gerät hochladen',
+  'Offline – the lists on this device keep working and sync later.': 'Offline – die Listen auf diesem Gerät funktionieren weiter und werden später synchronisiert.',
+  'Games for players apart (other places, mobile data):': 'Spiele für Spieler an verschiedenen Orten (oder über mobile Daten):', 'open the online server': 'Online-Server öffnen',
+  '– sign in there with the same account.': '– dort mit demselben Konto anmelden.', 'Change password': 'Passwort ändern', 'Current password': 'Aktuelles Passwort',
+  'New password': 'Neues Passwort', 'At least 8 characters. Your other devices are signed out.': 'Mindestens 8 Zeichen. Deine anderen Geräte werden abgemeldet.',
+  'Save password': 'Passwort speichern', 'Sign out': 'Abmelden', 'Sign out?': 'Abmelden?', 'Signed out': 'Abgemeldet', 'Sign in': 'Anmelden', 'Create account': 'Konto erstellen',
+  'Server address': 'Serveradresse', 'User name': 'Benutzername', 'Password': 'Passwort', 'Invite code': 'Einladungscode', 'Password changed': 'Passwort geändert',
+  'User name: 3–24 characters (a–z, 0–9, _ and -). Password: at least 8 characters.': 'Benutzername: 3–24 Zeichen (a–z, 0–9, _ und -). Passwort: mindestens 8 Zeichen.',
+  'Lists and finished games that are in the account are removed from this device – they come back when you sign in again.': 'Listen und beendete Spiele, die im Konto liegen, werden von diesem Gerät entfernt – sie kommen zurück, sobald du dich wieder anmeldest.',
+  'Upload your lists?': 'Listen hochladen?', '1 army list on this device is not in your account yet. Upload it so it is on all your devices?': '1 Armeeliste auf diesem Gerät ist noch nicht in deinem Konto. Hochladen, damit sie auf allen deinen Geräten ist?',
+  'Wrong user name or password': 'Falscher Benutzername oder falsches Passwort', 'Invalid or already used invite code': 'Ungültiger oder bereits verwendeter Einladungscode',
+  'This user name is taken': 'Dieser Benutzername ist vergeben', 'The password needs at least 8 characters': 'Das Passwort braucht mindestens 8 Zeichen',
+  'User name: 3–24 characters, only a–z, 0–9, _ and -': 'Benutzername: 3–24 Zeichen, nur a–z, 0–9, _ und -', 'Too many attempts – please wait a while and try again.': 'Zu viele Versuche – bitte warte eine Weile und versuche es dann erneut.',
+  'The current password is wrong': 'Das aktuelle Passwort ist falsch', 'The online server cannot be reached': 'Der Online-Server ist nicht erreichbar',
+  'Enter the address of the online server': 'Gib die Adresse des Online-Servers ein', 'This is not a valid address': 'Das ist keine gültige Adresse',
+  'Use the https:// address of the online server': 'Nutze die https://-Adresse des Online-Servers', 'Please sign in': 'Bitte melde dich an',
+  'Only the player who created the game can delete it': 'Nur wer das Spiel angelegt hat, kann es löschen', 'Not available on the online server': 'Auf dem Online-Server nicht verfügbar',
+  'Request from another site refused': 'Anfrage von einer anderen Seite abgelehnt', 'Online server': 'Online-Server',
   // ── generic
   
   'Game terms in English': 'Spielbegriffe auf Englisch',
@@ -174,7 +198,7 @@ export const PHRASES = {
 };
 
 /* short interface words – only translated when they are the whole text of a button / label */
-export const EXACT = { 'File': 'Datei',
+export const EXACT = { 'File': 'Datei', 'Account': 'Konto', 'Upload': 'Hochladen',
   'Yes': 'Ja', 'No': 'Nein', 'All': 'Alle', 'Delete': 'Löschen', 'Done': 'Fertig', 'Close': 'Schließen',
   'Save': 'Speichern', 'Join': 'Beitreten', 'Import': 'Importieren', 'Back': 'Zurück', 'Score': 'Spielstand',
   'Note': 'Notiz', 'More': 'Mehr', 'Less': 'Weniger', 'Fewer': 'Weniger', 'Status': 'Status', 'Limit': 'Limit', 'Step': 'Schritt',
@@ -184,6 +208,8 @@ export const EXACT = { 'File': 'Datei',
 
 /* numbers with units and other short composites (whole text node; applied before PHRASES) */
 export const PATTERNS = [
+  ['^(\\d+) lists? uploaded$', (m, n) => n + (n === '1' ? ' Liste hochgeladen' : ' Listen hochgeladen')],
+  ['^(\\d+) army lists on this device are not in your account yet\\. Upload them so they are on all your devices\\?$', (m, n) => n + ' Armeelisten auf diesem Gerät sind noch nicht in deinem Konto. Hochladen, damit sie auf allen deinen Geräten sind?'],
   ['^Next phase: (.+)$', (m, p) => 'Nächste Phase: ' + p],
   ['^Only in the (.+)$', (m, p) => 'Nur in der ' + p],
   ['^Only while (.+) is active for you$', (m, c) => 'Nur solange ' + c + ' für dich aktiv ist'],
