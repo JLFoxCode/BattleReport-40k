@@ -119,7 +119,11 @@ async function checkAppUpdate() {
   const list = (await r.json()).filter(x => !x.draft && !x.prerelease).sort((a, b) => codeOf(b) - codeOf(a));
   const latest = list[0];
   const code = latest ? codeOf(latest) : 0;
-  if (!(code > Number(me.versionCode || 0))) { appState = 'current'; return false; }
+  // also when the app's own file list is older than its version number: an update that set the version but did not
+  // replace the files (seen once on a Windows install) is then offered again
+  let localVer = 0;
+  try { localVer = Number((await (await fetch('/web-index.json', { cache: 'no-store' })).json()).version) || 0; } catch {}
+  if (!(code > Number(me.versionCode || 0)) && !(localVer && code > localVer)) { appState = 'current'; return false; }
   appState = 'available';
   // Partial update if the native part (shell) of the new version is the one installed: only the changed web files
   try { const done = await partialUpdate(rel.repo, latest, code, me, platform); if (done !== null) return done; }
