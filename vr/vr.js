@@ -118,7 +118,7 @@ const panel = new Panel(THREE, {
     { tab: 'mission', buttons: [{ label: 'Player 1 attacks', a: { attacker: 0 } }, { label: 'Player 2 attacks', a: { attacker: 1 } }] },
     // Table: calibration, fine adjustment, tracking
     { tab: 'table', title: 'Calibration: point the ray at three table corners (right, left, far) and press the trigger' },
-    { tab: 'table', buttons: [{ label: 'Calibrate (3 corners)', a: { tool: 'calib' }, w: 1.6 }, { label: 'Mirror', a: { act: 'mirror' } }, { label: 'Room scan', a: { act: 'scan' } }] },
+    { tab: 'table', buttons: [{ label: 'Calibrate (3 corners)', a: { tool: 'calib' }, w: 1.6 }, { label: 'Recall saved table', a: { act: 'recall' }, w: 1.2 }, { label: 'Mirror', a: { act: 'mirror' } }, { label: 'Room scan', a: { act: 'scan' } }] },
     { tab: 'table', title: 'Battlefield' },
     { tab: 'table', buttons: [{ label: 'Strike Force 44×60', a: { act: 'board', v: 'full' }, w: 1.3 }, { label: 'Incursion near half', a: { act: 'board', v: 'near' }, w: 1.3 }, { label: 'Incursion far half', a: { act: 'board', v: 'far' }, w: 1.3 }] },
     { tab: 'table', title: 'Fine adjustment' },
@@ -653,8 +653,9 @@ const frameToY = f => [f.ex.x, f.ex.y, f.ex.z, 0, f.ey.x, f.ey.y, f.ey.z, 0, f.u
 /** Fine adjustment of the calibrated table: x/y along the table's own axes, z = height, r = rotation about the
  *  table's origin corner. Rewrites the frame, the stored copy and the anchor. */
 function nudge(v) {
+  if (!app.frame) { toast('Calibrate first'); return; }
+  if (app.xr.anchor) app.frame = frameFromMatrix(table.matrix.elements);   // start from the anchored pose
   const f = app.frame;
-  if (!f) { toast('Calibrate first'); return; }
   const st = app.step, sign = v.endsWith('+') ? 1 : -1;
   const add = (p, d, k) => ({ x: p.x + d.x * k, y: p.y + d.y * k, z: p.z + d.z * k });
   if (v[0] === 'x') f.origin = add(f.origin, f.ex, sign * st);
@@ -678,22 +679,37 @@ function startCalibration() {
   applyFrame();
   app.tool = 'calib'; syncTools(); setCalibText(0);
 }
-async function createAnchor() {
-  const s = app.xr.session, xrFrame = renderer.xr.getFrame(), ref = renderer.xr.getReferenceSpace();
-  if (!s || !xrFrame || !ref || typeof xrFrame.createAnchor !== 'function' || !app.frame) return;
-  const f = app.frame;
-  const m = new THREE.Matrix4().makeBasis(new THREE.Vector3(f.ex.x, f.ex.y, f.ex.z), new THREE.Vector3(0, 1, 0), new THREE.Vector3(f.ey.x, f.ey.y, f.ey.z));
-  const q = new THREE.Quaternion().setFromRotationMatrix(m);
-  const anchor = await xrFrame.createAnchor(new XRRigidTransform(f.origin, { x: q.x, y: q.y, z: q.z, w: q.w }), ref);
-  app.xr.anchor = anchor;
-  if (typeof anchor.requestPersistentHandle === 'function') {
-    try { app.xr.anchorId = await anchor.requestPersistentHandle(); store.set('anchor', app.xr.anchorId); } catch {}
-  }
+/** Anchor the table in the headset's room map. XRFrame.createAnchor only works inside the animation frame, so the
+ *  request is queued and done in the render loop (makeAnchor). The anchor is made persistent (UUID stored) so the
+ *  table comes back in the same place in later sessions - the room scan + the headset's spatial memory do the rest. */
+function createAnchor() { app.wantAnchor = true; return Promise.resolve(); }
+async function makeAnchor(xrFrame) {
+  app.wantAnchor = false;
+  const s = app.xr.session, ref = renderer.xr.getReferenceSpace();
+  if (!s || !ref || typeof xrFrame.createAnchor !== 'function' || !app.frame) return;
+  try {
+    const f = app.frame;
+    const m = new THREE.Matrix4().makeBasis(new THREE.Vector3(f.ex.x, f.ex.y, f.ex.z), new THREE.Vector3(0, 1, 0), new THREE.Vector3(f.ey.x, f.ey.y, f.ey.z));
+    const q = new THREE.Quaternion().setFromRotationMatrix(m);
+    const anchor = await xrFrame.createAnchor(new XRRigidTransform(f.origin, { x: q.x, y: q.y, z: q.z, w: q.w }), ref);
+    // one saved table at a time: forget the previous persistent anchor
+    const old = store.get('anchor', null);
+    if (old && typeof s.deletePersistentAnchor === 'function') { try { await s.deletePersistentAnchor(old); } catch {} }
+    app.xr.anchor = anchor; app.xr.anchorId = null; store.set('anchor', null);
+    if (typeof anchor.requestPersistentHandle === 'function') {
+      try { app.xr.anchorId = await anchor.requestPersistentHandle(); store.set('anchor', app.xr.anchorId); app.anchorSaved = true; } catch (e) { console.warn('persistent anchor', e); }
+    }
+  } catch (e) { console.warn('anchor', e); toast('Could not anchor the table: ' + (e.message || e)); }
 }
 async function restoreAnchor(session) {
   const id = store.get('anchor', null);
   if (!id || typeof session.restorePersistentAnchor !== 'function') return false;
-  try { app.xr.anchor = await session.restorePersistentAnchor(id); app.xr.anchorId = id; return true; } catch { store.set('anchor', null); return false; }
+  try { app.xr.anchor = await session.restorePersistentAnchor(id); app.xr.anchorId = id; app.anchorSaved = true; return true; }
+  catch (e) { console.warn('restore anchor', e); return false; }
+}
+/** The table's current pose (anchor or frame) -> frame object, so fine adjustment starts from what is shown. */
+function frameFromMatrix(m) {
+  return { origin: { x: m[12], y: m[13], z: m[14] }, ex: { x: m[0], y: m[1], z: m[2] }, ey: { x: m[8], y: m[9], z: m[10] }, up: { x: 0, y: 1, z: 0 }, height: m[13], edge: app.frame ? app.frame.edge : 44 };
 }
 
 // ---------------------------------------------------------------- XR input
@@ -867,7 +883,8 @@ renderer.setAnimationLoop(() => {
     const pose = xrFrame.getPose(app.xr.anchor.anchorSpace, renderer.xr.getReferenceSpace());
     if (pose) { table.matrix.fromArray(levelMatrix(Array.from(pose.transform.matrix))); table.matrixWorldNeedsUpdate = true; }
   }
-  if (xrFrame) { readPlanes(xrFrame); readHits(xrFrame); mcalTick(); trackTick(); }
+  if (xrFrame && app.wantAnchor) makeAnchor(xrFrame);
+  if (xrFrame) { try { readPlanes(xrFrame); readHits(xrFrame); } catch (e) { /* stale hit-test source after a session restart */ } mcalTick(); trackTick(); }
   if (renderer.xr.isPresenting) {
     pollGamepads();
     let hover = null;
@@ -912,7 +929,8 @@ async function enterXR() {
   app.xr.session = session; app.xr.mode = ar ? 'ar' : 'vr';
   document.body.dataset.xr = app.xr.mode;
   session.addEventListener('end', () => {
-    app.xr.session = null; app.xr.anchor = null; app.xr.mode = null; delete document.body.dataset.xr;
+    app.xr.session = null; app.xr.anchor = null; app.xr.mode = null; app.gazeSrc = null; app.wantAnchor = false; delete document.body.dataset.xr;
+    for (const c of controllers) { const src = c.c.userData.source; if (src) src.__hit = null; c.hit = null; }
     applyFrame(); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight);
     $('#enter').textContent = 'Enter headset';
   });
@@ -924,8 +942,8 @@ async function enterXR() {
   applyFrame();
   setTimeout(placePanel, 600);     // after the first frames, when the head pose is known
   setupHitTest(session).catch(() => {});
-  if (await restoreAnchor(session)) toast('Table position restored from the last session');
-  else if (app.frame) toast('Table position from the last calibration – recalibrate if it does not fit');
+  if (await restoreAnchor(session)) toast('Saved table recalled from the room map');
+  else if (app.frame) toast('No saved anchor - the table is placed from the last session coordinates, recalibrate if it does not fit');
   else { startCalibration(); toast('Calibrate the table first'); }
 }
 
@@ -1044,6 +1062,7 @@ function applyAction(a, btn) {
   else if (a.act === 'track') { app.track = a.v === 'local' ? 'local' : 'room'; if (app.track === 'local' && app.frame) applyFrame(); toast(app.track === 'room' ? 'Tracking: the table follows its room anchor' : 'Tracking: the table stays fixed in the headset space'); }
   else if (a.act === 'scan') { app.scan = !app.scan; planesAt = 0; if (!app.scan) planeGroup.clear(); }
   else if (a.act === 'undo') undo();
+  else if (a.act === 'recall') { const s = app.xr.session; if (!s) toast('Enter the headset first'); else restoreAnchor(s).then(ok => toast(ok ? 'Saved table recalled from the room map' : 'No saved table in the room map - calibrate once, it is saved automatically')); }
   else if (a.act === 'mcal') { if (app.mcal) mcalCancel(); else mcalStart(); }
   else if (a.act === 'mcalDone') mcalFinish(true);
   else if (a.act === 'mcalCancel') mcalCancel();
