@@ -248,8 +248,15 @@ function setPreviewFrame() {
 }
 setPreviewFrame();
 
+/** Tables are level: keep only yaw + position of a pose, up = world up (removes any tilt from anchors or solvers). */
+function levelMatrix(m) {
+  const ex = new THREE.Vector3(m[0], 0, m[2]);
+  if (ex.lengthSq() < 1e-8) ex.set(1, 0, 0); else ex.normalize();
+  const up = new THREE.Vector3(0, 1, 0), ez = new THREE.Vector3().crossVectors(ex, up).normalize();   // local z = board y
+  return [ex.x, ex.y, ex.z, 0, 0, 1, 0, 0, ez.x, ez.y, ez.z, 0, m[12], m[13], m[14], 1];
+}
 function applyFrame() {
-  if (app.frame) table.matrix.fromArray(frameMatrix(app.frame)); else setPreviewFrame();
+  if (app.frame) table.matrix.fromArray(levelMatrix(frameMatrix(app.frame))); else setPreviewFrame();
   table.matrixWorldNeedsUpdate = true;
   floor.visible = floorGrid.visible = !app.frame && app.xr.mode !== 'ar';
 }
@@ -573,6 +580,9 @@ function mcalFinish(manual) {
 }
 /** Table pose (table → world) → the frame used by everything else; anchor unless tracking live. */
 function setTableFromY(Y, anchor) {
+  Y = levelMatrix(Y).map((v, i) => (i === 4 || i === 6) ? 0 : v);   // level: table y stays in the ground plane
+  // levelMatrix returns columns [ex, up, ez]; the table pose wants [ex, ey, up]
+  const L = levelMatrix(Y); Y = [L[0], L[1], L[2], 0, L[8], L[9], L[10], 0, 0, 1, 0, 0, L[12], L[13], L[14], 1];
   app.Y = Y;
   const o = mApply(Y, [0, 0, 0]);
   app.frame = { origin: { x: o[0], y: o[1], z: o[2] }, ex: { x: Y[0], y: Y[1], z: Y[2] }, ey: { x: Y[4], y: Y[5], z: Y[6] }, up: { x: Y[8], y: Y[9], z: Y[10] }, height: o[1], edge: 44 };
@@ -818,7 +828,7 @@ renderer.setAnimationLoop(() => {
   const xrFrame = renderer.xr.getFrame();
   if (xrFrame && app.xr.anchor && app.track === 'room') {
     const pose = xrFrame.getPose(app.xr.anchor.anchorSpace, renderer.xr.getReferenceSpace());
-    if (pose) { table.matrix.fromArray(pose.transform.matrix); table.matrixWorldNeedsUpdate = true; }
+    if (pose) { table.matrix.fromArray(levelMatrix(Array.from(pose.transform.matrix))); table.matrixWorldNeedsUpdate = true; }
   }
   if (xrFrame) { readPlanes(xrFrame); readHits(xrFrame); mcalTick(); trackTick(); }
   if (renderer.xr.isPresenting) {
