@@ -424,7 +424,7 @@ function generateRandomLayout() {
   const half = app.board !== 'full';
   const map = cur().mission.deployment ? WH.DEPLOYMENT_MAPS[cur().mission.deployment] : null;
   const objectives = !half && map ? [map.home.a, map.home.d, map.exp[0], map.exp[1], [22, 30]] : [];
-  const r = generateLayout({ board: half ? 'half' : 'full', objectives, tries: 1200 });
+  const r = generateLayout({ board: half ? 'half' : 'full', objectives, zones: !half && map ? map.zones : null, tries: 1500 });
   if (!r) { toast('No fair layout found – try again'); return; }
   pushUndo('random layout');
   const y0 = app.board === 'far' ? 30 : 0;

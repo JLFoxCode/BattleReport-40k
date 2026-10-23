@@ -47,7 +47,8 @@ export function segHits(p, q, poly) {
 const distToPoly = (pt, poly) => { if (inPoly(pt, poly)) return 0; let d = Infinity; for (let i = 0; i < poly.length; i++) { const a = poly[i], b = poly[(i + 1) % poly.length]; const vx = b[0] - a[0], vy = b[1] - a[1]; const t = Math.max(0, Math.min(1, ((pt[0] - a[0]) * vx + (pt[1] - a[1]) * vy) / (vx * vx + vy * vy || 1))); d = Math.min(d, Math.hypot(pt[0] - a[0] - vx * t, pt[1] - a[1] - vy * t)); } return d; };
 
 // ---------------------------------------------------------------- generation
-const ROTS = [0, 90, 30, 45, 60, 120, 135, 150];
+// mostly axis-aligned like the GW layouts, sometimes diagonal
+const ROTS = [0, 90, 0, 90, 0, 90, 45, 135, 0, 90];
 /** Constructive: place the pieces of one half one by one (each with its mirror image), rejecting positions that
  *  leave the board or come closer than 2" to anything placed so far. */
 function candidate(rand, set) {
@@ -73,11 +74,28 @@ function candidate(rand, set) {
 
 export const FAIL = {};                      // why candidates were rejected (debugging / tuning)
 const fail = why => { FAIL[why] = (FAIL[why] || 0) + 1; return false; };
-/** Hard rules → false, else a score (higher = better). objectives: [[x, y], …] (inches) or []. */
-export function evaluate(pieces, set, objectives) {
+/** random point inside a polygon (rejection sampling in its bounding box) */
+function pointIn(poly, r) {
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  for (const [x, y] of poly) { x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); }
+  for (let i = 0; i < 40; i++) { const p = [x0 + r() * (x1 - x0), y0 + r() * (y1 - y0)]; if (inPoly(p, poly)) return p; }
+  return [(x0 + x1) / 2, (y0 + y1) / 2];
+}
+/** Hard rules → false, else a score (higher = better).
+ *  objectives: [[x, y], …] (inches) or []; zones: { a, d } deployment polygons of the card (optional). */
+export function evaluate(pieces, set, objectives, zones) {
   const [W, L] = set.size;
   const polys = pieces.map(corners);
   const tallPolys = polys.filter((_, i) => pieces[i].tall);
+  // deployment zones: at most a third of each zone covered by terrain (room to deploy)
+  if (zones) {
+    const r0 = rng(777);
+    for (const z of [zones.a, zones.d]) {
+      let cov = 0, n = 60;
+      for (let k = 0; k < n; k++) { const pt = pointIn(z, r0); if (polys.some(q => inPoly(pt, q))) cov++; }
+      if (cov / n > 0.34) return fail('zone blocked');
+    }
+  }
   // no open lane along the long axis (sampled every 3", ≥ 90 % of them blocked by a tall piece)
   let lanes = 0, lanesBlocked = 0;
   for (let x = 2; x <= W - 2; x += 3) { lanes++; if (tallPolys.some(t => segHits([x, 0], [x, L], t))) lanesBlocked++; }
@@ -91,15 +109,17 @@ export function evaluate(pieces, set, objectives) {
   if (!tallPolys.some(t => distToPoly([W / 2, L / 2], t) <= 8)) return fail('centre open');
   const quarters = [[0, 0], [1, 0], [0, 1], [1, 1]].map(([qx, qy]) => pieces.some(p => p.tall && (p.x < W / 2) === (qx === 0) && (p.y < L / 2) === (qy === 0)));
   if (quarters.some(q => !q)) return fail('quarter without tall piece');
-  // score: fraction of blocked lines between the two deployment bands (first 12" from each short edge)
+  // score: fraction of blocked sightlines between the two deployment zones of the card (else the 12" bands at the
+  // short edges)
   let blocked = 0, n = 0;
   const r = rng(12345);
-  for (let k = 0; k < 160; k++) {
-    const a = [r() * W, r() * 12], b = [r() * W, L - r() * 12];
+  for (let k = 0; k < 200; k++) {
+    const a = zones ? pointIn(zones.a, r) : [r() * W, r() * 12], b = zones ? pointIn(zones.d, r) : [r() * W, L - r() * 12];
     n++; if (tallPolys.some(t => segHits(a, b, t))) blocked++;
   }
   const frac = blocked / n;
-  if (frac < 0.65) return fail('too open');
+  if (frac < 0.7) return fail('too open');
+  if (frac > 0.97) return fail('too closed');
   // prefer spread: mean nearest-neighbour gap around 3–6"
   let spread = 0;
   for (let i = 0; i < polys.length; i++) { let g = Infinity; for (let j = 0; j < polys.length; j++) if (j !== i) g = Math.min(g, gap(polys[i], polys[j])); spread += Math.min(g, 8); }
@@ -127,7 +147,7 @@ export function generate(opts = {}) {
   for (let i = 0; i < tries; i++) {
     const pieces = candidate(rand, set);
     if (!pieces) { FAIL.placement = (FAIL.placement || 0) + 1; continue; }
-    const score = evaluate(pieces, set, opts.objectives || []);
+    const score = evaluate(pieces, set, opts.objectives || [], opts.zones || null);
     if (score === false) continue;
     if (!best || score > best.score) best = { pieces, score };
   }
