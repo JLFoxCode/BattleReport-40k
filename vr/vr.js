@@ -253,17 +253,54 @@ function repaint() {
 }
 
 const KIND_COLOR = { ruin: 0x8d99ae, wall: 0xc9a86a, crate: 0x7fb069, crater: 0x6b4f3a, wood: 0x3d8b5f };
+const TALL_COLOR = 0x8d99ae, LOW_COLOR = 0x2f8fc4, WALL_COLOR = 0xdde3ea;
+const labelCache = {};
+/** Small text sprite (canvas) – the size / class label on top of a piece. */
+function labelSprite(text) {
+  if (!labelCache[text]) {
+    const c = document.createElement('canvas'); c.width = 256; c.height = 64;
+    const g = c.getContext('2d');
+    g.fillStyle = 'rgba(14,17,23,0.75)'; g.fillRect(0, 0, 256, 64);
+    g.font = '700 30px sans-serif'; g.fillStyle = '#fff'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillText(text, 128, 34);
+    const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
+    labelCache[text] = new THREE.SpriteMaterial({ map: t, transparent: true, depthTest: false });
+  }
+  const sp = new THREE.Sprite(labelCache[text]);
+  sp.scale.set(4 * IN, 1 * IN, 1); sp.renderOrder = 8;
+  return sp;
+}
+/** Height (inches) a piece is drawn with: the card's terrain key (tall > 4", low ≤ 2") or the kind. */
+const heightOf = p => p.tall === true ? 5 : p.tall === false ? 2 : pieceHeight(p.kind);
 function buildTerrain() {
   while (terrainGroup.children.length) { const c = terrainGroup.children[0]; terrainGroup.remove(c); }
   app.pieces.forEach((p, i) => {
-    const h = pieceHeight(p.kind);
+    const h = heightOf(p);
     const g = new THREE.Group();
+    const col = p.tall === true ? TALL_COLOR : p.tall === false ? LOW_COLOR : (KIND_COLOR[p.kind] || 0x8d99ae);
     const box = new THREE.Mesh(new THREE.BoxGeometry(p.w * IN, h * IN, p.h * IN),
-      new THREE.MeshBasicMaterial({ color: KIND_COLOR[p.kind] || 0x8d99ae, transparent: true, opacity: i === app.selected ? 0.55 : 0.3, side: THREE.DoubleSide, depthWrite: false }));
+      new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: i === app.selected ? 0.5 : (p.tall === false ? 0.28 : 0.22), side: THREE.DoubleSide, depthWrite: false }));
     box.position.y = h * IN / 2;
     const edges = new THREE.LineSegments(new THREE.EdgesGeometry(box.geometry), new THREE.LineBasicMaterial({ color: i === app.selected ? 0xffffff : 0xdde3ea, transparent: true, opacity: 0.9 }));
     edges.position.y = h * IN / 2;
     g.add(box, edges);
+    // recommended Ruins wall placement: solid slabs 0.35" thick along the marked local edges, inset 0.3"
+    if (p.tall && p.walls) {
+      const t = 0.35, inset = 0.3, wh = h;
+      const slab = (sx, sz, px, pz) => {
+        const m = new THREE.Mesh(new THREE.BoxGeometry(sx * IN, wh * IN, sz * IN), new THREE.MeshBasicMaterial({ color: WALL_COLOR, transparent: true, opacity: 0.6, depthWrite: false }));
+        m.position.set(px * IN, wh * IN / 2, pz * IN); g.add(m);
+      };
+      for (const e of p.walls) {
+        if (e === 'n') slab(p.w - 2 * inset, t, 0, -p.h / 2 + inset + t / 2);
+        if (e === 's') slab(p.w - 2 * inset, t, 0, p.h / 2 - inset - t / 2);
+        if (e === 'w') slab(t, p.h - 2 * inset, -p.w / 2 + inset + t / 2, 0);
+        if (e === 'e') slab(t, p.h - 2 * inset, p.w / 2 - inset - t / 2, 0);
+      }
+    }
+    // label: size + class
+    const lbl = labelSprite(`${p.w}"×${p.h}" ${p.tall === true ? '>4" tall' : p.tall === false ? '≤2" low' : (TERRAIN_KINDS[p.kind] || p.kind)}`);
+    lbl.position.set(0, (h + 1.2) * IN, 0); g.add(lbl);
     g.position.set(p.x * IN, 0, p.y * IN);
     g.rotation.y = -(p.rot || 0) * Math.PI / 180;
     g.userData.idx = i;
@@ -271,7 +308,7 @@ function buildTerrain() {
   });
   $('#pieces').textContent = app.pieces.length ? app.pieces.length + ' pieces' + (app.selected >= 0 ? ' · selected: ' + describe(app.pieces[app.selected]) : '') : 'No terrain';
 }
-const describe = p => `${TERRAIN_KINDS[p.kind] || p.kind} ${p.w}"×${p.h}" @ ${p.x.toFixed(1)}/${p.y.toFixed(1)} ${p.rot | 0}°`;
+const describe = p => `${p.tall === true ? 'tall' : p.tall === false ? 'low' : (TERRAIN_KINDS[p.kind] || p.kind)} ${p.w}"×${p.h}" @ ${p.x.toFixed(1)}/${p.y.toFixed(1)} ${p.rot | 0}°`;
 const layoutById = id => TERRAIN_LAYOUTS.find(t => t.id === id) || null;
 
 function saveTerrain() { if (app.code) store.set('terrain.' + app.code, { layout: app.layoutId, pieces: app.pieces }); }

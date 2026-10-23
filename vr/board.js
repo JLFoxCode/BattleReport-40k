@@ -28,7 +28,7 @@ export function pieceAt(pieces, p) {
 }
 
 /** Deep copy of a layout's pieces with ids. */
-export const layoutPieces = layout => (layout && Array.isArray(layout.pieces) ? layout.pieces : []).map((p, i) => ({ id: 't' + i, kind: p.kind || 'ruin', x: p.x, y: p.y, w: p.w, h: p.h, rot: p.rot || 0 }));
+export const layoutPieces = layout => (layout && Array.isArray(layout.pieces) ? layout.pieces : []).map((p, i) => Object.assign({ id: 't' + i, kind: p.kind || 'ruin', x: p.x, y: p.y, w: p.w, h: p.h, rot: p.rot || 0 }, p.tall != null ? { tall: !!p.tall } : {}, p.walls ? { walls: p.walls } : {}));
 
 /** Height (inches) a piece is drawn with. */
 export const pieceHeight = kind => ({ ruin: 5, wall: 2, crate: 2.5, crater: 0.25, wood: 3 })[kind] || 3;
