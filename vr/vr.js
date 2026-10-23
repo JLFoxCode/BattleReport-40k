@@ -213,9 +213,11 @@ function hudRefresh() {
   else if (app.tool === 'capture') lines.push({ text: 'Capture: touch the corners of the real piece (' + app.capPts.length + '/3)', color: '#ffd966' });
   if (toastText && now < toastUntil) lines.push({ text: toastText });
   if (app.mcal) {
-    const m = app.mcal, multi = m.obs.filter(o => o.markers.length >= 2).length;
-    lines.push({ text: `Marker calibration: ${m.ids.size} markers seen (${Array.from(m.ids).map(i => i + 1).join(', ') || '–'}), ${m.obs.length} frames, ${multi} with 2+ markers`, big: true, color: '#ffd966' });
-    lines.push({ text: 'Look at each corner sheet from 40–80 cm, hold still a moment, then move on. Finishes by itself with 3 markers and 24 frames.' });
+    const m = app.mcal;
+    const need = m.ids.size < 2 ? 'Look at another corner sheet.' : m.views.length < 3 ? 'Now step to another spot and look at a sheet again.' : m.obs.length < 8 ? 'Hold still on a sheet for a moment.' : 'Enough for a result – keep going for accuracy or press Finish now.';
+    lines.push({ text: `In view now: ${m.inView.length ? m.inView.map(i => 'sheet ' + (i + 1)).join(', ') : 'no marker'}`, big: true, color: m.inView.length ? '#7fe3a0' : '#ffd966' });
+    lines.push({ text: `Collected: sheets ${Array.from(m.ids).map(i => i + 1).join(', ') || '–'} (${m.ids.size}/2+) · frames ${m.obs.length}/8+ · viewpoints ${m.views.length}/3+` });
+    lines.push({ text: need + ' Look at the sheets from above, 40-80 cm away, so the whole black square is in the camera image.', color: '#ffd966' });
   } else if (app.mtrack) lines.push({ text: 'Marker tracking on', color: '#9ef' });
   const cs = cam.state();
   if (cs.on) lines.push({ text: `Camera ${cs.w}×${cs.h} · ${cs.fps} fps · markers: ${cs.markers.length ? cs.markers.map(m => m.id + 1).join(', ') : 'none'}` + (cs.error ? ' · ' + cs.error : ''), color: '#9ef' });
@@ -495,7 +497,7 @@ function stillEnough(a, b) {
 }
 function mcalStart() {
   if (!renderer.xr.isPresenting) { toast('Marker calibration needs the headset'); return; }
-  app.mcal = { obs: [], ids: new Set(), lastT: 0, lastHead: null, prevHead: null, t0: performance.now(), lastKeep: 0 };
+  app.mcal = { obs: [], ids: new Set(), lastT: 0, views: [], prevHead: null, t0: performance.now(), lastKeep: 0, inView: [] };
   app.mtrack = false;
   cam.start().then(() => toast('Look at the corner sheets one after the other, move a little between looks')).catch(e => { toast('Camera: ' + (e.message || e)); app.mcal = null; });
 }
@@ -505,20 +507,23 @@ function mcalTick() {
   m.lastT = fr.t;
   const head = headPose();
   const still = stillEnough(head, m.prevHead); m.prevHead = head;
-  if (!fr.markers.length || !still) return;
-  if (fr.t - m.lastKeep < 250) return;
-  // keep frames from different viewpoints: skip when the head hardly moved since the last kept frame
-  if (m.lastHead && stillEnough(head, m.lastHead) && Math.hypot(head[12] - m.lastHead[12], head[13] - m.lastHead[13], head[14] - m.lastHead[14]) < 0.03) return;
-  m.lastKeep = fr.t; m.lastHead = head;
+  m.inView = fr.markers.map(x => x.id);
+  if (!fr.markers.length || !still) return;                 // only still frames: the camera image lags the head pose
+  if (fr.t - m.lastKeep < 250) return;                       // ~4 frames per second are plenty
+  m.lastKeep = fr.t;
   m.obs.push({ head, w: fr.w, h: fr.h, markers: fr.markers.map(x => ({ id: x.id, corners: x.corners.map(c => ({ x: c.x, y: c.y })) })) });
   fr.markers.forEach(x => m.ids.add(x.id));
-  const multi = m.obs.filter(o => o.markers.length >= 2).length;
-  if (m.ids.size >= 3 && m.obs.length >= 24 && multi >= 6) mcalFinish(false);
+  // distinct viewpoints (≥ 5 cm or ≥ 8° apart) – the solver needs a few of them
+  if (!m.views.some(v => Math.hypot(v[12] - head[12], v[13] - head[13], v[14] - head[14]) < 0.05 && (v[8] * head[8] + v[9] * head[9] + v[10] * head[10]) > Math.cos(8 * Math.PI / 180))) m.views.push(head);
+  if (m.ids.size >= 3 && m.obs.length >= 24 && m.views.length >= 5) mcalFinish(false);
 }
 function mcalFinish(manual) {
   const m = app.mcal; if (!m) return;
   const ids = Array.from(m.ids).sort((a, b) => a - b);
-  if (ids.length < 2 || m.obs.length < 6) { if (manual) toast(`Not enough yet: ${ids.length} markers, ${m.obs.length} frames (need 2+ markers, 6+ frames)`); return; }
+  if (ids.length < 2 || m.obs.length < 8 || m.views.length < 3) {
+    if (manual) toast(`Not enough yet: ${ids.length} of 2+ markers, ${m.obs.length} of 8+ frames, ${m.views.length} of 3+ viewpoints`);
+    return;
+  }
   app.mcal = null;
   const w = m.obs[0].w;
   const init = app.camcal ? { f: app.camcal.f, X: app.camcal.X } : { f: w * 0.5, X: fromRT([0, 0, 0], [0, -0.03, -0.08]) };
