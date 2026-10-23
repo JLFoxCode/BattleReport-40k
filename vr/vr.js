@@ -17,6 +17,7 @@ import { IN, BOARD, frameFromCorners, frameMatrix, packFrame, unpackFrame, snap,
 import { PX, paintBoard, rectCorners, pieceAt, layoutPieces, pieceHeight } from './board.js';
 import { connect, session as apiSession } from './net.js';
 import { Panel, Hud } from './panel.js';
+import { createCamera } from './camera.js';
 
 const $ = s => document.querySelector(s);
 const $$ = s => Array.from(document.querySelectorAll(s));
@@ -87,7 +88,7 @@ function layoutRows() {
   return rows;
 }
 const panel = new Panel(THREE, {
-  tabs: [{ id: 'table', label: 'Table' }, { id: 'mission', label: 'Mission' }, { id: 'terrain', label: 'Terrain' }, { id: 'deploy', label: 'Deploy' }, { id: 'system', label: 'System' }],
+  tabs: [{ id: 'table', label: 'Table' }, { id: 'mission', label: 'Mission' }, { id: 'terrain', label: 'Terrain' }, { id: 'deploy', label: 'Deploy' }, { id: 'camera', label: 'Camera' }, { id: 'system', label: 'System' }],
   rows: [
     // Mission: the Deployment card of the game (zones + objectives on the table)
     { tab: 'mission', title: 'Deployment card' },
@@ -116,6 +117,9 @@ const panel = new Panel(THREE, {
     { tab: 'deploy', title: 'Tape = movement / distance · rings = range' },
     { tab: 'deploy', buttons: [{ label: '9" band', a: { act: 'band' } }, { label: 'Tape', a: { tool: 'tape' } }, { label: 'Clear marks', a: { act: 'clear' } }] },
     { tab: 'deploy', buttons: [{ label: '3" ring', a: { ring: 3 } }, { label: '6" ring', a: { ring: 6 } }, { label: '9" ring', a: { ring: 9 } }, { label: '12" ring', a: { ring: 12 } }] },
+    // Camera: passthrough camera + corner markers (vr/print/table-markers-10x15.pdf)
+    { tab: 'camera', title: 'Passthrough camera & corner markers' },
+    { tab: 'camera', buttons: [{ label: 'Camera on', a: { act: 'cam', v: 'on' } }, { label: 'Camera off', a: { act: 'cam', v: 'off' } }] },
     // System
     { tab: 'system', title: 'Panel & session' },
     { tab: 'system', buttons: [{ label: 'Panel here', a: { act: 'panel' } }, { label: 'Undo', a: { act: 'undo' } }, { label: 'Leave headset', a: { act: 'enter' } }] }
@@ -127,6 +131,7 @@ panel.setState(a => (a.tool && a.tool === app.tool) || (a.ring && app.tool === '
   || (a.act === 'band' && app.band === 'infiltrate') || (a.act === 'grid' && app.grid) || (a.act === 'mirror' && app.mirror)
   || (a.act === 'track' && a.v === app.track) || (a.act === 'scan' && app.scan) || (a.act === 'step' && a.v === app.step)
   || (a.base !== undefined && Number(a.base) === app.base)
+  || (a.act === 'cam' && ((a.v === 'on') === cam.state().on))
   || (a.layout !== undefined && (a.layout || null) === app.layoutId)
   || (a.deployment !== undefined && app.state && app.state.mission.deployment === a.deployment)
   || (a.attacker !== undefined && app.state && app.state.mission.attacker === a.attacker));
@@ -173,6 +178,8 @@ function snapToScan(p) {
   if (best) { q.x = best.x; q.z = best.z; }
   return { p: q, snapped: !!best };
 }
+// passthrough camera + marker detection (vr/camera.js); frames are consumed by the marker calibration (later)
+const cam = createCamera({ onFrame: f => { app.camFrame = f; } });
 /** Put the panel 0.75 m in front of the head, a little below eye level, facing the user. */
 function placePanel() {
   const pos = new THREE.Vector3(), dir = new THREE.Vector3();
@@ -193,6 +200,8 @@ function hudRefresh() {
   }
   else if (app.tool === 'capture') lines.push({ text: 'Capture: touch the corners of the real piece (' + app.capPts.length + '/3)', color: '#ffd966' });
   if (toastText && now < toastUntil) lines.push({ text: toastText });
+  const cs = cam.state();
+  if (cs.on) lines.push({ text: `Camera ${cs.w}×${cs.h} · ${cs.fps} fps · markers: ${cs.markers.length ? cs.markers.map(m => m.id + 1).join(', ') : 'none'}` + (cs.error ? ' · ' + cs.error : ''), color: '#9ef' });
   const st = app.state;
   if (st && !noteText && app.tool !== 'calib') lines.push({ text: (st.mission.deployment || 'No deployment card') + (app.layoutId ? ' · ' + ((layoutById(app.layoutId) || {}).name || '') : ''), color: '#9aa3b2' });
   hud.set(lines);
@@ -815,6 +824,10 @@ function applyAction(a, btn) {
   else if (a.act === 'track') { app.track = a.v === 'local' ? 'local' : 'room'; if (app.track === 'local' && app.frame) applyFrame(); toast(app.track === 'room' ? 'Tracking: the table follows its room anchor' : 'Tracking: the table stays fixed in the headset space'); }
   else if (a.act === 'scan') { app.scan = !app.scan; planesAt = 0; if (!app.scan) planeGroup.clear(); }
   else if (a.act === 'undo') undo();
+  else if (a.act === 'cam') {
+    if (a.v === 'on') cam.start().then(() => toast('Camera: ' + cam.state().label + ' ' + cam.state().w + '×' + cam.state().h)).catch(e => toast('Camera: ' + (e && e.message || e)));
+    else cam.stop();
+  }
   else if (a.act === 'step') app.step = Number(a.v) || 0.01;
   else if (a.act === 'nudge') nudge(a.v);
   else if (a.tab) panel.setTab(a.tab);
@@ -861,4 +874,4 @@ async function main() {
 main();
 
 // debug access for remote testing over DevTools (adb) – read-only use
-window.BRVR = { app, planesDebug: () => app.planesDebug, planes: () => app.planes.map(p => ({ label: p.label, o: p.orientation, n: p.corners.length, y: +p.y.toFixed(3) })), hits: () => controllers.map(c => c.hit), sources: () => (app.xr.session ? app.xr.session.inputSources.length : 0) };
+window.BRVR = { app, planesDebug: () => app.planesDebug, cam, planes: () => app.planes.map(p => ({ label: p.label, o: p.orientation, n: p.corners.length, y: +p.y.toFixed(3) })), hits: () => controllers.map(c => c.hit), sources: () => (app.xr.session ? app.xr.session.inputSources.length : 0) };
