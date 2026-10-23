@@ -160,20 +160,33 @@ function pageHtml(page) {
 /* VR table setup (vr/ – a separate web module, served by the online server only; the headset opens it in its own
  * browser). The page here only shows where to open it and a QR code with the current game's code. */
 function vrPageHtml(last) {
+  const code = last && last.code ? last.code : '';
+  const games_ = (games || []).filter(g => g.stage !== 'over');
+  // on the online server itself (headset browser, phone through the tunnel): enter the code, start in this tab
+  if (online()) {
+    return `<section class="card vr-card">
+      <div class="title">Meta Quest 3 · Mixed reality</div>
+      <form class="join-form" data-form="vr" autocomplete="off">
+        <input class="code-input" name="code" maxlength="4" placeholder="CODE" value="${esc(code)}" inputmode="latin" autocapitalize="characters" spellcheck="false" aria-label="Game code">
+        ${btn({ label: 'Start VR', kind: 'primary', cta: true, type: 'submit' })}
+      </form>
+      ${games_.length ? `<div class="chips">${games_.map(g => `<a class="chip" href="/vr/#/g/${esc(g.code)}">${esc(g.code)} · ${esc((g.players || []).filter(Boolean).join(' vs ') || 'Game')}</a>`).join('')}</div>` : ''}
+      <p class="muted small">Calibrate the real table by touching three corners, then see the deployment zones, the territory line and the five objectives of the game's Deployment card on the table, plan terrain with the GW layouts and use tape, range rings and the 9" band while deploying. Needs a Meta Quest browser; elsewhere a 3D preview is shown.</p>
+    </section>`;
+  }
+  // installed app: the headset has to open the online server's address – show it as a QR code
   const server = accountInfo().server;
   if (!server) {
     return `<section class="card"><div class="title">Meta Quest 3</div>
       <p class="muted">The VR table setup runs on the online server (https is required for WebXR). Set the server address under <a href="#/account">Account</a> first.</p></section>`;
   }
-  const url = `${server.replace(/\/+$/, '')}/vr/${last && last.code ? '#/g/' + last.code : ''}`;
+  const url = `${server.replace(/\/+$/, '')}/${code ? '#/play/vr' : ''}`;
   if (!qrReady()) prepareQr().then(changed => { if (changed && lastRoot && lastCtx && document.body.dataset.view === 'lobby') render(lastRoot, lastCtx); }).catch(() => {});
   return `<section class="card vr-card">
     <div class="title">Meta Quest 3 · Mixed reality</div>
-    <p>Open this address in the headset's browser${last && last.code ? ` – it opens game <b>${esc(last.code)}</b>` : ''}:</p>
+    <p>In the headset's browser open the online server, sign in, then Menu → <b>VR table setup</b> and enter the game code${code ? ` (<b>${esc(code)}</b>)` : ''}:</p>
     <div class="join-card">${qrReady() ? qrSvg(url, 200) : ''}<div class="join-url xs muted">${esc(url)}</div></div>
-    <p class="muted small">What it does: calibrate the real table by touching three corners, then see the deployment zones, the territory line and the five objectives of the game's Deployment card on the table, plan terrain with the GW layouts (move, rotate, add pieces) and use tape, range rings and the 9" band while deploying.</p>
-    <p class="muted xs">Sign in with the same account in the headset's browser (page ‹ Account). The VR module is loaded only there – nothing of it is part of this app.</p>
-    <a class="btn primary" href="${esc(url)}" target="_blank" rel="noopener">Open here</a>
+    <p class="muted xs">The VR module is loaded only there – nothing of it is part of this app.</p>
   </section>`;
 }
 
@@ -407,6 +420,14 @@ function onClick(e) {
 }
 
 function onSubmit(e) {
+  const v = e.target.closest('[data-form="vr"]');
+  if (v) {
+    e.preventDefault();
+    const code = String(v.code.value || '').trim().toUpperCase();
+    if (!/^[A-Z]{4}$/.test(code)) { toast('Code: 4 letters, e.g. KXWA', 'warn'); v.code.focus(); return; }
+    location.href = `/vr/#/g/${code}`;
+    return;
+  }
   const f = e.target.closest('[data-form="join"]');
   if (!f) return;
   e.preventDefault();
