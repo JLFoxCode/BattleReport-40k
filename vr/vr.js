@@ -466,7 +466,7 @@ function openGame(code) {
   store.set('code', code);
   location.hash = '#/g/' + code;
   setStatus('offline');
-  app.net = connect(code, { onState, onStatus: setStatus });
+  app.net = connect(code, { onState, onStatus: s => { setStatus(s); if (s === 'online') sendStatus(); }, onSignal });
   const saved = store.get('terrain.' + code, null);
   if (saved && Array.isArray(saved.pieces)) { app.layoutId = saved.layout || null; app.pieces = saved.pieces; buildTerrain(); $('#layout').value = app.layoutId || ''; }
   repaint();
@@ -480,25 +480,52 @@ function initUi() {
   ui.addEventListener('beforexrselect', e => e.preventDefault());     // taps on the overlay are not table taps
   ui.addEventListener('click', e => {
     const b = e.target.closest('button'); if (!b) return;
-    const a = b.dataset;
-    if (a.tool) { app.tool = a.tool; app.tapeA = null; app.capPts = []; if (a.tool === 'calib') startCalibration(); if (a.tool === 'capture') toast('Capture: touch a corner of the real piece and press the trigger'); }
-    else if (a.ring) { app.tool = 'ring'; app.ringR = Number(a.ring); }
-    else if (a.add) { const [w, h] = a.add.split('x').map(Number); addPiece(w, h, a.kind || 'ruin'); }
-    else if (a.act === 'rotl') rotateSelected(-15);
-    else if (a.act === 'rotr') rotateSelected(15);
-    else if (a.act === 'del') removeSelected();
-    else if (a.act === 'reset') setLayout(app.layoutId, { fromState: true });
-    else if (a.act === 'clear') { app.marks = []; app.tapeA = null; repaint(); }
-    else if (a.act === 'band') app.band = app.band === 'infiltrate' ? 'none' : 'infiltrate';
-    else if (a.act === 'grid') app.grid = !app.grid;
-    else if (a.act === 'mirror') { app.mirror = !app.mirror; applyMirror(); }
-    else if (a.act === 'enter') { if (app.xr.session) app.xr.session.end(); else enterXR(); }
-    else if (a.act === 'open') openGame($('#code').value);
-    else if (a.act === 'panel') { const p = $('#panels'); p.hidden = !p.hidden; b.textContent = p.hidden ? 'Menu' : 'Hide'; }
-    syncTools(); repaint();
+    applyAction(Object.assign({}, b.dataset), b);
   });
   $('#code').addEventListener('keydown', e => { if (e.key === 'Enter') openGame(e.target.value); });
   syncTools();
+}
+
+/** One UI action – from a panel button (dataset) or from the remote control (signal { type: 'vr', …same keys }). */
+function applyAction(a, btn) {
+  if (a.tool) { app.tool = a.tool; app.tapeA = null; app.capPts = []; if (a.tool === 'calib') startCalibration(); if (a.tool === 'capture') toast('Capture: touch a corner of the real piece and press the trigger'); }
+  else if (a.ring) { app.tool = 'ring'; app.ringR = Number(a.ring); }
+  else if (a.add) { const [w, h] = String(a.add).split('x').map(Number); if (w > 0 && h > 0) addPiece(w, h, a.kind || 'ruin'); }
+  else if (a.layout !== undefined) setLayout(a.layout || null);
+  else if (a.text !== undefined) note(String(a.text || ''));
+  else if (a.act === 'rotl') rotateSelected(-15);
+  else if (a.act === 'rotr') rotateSelected(15);
+  else if (a.act === 'del') removeSelected();
+  else if (a.act === 'reset') setLayout(app.layoutId, { fromState: true });
+  else if (a.act === 'clear') { app.marks = []; app.tapeA = null; repaint(); }
+  else if (a.act === 'band') app.band = app.band === 'infiltrate' ? 'none' : 'infiltrate';
+  else if (a.act === 'grid') app.grid = !app.grid;
+  else if (a.act === 'mirror') { app.mirror = !app.mirror; applyMirror(); }
+  else if (a.act === 'enter') { if (app.xr.session) app.xr.session.end(); else enterXR(); }
+  else if (a.act === 'open') openGame($('#code').value);
+  else if (a.act === 'panel') { const p = $('#panels'); p.hidden = !p.hidden; if (btn) btn.textContent = p.hidden ? 'Menu' : 'Hide'; }
+  else if (a.act === 'ping') { /* status only */ }
+  syncTools(); repaint(); sendStatus();
+}
+/** Text from the remote control – shown large in the headset until the next one (empty = hide). */
+function note(text) {
+  const el = $('#note');
+  el.textContent = text; el.hidden = !text;
+}
+/** Tell the remote control what the headset is doing (signal 'vr.status'). */
+let statusTimer = null;
+function sendStatus() {
+  if (!app.net) return;
+  clearTimeout(statusTimer);
+  statusTimer = setTimeout(() => app.net.signal({
+    type: 'vr.status', xr: app.xr.mode, calibrated: !!app.frame, edge: app.frame ? +app.frame.edge.toFixed(1) : null,
+    tool: app.tool, ringR: app.ringR, layout: app.layoutId, pieces: app.pieces.length, selected: app.selected, band: app.band, grid: app.grid, mirror: app.mirror
+  }), 150);
+}
+function onSignal(sig) {
+  if (!sig || sig.type !== 'vr') return;
+  const a = Object.assign({}, sig); delete a.type; delete a.ts;
+  applyAction(a);
 }
 
 async function main() {

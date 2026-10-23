@@ -35,3 +35,5 @@ select { width: 100%; }
 #status[data-s="login"], #status[data-s="notfound"], #status[data-s="offline"] { background: #5a2a2a; }
 #toast { position: fixed; left: 50%; bottom: 24px; transform: translate(-50%, 20px); background: #1c2230; border: 1px solid #3a4356; border-radius: 12px; padding: 10px 16px; opacity: 0; transition: opacity .2s, transform .2s; pointer-events: none; max-width: 90vw; }
 #toast.on { opacity: 1; transform: translate(-50%, 0); }
+.note-big { position: fixed; left: 50%; top: 18%; transform: translateX(-50%); max-width: 80vw; background: rgba(16, 48, 74, 0.92); border: 2px solid var(--acc); border-radius: 16px; padding: 16px 24px; font-size: 26px; font-weight: 600; text-align: center; pointer-events: none; }
+.note-big[hidden] { display: none; }

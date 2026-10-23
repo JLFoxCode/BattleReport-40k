@@ -21,7 +21,8 @@ async function request(method, url, body) {
 export const session = () => request('GET', '/api/session').catch(() => ({ auth: false, user: null }));
 export const listGames = () => request('GET', '/api/games');
 
-/** connect(code, { onState, onStatus }) → { state(), dispatch(action), close() } */
+/** connect(code, { onState, onStatus, onSignal }) → { state(), dispatch(action), signal(obj), close() }
+ *  signal: POST …/signal – the server broadcasts it as SSE "signal" to every device of the game (VR remote control). */
 export function connect(code, h = {}) {
   const base = `/api/games/${encodeURIComponent(code)}`;
   let state = null, es = null, closed = false, timer = null;
@@ -31,16 +32,19 @@ export function connect(code, h = {}) {
     if (closed) return;
     es = new EventSource(`${base}/events`);
     es.addEventListener('state', e => { try { set(JSON.parse(e.data)); } catch {} });
+    es.addEventListener('signal', e => { if (!h.onSignal) return; try { h.onSignal(JSON.parse(e.data)); } catch {} });
     es.onopen = () => status('online');
     es.onerror = () => { status('reconnecting'); };     // EventSource retries by itself
   };
-  request('GET', base).then(s => { set(s); open(); }).catch(e => {
+  const start = () => request('GET', base).then(s => { set(s); open(); }).catch(e => {
     if (e.login || e.status === 401) status('login');
     else if (e.status === 404) status('notfound');
-    else { status('offline'); timer = setTimeout(() => { if (!closed) connect(code, h); }, 3000); }
+    else { status('offline'); timer = setTimeout(() => { if (!closed) start(); }, 3000); }
   });
+  start();
   return {
     state: () => state,
+    signal: obj => request('POST', `${base}/signal`, obj).catch(() => {}),
     dispatch: async action => { const r = await request('POST', `${base}/actions`, { action }); if (r && r.state) set(r.state); return r; },
     close: () => { closed = true; if (es) es.close(); if (timer) clearTimeout(timer); }
   };

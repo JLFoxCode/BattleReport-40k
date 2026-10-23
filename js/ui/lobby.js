@@ -171,6 +171,7 @@ function vrPageHtml(last) {
         ${btn({ label: 'Start VR', kind: 'primary', cta: true, type: 'submit' })}
       </form>
       ${games_.length ? `<div class="chips">${games_.map(g => `<a class="chip" href="/vr/#/g/${esc(g.code)}">${esc(g.code)} · ${esc((g.players || []).filter(Boolean).join(' vs ') || 'Game')}</a>`).join('')}</div>` : ''}
+      <p class="muted small"><a href="/vr/remote.html${code ? '#/g/' + esc(code) : ''}">Remote control</a> – from a phone or PC: send messages to the headset, choose the layout, switch tools.</p>
       <p class="muted small">Calibrate the real table by touching three corners, then see the deployment zones, the territory line and the five objectives of the game's Deployment card on the table, plan terrain with the GW layouts and use tape, range rings and the 9" band while deploying. Needs a Meta Quest browser; elsewhere a 3D preview is shown.</p>
     </section>`;
   }

@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Battle Report 40k – VR remote</title>
+<link rel="icon" href="../icons/icon-192.png">
+<link rel="stylesheet" href="vr.css">
+<style>
+  body { overflow: auto; }
+  #ui { position: static; min-height: 100%; }
+  .status-grid { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; font-size: 14px; }
+  textarea { width: 100%; min-height: 70px; font: inherit; color: var(--fg); background: #1c2230; border: 1px solid #3a4356; border-radius: 10px; padding: 10px; }
+</style>
+</head>
+<body>
+<div id="ui">
+  <header class="bar">
+    <div class="brand">BR40k <span class="muted">VR remote</span></div>
+    <div class="game">
+      <input id="code" maxlength="8" placeholder="CODE" autocapitalize="characters" spellcheck="false" aria-label="Game code">
+      <button data-act="open" class="sm">Open</button>
+      <span id="status" data-s="idle">No game</span>
+    </div>
+  </header>
+  <div id="login" class="note" hidden>Sign in on the <a href="../#/account">main page</a> of this server first, then open the game again.</div>
+
+  <section class="panel">
+    <h3>Headset</h3>
+    <div class="status-grid"><span class="muted">Status</span><span id="hs-text">Waiting for the headset… (it answers as soon as it has the same game open)</span></div>
+    <div class="row"><button data-act="ping" class="ghost">Refresh</button><button data-tool="calib">Recalibrate</button><button data-act="mirror">Mirror</button><button data-act="grid">6" grid</button></div>
+  </section>
+
+  <section class="panel">
+    <h3>Message in the headset</h3>
+    <textarea id="text" placeholder="Shown large in the headset until the next message"></textarea>
+    <div class="row"><button data-send="text" class="primary">Send</button><button data-text="" class="ghost">Hide</button></div>
+  </section>
+
+  <section class="panel">
+    <h3>Terrain</h3>
+    <select id="layout" aria-label="Terrain layout"></select>
+    <div class="row">
+      <button data-tool="move">Move</button>
+      <button data-act="rotl">⟲ 15°</button>
+      <button data-act="rotr">⟳ 15°</button>
+      <button data-act="del">Delete</button>
+      <button data-act="reset" class="ghost">Reset layout</button>
+    </div>
+    <div class="row">
+      <button data-add="6x4">+ 6"×4"</button>
+      <button data-add="10x5">+ 10"×5"</button>
+      <button data-add="12x6">+ 12"×6"</button>
+      <button data-add="6x6" data-kind="crater">+ crater</button>
+      <button data-add="6x1" data-kind="wall">+ wall</button>
+      <button data-tool="capture">Capture real piece</button>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h3>Deployment</h3>
+    <div class="row">
+      <button data-act="band">9" band</button>
+      <button data-tool="tape">Tape</button>
+      <button data-ring="3">3" ring</button>
+      <button data-ring="6">6" ring</button>
+      <button data-ring="9">9" ring</button>
+      <button data-ring="12">12" ring</button>
+      <button data-act="clear" class="ghost">Clear</button>
+    </div>
+  </section>
+  <div id="toast"></div>
+</div>
+<script type="module" src="remote.js"></script>
+</body>
+</html>
