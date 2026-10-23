@@ -711,3 +711,6 @@ async function main() {
   buildTerrain(); repaint();
 }
 main();
+
+// debug access for remote testing over DevTools (adb) – read-only use
+window.BRVR = { app, planes: () => app.planes.map(p => ({ label: p.label, o: p.orientation, n: p.corners.length, y: +p.y.toFixed(3) })), hits: () => controllers.map(c => c.hit), sources: () => (app.xr.session ? app.xr.session.inputSources.length : 0) };
