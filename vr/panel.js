@@ -91,7 +91,7 @@ export class Panel {
 export class Hud {
   constructor(THREE, opts = {}) {
     this.THREE = THREE;
-    this.pxW = 1024; this.pxH = 320;
+    this.pxW = 1024; this.pxH = 480;
     this.canvas = document.createElement('canvas'); this.canvas.width = this.pxW; this.canvas.height = this.pxH;
     this.tex = new THREE.CanvasTexture(this.canvas); this.tex.colorSpace = THREE.SRGBColorSpace;
     const w = opts.width || 0.5;
@@ -111,17 +111,24 @@ export class Hud {
     c.clearRect(0, 0, this.pxW, this.pxH);
     this.mesh.visible = this.lines.length > 0;
     if (!this.lines.length) { this.tex.needsUpdate = true; return; }
-    const sizes = this.lines.map(l => l.big ? 44 : 30);
-    const total = sizes.reduce((s, v) => s + v + 16, 0) + 24;
-    const y0 = (this.pxH - total) / 2;
-    c.fillStyle = 'rgba(14,17,23,0.82)'; roundRect(c, 40, y0, this.pxW - 80, total, 24); c.fill();
-    c.textAlign = 'center'; c.textBaseline = 'middle';
-    let y = y0 + 20;
-    this.lines.forEach((l, i) => {
-      c.font = (l.big ? '700 ' : '500 ') + sizes[i] + 'px sans-serif'; c.fillStyle = l.color || '#e8ecf2';
-      wrap(c, l.text, this.pxW / 2, y + sizes[i] / 2, this.pxW - 140, sizes[i] + 6);
-      y += sizes[i] + 16;
+    // wrap every entry first, then stack them – each entry takes as many rows as its wrapped text needs
+    const maxW = this.pxW - 140;
+    const entries = this.lines.map(l => {
+      const size = l.big ? 40 : 28;
+      c.font = (l.big ? '700 ' : '500 ') + size + 'px sans-serif';
+      return { l, size, rows: wrapRows(c, l.text, maxW).slice(0, 4) };
     });
+    const gap = 10;
+    const total = entries.reduce((s, e) => s + e.rows.length * (e.size + 6) + gap, 0) + 24;
+    const y0 = Math.max(0, (this.pxH - total) / 2);
+    c.fillStyle = 'rgba(14,17,23,0.85)'; roundRect(c, 40, y0, this.pxW - 80, Math.min(total, this.pxH - y0), 24); c.fill();
+    c.textAlign = 'center'; c.textBaseline = 'middle';
+    let y = y0 + 18;
+    for (const e of entries) {
+      c.font = (e.l.big ? '700 ' : '500 ') + e.size + 'px sans-serif'; c.fillStyle = e.l.color || '#e8ecf2';
+      for (const row of e.rows) { c.fillText(row, this.pxW / 2, y + e.size / 2); y += e.size + 6; }
+      y += gap;
+    }
     this.tex.needsUpdate = true;
   }
 }
@@ -131,9 +138,9 @@ function roundRect(c, x, y, w, h, r) {
   c.lineTo(x + w, y + h - r); c.quadraticCurveTo(x + w, y + h, x + w - r, y + h); c.lineTo(x + r, y + h);
   c.quadraticCurveTo(x, y + h, x, y + h - r); c.lineTo(x, y + r); c.quadraticCurveTo(x, y, x + r, y); c.closePath();
 }
-function wrap(c, text, x, y, maxW, lh) {
+function wrapRows(c, text, maxW) {
   const words = String(text).split(' '); let line = '', lines = [];
   for (const w of words) { const t = line ? line + ' ' + w : w; if (c.measureText(t).width > maxW && line) { lines.push(line); line = w; } else line = t; }
   if (line) lines.push(line);
-  lines.slice(0, 3).forEach((l, i) => c.fillText(l, x, y + i * lh));
+  return lines;
 }

@@ -148,7 +148,7 @@ panel.setState(a => (a.tool && a.tool === app.tool) || (a.ring && app.tool === '
   || (a.deployment !== undefined && app.state && app.state.mission.deployment === a.deployment)
   || (a.attacker !== undefined && app.state && app.state.mission.attacker === a.attacker));
 const hud = new Hud(THREE, { width: 0.5 });
-hud.mesh.position.set(0, -0.14, -0.7);
+hud.mesh.position.set(0, -0.17, -0.7);
 camera.add(hud.mesh);
 scene.add(camera);
 let toastText = '', toastUntil = 0, noteText = '';
