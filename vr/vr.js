@@ -105,10 +105,8 @@ const panel = new Panel(THREE, {
     { tab: 'mission', title: 'Attacker' },
     { tab: 'mission', buttons: [{ label: 'Player 1 attacks', a: { attacker: 0 } }, { label: 'Player 2 attacks', a: { attacker: 1 } }] },
     // Table: calibration, fine adjustment, tracking
-    { tab: 'table', title: 'Calibration' },
+    { tab: 'table', title: 'Calibration: point the ray at three table corners (right, left, far) and press the trigger' },
     { tab: 'table', buttons: [{ label: 'Calibrate (3 corners)', a: { tool: 'calib' }, w: 1.6 }, { label: 'Mirror', a: { act: 'mirror' } }, { label: 'Room scan', a: { act: 'scan' } }] },
-    { tab: 'table', title: 'Marker calibration (camera, printed corner sheets)' },
-    { tab: 'table', buttons: [{ label: 'Marker calibration', a: { act: 'mcal' }, w: 1.4 }, { label: 'Finish now', a: { act: 'mcalDone' } }, { label: 'Cancel', a: { act: 'mcalCancel' } }, { label: 'Tracking', a: { act: 'mtrack' } }] },
     { tab: 'table', title: 'Battlefield' },
     { tab: 'table', buttons: [{ label: 'Strike Force 44×60', a: { act: 'board', v: 'full' }, w: 1.3 }, { label: 'Incursion near half', a: { act: 'board', v: 'near' }, w: 1.3 }, { label: 'Incursion far half', a: { act: 'board', v: 'far' }, w: 1.3 }] },
     { tab: 'table', title: 'Fine adjustment' },
@@ -130,7 +128,9 @@ const panel = new Panel(THREE, {
     { tab: 'deploy', buttons: [{ label: '9" band', a: { act: 'band' } }, { label: 'Tape', a: { tool: 'tape' } }, { label: 'Clear marks', a: { act: 'clear' } }] },
     { tab: 'deploy', buttons: [{ label: '3" ring', a: { ring: 3 } }, { label: '6" ring', a: { ring: 6 } }, { label: '9" ring', a: { ring: 9 } }, { label: '12" ring', a: { ring: 12 } }] },
     // Camera: passthrough camera + corner markers (vr/print/table-markers-10x15.pdf)
-    { tab: 'camera', title: 'Passthrough camera & corner markers' },
+    { tab: 'camera', title: 'Experimental: marker calibration (camera, printed corner sheets)' },
+    { tab: 'camera', buttons: [{ label: 'Marker calibration', a: { act: 'mcal' }, w: 1.4 }, { label: 'Finish now', a: { act: 'mcalDone' } }, { label: 'Cancel', a: { act: 'mcalCancel' } }, { label: 'Tracking', a: { act: 'mtrack' } }] },
+    { tab: 'camera', title: 'Passthrough camera' },
     { tab: 'camera', buttons: [{ label: 'Camera on', a: { act: 'cam', v: 'on' } }, { label: 'Camera off', a: { act: 'cam', v: 'off' } }] },
     { tab: 'camera', buttons: [{ label: 'Forget camera calibration', a: { act: 'camReset' }, w: 1.5 }] },
     { tab: 'camera', title: 'Corner sheets printed as (black square / centre from the corner)' },
