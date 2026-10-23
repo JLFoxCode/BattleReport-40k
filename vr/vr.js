@@ -58,6 +58,10 @@ const app = {
   planes: []                   // detected planes { label, y, corners: [{x, y, z}] } (world), refreshed every ~0.5 s
 };
 
+/** What the overlay shows: the connected game, else the local choices. */
+const cur = () => app.state || app.local;
+const saveLocal = () => store.set('local', { mission: app.local.mission });
+
 // ---------------------------------------------------------------- three.js scene
 const canvas = $('#gl');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
@@ -281,9 +285,6 @@ function fieldRect() {
   return { y0: 0, y1: 60 };
 }
 function rebuildBoard() { repaint(); }
-/** What the overlay shows: the connected game, else the local choices. */
-const cur = () => app.state || app.local;
-const saveLocal = () => store.set('local', { mission: app.local.mission });
 function repaint() {
   const s = cur();
   const map = s && s.mission && s.mission.deployment ? WH.DEPLOYMENT_MAPS[s.mission.deployment] : null;
