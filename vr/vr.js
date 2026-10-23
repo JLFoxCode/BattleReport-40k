@@ -130,7 +130,7 @@ const panel = new Panel(THREE, {
     { tab: 'terrain', title: 'Layout (✓ = recommended for the chosen deployment card)' },
     ...layoutRows(),
     { tab: 'terrain', buttons: [{ label: 'No layout', a: { layout: '' } }, { label: 'Reset layout', a: { act: 'reset' } }, { label: 'Capture piece', a: { tool: 'capture' }, w: 1.3 }] },
-    { tab: 'terrain', title: 'Random layout (fair: point-symmetric, lanes blocked, cover at every objective)' },
+    { tab: 'terrain', title: 'Random layout, 11th ed. style: point-symmetric, every objective inside a terrain area, sightlines broken' },
     { tab: 'terrain', buttons: [{ label: 'Generate random layout', a: { act: 'gen' }, w: 1.6 }, { label: 'Re-roll', a: { act: 'gen' } }] },
     { tab: 'terrain', title: 'Pieces (trigger: grab & move, twist: rotate, B/Y: delete)' },
     { tab: 'terrain', buttons: [{ label: 'Move', a: { tool: 'move' } }, { label: '⟲ 15°', a: { act: 'rotl' } }, { label: '⟳ 15°', a: { act: 'rotr' } }, { label: 'Delete', a: { act: 'del' } }] },
@@ -377,7 +377,7 @@ function buildTerrain() {
       }
     }
     // label: size + class
-    const lbl = labelSprite(`${p.w}"×${p.h}" ${p.tall === true ? 'tall ruin >4" (walls = L)' : p.tall === false ? 'low cover ≤2": crates / rubble / barricade' : (TERRAIN_KINDS[p.kind] || p.kind)}`);
+    const lbl = labelSprite(`${p.w}"×${p.h}" ${p.tall === true ? 'dense: tall ruin >4" (walls = L)' : p.tall === false ? 'light: low cover ≤2" (crates, rubble, barricade)' : (TERRAIN_KINDS[p.kind] || p.kind)}`);
     lbl.position.set(0, (h + 1.2) * IN, 0); g.add(lbl);
     g.position.set(p.x * IN, 0, p.y * IN);
     g.rotation.y = -(p.rot || 0) * Math.PI / 180;
