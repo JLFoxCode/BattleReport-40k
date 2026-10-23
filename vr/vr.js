@@ -39,7 +39,10 @@ const app = {
   band: 'none', grid: false, mirror: false,
   layoutId: null, pieces: [], selected: -1,
   drag: null,                  // { ctrl, idx, dx, dy } while a piece is held
-  xr: { session: null, anchor: null, anchorId: null, mode: null }
+  xr: { session: null, anchor: null, anchorId: null, mode: null },
+  track: 'room',               // room: the table follows its WebXR anchor | local: fixed in the reference space
+  scan: true,                  // show the planes of the room scan (plane-detection)
+  planes: []                   // detected planes { label, y, corners: [{x, y, z}] } (world), refreshed every ~0.5 s
 };
 
 // ---------------------------------------------------------------- three.js scene
@@ -78,6 +81,7 @@ const calibDots = new THREE.Group(); scene.add(calibDots);
 const panel = new Panel(THREE, [
   { title: 'Table' },
   { buttons: [{ label: 'Calibrate', a: { tool: 'calib' } }, { label: 'Mirror', a: { act: 'mirror' } }, { label: '6" grid', a: { act: 'grid' } }, { label: 'Panel here', a: { act: 'panel' } }, { label: 'Leave', a: { act: 'enter' } }] },
+  { buttons: [{ label: 'Tracking: room', a: { act: 'track', v: 'room' }, w: 1.2 }, { label: 'Tracking: local', a: { act: 'track', v: 'local' }, w: 1.2 }, { label: 'Room scan', a: { act: 'scan' } }] },
   { title: 'Terrain' },
   { buttons: [{ label: '‹ Layout', a: { act: 'layoutPrev' } }, { label: 'Layout ›', a: { act: 'layoutNext' } }, { label: 'Reset', a: { act: 'reset' } }, { label: 'Capture piece', a: { tool: 'capture' }, w: 1.3 }] },
   { buttons: [{ label: 'Move', a: { tool: 'move' } }, { label: '⟲ 15°', a: { act: 'rotl' } }, { label: '⟳ 15°', a: { act: 'rotr' } }, { label: 'Delete', a: { act: 'del' } }] },
@@ -88,12 +92,50 @@ const panel = new Panel(THREE, [
 panel.mesh.visible = false;
 scene.add(panel.mesh);
 panel.setState(a => (a.tool && a.tool === app.tool) || (a.ring && app.tool === 'ring' && a.ring === app.ringR)
-  || (a.act === 'band' && app.band === 'infiltrate') || (a.act === 'grid' && app.grid) || (a.act === 'mirror' && app.mirror));
+  || (a.act === 'band' && app.band === 'infiltrate') || (a.act === 'grid' && app.grid) || (a.act === 'mirror' && app.mirror)
+  || (a.act === 'track' && a.v === app.track) || (a.act === 'scan' && app.scan));
 const hud = new Hud(THREE, { width: 0.5 });
 hud.mesh.position.set(0, -0.14, -0.7);
 camera.add(hud.mesh);
 scene.add(camera);
 let toastText = '', toastUntil = 0, noteText = '';
+// room scan (WebXR plane-detection): outlines of the detected planes, the table's corners snap the calibration taps
+const planeGroup = new THREE.Group(); scene.add(planeGroup);
+const planeMat = { table: new THREE.LineBasicMaterial({ color: 0x4ad6ff }), other: new THREE.LineBasicMaterial({ color: 0x8d99ae, transparent: true, opacity: 0.5 }) };
+let planesAt = 0;
+const isTable = l => /table|desk/i.test(l || '');
+function readPlanes(xrFrame) {
+  const ref = renderer.xr.getReferenceSpace();
+  const set = xrFrame.detectedPlanes;
+  if (!set || !ref || performance.now() - planesAt < 500) return;
+  planesAt = performance.now();
+  const out = [];
+  const m = new THREE.Matrix4(), v = new THREE.Vector3();
+  for (const pl of set) {
+    const pose = xrFrame.getPose(pl.planeSpace, ref);
+    if (!pose || !pl.polygon || pl.polygon.length < 3) continue;
+    m.fromArray(pose.transform.matrix);
+    const corners = pl.polygon.map(p => { v.set(p.x, 0, p.z).applyMatrix4(m); return { x: v.x, y: v.y, z: v.z }; });
+    out.push({ label: pl.semanticLabel || '', orientation: pl.orientation, y: corners.reduce((s, c) => s + c.y, 0) / corners.length, corners });
+  }
+  app.planes = out;
+  planeGroup.clear();
+  if (app.scan) for (const p of out) {
+    if (p.orientation !== 'horizontal' && !isTable(p.label)) continue;
+    const pts = p.corners.map(c => new THREE.Vector3(c.x, c.y + 0.004, c.z));
+    planeGroup.add(new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(pts), isTable(p.label) ? planeMat.table : planeMat.other));
+  }
+}
+const scannedTable = () => app.planes.find(p => isTable(p.label)) || null;
+/** A calibration tap near the scanned table: height from the scan, xz snapped to the nearest scanned corner (<= 12 cm). */
+function snapToScan(p) {
+  const t = scannedTable(); if (!t) return { p, snapped: false };
+  const q = { x: p.x, y: t.y, z: p.z };
+  let best = null, bd = 0.12;
+  for (const c of t.corners) { const d = Math.hypot(c.x - p.x, c.z - p.z); if (d < bd) { bd = d; best = c; } }
+  if (best) { q.x = best.x; q.z = best.z; }
+  return { p: q, snapped: !!best };
+}
 /** Put the panel 0.75 m in front of the head, a little below eye level, facing the user. */
 function placePanel() {
   const pos = new THREE.Vector3(), dir = new THREE.Vector3();
@@ -107,7 +149,11 @@ function hudRefresh() {
   const now = performance.now();
   const lines = [];
   if (noteText) lines.push({ text: noteText, big: true, color: '#4ad6ff' });
-  if (app.tool === 'calib') lines.push({ text: $('#calib-info').textContent, color: '#ffd966' });
+  if (app.tool === 'calib') {
+    lines.push({ text: $('#calib-info').textContent, color: '#ffd966' });
+    const t = scannedTable();
+    lines.push({ text: t ? `Room scan: table found (${t.corners.length} corners) - taps snap to its corners and height` : 'Room scan: no table in the scan - taps use the controller position' });
+  }
   else if (app.tool === 'capture') lines.push({ text: 'Capture: touch the corners of the real piece (' + app.capPts.length + '/3)', color: '#ffd966' });
   if (toastText && now < toastUntil) lines.push({ text: toastText });
   hud.set(lines);
@@ -270,6 +316,9 @@ function release() { if (app.drag) { app.drag = null; buildTerrain(); saveTerrai
 
 // ---------------------------------------------------------------- calibration
 function calibTap(worldPos) {
+  const sn = snapToScan({ x: worldPos.x, y: worldPos.y, z: worldPos.z });
+  worldPos = new THREE.Vector3(sn.p.x, sn.p.y, sn.p.z);
+  if (sn.snapped) toast('Snapped to a corner of the scanned table');
   app.calibPts.push({ x: worldPos.x, y: worldPos.y, z: worldPos.z });
   const dot = new THREE.Mesh(new THREE.SphereGeometry(0.008, 10, 8), new THREE.MeshBasicMaterial({ color: 0x4ad6ff }));
   dot.position.copy(worldPos); calibDots.add(dot);
@@ -288,7 +337,7 @@ function calibTap(worldPos) {
   toast(`Table calibrated – edge ${f.edge.toFixed(1)}"`);
 }
 function setCalibText(n) {
-  const steps = ['Stand at the Attacker\'s edge. Touch the corner on your RIGHT with the controller tip and press the trigger.',
+  const steps = ['Stand at the Attacker\'s edge. Point the controller ray at the corner on your RIGHT (the yellow dot marks the spot) and press the trigger.',
     'Now the corner on your LEFT (the other end of the Attacker\'s edge).',
     'Now any corner of the Defender\'s edge (the far side).'];
   $('#calib-info').textContent = `Step ${n + 1} of 3 – ${steps[n]}`;
@@ -344,6 +393,40 @@ function ctrlRay(i) {
   _d.set(0, 0, -1).applyQuaternion(c.getWorldQuaternion(new THREE.Quaternion())).normalize();
   return { origin: _o, dir: _d };
 }
+/** Where a tap lands (world): the hit-test point of the controller ray on the real surface (Quest: room mesh / depth),
+ *  else the ray's intersection with the scanned table plane, else the controller's own position. */
+function tapPoint(i) {
+  const h = controllers[i].hit;
+  if (h) return new THREE.Vector3(h.x, h.y, h.z);
+  const t = scannedTable();
+  if (t) {
+    const r = ctrlRay(i);
+    if (Math.abs(r.dir.y) > 1e-4) { const k = (t.y - r.origin.y) / r.dir.y; if (k > 0 && k < 3) return new THREE.Vector3(r.origin.x + r.dir.x * k, t.y, r.origin.z + r.dir.z * k); }
+  }
+  return tipPos(i);
+}
+const reticles = [0, 1].map(() => { const m = new THREE.Mesh(new THREE.SphereGeometry(0.006, 10, 8), new THREE.MeshBasicMaterial({ color: 0xffd966, depthTest: false })); m.renderOrder = 9; m.visible = false; scene.add(m); return m; });
+async function setupHitTest(session) {
+  const make = async src => {
+    if (!src.targetRaySpace || typeof session.requestHitTestSource !== 'function') return;
+    try { src.__hit = await session.requestHitTestSource({ space: src.targetRaySpace }); } catch { src.__hit = null; }
+  };
+  for (const src of session.inputSources) await make(src);
+  session.addEventListener('inputsourceschange', e => { for (const src of e.added) make(src); });
+}
+function readHits(xrFrame) {
+  const ref = renderer.xr.getReferenceSpace(); if (!ref) return;
+  for (let i = 0; i < 2; i++) {
+    const src = controllers[i].c.userData.source;
+    const hs = src && src.__hit;
+    let hit = null;
+    if (hs) { const r = xrFrame.getHitTestResults(hs)[0]; const pose = r && r.getPose(ref); if (pose) hit = { x: pose.transform.position.x, y: pose.transform.position.y, z: pose.transform.position.z }; }
+    controllers[i].hit = hit;
+    const show = !!hit && (app.tool === 'calib' || app.tool === 'capture');
+    reticles[i].visible = show;
+    if (show) reticles[i].position.set(hit.x, hit.y, hit.z);
+  }
+}
 /** Where the controller tip / index finger is (world). */
 function tipPos(i) {
   const { hand, c } = controllers[i];
@@ -363,8 +446,8 @@ function panelHit(i) {
 function onSelectStart(i) {
   const ph = panelHit(i);
   if (ph) { if (ph.b) { applyAction(Object.assign({}, ph.b.a)); panel.draw(); } return; }   // a tap on the panel never reaches the table
-  if (app.tool === 'calib') { calibTap(tipPos(i)); return; }
-  if (app.tool === 'capture') { captureTap(boardPoint(tipPos(i))); return; }
+  if (app.tool === 'calib') { calibTap(tapPoint(i)); return; }
+  if (app.tool === 'capture') { captureTap(boardPoint(tapPoint(i))); return; }
   const r = ctrlRay(i);
   pressAt(boardHit(r.origin, r.dir), i);
 }
@@ -436,10 +519,11 @@ addEventListener('resize', () => { if (renderer.xr.isPresenting) return; camera.
 // ---------------------------------------------------------------- render loop
 renderer.setAnimationLoop(() => {
   const xrFrame = renderer.xr.getFrame();
-  if (xrFrame && app.xr.anchor) {
+  if (xrFrame && app.xr.anchor && app.track === 'room') {
     const pose = xrFrame.getPose(app.xr.anchor.anchorSpace, renderer.xr.getReferenceSpace());
     if (pose) { table.matrix.fromArray(pose.transform.matrix); table.matrixWorldNeedsUpdate = true; }
   }
+  if (xrFrame) { readPlanes(xrFrame); readHits(xrFrame); }
   if (renderer.xr.isPresenting) {
     pollGamepads();
     let hover = null;
@@ -468,8 +552,8 @@ async function enterXR() {
   // The Quest browser sometimes refuses a session right after a failed one ("Something went wrong initializing the
   // session in the runtime"): try the full feature set, then the bare minimum, then plain VR.
   const attempts = [
-    [mode, { requiredFeatures: ['local-floor'], optionalFeatures: ['hand-tracking', 'anchors', 'hit-test'] }],
-    [mode, { requiredFeatures: ['local'], optionalFeatures: ['local-floor', 'hand-tracking', 'anchors'] }],
+    [mode, { requiredFeatures: ['local-floor'], optionalFeatures: ['hand-tracking', 'anchors', 'hit-test', 'plane-detection'] }],
+    [mode, { requiredFeatures: ['local'], optionalFeatures: ['local-floor', 'hand-tracking', 'anchors', 'plane-detection'] }],
     [mode, {}],
     ['immersive-vr', { requiredFeatures: ['local-floor'], optionalFeatures: ['hand-tracking', 'anchors'] }]
   ];
@@ -491,6 +575,7 @@ async function enterXR() {
   $('#enter').textContent = 'Leave';
   applyFrame();
   setTimeout(placePanel, 600);     // after the first frames, when the head pose is known
+  setupHitTest(session).catch(() => {});
   if (await restoreAnchor(session)) toast('Table position restored from the last session');
   else if (app.frame) toast('Table position from the last calibration – recalibrate if it does not fit');
   else { startCalibration(); toast('Calibrate the table first'); }
@@ -583,6 +668,8 @@ function applyAction(a, btn) {
     const i = Math.max(0, ids.indexOf(app.layoutId));
     setLayout(ids[(i + (a.act === 'layoutNext' ? 1 : ids.length - 1)) % ids.length]);
   }
+  else if (a.act === 'track') { app.track = a.v === 'local' ? 'local' : 'room'; if (app.track === 'local' && app.frame) applyFrame(); toast(app.track === 'room' ? 'Tracking: the table follows its room anchor' : 'Tracking: the table stays fixed in the headset space'); }
+  else if (a.act === 'scan') { app.scan = !app.scan; planesAt = 0; if (!app.scan) planeGroup.clear(); }
   else if (a.act === 'ping') { /* status only */ }
   syncTools(); repaint(); sendStatus(); panel.draw();
 }
