@@ -46,15 +46,26 @@ export function paintBoard(ctx, o) {
   ctx.scale(PX, PX);
   ctx.lineJoin = 'round'; ctx.lineCap = 'round';
 
-  // battlefield edge (Incursion: one 44×30 half of the table, the rest shaded)
+  // battlefield edge: Strike Force = the whole table; one Incursion half (rest shaded); or two Incursion fields
   const field = o.field || { y0: 0, y1: BOARD[1] };
-  if (field.y0 > 0) { ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fillRect(0, 0, BOARD[0], field.y0); }
-  if (field.y1 < BOARD[1]) { ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fillRect(0, field.y1, BOARD[0], BOARD[1] - field.y1); }
-  ctx.strokeStyle = 'rgba(255,255,255,0.85)'; ctx.lineWidth = 0.15;
-  ctx.strokeRect(0, field.y0, BOARD[0], field.y1 - field.y0);
-  if (field.y1 - field.y0 < BOARD[1]) {
-    ctx.font = 'bold 1.6px sans-serif'; ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText('Incursion 44\" \u00d7 30\"', BOARD[0] / 2, (field.y0 + field.y1) / 2);
+  if (o.fields) {
+    for (const f of o.fields) {
+      ctx.strokeStyle = f.active ? 'rgba(255,230,80,0.95)' : 'rgba(255,255,255,0.6)'; ctx.lineWidth = f.active ? 0.25 : 0.15;
+      ctx.strokeRect(0.1, f.y0 + 0.1, BOARD[0] - 0.2, f.y1 - f.y0 - 0.2);
+      ctx.font = 'bold 1.5px sans-serif'; ctx.fillStyle = f.active ? 'rgba(255,230,80,0.9)' : 'rgba(255,255,255,0.6)'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(`${f.key} field \u00b7 ${f.name}${f.active ? ' \u00b7 editing' : ''}`, BOARD[0] / 2, f.y0 + 2);
+      // centre marker of each field
+      ctx.beginPath(); ctx.arc(BOARD[0] / 2, (f.y0 + f.y1) / 2, 0.4, 0, Math.PI * 2); ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.fill();
+    }
+  } else {
+    if (field.y0 > 0) { ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fillRect(0, 0, BOARD[0], field.y0); }
+    if (field.y1 < BOARD[1]) { ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fillRect(0, field.y1, BOARD[0], BOARD[1] - field.y1); }
+    ctx.strokeStyle = 'rgba(255,255,255,0.85)'; ctx.lineWidth = 0.15;
+    ctx.strokeRect(0, field.y0, BOARD[0], field.y1 - field.y0);
+    if (field.y1 - field.y0 < BOARD[1]) {
+      ctx.font = 'bold 1.6px sans-serif'; ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText('Incursion 44\" \u00d7 30\"', BOARD[0] / 2, (field.y0 + field.y1) / 2);
+    }
   }
 
   if (o.grid) {

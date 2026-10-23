@@ -50,7 +50,9 @@ const app = {
   camcal: store.get('camcal', null),   // { f, X } – this headset's camera: focal length + head→camera transform
   markers: store.get('markers', null), // { [id]: { corner, turn } } – where the printed sheets lie
   Y: null,                     // table pose (table → world, 4×4) when known from markers
-  board: 'full',               // 'full' = Strike Force 44×60 | 'near' / 'far' = Incursion 44×30 on that half of the table
+  board: 'full',               // 'full' = Strike Force 44×60 | 'near' / 'far' = one Incursion 44×30 half | 'both' = two Incursion games on one table
+  editHalf: 'near',            // with 'both': the half that terrain tools, card and attacker apply to
+  halves: Object.assign({ near: { deployment: null, attacker: 0 }, far: { deployment: null, attacker: 0 } }, store.get('halves', {})),
   markerScale: store.get('markerScale', 1),  // print scale of the corner sheets: 1 = 10×15 at 100 %, 1.98 = fitted onto A4
   // play aid without a game: deployment card, attacker and layout chosen here and kept on the headset
   local: Object.assign({ mission: { deployment: null, attacker: 0, terrainLayout: null }, players: [{ name: 'Player 1', color: 0 }, { name: 'Player 2', color: 1 }], objectives: [], stage: 'setup' }, store.get('local', {})),
@@ -120,7 +122,8 @@ const panel = new Panel(THREE, {
     { tab: 'table', title: 'Calibration: point the ray at three table corners (right, left, far) and press the trigger' },
     { tab: 'table', buttons: [{ label: 'Calibrate (3 corners)', a: { tool: 'calib' }, w: 1.6 }, { label: 'Recall saved table', a: { act: 'recall' }, w: 1.2 }, { label: 'Mirror', a: { act: 'mirror' } }, { label: 'Room scan', a: { act: 'scan' } }] },
     { tab: 'table', title: 'Battlefield' },
-    { tab: 'table', buttons: [{ label: 'Strike Force 44×60', a: { act: 'board', v: 'full' }, w: 1.3 }, { label: 'Incursion near half', a: { act: 'board', v: 'near' }, w: 1.3 }, { label: 'Incursion far half', a: { act: 'board', v: 'far' }, w: 1.3 }] },
+    { tab: 'table', buttons: [{ label: 'Strike Force 44\u00d760', a: { act: 'board', v: 'full' }, w: 1.3 }, { label: 'Incursion near', a: { act: 'board', v: 'near' } }, { label: 'Incursion far', a: { act: 'board', v: 'far' } }, { label: '2\u00d7 Incursion (both)', a: { act: 'board', v: 'both' }, w: 1.3 }] },
+    { tab: 'table', buttons: [{ label: 'Edit: near field', a: { act: 'editHalf', v: 'near' }, w: 1.2 }, { label: 'Edit: far field', a: { act: 'editHalf', v: 'far' }, w: 1.2 }] },
     { tab: 'table', title: 'Fine adjustment' },
     { tab: 'table', buttons: [{ label: 'Step 1 cm', a: { act: 'step', v: 0.01 } }, { label: 'Step 1 mm', a: { act: 'step', v: 0.001 } }, { label: '↑ up', a: { act: 'nudge', v: 'z+' } }, { label: '↓ down', a: { act: 'nudge', v: 'z-' } }] },
     { tab: 'table', buttons: [{ label: '← x', a: { act: 'nudge', v: 'x-' } }, { label: 'x →', a: { act: 'nudge', v: 'x+' } }, { label: '← y', a: { act: 'nudge', v: 'y-' } }, { label: 'y →', a: { act: 'nudge', v: 'y+' } }, { label: '⟲ 0.5°', a: { act: 'nudge', v: 'r-' } }, { label: '⟳ 0.5°', a: { act: 'nudge', v: 'r+' } }] },
@@ -131,7 +134,11 @@ const panel = new Panel(THREE, {
     ...layoutRows(),
     { tab: 'terrain', buttons: [{ label: 'No layout', a: { layout: '' } }, { label: 'Reset layout', a: { act: 'reset' } }, { label: 'Capture piece', a: { tool: 'capture' }, w: 1.3 }] },
     { tab: 'terrain', title: 'Random layout, 11th ed. style: point-symmetric, every objective inside a terrain area, sightlines broken' },
-    { tab: 'terrain', buttons: [{ label: 'Generate random layout', a: { act: 'gen' }, w: 1.6 }, { label: 'Re-roll', a: { act: 'gen' } }] },
+    { tab: 'terrain', buttons: [{ label: 'Generate random layout', a: { act: 'gen' }, w: 1.6 }, { label: 'Re-roll', a: { act: 'gen' } }, { label: '★ Favourite', a: { act: 'fav' } }] },
+    { tab: 'terrain', title: 'Recent random layouts (tap = restore exactly)' },
+    { tab: 'terrain', key: 'recent', buttons: [{ label: 'none yet', a: { act: 'noop' }, w: 3 }] },
+    { tab: 'terrain', title: 'Favourites' },
+    { tab: 'terrain', key: 'favs', buttons: [{ label: 'none yet', a: { act: 'noop' }, w: 3 }] },
     { tab: 'terrain', title: 'Pieces (trigger: grab & move, twist: rotate, B/Y: delete)' },
     { tab: 'terrain', buttons: [{ label: 'Move', a: { tool: 'move' } }, { label: '⟲ 15°', a: { act: 'rotl' } }, { label: '⟳ 15°', a: { act: 'rotr' } }, { label: 'Delete', a: { act: 'del' } }] },
     { tab: 'terrain', buttons: [{ label: '+ 6×4', a: { add: '6x4' } }, { label: '+ 10×5', a: { add: '10x5' } }, { label: '+ 12×6', a: { add: '12x6' } }, { label: '+ crater', a: { add: '6x6', kind: 'crater' } }, { label: '+ wall', a: { add: '6x1', kind: 'wall' } }] },
@@ -160,12 +167,12 @@ panel.setState(a => (a.tool && a.tool === app.tool) || (a.ring && app.tool === '
   || (a.act === 'track' && a.v === app.track) || (a.act === 'scan' && app.scan) || (a.act === 'step' && a.v === app.step)
   || (a.base !== undefined && Number(a.base) === app.base)
   || (a.act === 'cam' && ((a.v === 'on') === cam.state().on))
-  || (a.act === 'mcal' && !!app.mcal) || (a.act === 'mtrack' && app.mtrack) || (a.act === 'board' && a.v === app.board)
+  || (a.act === 'mcal' && !!app.mcal) || (a.act === 'mtrack' && app.mtrack) || (a.act === 'board' && a.v === app.board) || (a.act === 'editHalf' && a.v === app.editHalf)
   || (a.act === 'mscale' && Math.abs(Number(a.v) - app.markerScale) < 0.02)
   || (a.layout !== undefined && (a.layout || null) === app.layoutId)
   || (a.open !== undefined && a.open === app.code)
-  || (a.deployment !== undefined && cur().mission.deployment === a.deployment)
-  || (a.attacker !== undefined && cur().mission.attacker === a.attacker));
+  || (a.deployment !== undefined && (app.board === 'both' ? app.halves[app.editHalf].deployment : cur().mission.deployment) === a.deployment)
+  || (a.attacker !== undefined && (app.board === 'both' ? app.halves[app.editHalf].attacker : cur().mission.attacker) === a.attacker));
 const hud = new Hud(THREE, { width: 0.5 });
 hud.mesh.position.set(0, -0.17, -0.7);
 camera.add(hud.mesh);
@@ -241,7 +248,10 @@ function hudRefresh() {
   const cs = cam.state();
   if (cs.on) lines.push({ text: `Camera ${cs.w}×${cs.h} · ${cs.fps} fps · markers: ${cs.markers.length ? cs.markers.map(m => m.id + 1).join(', ') : 'none'}` + (cs.error ? ' · ' + cs.error : ''), color: '#9ef' });
   const st = cur();
-  if (!noteText && app.tool !== 'calib') {
+  if (!noteText && app.tool !== 'calib' && app.board === 'both') {
+    const near = app.halves.near, far = app.halves.far;
+    lines.push({ text: `Near field: ${near.deployment || 'no card'} \u00b7 Far field: ${far.deployment || 'no card'} \u00b7 editing: ${app.editHalf}`, color: '#9aa3b2' });
+  } else if (!noteText && app.tool !== 'calib') {
     const rec = recommended();
     const layoutNote = app.layoutId ? ' · ' + ((layoutById(app.layoutId) || {}).name || '') + (rec && !rec.includes(app.layoutId) ? ' (not recommended for this card)' : '') : rec ? ' · recommended layouts: ' + rec.map(id => id.replace('ca2025-', '')).join(', ') : '';
     lines.push({ text: (st.mission.deployment || 'No deployment card') + layoutNote + (app.state ? '' : ' · local'), color: '#9aa3b2' });
@@ -285,8 +295,15 @@ const objMat = {};
 function fieldRect() {
   if (app.board === 'near') return { y0: 0, y1: 30 };
   if (app.board === 'far') return { y0: 30, y1: 60 };
+  if (app.board === 'both') return app.editHalf === 'far' ? { y0: 30, y1: 60 } : { y0: 0, y1: 30 };
   return { y0: 0, y1: 60 };
 }
+/** the two Incursion fields when both are shown: [{ y0, y1, name, active }] */
+function fields() {
+  if (app.board !== 'both') return null;
+  return ['near', 'far'].map(k => ({ y0: k === 'far' ? 30 : 0, y1: k === 'far' ? 60 : 30, key: k, name: app.halves[k].deployment || 'Incursion (no card)', active: k === app.editHalf }));
+}
+const saveHalves = () => store.set('halves', app.halves);
 function rebuildBoard() { repaint(); }
 function repaint() {
   const s = cur();
@@ -301,7 +318,7 @@ function repaint() {
   const half = app.board !== 'full';
   paintBoard(boardCanvas.getContext('2d'), {
     map: half ? null : map, attacker: s && s.mission ? s.mission.attacker : null, colors, names: players.map(p => p.name),
-    objectives: half ? [] : objectives, band: app.band, grid: app.grid, marks: app.marks, field
+    objectives: half ? [] : objectives, band: app.band, grid: app.grid, marks: app.marks, field, fields: fields()
   });
   boardTex.needsUpdate = true;
 
@@ -420,16 +437,46 @@ function setLayout(id, { fromState = false } = {}) {
   if (!app.state) { app.local.mission.terrainLayout = id || null; saveLocal(); }
 }
 /** Random fair layout for the current battlefield (full table or the chosen Incursion half) and deployment card. */
-function generateRandomLayout() {
+/** history of random layouts: [{ seed, board, half, deployment, fav, t }] newest first, kept on the headset */
+function historyAdd(e) {
+  app.history = (app.history || []).filter(h => h.seed !== e.seed);
+  app.history.unshift(e);
+  const favs = app.history.filter(h => h.fav), rest = app.history.filter(h => !h.fav).slice(0, 12);
+  app.history = favs.concat(rest);
+  store.set('history', app.history); refreshHistoryRows();
+}
+function refreshHistoryRows() {
+  const h = app.history || [];
+  const lbl = e => `#${String(e.seed).slice(-5)} ${e.board === 'full' ? '44×60' : e.half + ' half'}${e.deployment ? ' · ' + e.deployment.split(' ')[0] : ''}${e.fav ? ' ★' : ''}`;
+  const recent = h.filter(e => !e.fav).slice(0, 4), favs = h.filter(e => e.fav).slice(0, 8);
+  panel.setRow('recent', recent.length ? recent.map(e => ({ label: lbl(e), a: { gen: e.seed } })) : [{ label: 'none yet', a: { act: 'noop' }, w: 3 }]);
+  panel.setRow('favs', favs.length ? favs.map(e => ({ label: lbl(e), a: { gen: e.seed } })) : [{ label: 'none yet – generate one and press ★ Favourite', a: { act: 'noop' }, w: 3 }]);
+}
+function toggleFavourite() {
+  const seed = app.layoutId && String(app.layoutId).startsWith('random-') ? app.layoutId.slice(7) : null;
+  const e = seed && (app.history || []).find(h => String(h.seed) === seed);
+  if (!e) { toast('Generate a random layout first'); return; }
+  e.fav = !e.fav; store.set('history', app.history); refreshHistoryRows();
+  toast(e.fav ? `Layout #${String(e.seed).slice(-5)} saved as favourite` : 'Favourite removed');
+}
+function restoreRandom(e) {
+  app.board = e.board; if (e.half) app.editHalf = e.half;
+  if (e.deployment && !app.state) { if (app.board === 'both') app.halves[app.editHalf].deployment = e.deployment; else app.local.mission.deployment = e.deployment; }
+  generateRandomLayout(e.seed);
+}
+function generateRandomLayout(seed) {
   const half = app.board !== 'full';
   const map = cur().mission.deployment ? WH.DEPLOYMENT_MAPS[cur().mission.deployment] : null;
   const objectives = !half && map ? [map.home.a, map.home.d, map.exp[0], map.exp[1], [22, 30]] : [];
-  const r = generateLayout({ board: half ? 'half' : 'full', objectives, zones: !half && map ? map.zones : null, tries: 1500 });
+  const r = generateLayout({ seed, board: half ? 'half' : 'full', objectives, zones: !half && map ? map.zones : null, tries: 1500 });
   if (!r) { toast('No fair layout found – try again'); return; }
+  historyAdd({ seed: r.seed, board: app.board, half: half ? app.editHalf : null, deployment: cur().mission.deployment || null, fav: !!(app.history || []).find(h => h.seed === r.seed && h.fav), t: Date.now() });
   pushUndo('random layout');
-  const y0 = app.board === 'far' ? 30 : 0;
+  const f = fieldRect(), y0 = f.y0;
   app.layoutId = 'random-' + r.seed;
-  app.pieces = r.pieces.map(p => Object.assign({}, p, { y: +(p.y + y0).toFixed(2) }));
+  const fresh = r.pieces.map(p => Object.assign({}, p, { id: p.id + '-' + y0, y: +(p.y + y0).toFixed(2) }));
+  // one half of a two-field table: keep the other field's pieces
+  app.pieces = half ? app.pieces.filter(p => p.y < f.y0 || p.y >= f.y1).concat(fresh) : fresh;
   app.selected = -1;
   buildTerrain(); saveTerrain();
   if (!app.state) { app.local.mission.terrainLayout = app.layoutId; saveLocal(); }
@@ -438,7 +485,8 @@ function generateRandomLayout() {
 function selectPiece(i) { app.selected = i; buildTerrain(); }
 function addPiece(w, h, kind = 'ruin') {
   pushUndo('add piece');
-  app.pieces.push({ id: 'c' + Date.now().toString(36), kind, x: 22, y: 30, w, h, rot: 0 });
+  const f = fieldRect();
+  app.pieces.push({ id: 'c' + Date.now().toString(36), kind, x: 22, y: (f.y0 + f.y1) / 2, w, h, rot: 0 });
   selectPiece(app.pieces.length - 1); saveTerrain();
 }
 function removeSelected() { if (app.selected < 0) return; pushUndo('delete piece'); app.pieces.splice(app.selected, 1); app.selected = -1; buildTerrain(); saveTerrain(); }
@@ -1035,6 +1083,11 @@ function applyAction(a, btn) {
       if (a.deployment !== undefined) act.deployment = a.deployment;
       if (a.attacker !== undefined) act.attacker = Number(a.attacker);
       app.net.dispatch(act).catch(e => toast(e.message));
+    } else if (app.board === 'both') {
+      const h = app.halves[app.editHalf];
+      if (a.deployment !== undefined) h.deployment = h.deployment === a.deployment ? null : a.deployment;
+      if (a.attacker !== undefined) h.attacker = Number(a.attacker);
+      saveHalves();
     } else {
       if (a.deployment !== undefined) app.local.mission.deployment = app.local.mission.deployment === a.deployment ? null : a.deployment;
       if (a.attacker !== undefined) app.local.mission.attacker = Number(a.attacker);
@@ -1073,10 +1126,13 @@ function applyAction(a, btn) {
     if (app.mtrack) { if (!app.camcal || !app.markers) { app.mtrack = false; toast('Run the marker calibration first'); } else cam.start().then(() => cam.setInterval(1000)).catch(e => toast(String(e.message || e))); }
     else { cam.stop(); if (app.frame) createAnchor().catch(() => {}); }
   }
-  else if (a.act === 'board') { app.board = a.v; rebuildBoard(); }
+  else if (a.act === 'board') { app.board = a.v; if (a.v === 'near' || a.v === 'far') app.editHalf = a.v; rebuildBoard(); }
+  else if (a.act === 'editHalf') { app.editHalf = a.v; repaint(); }
   else if (a.open !== undefined) openGame(a.open);
   else if (a.act === 'games') refreshGames();
   else if (a.act === 'gen') generateRandomLayout();
+  else if (a.gen !== undefined) { const e = (app.history || []).find(h => String(h.seed) === String(a.gen)); if (e) restoreRandom(e); }
+  else if (a.act === 'fav') toggleFavourite();
   else if (a.act === 'camReset') { app.camcal = null; app.markers = null; app.mtrack = false; store.set('camcal', null); store.set('markers', null); toast('Camera calibration forgotten – run the marker calibration again'); }
   else if (a.act === 'mscale' || a.act === 'mscaleStep') {
     app.markerScale = a.act === 'mscale' ? Number(a.v) : Math.max(0.3, app.markerScale + Number(a.v) / 52.5);
@@ -1117,6 +1173,7 @@ function onSignal(sig) {
 
 async function main() {
   initUi();
+  app.history = store.get('history', []); refreshHistoryRows();
   setMarkerScale(app.markerScale);
   app.frame = unpackFrame(store.get('frame', null));
   applyFrame(); applyMirror();
