@@ -136,17 +136,15 @@ export function paintBoard(ctx, o) {
       ctx.font = 'bold 1.2px sans-serif'; ctx.fillStyle = 'rgba(80,220,255,1)'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.fillText(m.r + '"' + (br ? ' from base edge' : ''), m.x, m.y - m.r - br - 0.8);
     } else if (m.kind === 'tape') {
-      // distance between the two base edges (both ends the same base), never negative
-      const dc = Math.hypot(m.b[0] - m.a[0], m.b[1] - m.a[1]);
-      const d = Math.max(0, dc - 2 * br);
-      ctx.beginPath(); ctx.moveTo(m.a[0], m.a[1]); ctx.lineTo(m.b[0], m.b[1]);
-      ctx.strokeStyle = 'rgba(255,230,80,0.95)'; ctx.lineWidth = 0.15; ctx.stroke();
-      [m.a, m.b].forEach(([x, y]) => {
-        ctx.beginPath(); ctx.arc(x, y, br || 0.3, 0, Math.PI * 2);
-        if (br) { ctx.strokeStyle = 'rgba(255,230,80,0.9)'; ctx.lineWidth = 0.1; ctx.stroke(); } else { ctx.fillStyle = 'rgba(255,230,80,1)'; ctx.fill(); }
-      });
+      // dimension line: a straight line with perpendicular end ticks – the distance counts from tick to tick
+      const d = Math.hypot(m.b[0] - m.a[0], m.b[1] - m.a[1]);
+      const ux = d ? (m.b[0] - m.a[0]) / d : 1, uy = d ? (m.b[1] - m.a[1]) / d : 0, nx = -uy, ny = ux, tick = 0.9;
+      ctx.strokeStyle = 'rgba(255,230,80,0.95)'; ctx.lineWidth = 0.14; ctx.lineCap = 'butt';
+      ctx.beginPath(); ctx.moveTo(m.a[0], m.a[1]); ctx.lineTo(m.b[0], m.b[1]); ctx.stroke();
+      for (const [x, y] of [m.a, m.b]) { ctx.beginPath(); ctx.moveTo(x + nx * tick, y + ny * tick); ctx.lineTo(x - nx * tick, y - ny * tick); ctx.stroke(); }
+      ctx.lineCap = 'round';
       ctx.font = 'bold 1.3px sans-serif'; ctx.fillStyle = 'rgba(255,230,80,1)'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillText(d.toFixed(1) + '"' + (br ? ' edge to edge' : ''), (m.a[0] + m.b[0]) / 2, (m.a[1] + m.b[1]) / 2 - 1);
+      ctx.fillText(d.toFixed(1) + '"', (m.a[0] + m.b[0]) / 2 + nx * 1.2, (m.a[1] + m.b[1]) / 2 + ny * 1.2);
     }
   }
   ctx.restore();
