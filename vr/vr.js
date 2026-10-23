@@ -10,7 +10,7 @@
  *     the thumbstick, add / remove pieces; custom positions are kept per game on the headset.
  *  4. Deployment helpers: tape measure, range rings, the 9" band around the enemy deployment zone.
  * Without a headset the page shows the same scene as a 3D preview (mouse: drag = orbit, wheel = zoom). */
-import * as THREE from 'three';
+import * as THREE from './vendor/three.module.min.js';   // no import map: the online server's CSP allows no inline scripts
 import { WH } from '../data/rules.js';
 import { TERRAIN_LAYOUTS, TERRAIN_KINDS } from '../data/terrain.js';
 import { IN, BOARD, frameFromCorners, frameMatrix, packFrame, unpackFrame, snap, onBoard } from './calib.js';
