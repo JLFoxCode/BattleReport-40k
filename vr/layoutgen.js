@@ -22,7 +22,7 @@
 import { LAYOUTS11 } from '../data/layouts11.js';
 /* Calibrated on the 45 official layouts (measured 2026-10-23): 12 dense + 4 light areas – dense: 7×11.5 ×4,
  * 8×11.5 polygon ×2 (the central block), 10×2.5 ×2, 6×4 ×2, 6×2 ×2; light: 6×4 ×2, 6×2 ×2. Sightlines between the
- * deployment zones 94–100 % blocked, 14–27 % of each zone covered by terrain, areas may touch, ≥ 2" from the edge,
+ * deployment zones 94–100 % blocked, 14–27 % of each zone covered by terrain, areas may touch, ≥ 1.9" from the edge,
  * objectives (nearly) always inside dense areas, the central objective inside the interlocking 8×11.5 pair. */
 export const SETS = {
   armageddon: { size: [44, 60], centreBlock: true, pieces: [[7, 11.5, true], [7, 11.5, true], [10, 2.5, true], [6, 4, true], [6, 4, false], [6, 2, true], [6, 2, false]] },
@@ -39,6 +39,7 @@ const CENTRE_BLOCK = (() => {
 })();
 export const FAIL = {};                      // why candidates were rejected (debugging / tuning)
 const fail = why => { FAIL[why] = (FAIL[why] || 0) + 1; return false; };
+const EDGE = 1.5;                            // official footprints keep ≥ 1.9" from the table edge (their features may overhang)
 const rotPoint = ([x, y], q) => { const a = q * Math.PI / 2, c = Math.cos(a), s = Math.sin(a); return [x * c - y * s, x * s + y * c]; };
 
 export function rng(seed) {
@@ -81,7 +82,7 @@ const ROTS = [0, 90, 0, 90, 0, 90, 45, 135, 0, 90];
 function candidate(rand, set, objectives) {
   const [W, L] = set.size, cx = W / 2, cy = L / 2;
   const placed = [], polys = [];
-  const fits = poly => poly.every(c => c[0] >= 2 && c[0] <= W - 2 && c[1] >= 2 && c[1] <= L - 2) && polys.every(q => gap(poly, q) >= 0);
+  const fits = poly => poly.every(c => c[0] >= EDGE && c[0] <= W - EDGE && c[1] >= EDGE && c[1] <= L - EDGE) && polys.every(q => gap(poly, q) >= 0);
   const add = (p, m) => { placed.push(p); polys.push(corners(p)); if (m) { placed.push(m); polys.push(corners(m)); } };
   // objectives of the first half (their partners are the mirror images); the centre one separately
   const objs = (objectives || []).filter(o => Math.hypot(o[0] - cx, o[1] - cy) > 1);
@@ -100,7 +101,7 @@ function candidate(rand, set, objectives) {
   if (set.centreBlock && CENTRE_BLOCK) {
     const q = Math.floor(rand() * 4);
     const pair = CENTRE_BLOCK.map(b => { const [dx, dy] = rotPoint([b.dx, b.dy], q); return { kind: 'ruin', w: b.w, h: b.h, rot: q * 90, tall: true, x: +(cx + dx).toFixed(2), y: +(cy + dy).toFixed(2), poly: b.poly }; });
-    if (!pair.every(p => corners(p).every(c => c[0] >= 2 && c[0] <= W - 2 && c[1] >= 2 && c[1] <= L - 2))) { FAIL.centre = (FAIL.centre || 0) + 1; return null; }
+    if (!pair.every(p => corners(p).every(c => c[0] >= EDGE && c[0] <= W - EDGE && c[1] >= EDGE && c[1] <= L - EDGE))) { FAIL.centre = (FAIL.centre || 0) + 1; return null; }
     for (const p of pair) { placed.push(p); polys.push(corners(p)); }
   } else if (set.centre && (hasCentre || !objectives || !objectives.length)) {
     const [w, h, tall] = set.centre;
