@@ -461,16 +461,22 @@ renderer.setAnimationLoop(() => {
 async function enterXR() {
   if (!navigator.xr) { toast('WebXR is not available in this browser'); return; }
   const ui = $('#ui');
-  const ar = await navigator.xr.isSessionSupported('immersive-ar').catch(() => false);
-  const mode = ar ? 'immersive-ar' : 'immersive-vr';
-  let session;
-  try {
-    session = await navigator.xr.requestSession(mode, {
-      requiredFeatures: ['local-floor'],
-      optionalFeatures: ['dom-overlay', 'hand-tracking', 'anchors', 'hit-test', 'bounded-floor'],
-      domOverlay: { root: ui }
-    });
-  } catch (e) { toast('Could not start the XR session: ' + (e && e.message ? e.message : e)); return; }
+  let mode = (await navigator.xr.isSessionSupported('immersive-ar').catch(() => false)) ? 'immersive-ar' : 'immersive-vr';
+  // The Quest browser sometimes refuses a session right after a failed one ("Something went wrong initializing the
+  // session in the runtime"): try the full feature set, then the bare minimum, then plain VR.
+  const attempts = [
+    [mode, { requiredFeatures: ['local-floor'], optionalFeatures: ['hand-tracking', 'anchors', 'hit-test'] }],
+    [mode, { requiredFeatures: ['local'], optionalFeatures: ['local-floor', 'hand-tracking', 'anchors'] }],
+    [mode, {}],
+    ['immersive-vr', { requiredFeatures: ['local-floor'], optionalFeatures: ['hand-tracking', 'anchors'] }]
+  ];
+  let session = null, lastErr = null;
+  for (const [m, init] of attempts) {
+    try { session = await navigator.xr.requestSession(m, init); mode = m; break; }
+    catch (e) { lastErr = e; console.warn('requestSession', m, JSON.stringify(init), 'failed:', e && e.message); }
+  }
+  if (!session) { toast('Could not start the XR session: ' + (lastErr && lastErr.message ? lastErr.message : lastErr) + ' – close the browser completely and open the page again'); return; }
+  const ar = mode === 'immersive-ar';
   app.xr.session = session; app.xr.mode = ar ? 'ar' : 'vr';
   document.body.dataset.xr = app.xr.mode;
   session.addEventListener('end', () => {
