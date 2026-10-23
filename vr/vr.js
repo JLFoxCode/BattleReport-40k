@@ -80,7 +80,7 @@ const calibDots = new THREE.Group(); scene.add(calibDots);
 // in-headset UI: 3D panel (no dom-overlay in the Quest browser) + HUD text in front of the camera
 const panel = new Panel(THREE, [
   { title: 'Table' },
-  { buttons: [{ label: 'Calibrate', a: { tool: 'calib' } }, { label: 'Mirror', a: { act: 'mirror' } }, { label: '6" grid', a: { act: 'grid' } }, { label: 'Panel here', a: { act: 'panel' } }, { label: 'Leave', a: { act: 'enter' } }] },
+  { buttons: [{ label: 'Calibrate', a: { tool: 'calib' } }, { label: 'Mirror', a: { act: 'mirror' } }, { label: '6" grid', a: { act: 'grid' } }, { label: 'Panel here', a: { act: 'panel' } }, { label: 'Undo', a: { act: 'undo' } }, { label: 'Leave', a: { act: 'enter' } }] },
   { buttons: [{ label: 'Tracking: room', a: { act: 'track', v: 'room' }, w: 1.2 }, { label: 'Tracking: local', a: { act: 'track', v: 'local' }, w: 1.2 }, { label: 'Room scan', a: { act: 'scan' } }] },
   { title: 'Terrain' },
   { buttons: [{ label: '‹ Layout', a: { act: 'layoutPrev' } }, { label: 'Layout ›', a: { act: 'layoutNext' } }, { label: 'Reset', a: { act: 'reset' } }, { label: 'Capture piece', a: { tool: 'capture' }, w: 1.3 }] },
@@ -237,7 +237,25 @@ const describe = p => `${TERRAIN_KINDS[p.kind] || p.kind} ${p.w}"×${p.h}" @ ${p
 const layoutById = id => TERRAIN_LAYOUTS.find(t => t.id === id) || null;
 
 function saveTerrain() { if (app.code) store.set('terrain.' + app.code, { layout: app.layoutId, pieces: app.pieces }); }
+// ---------------------------------------------------------------- undo (right grip without the panel in the ray, or panel button)
+const undoStack = [];
+function pushUndo(what) {
+  undoStack.push({ what, pieces: JSON.parse(JSON.stringify(app.pieces)), marks: JSON.parse(JSON.stringify(app.marks)), calibPts: app.calibPts.slice(), capPts: app.capPts.slice(), tapeA: app.tapeA, selected: app.selected, layoutId: app.layoutId });
+  if (undoStack.length > 50) undoStack.shift();
+}
+function undo() {
+  const u = undoStack.pop();
+  if (!u) { toast('Nothing to undo'); return; }
+  app.pieces = u.pieces; app.marks = u.marks; app.calibPts = u.calibPts; app.capPts = u.capPts; app.tapeA = u.tapeA; app.selected = u.selected;
+  if (u.layoutId !== app.layoutId) { app.layoutId = u.layoutId; $('#layout').value = u.layoutId || ''; }
+  calibDots.clear();
+  for (const c of app.calibPts) { const dot = new THREE.Mesh(new THREE.SphereGeometry(0.008, 10, 8), new THREE.MeshBasicMaterial({ color: 0x4ad6ff })); dot.position.set(c.x, c.y, c.z); calibDots.add(dot); }
+  if (app.tool === 'calib') setCalibText(app.calibPts.length);
+  buildTerrain(); saveTerrain(); repaint(); sendStatus();
+  toast('Undo: ' + u.what);
+}
 function setLayout(id, { fromState = false } = {}) {
+  if (!fromState) pushUndo('layout');
   app.layoutId = id || null;
   app.pieces = layoutPieces(layoutById(id));
   app.selected = -1;
@@ -249,14 +267,16 @@ function setLayout(id, { fromState = false } = {}) {
 }
 function selectPiece(i) { app.selected = i; buildTerrain(); }
 function addPiece(w, h, kind = 'ruin') {
+  pushUndo('add piece');
   app.pieces.push({ id: 'c' + Date.now().toString(36), kind, x: 22, y: 30, w, h, rot: 0 });
   selectPiece(app.pieces.length - 1); saveTerrain();
 }
-function removeSelected() { if (app.selected < 0) return; app.pieces.splice(app.selected, 1); app.selected = -1; buildTerrain(); saveTerrain(); }
+function removeSelected() { if (app.selected < 0) return; pushUndo('delete piece'); app.pieces.splice(app.selected, 1); app.selected = -1; buildTerrain(); saveTerrain(); }
 /** Capture a real terrain piece: touch corner A, the adjacent corner B (one edge) and any corner C of the opposite
  *  edge → an axis-aligned block rotated like that edge. Board inches. */
 function captureTap(p) {
   if (!p) return;
+  pushUndo('capture corner');
   app.capPts.push([p.x, p.y]);
   const n = app.capPts.length;
   if (n < 3) { toast(n === 1 ? 'Capture: now the next corner along one edge' : 'Capture: now a corner of the opposite edge'); return; }
@@ -273,7 +293,7 @@ function captureTap(p) {
   selectPiece(app.pieces.length - 1); saveTerrain();
   toast(`Captured ${W2}" × ${H2}" at ${Math.round(rot)}°`);
 }
-function rotateSelected(deg) { const p = app.pieces[app.selected]; if (!p) return; p.rot = ((p.rot || 0) + deg + 360) % 360; buildTerrain(); saveTerrain(); }
+function rotateSelected(deg) { const p = app.pieces[app.selected]; if (!p) return; pushUndo('rotate'); p.rot = ((p.rot || 0) + deg + 360) % 360; buildTerrain(); saveTerrain(); }
 
 // ---------------------------------------------------------------- pointing at the table
 const _ray = new THREE.Ray(), _inv = new THREE.Matrix4(), _plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), _hit = new THREE.Vector3();
@@ -296,26 +316,38 @@ function boardPoint(p) {
 function pressAt(hit, src) {
   if (!hit) return;
   if (app.tool === 'tape') {
+    pushUndo('tape');
     if (!app.tapeA) { app.tapeA = [hit.x, hit.y]; toast('Tape: tap the second point'); }
     else { app.marks.push({ kind: 'tape', a: app.tapeA, b: [hit.x, hit.y] }); app.tapeA = null; repaint(); }
     return;
   }
-  if (app.tool === 'ring') { app.marks.push({ kind: 'ring', x: hit.x, y: hit.y, r: app.ringR }); repaint(); return; }
+  if (app.tool === 'ring') { pushUndo('ring'); app.marks.push({ kind: 'ring', x: hit.x, y: hit.y, r: app.ringR }); repaint(); return; }
   // move: grab a piece
   const i = pieceAt(app.pieces, hit);
   selectPiece(i);
-  if (i >= 0) app.drag = { src, idx: i, dx: app.pieces[i].x - hit.x, dy: app.pieces[i].y - hit.y };
+  if (i >= 0) { pushUndo('move piece'); app.drag = { src, idx: i, dx: app.pieces[i].x - hit.x, dy: app.pieces[i].y - hit.y, rot0: app.pieces[i].rot || 0, yaw0: typeof src === 'number' ? ctrlYaw(src) : null }; }
 }
-function dragTo(hit) {
+/** Yaw of a controller (degrees, world, about the up axis). */
+function ctrlYaw(i) {
+  const q = controllers[i].c.getWorldQuaternion(new THREE.Quaternion());
+  const d = new THREE.Vector3(0, 0, -1).applyQuaternion(q);
+  return Math.atan2(d.x, d.z) * 180 / Math.PI;
+}
+function dragTo(hit, yaw) {
   const d = app.drag; if (!d || !hit) return;
   const p = app.pieces[d.idx]; if (!p) return;
   p.x = snap(hit.x + d.dx, 0.5); p.y = snap(hit.y + d.dy, 0.5);
-  const g = terrainGroup.children[d.idx]; if (g) g.position.set(p.x * IN, 0, p.y * IN);
+  if (yaw != null && d.yaw0 != null) {
+    let delta = yaw - d.yaw0; delta = ((delta + 540) % 360) - 180;            // twist since the grab, -180..180
+    p.rot = (Math.round((d.rot0 + (app.mirror ? -delta : delta)) / 5) * 5 + 360) % 360;
+  }
+  const g = terrainGroup.children[d.idx]; if (g) { g.position.set(p.x * IN, 0, p.y * IN); g.rotation.y = -(p.rot || 0) * Math.PI / 180; }
 }
 function release() { if (app.drag) { app.drag = null; buildTerrain(); saveTerrain(); } }
 
 // ---------------------------------------------------------------- calibration
 function calibTap(worldPos) {
+  pushUndo('corner tap');
   const sn = snapToScan({ x: worldPos.x, y: worldPos.y, z: worldPos.z });
   worldPos = new THREE.Vector3(sn.p.x, sn.p.y, sn.p.z);
   if (sn.snapped) toast('Snapped to a corner of the scanned table');
@@ -376,7 +408,12 @@ const controllers = [0, 1].map(i => {
   c.addEventListener('selectstart', () => onSelectStart(i));
   c.addEventListener('selectend', () => release());
   // grip (side trigger): grab the panel with the ray on it, carry it, drop it where the grip is released
-  c.addEventListener('squeezestart', () => { const ph = panelHit(i); if (ph) { c.attach(panel.mesh); panel.grabbed = i; } });
+  c.addEventListener('squeezestart', () => {
+    const ph = panelHit(i);
+    if (ph) { c.attach(panel.mesh); panel.grabbed = i; return; }
+    const src = c.userData.source;
+    if (src && src.handedness === 'right') undo();                 // right grip away from the panel: undo
+  });
   c.addEventListener('squeezeend', () => { if (panel.grabbed === i) { scene.attach(panel.mesh); panel.grabbed = null; } });
   c.addEventListener('connected', e => { c.userData.source = e.data; });
   c.addEventListener('disconnected', () => { c.userData.source = null; });
@@ -530,7 +567,7 @@ renderer.setAnimationLoop(() => {
     for (let i = 0; i < 2; i++) {
       const src = controllers[i].c.userData.source; if (!src) continue;
       const r = ctrlRay(i), hit = boardHit(r.origin, r.dir);
-      if (app.drag && app.drag.src === i) dragTo(hit);
+      if (app.drag && app.drag.src === i) dragTo(hit, ctrlYaw(i));
       if (hit && onBoard(hit)) hover = hit;
     }
     hoverRing.visible = !!hover && app.tool !== 'calib';
@@ -670,6 +707,7 @@ function applyAction(a, btn) {
   }
   else if (a.act === 'track') { app.track = a.v === 'local' ? 'local' : 'room'; if (app.track === 'local' && app.frame) applyFrame(); toast(app.track === 'room' ? 'Tracking: the table follows its room anchor' : 'Tracking: the table stays fixed in the headset space'); }
   else if (a.act === 'scan') { app.scan = !app.scan; planesAt = 0; if (!app.scan) planeGroup.clear(); }
+  else if (a.act === 'undo') undo();
   else if (a.act === 'ping') { /* status only */ }
   syncTools(); repaint(); sendStatus(); panel.draw();
 }
