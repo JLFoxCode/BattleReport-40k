@@ -107,7 +107,7 @@ const panel = new Panel(THREE, {
     { tab: 'table', title: 'Calibration' },
     { tab: 'table', buttons: [{ label: 'Calibrate (3 corners)', a: { tool: 'calib' }, w: 1.6 }, { label: 'Mirror', a: { act: 'mirror' } }, { label: 'Room scan', a: { act: 'scan' } }] },
     { tab: 'table', title: 'Marker calibration (camera, printed corner sheets)' },
-    { tab: 'table', buttons: [{ label: 'Marker calibration', a: { act: 'mcal' }, w: 1.4 }, { label: 'Finish now', a: { act: 'mcalDone' } }, { label: 'Tracking', a: { act: 'mtrack' } }] },
+    { tab: 'table', buttons: [{ label: 'Marker calibration', a: { act: 'mcal' }, w: 1.4 }, { label: 'Finish now', a: { act: 'mcalDone' } }, { label: 'Cancel', a: { act: 'mcalCancel' } }, { label: 'Tracking', a: { act: 'mtrack' } }] },
     { tab: 'table', title: 'Battlefield' },
     { tab: 'table', buttons: [{ label: 'Strike Force 44×60', a: { act: 'board', v: 'full' }, w: 1.3 }, { label: 'Incursion near half', a: { act: 'board', v: 'near' }, w: 1.3 }, { label: 'Incursion far half', a: { act: 'board', v: 'far' }, w: 1.3 }] },
     { tab: 'table', title: 'Fine adjustment' },
@@ -501,6 +501,11 @@ function mcalStart() {
   app.mtrack = false;
   cam.start().then(() => toast('Look at the corner sheets one after the other, move a little between looks')).catch(e => { toast('Camera: ' + (e.message || e)); app.mcal = null; });
 }
+function mcalCancel() {
+  app.mcal = null;
+  if (!app.mtrack) cam.stop();
+  toast('Marker calibration cancelled');
+}
 function mcalTick() {
   const m = app.mcal; if (!m) return;
   const fr = app.camFrame; if (!fr || fr.t === m.lastT) return;
@@ -526,15 +531,16 @@ function mcalFinish(manual) {
   }
   app.mcal = null;
   const w = m.obs[0].w;
-  const init = app.camcal ? { f: app.camcal.f, X: app.camcal.X } : { f: w * 0.5, X: fromRT([0, 0, 0], [0, -0.03, -0.08]) };
+  const init = app.camcal ? { f: app.camcal.f, X: app.camcal.X, dist: app.camcal.dist, cxy: app.camcal.cxy } : { f: w * 0.5, X: fromRT([0, 0, 0], [0, -0.03, -0.08]) };
   let res;
   try { res = guessLayout(m.obs, ids, init); } catch (e) { toast('Calibration failed: ' + (e.message || e)); return; }
-  if (!res || !(res.rms < 6)) { toast(`Calibration not good enough (error ${res ? res.rms.toFixed(1) : '?'} px) – try again, look at each sheet from closer`); return; }
-  app.camcal = { f: res.f, X: res.X }; store.set('camcal', app.camcal);
+  app.mcalLast = { obs: m.obs, ids, res };            // kept for analysis (BRVR.mcalLast)
+  if (!res || !(res.rms < 12)) { cam.stop(); toast(`Calibration not good enough (error ${res ? res.rms.toFixed(1) : '?'} px) – try again, look at each sheet from closer`); return; }
+  app.camcal = { f: res.f, X: res.X, dist: res.dist, cxy: res.cxy }; store.set('camcal', app.camcal);
   app.markers = res.layout; store.set('markers', app.markers);
   setTableFromY(res.Y, true);
   app.mtrack = true;
-  toast(`Table calibrated from ${ids.length} markers, ${m.obs.length} frames, error ${res.rms.toFixed(2)} px – tracking on`);
+  toast(`Table calibrated from ${ids.length} markers, ${m.obs.length} frames, error ${res.rms.toFixed(1)} px${res.rms > 5 ? ' (coarse)' : ''} – tracking on`);
   pushUndo('marker calibration');
 }
 /** Table pose (table → world) → the frame used by everything else; anchor unless tracking live. */
@@ -560,8 +566,8 @@ function trackTick() {
   const obs = [{ head, w: fr.w, h: fr.h, markers: usable }];
   const Y0 = app.Y || (app.frame ? frameToY(app.frame) : null); if (!Y0) return;
   let r;
-  try { r = solveAll(obs, app.markers, { f: app.camcal.f, X: app.camcal.X, Y: Y0 }, { f: true, X: true }, 25); } catch { return; }
-  if (!(r.rms < 4)) return;
+  try { r = solveAll(obs, app.markers, { f: app.camcal.f, X: app.camcal.X, Y: Y0, dist: app.camcal.dist, cxy: app.camcal.cxy }, { f: true, X: true, dist: true }, 25); } catch { return; }
+  if (!(r.rms < 8)) return;
   // smooth: blend rotation vector + translation
   const a = toRT(Y0), b = toRT(r.Y), k = 0.35;
   const Y = fromRT(a.rv.map((v, i) => v + (b.rv[i] - v) * k), a.t.map((v, i) => v + (b.t[i] - v) * k));
@@ -942,8 +948,9 @@ function applyAction(a, btn) {
   else if (a.act === 'track') { app.track = a.v === 'local' ? 'local' : 'room'; if (app.track === 'local' && app.frame) applyFrame(); toast(app.track === 'room' ? 'Tracking: the table follows its room anchor' : 'Tracking: the table stays fixed in the headset space'); }
   else if (a.act === 'scan') { app.scan = !app.scan; planesAt = 0; if (!app.scan) planeGroup.clear(); }
   else if (a.act === 'undo') undo();
-  else if (a.act === 'mcal') mcalStart();
+  else if (a.act === 'mcal') { if (app.mcal) mcalCancel(); else mcalStart(); }
   else if (a.act === 'mcalDone') mcalFinish(true);
+  else if (a.act === 'mcalCancel') mcalCancel();
   else if (a.act === 'mtrack') { app.mtrack = !app.mtrack; if (app.mtrack) { if (!app.camcal || !app.markers) { app.mtrack = false; toast('Run the marker calibration first'); } else cam.start().catch(e => toast(String(e.message || e))); } else if (app.frame) createAnchor().catch(() => {}); }
   else if (a.act === 'board') { app.board = a.v; rebuildBoard(); }
   else if (a.act === 'cam') {
@@ -996,4 +1003,4 @@ async function main() {
 main();
 
 // debug access for remote testing over DevTools (adb) – read-only use
-window.BRVR = { app, planesDebug: () => app.planesDebug, cam, mcalFinish, mcalStart, perf: () => ({ loopMs: +perf.loopMs.toFixed(2), frameMs: +perf.frameMs.toFixed(2), fps: perf.fps, render: renderer.info.render, mem: renderer.info.memory, rate: app.xr.session && app.xr.session.frameRate, rates: app.xr.rates, scale: renderer.xr.getFramebufferScaleFactor ? renderer.xr.getFramebufferScaleFactor() : null }), planes: () => app.planes.map(p => ({ label: p.label, o: p.orientation, n: p.corners.length, y: +p.y.toFixed(3) })), hits: () => controllers.map(c => c.hit), sources: () => (app.xr.session ? app.xr.session.inputSources.length : 0) };
+window.BRVR = { app, planesDebug: () => app.planesDebug, cam, mcalFinish, mcalStart, mcalLast: () => app.mcalLast, perf: () => ({ loopMs: +perf.loopMs.toFixed(2), frameMs: +perf.frameMs.toFixed(2), fps: perf.fps, render: renderer.info.render, mem: renderer.info.memory, rate: app.xr.session && app.xr.session.frameRate, rates: app.xr.rates, scale: renderer.xr.getFramebufferScaleFactor ? renderer.xr.getFramebufferScaleFactor() : null }), planes: () => app.planes.map(p => ({ label: p.label, o: p.orientation, n: p.corners.length, y: +p.y.toFixed(3) })), hits: () => controllers.map(c => c.hit), sources: () => (app.xr.session ? app.xr.session.inputSources.length : 0) };

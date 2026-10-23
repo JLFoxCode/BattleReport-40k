@@ -9,8 +9,10 @@
  *   onFrame({ t, w, h, markers: [{ id, corners: [{x, y}×4] }] })   corners in full-frame pixels, clockwise from top-left
  */
 export function createCamera(opts = {}) {
-  const scale = opts.scale || 0.4;                 // detect on a 512² copy of the 1280² frame
-  const interval = opts.interval || 120;           // ms between frames handed to the worker (≈ 8 fps)
+  // A lighter stream keeps the headset smooth: 640² @ 15 fps is enough for 52 mm markers at 40–80 cm (≈ 35–70 px).
+  const res = opts.res || 640, fpsWant = opts.fps || 15;
+  const scale = opts.scale || 1;                   // detect on the frame as is
+  const interval = opts.interval || 150;           // ms between frames handed to the worker (≈ 6 fps)
   let stream = null, video = null, timer = null, canvas = null, ctx = null, worker = null, busy = false, seq = 0;
   const st = { on: false, label: '', w: 0, h: 0, fps: 0, markers: [], frames: 0, error: '' };
   let fpsT = 0, fpsN = 0;
@@ -31,8 +33,8 @@ export function createCamera(opts = {}) {
       probe.getTracks().forEach(t => t.stop());
       dev = await pickDevice();
     }
-    const constraints = dev ? { deviceId: { exact: dev.deviceId }, width: { ideal: 1280 }, height: { ideal: 1280 }, frameRate: { ideal: 30 } }
-      : { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 1280 } };
+    const constraints = dev ? { deviceId: { exact: dev.deviceId }, width: { ideal: res }, height: { ideal: res }, frameRate: { ideal: fpsWant, max: fpsWant } }
+      : { facingMode: { ideal: 'environment' }, width: { ideal: res }, height: { ideal: res }, frameRate: { ideal: fpsWant, max: fpsWant } };
     stream = await navigator.mediaDevices.getUserMedia({ video: constraints });
     const track = stream.getVideoTracks()[0];
     st.label = track.label || (dev ? dev.label : '');

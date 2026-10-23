@@ -94,11 +94,16 @@ export function markerCorners(corner, turn) {
 // ---------------------------------------------------------------- projection
 /** table point → pixel. cam = inv(world→camera pose) i.e. the camera's view matrix (world → camera), Y = world→table pose
  *  (table → world). Camera looks down -z (WebXR / three.js), image x right, image y down, principal point at the centre. */
-export function project(f, cxy, viewCam, Y, P) {
+export function project(f, cxy, viewCam, Y, P, dist) {
   const w = apply(Y, P);                 // table → world
   const c = apply(viewCam, w);           // world → camera
   if (c[2] >= -1e-6) return null;        // behind the camera
-  return [cxy[0] + f * c[0] / -c[2], cxy[1] - f * c[1] / -c[2]];
+  let x = c[0] / -c[2], y = c[1] / -c[2];
+  if (dist) {                            // radial distortion k1 r² + k2 r⁴ (the Quest cameras are wide-angle)
+    const r2 = x * x + y * y, k = 1 + dist[0] * r2 + dist[1] * r2 * r2;
+    x *= k; y *= k;
+  }
+  return [cxy[0] + f * x, cxy[1] - f * y];
 }
 
 // ---------------------------------------------------------------- Levenberg–Marquardt (numeric Jacobian)
@@ -158,21 +163,25 @@ function solve(A, b, n) {
  *  layout: { [id]: { corner, turn } } (known or guessed); X0, f0: initial guesses.
  *  Solves f, X, Y (and optionally keeps X / f fixed). Returns { f, X, Y, rms, n }. */
 export function solveAll(obs, layout, init, fix = {}, maxIter = 80) {
-  const cxy0 = [obs[0].w / 2, obs[0].h / 2];
+  const cxy0 = init.cxy || [obs[0].w / 2, obs[0].h / 2];
+  const dist0 = init.dist || [0, 0];
   const X0 = toRT(init.X || I4()), Y0 = toRT(init.Y || I4());
   const f0 = init.f || obs[0].w * 0.75;
-  // parameter vector: [f?, X rv(3) t(3)?, Y rv(3) t(3)]
+  // parameter vector: [f?, dist k1 k2 + principal point?, X rv(3) t(3)?, Y rv(3) t(3)]
   const p0 = []; const idx = {};
   if (!fix.f) { idx.f = p0.length; p0.push(f0); }
+  if (!fix.dist) { idx.d = p0.length; p0.push(dist0[0], dist0[1], cxy0[0], cxy0[1]); }
   if (!fix.X) { idx.X = p0.length; p0.push(...X0.rv, ...X0.t); }
   idx.Y = p0.length; p0.push(...Y0.rv, ...Y0.t);
   const unpack = p => ({
     f: fix.f ? f0 : p[idx.f],
+    dist: fix.dist ? dist0 : [p[idx.d], p[idx.d + 1]],
+    cxy: fix.dist ? cxy0 : [p[idx.d + 2], p[idx.d + 3]],
     X: fix.X ? (init.X || I4()) : fromRT(p.slice(idx.X, idx.X + 3), p.slice(idx.X + 3, idx.X + 6)),
     Y: fromRT(p.slice(idx.Y, idx.Y + 3), p.slice(idx.Y + 3, idx.Y + 6))
   });
   const residuals = p => {
-    const { f, X, Y } = unpack(p);
+    const { f, dist, cxy, X, Y } = unpack(p);
     const out = [];
     for (const o of obs) {
       const viewCam = inv(mul(o.head, X));
@@ -180,7 +189,7 @@ export function solveAll(obs, layout, init, fix = {}, maxIter = 80) {
         const L = layout[m.id]; if (!L) continue;
         const P = markerCorners(L.corner, L.turn);
         for (let k = 0; k < 4; k++) {
-          const q = project(f, cxy0, viewCam, Y, P[k]);
+          const q = project(f, cxy, viewCam, Y, P[k], dist);
           if (!q) { out.push(50, 50); continue; }
           out.push((q[0] - m.corners[k].x) / 1, (q[1] - m.corners[k].y) / 1);
         }
@@ -188,11 +197,11 @@ export function solveAll(obs, layout, init, fix = {}, maxIter = 80) {
     }
     return out;
   };
-  const steps = p0.map((v, i) => (idx.f === i ? 1 : 1e-5));
+  const steps = p0.map((v, i) => (idx.f === i ? 1 : idx.d !== undefined && i >= idx.d && i < idx.d + 2 ? 1e-4 : idx.d !== undefined && i >= idx.d + 2 && i < idx.d + 4 ? 0.5 : 1e-5));
   const r = lm(residuals, p0, { maxIter, steps });
   const n = r.p.length ? residuals(r.p).length / 2 : 0;
-  const { f, X, Y } = unpack(r.p);
-  return { f, X, Y, rms: n ? Math.sqrt(r.cost / (n * 2)) : Infinity, n, iter: r.iter };
+  const { f, dist, cxy, X, Y } = unpack(r.p);
+  return { f, dist, cxy, X, Y, rms: n ? Math.sqrt(r.cost / (n * 2)) : Infinity, n, iter: r.iter };
 }
 
 /** Rough world position of each marker id from the marker's pixel size (distance = f·size/edge) and the head pose
@@ -243,14 +252,14 @@ export function guessLayout(obs, ids, init) {
     const layout = {};
     ids.forEach((id, i) => { layout[id] = { corner: perm[i], turn: 0 }; });
     const Y0 = initY(pos, ids, perm);
-    const coarse = solveAll(obs, layout, { f: init.f, X: init.X, Y: Y0 || init.Y }, {}, 30);
+    const coarse = solveAll(obs, layout, { f: init.f, X: init.X, Y: Y0 || init.Y }, { dist: true }, 30);
     // per-marker turn: evaluate the 4 options with the coarse (f, X, Y)
     for (const id of ids) {
       let bt = 0, be = Infinity;
       for (let t = 0; t < 4; t++) { layout[id].turn = t; const e = markerError(obs, layout, coarse, id); if (e < be) { be = e; bt = t; } }
       layout[id].turn = bt;
     }
-    const r = solveAll(obs, layout, { f: coarse.f, X: coarse.X, Y: coarse.Y });
+    const r = solveAll(obs, layout, { f: coarse.f, X: coarse.X, Y: coarse.Y, dist: init.dist, cxy: init.cxy }, init.fixDist ? { dist: true } : {});
     if (!best || r.rms < best.rms) best = Object.assign({ layout: JSON.parse(JSON.stringify(layout)) }, r);
   }
   return best;
@@ -283,7 +292,7 @@ export function markerError(obs, layout, sol, id) {
     for (const m of o.markers) {
       if (m.id !== id) continue;
       const P = markerCorners(layout[id].corner, layout[id].turn);
-      for (let k = 0; k < 4; k++) { const q = project(sol.f, cxy, viewCam, sol.Y, P[k]); if (!q) { s += 100; n++; continue; } s += Math.hypot(q[0] - m.corners[k].x, q[1] - m.corners[k].y); n++; }
+      for (let k = 0; k < 4; k++) { const q = project(sol.f, sol.cxy || cxy, viewCam, sol.Y, P[k], sol.dist); if (!q) { s += 100; n++; continue; } s += Math.hypot(q[0] - m.corners[k].x, q[1] - m.corners[k].y); n++; }
     }
   }
   return n ? s / n : Infinity;
