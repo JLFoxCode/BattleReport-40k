@@ -132,6 +132,7 @@ const panel = new Panel(THREE, {
     // Camera: passthrough camera + corner markers (vr/print/table-markers-10x15.pdf)
     { tab: 'camera', title: 'Passthrough camera & corner markers' },
     { tab: 'camera', buttons: [{ label: 'Camera on', a: { act: 'cam', v: 'on' } }, { label: 'Camera off', a: { act: 'cam', v: 'off' } }] },
+    { tab: 'camera', buttons: [{ label: 'Forget camera calibration', a: { act: 'camReset' }, w: 1.5 }] },
     { tab: 'camera', title: 'Corner sheets printed as (black square / centre from the corner)' },
     { tab: 'camera', buttons: [{ label: '10×15 at 100 % (5.25 cm / 5 cm)', a: { act: 'mscale', v: 1 }, w: 1.4 }, { label: 'Fitted on A4 (10.4 cm / 9.9 cm)', a: { act: 'mscale', v: 1.98 }, w: 1.4 }] },
     { tab: 'camera', buttons: [{ label: 'Square − 5 mm', a: { act: 'mscaleStep', v: -5 } }, { label: 'Square + 5 mm', a: { act: 'mscaleStep', v: 5 } }] },
@@ -542,16 +543,21 @@ function mcalFinish(manual) {
   if (plane && plane.n[1] < Math.cos(12 * Math.PI / 180)) plane = null;                 // not a level surface: ignore
   if (!plane && gaze.length) { const ys = gaze.map(g => g[1]).sort((a, b) => a - b); plane = { p: [gaze[0][0], ys[ys.length >> 1], gaze[0][2]], n: [0, 1, 0] }; }
   const tPrior = [0, -0.02, -0.05];                                                        // camera: a little below / in front of the eyes
-  const init = app.camcal ? { f: app.camcal.f, X: app.camcal.X, plane, tPrior, wPrior: 150 } : { f: w * 0.65, X: fromRT([0, 0, 0], tPrior), plane, tPrior, wPrior: 150 };
-  let res;
-  try { res = guessLayout(m.obs, ids, init); } catch (e) { toast('Calibration failed: ' + (e.message || e)); return; }
+  // solve from the neutral start and – if this headset was calibrated before – from the stored camera values; keep the better
+  const inits = [{ f: w * 1.3, X: fromRT([0, 0, 0], tPrior), plane, tPrior, wPrior: 150 }];
+  if (app.camcal && app.camcal.f > w * 0.5 && app.camcal.f < w * 2.5) inits.push({ f: app.camcal.f, X: app.camcal.X, plane, tPrior, wPrior: 150 });
+  let res = null;
+  for (const init of inits) {
+    try { const r = guessLayout(m.obs, ids, init); if (!res || r.rms < res.rms) res = r; } catch (e) { console.warn('calibration', e); }
+  }
+  if (!res) { toast('Calibration failed'); return; }
   app.mcalLast = { obs: m.obs, ids, res, plane };     // kept for analysis (BRVR.mcalLast)
   const tx = res && [res.X[12], res.X[13], res.X[14]];
   const headY = m.obs.reduce((s, o) => s + o.head[13], 0) / m.obs.length;
-  const bad = !res ? 'no solution' : !(res.rms < 12) ? `error ${res.rms.toFixed(1)} px` : (res.f < w * 0.35 || res.f > w * 1.3) ? 'implausible focal length' : Math.hypot(...tx) > 0.2 ? 'implausible camera offset' : res.Y[9] < Math.cos(15 * Math.PI / 180) ? 'table not level' : res.Y[13] > headY - 0.3 ? 'table too high' : '';
+  const bad = !res ? 'no solution' : !(res.rms < 12) ? `error ${res.rms.toFixed(1)} px` : (res.f < w * 0.5 || res.f > w * 2.5) ? 'implausible focal length' : Math.hypot(...tx) > 0.2 ? 'implausible camera offset' : res.Y[9] < Math.cos(15 * Math.PI / 180) ? 'table not level' : res.Y[13] > headY - 0.3 ? 'table too high' : '';
   if (bad) { cam.stop(); toast(`Calibration rejected (${bad}) – look at the sheets from above, from 2–3 spots, with two sheets in view at times`); return; }
   if (!plane) toast('No table surface from the headset – using the markers alone');
-  app.camcal = { f: res.f, X: res.X, dist: res.dist, cxy: res.cxy, tPrior }; store.set('camcal', app.camcal);
+  app.camcal = { f: res.f, X: res.X, dist: [0, 0], cxy: [w / 2, w / 2], tPrior }; store.set('camcal', app.camcal);
   app.markers = res.layout; store.set('markers', app.markers);
   setTableFromY(res.Y, true);
   app.mtrack = true; cam.setInterval(1000);                // tracking: one frame a second keeps the table in place
@@ -978,6 +984,7 @@ function applyAction(a, btn) {
     else { cam.stop(); if (app.frame) createAnchor().catch(() => {}); }
   }
   else if (a.act === 'board') { app.board = a.v; rebuildBoard(); }
+  else if (a.act === 'camReset') { app.camcal = null; app.markers = null; app.mtrack = false; store.set('camcal', null); store.set('markers', null); toast('Camera calibration forgotten – run the marker calibration again'); }
   else if (a.act === 'mscale' || a.act === 'mscaleStep') {
     app.markerScale = a.act === 'mscale' ? Number(a.v) : Math.max(0.3, app.markerScale + Number(a.v) / 52.5);
     store.set('markerScale', app.markerScale); setMarkerScale(app.markerScale);
