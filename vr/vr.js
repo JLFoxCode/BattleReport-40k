@@ -499,7 +499,7 @@ function mcalStart() {
   if (!renderer.xr.isPresenting) { toast('Marker calibration needs the headset'); return; }
   app.mcal = { obs: [], ids: new Set(), lastT: 0, views: [], prevHead: null, t0: performance.now(), lastKeep: 0, inView: [] };
   app.mtrack = false;
-  cam.start().then(() => toast('Look at the corner sheets one after the other, move a little between looks')).catch(e => { toast('Camera: ' + (e.message || e)); app.mcal = null; });
+  cam.start().then(() => { cam.setInterval(150); toast('Look at the corner sheets one after the other, move a little between looks'); }).catch(e => { toast('Camera: ' + (e.message || e)); app.mcal = null; });
 }
 function mcalCancel() {
   app.mcal = null;
@@ -539,7 +539,7 @@ function mcalFinish(manual) {
   app.camcal = { f: res.f, X: res.X, dist: res.dist, cxy: res.cxy }; store.set('camcal', app.camcal);
   app.markers = res.layout; store.set('markers', app.markers);
   setTableFromY(res.Y, true);
-  app.mtrack = true;
+  app.mtrack = true; cam.setInterval(1000);                // tracking: one frame a second keeps the table in place
   toast(`Table calibrated from ${ids.length} markers, ${m.obs.length} frames, error ${res.rms.toFixed(1)} px${res.rms > 5 ? ' (coarse)' : ''} – tracking on`);
   pushUndo('marker calibration');
 }
@@ -951,7 +951,11 @@ function applyAction(a, btn) {
   else if (a.act === 'mcal') { if (app.mcal) mcalCancel(); else mcalStart(); }
   else if (a.act === 'mcalDone') mcalFinish(true);
   else if (a.act === 'mcalCancel') mcalCancel();
-  else if (a.act === 'mtrack') { app.mtrack = !app.mtrack; if (app.mtrack) { if (!app.camcal || !app.markers) { app.mtrack = false; toast('Run the marker calibration first'); } else cam.start().catch(e => toast(String(e.message || e))); } else if (app.frame) createAnchor().catch(() => {}); }
+  else if (a.act === 'mtrack') {
+    app.mtrack = !app.mtrack;
+    if (app.mtrack) { if (!app.camcal || !app.markers) { app.mtrack = false; toast('Run the marker calibration first'); } else cam.start().then(() => cam.setInterval(1000)).catch(e => toast(String(e.message || e))); }
+    else { cam.stop(); if (app.frame) createAnchor().catch(() => {}); }
+  }
   else if (a.act === 'board') { app.board = a.v; rebuildBoard(); }
   else if (a.act === 'cam') {
     if (a.v === 'on') cam.start().then(() => toast('Camera: ' + cam.state().label + ' ' + cam.state().w + '×' + cam.state().h)).catch(e => toast('Camera: ' + (e && e.message || e)));

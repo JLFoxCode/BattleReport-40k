@@ -12,7 +12,7 @@ export function createCamera(opts = {}) {
   // A lighter stream keeps the headset smooth: 640² @ 15 fps is enough for 52 mm markers at 40–80 cm (≈ 35–70 px).
   const res = opts.res || 640, fpsWant = opts.fps || 15;
   const scale = opts.scale || 1;                   // detect on the frame as is
-  const interval = opts.interval || 150;           // ms between frames handed to the worker (≈ 6 fps)
+  let interval = opts.interval || 150;             // ms between frames handed to the worker (≈ 6 fps)
   let stream = null, video = null, timer = null, canvas = null, ctx = null, worker = null, busy = false, seq = 0;
   const st = { on: false, label: '', w: 0, h: 0, fps: 0, markers: [], frames: 0, error: '' };
   let fpsT = 0, fpsN = 0;
@@ -60,6 +60,8 @@ export function createCamera(opts = {}) {
     fpsT = performance.now(); fpsN = 0;
     timer = setInterval(tick, interval);
   }
+  /** change the detection cadence (calibration: 150 ms, tracking: 1000 ms is plenty) */
+  function setInterval_(ms) { interval = ms; if (timer) { clearInterval(timer); timer = setInterval(tick, interval); } }
 
   function tick() {
     if (!st.on || busy || !video || video.readyState < 2) return;
@@ -86,5 +88,5 @@ export function createCamera(opts = {}) {
     return c.toDataURL('image/jpeg', q);
   }
 
-  return { start, stop, snapshot, state: () => st };
+  return { start, stop, snapshot, state: () => st, setInterval: setInterval_ };
 }
