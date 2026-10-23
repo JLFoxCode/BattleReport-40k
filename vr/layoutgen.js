@@ -85,7 +85,11 @@ function candidate(rand, set, objectives) {
   const fits = poly => poly.every(c => c[0] >= EDGE && c[0] <= W - EDGE && c[1] >= EDGE && c[1] <= L - EDGE) && polys.every(q => gap(poly, q) >= 0);
   const add = (p, m) => { placed.push(p); polys.push(corners(p)); if (m) { placed.push(m); polys.push(corners(m)); } };
   // objectives of the first half (their partners are the mirror images); the centre one separately
-  const objs = (objectives || []).filter(o => Math.hypot(o[0] - cx, o[1] - cy) > 1);
+  // one central objective near the middle (the official single-central layouts put it up to ~4" off centre, inside
+  // the interlocking block); two central objectives → the polygons go elsewhere as a pair
+  const centrals = (objectives || []).filter(o => Math.hypot(o[0] - cx, o[1] - cy) <= 5);
+  const hasCentre = centrals.length === 1;
+  const objs = (objectives || []).filter(o => !(centrals.length === 1 && o === centrals[0]));
   const firstHalf = []; const used = new Set();
   for (let i = 0; i < objs.length; i++) {
     if (used.has(i)) continue;
@@ -94,7 +98,6 @@ function candidate(rand, set, objectives) {
     if (j >= 0) used.add(j);
     used.add(i); firstHalf.push(o);
   }
-  const hasCentre = (objectives || []).some(o => Math.hypot(o[0] - cx, o[1] - cy) <= 1);
   let pieces = set.pieces.slice();
   // the 8×11.5 polygon pair: with a single central objective the official interlocking centre block (17 of the 45
   // official layouts, at any angle), otherwise a normal point-symmetric pair placed like the other pieces
