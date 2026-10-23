@@ -30,9 +30,10 @@ const app = {
   code: null, net: null, state: null, status: 'idle',
   frame: null,                 // calibrated table frame (calib.js) – null until calibrated or restored
   calibPts: [],                // corners touched so far
-  tool: 'move',                // move | calib | tape | ring
+  tool: 'move',                // move | calib | tape | ring | capture
   ringR: 6,
   tapeA: null,
+  capPts: [],                  // corners of a real terrain piece touched so far (capture tool)
   marks: [],                   // { kind: 'ring' | 'tape', … } on the board texture
   band: 'none', grid: false, mirror: false,
   layoutId: null, pieces: [], selected: -1,
@@ -166,6 +167,26 @@ function addPiece(w, h, kind = 'ruin') {
   selectPiece(app.pieces.length - 1); saveTerrain();
 }
 function removeSelected() { if (app.selected < 0) return; app.pieces.splice(app.selected, 1); app.selected = -1; buildTerrain(); saveTerrain(); }
+/** Capture a real terrain piece: touch corner A, the adjacent corner B (one edge) and any corner C of the opposite
+ *  edge → an axis-aligned block rotated like that edge. Board inches. */
+function captureTap(p) {
+  if (!p) return;
+  app.capPts.push([p.x, p.y]);
+  const n = app.capPts.length;
+  if (n < 3) { toast(n === 1 ? 'Capture: now the next corner along one edge' : 'Capture: now a corner of the opposite edge'); return; }
+  const [a, b, c] = app.capPts; app.capPts = [];
+  const ex = [b[0] - a[0], b[1] - a[1]], w = Math.hypot(ex[0], ex[1]);
+  if (w < 1) { toast('Corners too close together – start again'); return; }
+  const ux = ex[0] / w, uy = ex[1] / w, nx = -uy, ny = ux;                 // unit edge + normal
+  const hSigned = (c[0] - a[0]) * nx + (c[1] - a[1]) * ny, h = Math.abs(hSigned), sgn = Math.sign(hSigned) || 1;
+  if (h < 1) { toast('Third corner must be on the opposite edge – start again'); return; }
+  const cx = (a[0] + b[0]) / 2 + nx * sgn * h / 2, cy = (a[1] + b[1]) / 2 + ny * sgn * h / 2;
+  const rot = ((Math.atan2(uy, ux) * 180 / Math.PI) % 360 + 360) % 360;
+  const [W2, H2] = [Math.round(w * 2) / 2, Math.round(h * 2) / 2];
+  app.pieces.push({ id: 'c' + Date.now().toString(36), kind: 'ruin', x: snap(cx, 0.25), y: snap(cy, 0.25), w: W2, h: H2, rot: Math.round(rot) });
+  selectPiece(app.pieces.length - 1); saveTerrain();
+  toast(`Captured ${W2}" × ${H2}" at ${Math.round(rot)}°`);
+}
 function rotateSelected(deg) { const p = app.pieces[app.selected]; if (!p) return; p.rot = ((p.rot || 0) + deg + 360) % 360; buildTerrain(); saveTerrain(); }
 
 // ---------------------------------------------------------------- pointing at the table
@@ -289,6 +310,7 @@ function tipPos(i) {
 }
 function onSelectStart(i) {
   if (app.tool === 'calib') { calibTap(tipPos(i)); return; }
+  if (app.tool === 'capture') { captureTap(boardPoint(tipPos(i))); return; }
   const r = ctrlRay(i);
   pressAt(boardHit(r.origin, r.dir), i);
 }
@@ -328,6 +350,7 @@ canvas.addEventListener('pointerdown', e => {
   mouse.down = true; mouse.lx = e.clientX; mouse.ly = e.clientY;
   const r = mouseRay(e), hit = boardHit(r.origin, r.dir);
   if (app.tool === 'calib') { toast('Calibration needs the headset – in the preview the table sits at the origin'); return; }
+  if (app.tool === 'capture') { captureTap(hit); return; }
   const before = app.drag;
   pressAt(hit, 'mouse');
   mouse.orbit = !app.drag && !before && app.tool === 'move';
@@ -458,7 +481,7 @@ function initUi() {
   ui.addEventListener('click', e => {
     const b = e.target.closest('button'); if (!b) return;
     const a = b.dataset;
-    if (a.tool) { app.tool = a.tool; app.tapeA = null; if (a.tool === 'calib') startCalibration(); }
+    if (a.tool) { app.tool = a.tool; app.tapeA = null; app.capPts = []; if (a.tool === 'calib') startCalibration(); if (a.tool === 'capture') toast('Capture: touch a corner of the real piece and press the trigger'); }
     else if (a.ring) { app.tool = 'ring'; app.ringR = Number(a.ring); }
     else if (a.add) { const [w, h] = a.add.split('x').map(Number); addPiece(w, h, a.kind || 'ruin'); }
     else if (a.act === 'rotl') rotateSelected(-15);
