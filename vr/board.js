@@ -120,18 +120,26 @@ export function paintBoard(ctx, o) {
 
   // measuring marks
   for (const m of o.marks || []) {
+    const br = (m.base || 0) / 25.4 / 2;                      // base radius in inches (0 = hull / tapped point)
     if (m.kind === 'ring') {
-      ctx.beginPath(); ctx.arc(m.x, m.y, m.r, 0, Math.PI * 2);
+      // range measured from the base edge: the ring is r + base radius from the centre
+      ctx.beginPath(); ctx.arc(m.x, m.y, m.r + br, 0, Math.PI * 2);
       ctx.fillStyle = 'rgba(80,220,255,0.12)'; ctx.fill(); ctx.strokeStyle = 'rgba(80,220,255,0.95)'; ctx.lineWidth = 0.12; ctx.stroke();
+      if (br) { ctx.beginPath(); ctx.arc(m.x, m.y, br, 0, Math.PI * 2); ctx.strokeStyle = 'rgba(80,220,255,0.8)'; ctx.lineWidth = 0.08; ctx.stroke(); }
       ctx.font = 'bold 1.2px sans-serif'; ctx.fillStyle = 'rgba(80,220,255,1)'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillText(m.r + '"', m.x, m.y - m.r - 0.8);
+      ctx.fillText(m.r + '"' + (br ? ' from base edge' : ''), m.x, m.y - m.r - br - 0.8);
     } else if (m.kind === 'tape') {
-      const d = Math.hypot(m.b[0] - m.a[0], m.b[1] - m.a[1]);
+      // distance between the two base edges (both ends the same base), never negative
+      const dc = Math.hypot(m.b[0] - m.a[0], m.b[1] - m.a[1]);
+      const d = Math.max(0, dc - 2 * br);
       ctx.beginPath(); ctx.moveTo(m.a[0], m.a[1]); ctx.lineTo(m.b[0], m.b[1]);
       ctx.strokeStyle = 'rgba(255,230,80,0.95)'; ctx.lineWidth = 0.15; ctx.stroke();
-      [m.a, m.b].forEach(([x, y]) => { ctx.beginPath(); ctx.arc(x, y, 0.3, 0, Math.PI * 2); ctx.fillStyle = 'rgba(255,230,80,1)'; ctx.fill(); });
+      [m.a, m.b].forEach(([x, y]) => {
+        ctx.beginPath(); ctx.arc(x, y, br || 0.3, 0, Math.PI * 2);
+        if (br) { ctx.strokeStyle = 'rgba(255,230,80,0.9)'; ctx.lineWidth = 0.1; ctx.stroke(); } else { ctx.fillStyle = 'rgba(255,230,80,1)'; ctx.fill(); }
+      });
       ctx.font = 'bold 1.3px sans-serif'; ctx.fillStyle = 'rgba(255,230,80,1)'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillText(d.toFixed(1) + '"', (m.a[0] + m.b[0]) / 2, (m.a[1] + m.b[1]) / 2 - 1);
+      ctx.fillText(d.toFixed(1) + '"' + (br ? ' edge to edge' : ''), (m.a[0] + m.b[0]) / 2, (m.a[1] + m.b[1]) / 2 - 1);
     }
   }
   ctx.restore();

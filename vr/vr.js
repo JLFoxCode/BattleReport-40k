@@ -33,6 +33,7 @@ const app = {
   calibPts: [],                // corners touched so far
   tool: 'move',                // move | calib | tape | ring | capture
   ringR: 6,
+  base: 32,                    // base diameter in mm the tape / rings measure from (0 = hull: the tapped point itself)
   tapeA: null,
   capPts: [],                  // corners of a real terrain piece touched so far (capture tool)
   marks: [],                   // { kind: 'ring' | 'tape', … } on the board texture
@@ -110,7 +111,9 @@ const panel = new Panel(THREE, {
     { tab: 'terrain', buttons: [{ label: 'Move', a: { tool: 'move' } }, { label: '⟲ 15°', a: { act: 'rotl' } }, { label: '⟳ 15°', a: { act: 'rotr' } }, { label: 'Delete', a: { act: 'del' } }] },
     { tab: 'terrain', buttons: [{ label: '+ 6×4', a: { add: '6x4' } }, { label: '+ 10×5', a: { add: '10x5' } }, { label: '+ 12×6', a: { add: '12x6' } }, { label: '+ crater', a: { add: '6x6', kind: 'crater' } }, { label: '+ wall', a: { add: '6x1', kind: 'wall' } }] },
     // Deployment helpers
-    { tab: 'deploy', title: 'Deployment helpers' },
+    { tab: 'deploy', title: 'Measure from the base edge (tap the base centre) – hull: the tapped point' },
+    { tab: 'deploy', buttons: [{ label: 'Hull', a: { base: 0 } }, { label: '25', a: { base: 25 } }, { label: '28', a: { base: 28 } }, { label: '32', a: { base: 32 } }, { label: '40', a: { base: 40 } }, { label: '50', a: { base: 50 } }, { label: '60', a: { base: 60 } }, { label: '80', a: { base: 80 } }] },
+    { tab: 'deploy', title: 'Tape = movement / distance · rings = range' },
     { tab: 'deploy', buttons: [{ label: '9" band', a: { act: 'band' } }, { label: 'Tape', a: { tool: 'tape' } }, { label: 'Clear marks', a: { act: 'clear' } }] },
     { tab: 'deploy', buttons: [{ label: '3" ring', a: { ring: 3 } }, { label: '6" ring', a: { ring: 6 } }, { label: '9" ring', a: { ring: 9 } }, { label: '12" ring', a: { ring: 12 } }] },
     // System
@@ -123,6 +126,7 @@ scene.add(panel.mesh);
 panel.setState(a => (a.tool && a.tool === app.tool) || (a.ring && app.tool === 'ring' && a.ring === app.ringR)
   || (a.act === 'band' && app.band === 'infiltrate') || (a.act === 'grid' && app.grid) || (a.act === 'mirror' && app.mirror)
   || (a.act === 'track' && a.v === app.track) || (a.act === 'scan' && app.scan) || (a.act === 'step' && a.v === app.step)
+  || (a.base !== undefined && Number(a.base) === app.base)
   || (a.layout !== undefined && (a.layout || null) === app.layoutId)
   || (a.deployment !== undefined && app.state && app.state.mission.deployment === a.deployment)
   || (a.attacker !== undefined && app.state && app.state.mission.attacker === a.attacker));
@@ -352,10 +356,10 @@ function pressAt(hit, src) {
   if (app.tool === 'tape') {
     pushUndo('tape');
     if (!app.tapeA) { app.tapeA = [hit.x, hit.y]; toast('Tape: tap the second point'); }
-    else { app.marks.push({ kind: 'tape', a: app.tapeA, b: [hit.x, hit.y] }); app.tapeA = null; repaint(); }
+    else { app.marks.push({ kind: 'tape', a: app.tapeA, b: [hit.x, hit.y], base: app.base }); app.tapeA = null; repaint(); }
     return;
   }
-  if (app.tool === 'ring') { pushUndo('ring'); app.marks.push({ kind: 'ring', x: hit.x, y: hit.y, r: app.ringR }); repaint(); return; }
+  if (app.tool === 'ring') { pushUndo('ring'); app.marks.push({ kind: 'ring', x: hit.x, y: hit.y, r: app.ringR, base: app.base }); repaint(); return; }
   // move: grab a piece
   const i = pieceAt(app.pieces, hit);
   selectPiece(i);
@@ -739,6 +743,7 @@ function applyAction(a, btn) {
   if (a.tool) { app.tool = a.tool; app.tapeA = null; app.capPts = []; if (a.tool === 'calib') startCalibration(); if (a.tool === 'capture') toast('Capture: touch a corner of the real piece and press the trigger'); }
   else if (a.ring) { app.tool = 'ring'; app.ringR = Number(a.ring); }
   else if (a.add) { const [w, h] = String(a.add).split('x').map(Number); if (w > 0 && h > 0) addPiece(w, h, a.kind || 'ruin'); }
+  else if (a.base !== undefined) { app.base = Number(a.base) || 0; toast(app.base ? `Measuring from the edge of ${app.base} mm bases` : 'Measuring from the tapped point (hull)'); }
   else if (a.layout !== undefined) setLayout(a.layout || null);
   else if (a.deployment !== undefined || a.attacker !== undefined) {
     if (!app.net) toast('Open a game first');
