@@ -16,6 +16,7 @@ import { TERRAIN_LAYOUTS, TERRAIN_KINDS } from '../data/terrain.js';
 import { IN, BOARD, frameFromCorners, frameMatrix, packFrame, unpackFrame, snap, onBoard } from './calib.js';
 import { PX, paintBoard, rectCorners, pieceAt, layoutPieces, pieceHeight } from './board.js';
 import { connect, session as apiSession } from './net.js';
+import { Panel, Hud } from './panel.js';
 
 const $ = s => document.querySelector(s);
 const $$ = s => Array.from(document.querySelectorAll(s));
@@ -72,6 +73,45 @@ const terrainGroup = new THREE.Group(); content.add(terrainGroup);
 const hoverRing = new THREE.Mesh(new THREE.RingGeometry(0.4 * IN, 0.6 * IN, 32), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.8, side: THREE.DoubleSide, depthTest: false }));
 hoverRing.rotation.x = -Math.PI / 2; hoverRing.visible = false; content.add(hoverRing);
 const calibDots = new THREE.Group(); scene.add(calibDots);
+
+// in-headset UI: 3D panel (no dom-overlay in the Quest browser) + HUD text in front of the camera
+const panel = new Panel(THREE, [
+  { title: 'Table' },
+  { buttons: [{ label: 'Calibrate', a: { tool: 'calib' } }, { label: 'Mirror', a: { act: 'mirror' } }, { label: '6" grid', a: { act: 'grid' } }, { label: 'Panel here', a: { act: 'panel' } }, { label: 'Leave', a: { act: 'enter' } }] },
+  { title: 'Terrain' },
+  { buttons: [{ label: '‹ Layout', a: { act: 'layoutPrev' } }, { label: 'Layout ›', a: { act: 'layoutNext' } }, { label: 'Reset', a: { act: 'reset' } }, { label: 'Capture piece', a: { tool: 'capture' }, w: 1.3 }] },
+  { buttons: [{ label: 'Move', a: { tool: 'move' } }, { label: '⟲ 15°', a: { act: 'rotl' } }, { label: '⟳ 15°', a: { act: 'rotr' } }, { label: 'Delete', a: { act: 'del' } }] },
+  { buttons: [{ label: '+ 6×4', a: { add: '6x4' } }, { label: '+ 10×5', a: { add: '10x5' } }, { label: '+ 12×6', a: { add: '12x6' } }, { label: '+ crater', a: { add: '6x6', kind: 'crater' } }, { label: '+ wall', a: { add: '6x1', kind: 'wall' } }] },
+  { title: 'Deployment' },
+  { buttons: [{ label: '9" band', a: { act: 'band' } }, { label: 'Tape', a: { tool: 'tape' } }, { label: '3"', a: { ring: 3 } }, { label: '6"', a: { ring: 6 } }, { label: '9"', a: { ring: 9 } }, { label: '12"', a: { ring: 12 } }, { label: 'Clear', a: { act: 'clear' } }] }
+], { width: 0.55 });
+panel.mesh.visible = false;
+scene.add(panel.mesh);
+panel.setState(a => (a.tool && a.tool === app.tool) || (a.ring && app.tool === 'ring' && a.ring === app.ringR)
+  || (a.act === 'band' && app.band === 'infiltrate') || (a.act === 'grid' && app.grid) || (a.act === 'mirror' && app.mirror));
+const hud = new Hud(THREE, { width: 0.5 });
+hud.mesh.position.set(0, -0.14, -0.7);
+camera.add(hud.mesh);
+scene.add(camera);
+let toastText = '', toastUntil = 0, noteText = '';
+/** Put the panel 0.75 m in front of the head, a little below eye level, facing the user. */
+function placePanel() {
+  const pos = new THREE.Vector3(), dir = new THREE.Vector3();
+  camera.getWorldPosition(pos); camera.getWorldDirection(dir);
+  dir.y = 0; dir.normalize();
+  panel.mesh.position.copy(pos).addScaledVector(dir, 0.75); panel.mesh.position.y -= 0.12;
+  panel.mesh.lookAt(pos.x, panel.mesh.position.y, pos.z);
+  panel.mesh.visible = true;
+}
+function hudRefresh() {
+  const now = performance.now();
+  const lines = [];
+  if (noteText) lines.push({ text: noteText, big: true, color: '#4ad6ff' });
+  if (app.tool === 'calib') lines.push({ text: $('#calib-info').textContent, color: '#ffd966' });
+  else if (app.tool === 'capture') lines.push({ text: 'Capture: touch the corners of the real piece (' + app.capPts.length + '/3)', color: '#ffd966' });
+  if (toastText && now < toastUntil) lines.push({ text: toastText });
+  hud.set(lines);
+}
 
 // preview only (no headset): a dark floor so the table is visible
 const floor = new THREE.Mesh(new THREE.PlaneGeometry(6, 6), new THREE.MeshBasicMaterial({ color: 0x1b1f27 }));
@@ -308,7 +348,18 @@ function tipPos(i) {
   if (j && j.visible !== false && j.matrixWorld) return new THREE.Vector3().setFromMatrixPosition(j.matrixWorld);
   return new THREE.Vector3().setFromMatrixPosition(c.matrixWorld);
 }
+const _rc = new THREE.Raycaster();
+/** Button of the 3D panel under the controller ray, or null. */
+function panelHit(i) {
+  if (!panel.mesh.visible) return null;
+  const r = ctrlRay(i);
+  _rc.set(r.origin, r.dir);
+  const h = _rc.intersectObject(panel.mesh, false)[0];
+  return h ? { b: panel.at(h.uv), uv: h.uv } : null;
+}
 function onSelectStart(i) {
+  const ph = panelHit(i);
+  if (ph) { if (ph.b) { applyAction(Object.assign({}, ph.b.a)); panel.draw(); } return; }   // a tap on the panel never reaches the table
   if (app.tool === 'calib') { calibTap(tipPos(i)); return; }
   if (app.tool === 'capture') { captureTap(boardPoint(tipPos(i))); return; }
   const r = ctrlRay(i);
@@ -327,6 +378,10 @@ function pollGamepads() {
     const b = gp.buttons[5];
     if (b && b.pressed && !st.btn5) { st.btn5 = true; if (app.selected >= 0 && app.tool === 'move') removeSelected(); }
     else if (b && !b.pressed) st.btn5 = false;
+    // A / X (buttons[4]) shows the panel in front of the user / hides it
+    const a4 = gp.buttons[4];
+    if (a4 && a4.pressed && !st.btn4) { st.btn4 = true; if (panel.mesh.visible) panel.mesh.visible = false; else placePanel(); }
+    else if (a4 && !a4.pressed) st.btn4 = false;
   }
 }
 
@@ -393,6 +448,11 @@ renderer.setAnimationLoop(() => {
     }
     hoverRing.visible = !!hover && app.tool !== 'calib';
     if (hover) hoverRing.position.set(hover.x * IN, 0.003, hover.y * IN);
+    // panel hover (either controller)
+    let ph = null;
+    for (let i = 0; i < 2 && !ph; i++) if (controllers[i].c.userData.source) ph = panelHit(i);
+    panel.hover(ph ? ph.uv : null);
+    hudRefresh();
   } else placeCamera();
   renderer.render(scene, camera);
 });
@@ -421,6 +481,7 @@ async function enterXR() {
   await renderer.xr.setSession(session);
   $('#enter').textContent = 'Leave';
   applyFrame();
+  setTimeout(placePanel, 600);     // after the first frames, when the head pose is known
   if (await restoreAnchor(session)) toast('Table position restored from the last session');
   else if (app.frame) toast('Table position from the last calibration – recalibrate if it does not fit');
   else { startCalibration(); toast('Calibrate the table first'); }
@@ -430,6 +491,7 @@ async function enterXR() {
 function toast(msg) {
   const t = $('#toast'); t.textContent = msg; t.classList.add('on');
   clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove('on'), 3500);
+  toastText = msg; toastUntil = performance.now() + 4000;
 }
 function syncTools() {
   $$('[data-tool]').forEach(b => b.classList.toggle('on', b.dataset.tool === app.tool));
@@ -503,14 +565,23 @@ function applyAction(a, btn) {
   else if (a.act === 'mirror') { app.mirror = !app.mirror; applyMirror(); }
   else if (a.act === 'enter') { if (app.xr.session) app.xr.session.end(); else enterXR(); }
   else if (a.act === 'open') openGame($('#code').value);
-  else if (a.act === 'panel') { const p = $('#panels'); p.hidden = !p.hidden; if (btn) btn.textContent = p.hidden ? 'Menu' : 'Hide'; }
+  else if (a.act === 'panel') {
+    if (renderer.xr.isPresenting) placePanel();
+    else { const p = $('#panels'); p.hidden = !p.hidden; if (btn) btn.textContent = p.hidden ? 'Menu' : 'Hide'; }
+  }
+  else if (a.act === 'layoutPrev' || a.act === 'layoutNext') {
+    const ids = [null].concat(TERRAIN_LAYOUTS.map(t => t.id));
+    const i = Math.max(0, ids.indexOf(app.layoutId));
+    setLayout(ids[(i + (a.act === 'layoutNext' ? 1 : ids.length - 1)) % ids.length]);
+  }
   else if (a.act === 'ping') { /* status only */ }
-  syncTools(); repaint(); sendStatus();
+  syncTools(); repaint(); sendStatus(); panel.draw();
 }
 /** Text from the remote control – shown large in the headset until the next one (empty = hide). */
 function note(text) {
   const el = $('#note');
   el.textContent = text; el.hidden = !text;
+  noteText = text;
 }
 /** Tell the remote control what the headset is doing (signal 'vr.status'). */
 let statusTimer = null;
