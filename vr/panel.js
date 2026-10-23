@@ -36,6 +36,8 @@ export class Panel {
     this.draw();
   }
   setTab(id) { if (this.tabs.some(t => t.id === id)) { this.tab = id; this.layout(); this.draw(); } }
+  /** replace the buttons of the row with this key (dynamic rows, e.g. the list of games) */
+  setRow(key, buttons) { const r = this.rows.find(x => x.key === key); if (!r) return; r.buttons = buttons; this.layout(); this.draw(); }
   layout() {
     this.buttons = []; this.titles = [];
     let y = this.pad;

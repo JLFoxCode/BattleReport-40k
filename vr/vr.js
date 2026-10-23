@@ -15,7 +15,7 @@ import { WH } from '../data/rules.js';
 import { TERRAIN_LAYOUTS, TERRAIN_KINDS } from '../data/terrain.js';
 import { IN, BOARD, frameFromCorners, frameMatrix, packFrame, unpackFrame, snap, onBoard } from './calib.js';
 import { PX, paintBoard, rectCorners, pieceAt, layoutPieces, pieceHeight } from './board.js';
-import { connect, session as apiSession } from './net.js';
+import { connect, session as apiSession, listGames } from './net.js';
 import { Panel, Hud } from './panel.js';
 import { createCamera } from './camera.js';
 import { guessLayout, solveAll, fromRT, toRT, apply as mApply, fitPlane, setMarkerScale } from './markercal.js';
@@ -98,7 +98,9 @@ function layoutRows() {
 const panel = new Panel(THREE, {
   tabs: [{ id: 'table', label: 'Table' }, { id: 'mission', label: 'Mission' }, { id: 'terrain', label: 'Terrain' }, { id: 'deploy', label: 'Deploy' }, { id: 'camera', label: 'Camera' }, { id: 'system', label: 'System' }],
   rows: [
-    // Mission: the Deployment card of the game (zones + objectives on the table)
+    // Mission: pick the game, then its Deployment card (zones + objectives on the table)
+    { tab: 'mission', title: 'Game' },
+    { tab: 'mission', key: 'games', buttons: [{ label: 'Loading games…', a: { act: 'games' } }] },
     { tab: 'mission', title: 'Deployment card' },
     { tab: 'mission', buttons: WH.DEPLOYMENTS.slice(0, 3).map(n => ({ label: n, a: { deployment: n } })) },
     { tab: 'mission', buttons: WH.DEPLOYMENTS.slice(3, 6).map(n => ({ label: n, a: { deployment: n } })) },
@@ -151,6 +153,7 @@ panel.setState(a => (a.tool && a.tool === app.tool) || (a.ring && app.tool === '
   || (a.act === 'mcal' && !!app.mcal) || (a.act === 'mtrack' && app.mtrack) || (a.act === 'board' && a.v === app.board)
   || (a.act === 'mscale' && Math.abs(Number(a.v) - app.markerScale) < 0.02)
   || (a.layout !== undefined && (a.layout || null) === app.layoutId)
+  || (a.open !== undefined && a.open === app.code)
   || (a.deployment !== undefined && app.state && app.state.mission.deployment === a.deployment)
   || (a.attacker !== undefined && app.state && app.state.mission.attacker === a.attacker));
 const hud = new Hud(THREE, { width: 0.5 });
@@ -228,6 +231,7 @@ function hudRefresh() {
   const cs = cam.state();
   if (cs.on) lines.push({ text: `Camera ${cs.w}×${cs.h} · ${cs.fps} fps · markers: ${cs.markers.length ? cs.markers.map(m => m.id + 1).join(', ') : 'none'}` + (cs.error ? ' · ' + cs.error : ''), color: '#9ef' });
   const st = app.state;
+  if (!st && !app.mcal && app.tool !== 'calib') lines.push({ text: app.signedIn === false ? 'No game: sign in on the main page of this server in this browser, then open the game (menu → VR table setup).' : 'No game open – Mission tab → Game, or start from the menu with the game code.', color: '#ffd966' });
   if (st && !noteText && app.tool !== 'calib') lines.push({ text: (st.mission.deployment || 'No deployment card') + (app.layoutId ? ' · ' + ((layoutById(app.layoutId) || {}).name || '') : ''), color: '#9aa3b2' });
   hud.set(lines);
 }
@@ -907,6 +911,16 @@ function onState(s) {
   }
   repaint();
 }
+/** The account's open games as buttons in the Mission tab (needs the sign-in on the main page of this server). */
+async function refreshGames() {
+  let games = null, ses = null;
+  try { ses = await apiSession(); if (ses && ses.user) games = await listGames(); } catch (e) { games = null; }
+  app.signedIn = !!(ses && ses.user);
+  if (!app.signedIn) { panel.setRow('games', [{ label: 'Not signed in – sign in on the main page of this server, then reload', a: { act: 'games' }, w: 3 }]); return; }
+  const open = (games || []).filter(g => g.stage !== 'over').slice(0, 8);
+  if (!open.length) { panel.setRow('games', [{ label: 'No open games – create one on the tablet, then refresh', a: { act: 'games' }, w: 3 }]); return; }
+  panel.setRow('games', open.map(g => ({ label: g.code + ' ' + ((g.players || []).filter(Boolean).join(' vs ') || ''), a: { open: g.code }, w: 1.5 })).concat([{ label: '↻', a: { act: 'games' }, w: 0.5 }]));
+}
 function openGame(code) {
   code = String(code || '').trim().toUpperCase();
   if (app.net) { app.net.close(); app.net = null; }
@@ -984,6 +998,8 @@ function applyAction(a, btn) {
     else { cam.stop(); if (app.frame) createAnchor().catch(() => {}); }
   }
   else if (a.act === 'board') { app.board = a.v; rebuildBoard(); }
+  else if (a.open !== undefined) openGame(a.open);
+  else if (a.act === 'games') refreshGames();
   else if (a.act === 'camReset') { app.camcal = null; app.markers = null; app.mtrack = false; store.set('camcal', null); store.set('markers', null); toast('Camera calibration forgotten – run the marker calibration again'); }
   else if (a.act === 'mscale' || a.act === 'mscaleStep') {
     app.markerScale = a.act === 'mscale' ? Number(a.v) : Math.max(0.3, app.markerScale + Number(a.v) / 52.5);
@@ -1034,6 +1050,8 @@ async function main() {
   $('#xr-note').textContent = xrOk ? 'Mixed reality (passthrough) available' : vrOk ? 'VR available (no passthrough – the table is shown at 75 cm height)' : 'No headset detected – 3D preview. Open this page in the Meta Quest browser.';
   const ses = await apiSession();
   if (ses && ses.user) $('#user').textContent = ses.user;
+  app.signedIn = !!(ses && ses.user);
+  refreshGames();
   const m = location.hash.match(/#\/g\/([A-Z0-9]{3,8})/i);
   openGame(m ? m[1] : store.get('code', ''));
   buildTerrain(); repaint();
