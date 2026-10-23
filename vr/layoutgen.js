@@ -95,12 +95,15 @@ function candidate(rand, set, objectives) {
     used.add(i); firstHalf.push(o);
   }
   const hasCentre = (objectives || []).some(o => Math.hypot(o[0] - cx, o[1] - cy) <= 1);
-  const pieces = set.pieces.slice();
+  let pieces = set.pieces.slice();
+  // the 8×11.5 polygon pair: with a single central objective the official interlocking centre block (17 of the 45
+  // official layouts, at any angle), otherwise a normal point-symmetric pair placed like the other pieces
+  const useBlock = set.centreBlock && CENTRE_BLOCK && hasCentre;
+  if (set.centreBlock && CENTRE_BLOCK && !useBlock) pieces = [[CENTRE_BLOCK[0].w, CENTRE_BLOCK[0].h, true, CENTRE_BLOCK[0].poly]].concat(pieces);
   const tallIdx = pieces.map((p, i) => (p[2] ? i : -1)).filter(i => i >= 0);
-  // centre: the official interlocking 8×11.5 pair (quarter turn at random), or a single self-symmetric piece
-  if (set.centreBlock && CENTRE_BLOCK) {
-    const q = Math.floor(rand() * 4);
-    const pair = CENTRE_BLOCK.map(b => { const [dx, dy] = rotPoint([b.dx, b.dy], q); return { kind: 'ruin', w: b.w, h: b.h, rot: q * 90, tall: true, x: +(cx + dx).toFixed(2), y: +(cy + dy).toFixed(2), poly: b.poly }; });
+  if (useBlock) {
+    const ang = 15 * Math.floor(rand() * 24), a = ang * Math.PI / 180, ca = Math.cos(a), sa = Math.sin(a);
+    const pair = CENTRE_BLOCK.map(b => ({ kind: 'ruin', w: b.w, h: b.h, rot: ang, tall: true, x: +(cx + b.dx * ca - b.dy * sa).toFixed(2), y: +(cy + b.dx * sa + b.dy * ca).toFixed(2), poly: b.poly }));
     if (!pair.every(p => corners(p).every(c => c[0] >= EDGE && c[0] <= W - EDGE && c[1] >= EDGE && c[1] <= L - EDGE))) { FAIL.centre = (FAIL.centre || 0) + 1; return null; }
     for (const p of pair) { placed.push(p); polys.push(corners(p)); }
   } else if (set.centre && (hasCentre || !objectives || !objectives.length)) {
@@ -117,13 +120,13 @@ function candidate(rand, set, objectives) {
     const k = tallIdx.find(i => !cover.includes(i));
     if (k === undefined) break;
     cover.push(k);
-    const [w, h, tall] = pieces[k];
+    const [w, h, tall, shape] = pieces[k];
     let ok = false;
     for (let t = 0; t < 60 && !ok; t++) {
       const rot = ROTS[Math.floor(rand() * ROTS.length)], r = rot * Math.PI / 180, c = Math.cos(r), sn = Math.sin(r);
       const lx = (rand() - 0.5) * (w - 3), ly = (rand() - 0.5) * (h - 3);           // objective ≥ 1.5" inside the edges
-      const p = { kind: 'ruin', w, h, rot, tall, x: +(o[0] - (lx * c - ly * sn)).toFixed(2), y: +(o[1] - (lx * sn + ly * c)).toFixed(2) };
-      const m = { kind: 'ruin', w, h, rot, tall, x: +(W - p.x).toFixed(2), y: +(L - p.y).toFixed(2) };
+      const p = Object.assign({ kind: 'ruin', w, h, rot, tall, x: +(o[0] - (lx * c - ly * sn)).toFixed(2), y: +(o[1] - (lx * sn + ly * c)).toFixed(2) }, shape ? { poly: shape } : {});
+      const m = Object.assign({ kind: 'ruin', w, h, rot: shape ? (rot + 180) % 360 : rot, tall, x: +(W - p.x).toFixed(2), y: +(L - p.y).toFixed(2) }, shape ? { poly: shape } : {});
       const pp = corners(p), mp = corners(m);
       if (!fits(pp) || gap(pp, mp) < 0 || !fits(mp)) continue;
       add(p, m); ok = true;
@@ -133,12 +136,12 @@ function candidate(rand, set, objectives) {
   // the rest at random
   for (let i = 0; i < pieces.length; i++) {
     if (cover.includes(i)) continue;
-    const [w, h, tall] = pieces[i];
+    const [w, h, tall, shape] = pieces[i];
     let ok = false;
     for (let t = 0; t < 40 && !ok; t++) {
       const rot = ROTS[Math.floor(rand() * ROTS.length)];
-      const p = { kind: 'ruin', w, h, rot, tall, x: +(1 + rand() * (W - 2)).toFixed(2), y: +(1 + rand() * (L / 2 + 3)).toFixed(2) };
-      const m = { kind: 'ruin', w, h, rot, tall, x: +(W - p.x).toFixed(2), y: +(L - p.y).toFixed(2) };
+      const p = Object.assign({ kind: 'ruin', w, h, rot, tall, x: +(1 + rand() * (W - 2)).toFixed(2), y: +(1 + rand() * (L / 2 + 3)).toFixed(2) }, shape ? { poly: shape } : {});
+      const m = Object.assign({ kind: 'ruin', w, h, rot: shape ? (rot + 180) % 360 : rot, tall, x: +(W - p.x).toFixed(2), y: +(L - p.y).toFixed(2) }, shape ? { poly: shape } : {});
       const pp = corners(p), mp = corners(m);
       if (!fits(pp) || gap(pp, mp) < 0 || !fits(mp)) continue;
       add(p, m); ok = true;
