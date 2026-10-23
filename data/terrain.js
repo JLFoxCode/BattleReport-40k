@@ -226,5 +226,14 @@ export const TERRAIN_LAYOUTS = [
 ];
 
 export const TERRAIN_KINDS = { ruin: 'Ruine', wall: 'Mauer', crate: 'Container', crater: 'Krater', wood: 'Wald' };
+/** Chapter Approved Tournament Companion 2025-26, "Recommended terrain layouts" per deployment card. */
+export const RECOMMENDED_LAYOUTS = {
+  'Tipping Point': ['ca2025-1', 'ca2025-2', 'ca2025-4', 'ca2025-6', 'ca2025-7', 'ca2025-8'],
+  'Hammer and Anvil': ['ca2025-1', 'ca2025-7', 'ca2025-8'],
+  'Search and Destroy': ['ca2025-1', 'ca2025-2', 'ca2025-3', 'ca2025-4', 'ca2025-6'],
+  'Crucible of Battle': ['ca2025-1', 'ca2025-2', 'ca2025-4', 'ca2025-6', 'ca2025-8'],
+  'Sweeping Engagement': ['ca2025-3', 'ca2025-5'],
+  'Dawn of War': ['ca2025-5']
+};
 /** Drawn heights (inches) of the two classes from the card's terrain key. */
 export const TERRAIN_HEIGHT = { tall: 5, low: 2 };

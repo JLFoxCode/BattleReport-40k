@@ -12,7 +12,7 @@
  * Without a headset the page shows the same scene as a 3D preview (mouse: drag = orbit, wheel = zoom). */
 import * as THREE from './vendor/three.module.min.js';   // no import map: the online server's CSP allows no inline scripts
 import { WH } from '../data/rules.js';
-import { TERRAIN_LAYOUTS, TERRAIN_KINDS } from '../data/terrain.js';
+import { TERRAIN_LAYOUTS, TERRAIN_KINDS, RECOMMENDED_LAYOUTS } from '../data/terrain.js';
 import { IN, BOARD, frameFromCorners, frameMatrix, packFrame, unpackFrame, snap, onBoard } from './calib.js';
 import { PX, paintBoard, rectCorners, pieceAt, layoutPieces, pieceHeight } from './board.js';
 import { connect, session as apiSession, listGames } from './net.js';
@@ -92,11 +92,14 @@ const calibDots = new THREE.Group(); scene.add(calibDots);
 
 // in-headset UI: 3D panel (no dom-overlay in the Quest browser) + HUD text in front of the camera
 /** One button per layout (by name), four per row. */
+const recommended = () => RECOMMENDED_LAYOUTS[cur().mission.deployment] || null;
+const layoutButtons = (from, to) => TERRAIN_LAYOUTS.slice(from, to).map(t => { const rec = recommended(); return { label: (t.short || t.name) + (rec ? (rec.includes(t.id) ? ' ✓' : ' ·') : ''), a: { layout: t.id } }; });
 function layoutRows() {
   const rows = [];
-  for (let i = 0; i < TERRAIN_LAYOUTS.length; i += 4) rows.push({ tab: 'terrain', buttons: TERRAIN_LAYOUTS.slice(i, i + 4).map(t => ({ label: t.short || t.name, a: { layout: t.id } })) });
+  for (let i = 0; i < TERRAIN_LAYOUTS.length; i += 4) rows.push({ tab: 'terrain', key: 'layouts' + i, buttons: layoutButtons(i, i + 4) });
   return rows;
 }
+function refreshLayoutRows() { for (let i = 0; i < TERRAIN_LAYOUTS.length; i += 4) panel.setRow('layouts' + i, layoutButtons(i, i + 4)); }
 const panel = new Panel(THREE, {
   tabs: [{ id: 'table', label: 'Table' }, { id: 'mission', label: 'Mission' }, { id: 'terrain', label: 'Terrain' }, { id: 'deploy', label: 'Deploy' }, { id: 'camera', label: 'Camera' }, { id: 'system', label: 'System' }],
   rows: [
@@ -119,7 +122,7 @@ const panel = new Panel(THREE, {
     { tab: 'table', title: 'Tracking' },
     { tab: 'table', buttons: [{ label: 'Room anchor', a: { act: 'track', v: 'room' } }, { label: 'Local (fixed)', a: { act: 'track', v: 'local' } }, { label: '6" grid', a: { act: 'grid' } }] },
     // Terrain
-    { tab: 'terrain', title: 'Layout' },
+    { tab: 'terrain', title: 'Layout (✓ = recommended for the chosen deployment card)' },
     ...layoutRows(),
     { tab: 'terrain', buttons: [{ label: 'No layout', a: { layout: '' } }, { label: 'Reset layout', a: { act: 'reset' } }, { label: 'Capture piece', a: { tool: 'capture' }, w: 1.3 }] },
     { tab: 'terrain', title: 'Pieces (trigger: grab & move, twist: rotate, B/Y: delete)' },
@@ -231,7 +234,11 @@ function hudRefresh() {
   const cs = cam.state();
   if (cs.on) lines.push({ text: `Camera ${cs.w}×${cs.h} · ${cs.fps} fps · markers: ${cs.markers.length ? cs.markers.map(m => m.id + 1).join(', ') : 'none'}` + (cs.error ? ' · ' + cs.error : ''), color: '#9ef' });
   const st = cur();
-  if (!noteText && app.tool !== 'calib') lines.push({ text: (st.mission.deployment || 'No deployment card') + (app.layoutId ? ' · ' + ((layoutById(app.layoutId) || {}).name || '') : '') + (app.state ? '' : ' · local'), color: '#9aa3b2' });
+  if (!noteText && app.tool !== 'calib') {
+    const rec = recommended();
+    const layoutNote = app.layoutId ? ' · ' + ((layoutById(app.layoutId) || {}).name || '') + (rec && !rec.includes(app.layoutId) ? ' (not recommended for this card)' : '') : rec ? ' · recommended layouts: ' + rec.map(id => id.replace('ca2025-', '')).join(', ') : '';
+    lines.push({ text: (st.mission.deployment || 'No deployment card') + layoutNote + (app.state ? '' : ' · local'), color: '#9aa3b2' });
+  }
   hud.set(lines);
 }
 
@@ -914,7 +921,9 @@ function setStatus(s) {
   $('#login').hidden = s !== 'login';
 }
 function onState(s) {
+  const before = app.state && app.state.mission.deployment;
   app.state = s;
+  if (before !== s.mission.deployment) refreshLayoutRows();
   $('#players').textContent = s.players.map(p => p.name).join(' vs ');
   const id = s.mission && s.mission.terrainLayout ? s.mission.terrainLayout : null;
   if (id !== app.layoutId) {
@@ -1030,7 +1039,7 @@ function applyAction(a, btn) {
   else if (a.act === 'nudge') nudge(a.v);
   else if (a.tab) panel.setTab(a.tab);
   else if (a.act === 'ping') { /* status only */ }
-  syncTools(); repaint(); sendStatus(); panel.draw();
+  syncTools(); repaint(); sendStatus(); refreshLayoutRows(); panel.draw();
 }
 /** Text from the remote control – shown large in the headset until the next one (empty = hide). */
 function note(text) {
