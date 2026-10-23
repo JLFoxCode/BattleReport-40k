@@ -23,6 +23,12 @@ export class Panel {
     this.mesh = new THREE.Mesh(new THREE.PlaneGeometry(width, width * this.pxH / this.pxW),
       new THREE.MeshBasicMaterial({ map: this.tex, transparent: true, side: THREE.DoubleSide, depthTest: false, depthWrite: false }));
     this.mesh.renderOrder = 10;
+    this.tex.generateMipmaps = false; this.tex.minFilter = THREE.LinearFilter;
+    // hover highlight: a translucent plane moved over the pointed button (no texture upload per hover change)
+    this.hl = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.22, depthTest: false, depthWrite: false }));
+    this.hl.renderOrder = 11; this.hl.visible = false; this.hl.position.z = 0.001;
+    this.mesh.add(this.hl);
+    this.width = width;
     this.buttons = [];                             // { label, a, x, y, w, h, isTab }
     this.titles = [];
     this.hovered = null; this.isOn = () => false;
@@ -65,9 +71,9 @@ export class Panel {
       c.fillText(t.text.toUpperCase(), this.pad + 8, t.y + this.titleH / 2 + 4);
     }
     for (const b of this.buttons) {
-      const on = b.isTab ? b.a.tab === this.tab : this.isOn(b.a), hov = this.hovered === b;
-      c.fillStyle = on ? (b.isTab ? '#2f5fc4' : '#4ad6ff') : hov ? '#334159' : (b.isTab ? '#141922' : '#1c2230');
-      c.strokeStyle = hov ? '#ffffff' : on ? (b.isTab ? '#6f97f2' : '#4ad6ff') : '#3a4356'; c.lineWidth = hov ? 4 : 2;
+      const on = b.isTab ? b.a.tab === this.tab : this.isOn(b.a);
+      c.fillStyle = on ? (b.isTab ? '#2f5fc4' : '#4ad6ff') : (b.isTab ? '#141922' : '#1c2230');
+      c.strokeStyle = on ? (b.isTab ? '#6f97f2' : '#4ad6ff') : '#3a4356'; c.lineWidth = 2;
       roundRect(c, b.x, b.y, b.w, b.h, 16); c.fill(); c.stroke();
       c.font = (on ? '700 ' : '500 ') + (b.isTab ? '34px' : '30px') + ' sans-serif';
       c.fillStyle = on && !b.isTab ? '#06202a' : '#e8ecf2'; c.textAlign = 'center';
@@ -83,7 +89,16 @@ export class Panel {
   }
   hover(uv) {
     const b = this.at(uv);
-    if (b !== this.hovered) { this.hovered = b; this.draw(); }
+    if (b !== this.hovered) {
+      this.hovered = b;
+      if (b) {
+        const sx = this.width / this.pxW, sy = (this.width * this.pxH / this.pxW) / this.pxH;
+        this.hl.scale.set(b.w * sx, b.h * sy, 1);
+        this.hl.position.x = (b.x + b.w / 2 - this.pxW / 2) * sx;
+        this.hl.position.y = (this.pxH / 2 - (b.y + b.h / 2)) * sy;
+        this.hl.visible = true;
+      } else this.hl.visible = false;
+    }
     return b;
   }
 }
@@ -94,6 +109,7 @@ export class Hud {
     this.pxW = 1024; this.pxH = 480;
     this.canvas = document.createElement('canvas'); this.canvas.width = this.pxW; this.canvas.height = this.pxH;
     this.tex = new THREE.CanvasTexture(this.canvas); this.tex.colorSpace = THREE.SRGBColorSpace;
+    this.tex.generateMipmaps = false; this.tex.minFilter = THREE.LinearFilter;
     const w = opts.width || 0.5;
     this.mesh = new THREE.Mesh(new THREE.PlaneGeometry(w, w * this.pxH / this.pxW),
       new THREE.MeshBasicMaterial({ map: this.tex, transparent: true, depthTest: false, depthWrite: false }));

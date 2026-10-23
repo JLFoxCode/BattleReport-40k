@@ -75,7 +75,7 @@ const W = BOARD[0] * IN, L = BOARD[1] * IN;
 const boardCanvas = document.createElement('canvas');
 boardCanvas.width = BOARD[0] * PX; boardCanvas.height = BOARD[1] * PX;
 const boardTex = new THREE.CanvasTexture(boardCanvas);
-boardTex.colorSpace = THREE.SRGBColorSpace;
+boardTex.colorSpace = THREE.SRGBColorSpace; boardTex.generateMipmaps = false; boardTex.minFilter = THREE.LinearFilter;
 const boardMesh = new THREE.Mesh(new THREE.PlaneGeometry(W, L), new THREE.MeshBasicMaterial({ map: boardTex, transparent: true, side: THREE.DoubleSide, depthWrite: false }));
 boardMesh.rotation.x = -Math.PI / 2;
 boardMesh.position.set(W / 2, 0.002, L / 2);
@@ -838,7 +838,8 @@ async function enterXR() {
   });
   await renderer.xr.setSession(session);
   // run at the highest refresh rate the headset offers (Quest 3: 72 / 80 / 90 / 120 Hz; default 72 feels sluggish)
-  try { const rates = session.supportedFrameRates; if (rates && rates.length && session.updateTargetFrameRate) { app.xr.rates = Array.from(rates); await session.updateTargetFrameRate(Math.max(...rates)); } } catch (e) { console.warn('frame rate', e); }
+  // 90 Hz: 11 ms per frame leaves room for texture uploads and the camera; 120 Hz missed frames and juddered
+  try { const rates = session.supportedFrameRates; if (rates && rates.length && session.updateTargetFrameRate) { app.xr.rates = Array.from(rates); const want = rates.includes(90) ? 90 : Math.max(...rates); await session.updateTargetFrameRate(want); } } catch (e) { console.warn('frame rate', e); }
   $('#enter').textContent = 'Leave';
   applyFrame();
   setTimeout(placePanel, 600);     // after the first frames, when the head pose is known
