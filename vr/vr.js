@@ -326,6 +326,9 @@ const controllers = [0, 1].map(i => {
   c.userData.i = i;
   c.addEventListener('selectstart', () => onSelectStart(i));
   c.addEventListener('selectend', () => release());
+  // grip (side trigger): grab the panel with the ray on it, carry it, drop it where the grip is released
+  c.addEventListener('squeezestart', () => { const ph = panelHit(i); if (ph) { c.attach(panel.mesh); panel.grabbed = i; } });
+  c.addEventListener('squeezeend', () => { if (panel.grabbed === i) { scene.attach(panel.mesh); panel.grabbed = null; } });
   c.addEventListener('connected', e => { c.userData.source = e.data; });
   c.addEventListener('disconnected', () => { c.userData.source = null; });
   scene.add(c);
