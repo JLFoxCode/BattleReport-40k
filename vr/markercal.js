@@ -18,8 +18,10 @@
  */
 export const IN = 0.0254;
 export const TABLE = [44 * IN, 60 * IN];
-export const MARKER_INSET = 0.050;            // marker centre from both table edges
-export const MARKER_SIZE = 0.0525;            // black square of the marker (6 of 8 cells of the 70 mm print)
+export let MARKER_INSET = 0.050;              // marker centre from both table edges (10×15 print at 100 %)
+export let MARKER_SIZE = 0.0525;              // black square of the marker (6 of 8 cells of the 70 mm print)
+/** The sheets printed at another scale (e.g. 10×15 fitted onto A4 ≈ ×1.98): everything on the sheet scales alike. */
+export function setMarkerScale(scale) { MARKER_INSET = 0.050 * scale; MARKER_SIZE = 0.0525 * scale; }
 
 // ---------------------------------------------------------------- small linear algebra (column-major 4×4)
 export const I4 = () => [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
@@ -162,27 +164,52 @@ function solve(A, b, n) {
 /** obs: [{ head: 4×4 (head → world), w, h, markers: [{ id, corners: [{x, y}×4] }] }]
  *  layout: { [id]: { corner, turn } } (known or guessed); X0, f0: initial guesses.
  *  Solves f, X, Y (and optionally keeps X / f fixed). Returns { f, X, Y, rms, n }. */
+/** Base frame of a plane { p: point on it, n: unit normal (up) }: columns x (horizontal), y, z = n. */
+export function planeBase(plane) {
+  const n = plane.n;
+  let x = [1, 0, 0]; const d = n[0] * x[0] + n[1] * x[1] + n[2] * x[2];
+  x = [x[0] - n[0] * d, x[1] - n[1] * d, x[2] - n[2] * d]; const l = Math.hypot(...x); x = x.map(v => v / l);
+  const y = [n[1] * x[2] - n[2] * x[1], n[2] * x[0] - n[0] * x[2], n[0] * x[1] - n[1] * x[0]];
+  return [x[0], x[1], x[2], 0, y[0], y[1], y[2], 0, n[0], n[1], n[2], 0, plane.p[0], plane.p[1], plane.p[2], 1];
+}
+/** Least-squares plane through world points (y up): { p, n } with n pointing up, or null. */
+export function fitPlane(pts) {
+  if (!pts || pts.length < 3) return null;
+  const c = [0, 1, 2].map(k => pts.reduce((s, q) => s + q[k], 0) / pts.length);
+  let xx = 0, xy = 0, xz = 0, yy = 0, yz = 0, zz = 0;
+  for (const q of pts) { const a = q[0] - c[0], b = q[1] - c[1], d = q[2] - c[2]; xx += a * a; xy += a * b; xz += a * d; yy += b * b; yz += b * d; zz += d * d; }
+  // normal = eigenvector of the smallest eigenvalue – for a near-horizontal plane solve y = αx + βz + γ (regression on y)
+  const det = xx * zz - xz * xz; if (Math.abs(det) < 1e-12) return null;
+  const al = (xy * zz - yz * xz) / det, be = (yz * xx - xy * xz) / det;
+  let n = [-al, 1, -be]; const l = Math.hypot(...n); n = n.map(v => v / l);
+  return { p: c, n };
+}
 export function solveAll(obs, layout, init, fix = {}, maxIter = 80) {
   const cxy0 = init.cxy || [obs[0].w / 2, obs[0].h / 2];
   const dist0 = init.dist || [0, 0];
   const X0 = toRT(init.X || I4()), Y0 = toRT(init.Y || I4());
   const f0 = init.f || obs[0].w * 0.75;
-  // parameter vector: [f?, dist k1 k2 + principal point?, X rv(3) t(3)?, Y rv(3) t(3)]
+  const B = init.plane ? planeBase(init.plane) : null, Binv = B ? inv(B) : null;
+  // parameter vector: [f?, dist k1 k2 + principal point?, X rv(3) t(3)?, Y: rv(3) t(3) | with a plane: x y yaw]
   const p0 = []; const idx = {};
   if (!fix.f) { idx.f = p0.length; p0.push(f0); }
   if (!fix.dist) { idx.d = p0.length; p0.push(dist0[0], dist0[1], cxy0[0], cxy0[1]); }
   if (!fix.X) { idx.X = p0.length; p0.push(...X0.rv, ...X0.t); }
-  idx.Y = p0.length; p0.push(...Y0.rv, ...Y0.t);
+  idx.Y = p0.length;
+  if (B) { const L = mul(Binv, init.Y || B); p0.push(L[12], L[13], Math.atan2(L[1], L[0])); }
+  else p0.push(...Y0.rv, ...Y0.t);
+  const tPrior = init.tPrior || null, wPrior = init.wPrior || 60;     // X translation prior: 1 cm off ≈ 0.6 px
   const unpack = p => ({
     f: fix.f ? f0 : p[idx.f],
     dist: fix.dist ? dist0 : [p[idx.d], p[idx.d + 1]],
     cxy: fix.dist ? cxy0 : [p[idx.d + 2], p[idx.d + 3]],
     X: fix.X ? (init.X || I4()) : fromRT(p.slice(idx.X, idx.X + 3), p.slice(idx.X + 3, idx.X + 6)),
-    Y: fromRT(p.slice(idx.Y, idx.Y + 3), p.slice(idx.Y + 3, idx.Y + 6))
+    Y: B ? mul(B, fromRT([0, 0, p[idx.Y + 2]], [p[idx.Y], p[idx.Y + 1], 0])) : fromRT(p.slice(idx.Y, idx.Y + 3), p.slice(idx.Y + 3, idx.Y + 6))
   });
   const residuals = p => {
     const { f, dist, cxy, X, Y } = unpack(p);
     const out = [];
+    if (tPrior && !fix.X) { const t = [X[12], X[13], X[14]]; for (let k = 0; k < 3; k++) out.push((t[k] - tPrior[k]) * wPrior); }
     for (const o of obs) {
       const viewCam = inv(mul(o.head, X));
       for (const m of o.markers) {
@@ -199,7 +226,8 @@ export function solveAll(obs, layout, init, fix = {}, maxIter = 80) {
   };
   const steps = p0.map((v, i) => (idx.f === i ? 1 : idx.d !== undefined && i >= idx.d && i < idx.d + 2 ? 1e-4 : idx.d !== undefined && i >= idx.d + 2 && i < idx.d + 4 ? 0.5 : 1e-5));
   const r = lm(residuals, p0, { maxIter, steps });
-  const n = r.p.length ? residuals(r.p).length / 2 : 0;
+  const nPrior = tPrior && !fix.X ? 3 : 0;
+  const n = r.p.length ? (residuals(r.p).length - nPrior) / 2 : 0;
   const { f, dist, cxy, X, Y } = unpack(r.p);
   return { f, dist, cxy, X, Y, rms: n ? Math.sqrt(r.cost / (n * 2)) : Infinity, n, iter: r.iter };
 }
@@ -252,14 +280,15 @@ export function guessLayout(obs, ids, init) {
     const layout = {};
     ids.forEach((id, i) => { layout[id] = { corner: perm[i], turn: 0 }; });
     const Y0 = initY(pos, ids, perm);
-    const coarse = solveAll(obs, layout, { f: init.f, X: init.X, Y: Y0 || init.Y }, { dist: true }, 30);
+    const common = { plane: init.plane, tPrior: init.tPrior, wPrior: init.wPrior };
+    const coarse = solveAll(obs, layout, Object.assign({ f: init.f, X: init.X, Y: Y0 || init.Y }, common), { dist: true }, 30);
     // per-marker turn: evaluate the 4 options with the coarse (f, X, Y)
     for (const id of ids) {
       let bt = 0, be = Infinity;
       for (let t = 0; t < 4; t++) { layout[id].turn = t; const e = markerError(obs, layout, coarse, id); if (e < be) { be = e; bt = t; } }
       layout[id].turn = bt;
     }
-    const r = solveAll(obs, layout, { f: coarse.f, X: coarse.X, Y: coarse.Y, dist: init.dist, cxy: init.cxy }, init.fixDist ? { dist: true } : {});
+    const r = solveAll(obs, layout, Object.assign({ f: coarse.f, X: coarse.X, Y: coarse.Y, dist: init.dist, cxy: init.cxy }, common), init.freeDist ? {} : { dist: true });
     if (!best || r.rms < best.rms) best = Object.assign({ layout: JSON.parse(JSON.stringify(layout)) }, r);
   }
   return best;

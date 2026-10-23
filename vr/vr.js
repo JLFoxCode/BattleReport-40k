@@ -18,7 +18,7 @@ import { PX, paintBoard, rectCorners, pieceAt, layoutPieces, pieceHeight } from 
 import { connect, session as apiSession } from './net.js';
 import { Panel, Hud } from './panel.js';
 import { createCamera } from './camera.js';
-import { guessLayout, solveAll, fromRT, toRT, apply as mApply } from './markercal.js';
+import { guessLayout, solveAll, fromRT, toRT, apply as mApply, fitPlane, setMarkerScale } from './markercal.js';
 
 const $ = s => document.querySelector(s);
 const $$ = s => Array.from(document.querySelectorAll(s));
@@ -50,6 +50,7 @@ const app = {
   markers: store.get('markers', null), // { [id]: { corner, turn } } – where the printed sheets lie
   Y: null,                     // table pose (table → world, 4×4) when known from markers
   board: 'full',               // 'full' = Strike Force 44×60 | 'near' / 'far' = Incursion 44×30 on that half of the table
+  markerScale: store.get('markerScale', 1),  // print scale of the corner sheets: 1 = 10×15 at 100 %, 1.98 = fitted onto A4
   track: 'room',               // room: the table follows its WebXR anchor | local: fixed in the reference space
   scan: true,                  // show the planes of the room scan (plane-detection)
   planes: []                   // detected planes { label, y, corners: [{x, y, z}] } (world), refreshed every ~0.5 s
@@ -131,6 +132,9 @@ const panel = new Panel(THREE, {
     // Camera: passthrough camera + corner markers (vr/print/table-markers-10x15.pdf)
     { tab: 'camera', title: 'Passthrough camera & corner markers' },
     { tab: 'camera', buttons: [{ label: 'Camera on', a: { act: 'cam', v: 'on' } }, { label: 'Camera off', a: { act: 'cam', v: 'off' } }] },
+    { tab: 'camera', title: 'Corner sheets printed as (black square / centre from the corner)' },
+    { tab: 'camera', buttons: [{ label: '10×15 at 100 % (5.25 cm / 5 cm)', a: { act: 'mscale', v: 1 }, w: 1.4 }, { label: 'Fitted on A4 (10.4 cm / 9.9 cm)', a: { act: 'mscale', v: 1.98 }, w: 1.4 }] },
+    { tab: 'camera', buttons: [{ label: 'Square − 5 mm', a: { act: 'mscaleStep', v: -5 } }, { label: 'Square + 5 mm', a: { act: 'mscaleStep', v: 5 } }] },
     // System
     { tab: 'system', title: 'Panel & session' },
     { tab: 'system', buttons: [{ label: 'Panel here', a: { act: 'panel' } }, { label: 'Undo', a: { act: 'undo' } }, { label: 'Leave headset', a: { act: 'enter' } }] }
@@ -144,6 +148,7 @@ panel.setState(a => (a.tool && a.tool === app.tool) || (a.ring && app.tool === '
   || (a.base !== undefined && Number(a.base) === app.base)
   || (a.act === 'cam' && ((a.v === 'on') === cam.state().on))
   || (a.act === 'mcal' && !!app.mcal) || (a.act === 'mtrack' && app.mtrack) || (a.act === 'board' && a.v === app.board)
+  || (a.act === 'mscale' && Math.abs(Number(a.v) - app.markerScale) < 0.02)
   || (a.layout !== undefined && (a.layout || null) === app.layoutId)
   || (a.deployment !== undefined && app.state && app.state.mission.deployment === a.deployment)
   || (a.attacker !== undefined && app.state && app.state.mission.attacker === a.attacker));
@@ -216,8 +221,8 @@ function hudRefresh() {
     const m = app.mcal;
     const need = m.ids.size < 2 ? 'Look at another corner sheet.' : m.views.length < 3 ? 'Now step to another spot and look at a sheet again.' : m.obs.length < 8 ? 'Hold still on a sheet for a moment.' : 'Enough for a result – keep going for accuracy or press Finish now.';
     lines.push({ text: `In view now: ${m.inView.length ? m.inView.map(i => 'sheet ' + (i + 1)).join(', ') : 'no marker'}`, big: true, color: m.inView.length ? '#7fe3a0' : '#ffd966' });
-    lines.push({ text: `Collected: sheets ${Array.from(m.ids).map(i => i + 1).join(', ') || '–'} (${m.ids.size}/2+) · frames ${m.obs.length}/8+ · viewpoints ${m.views.length}/3+` });
-    lines.push({ text: need + ' Look at the sheets from above, 40-80 cm away, so the whole black square is in the camera image.', color: '#ffd966' });
+    lines.push({ text: `Collected: sheets ${Array.from(m.ids).map(i => i + 1).join(', ') || '–'} (${m.ids.size}/2+) · frames ${m.obs.length}/8+ · viewpoints ${m.views.length}/3+ · sheet scale ${app.markerScale.toFixed(2)}` });
+    lines.push({ text: need + ' Look at the sheets from above (40-80 cm). Also step back once so that TWO sheets are in view together.', color: '#ffd966' });
   } else if (app.mtrack) lines.push({ text: 'Marker tracking on', color: '#9ef' });
   const cs = cam.state();
   if (cs.on) lines.push({ text: `Camera ${cs.w}×${cs.h} · ${cs.fps} fps · markers: ${cs.markers.length ? cs.markers.map(m => m.id + 1).join(', ') : 'none'}` + (cs.error ? ' · ' + cs.error : ''), color: '#9ef' });
@@ -516,7 +521,7 @@ function mcalTick() {
   if (!fr.markers.length || !still) return;                 // only still frames: the camera image lags the head pose
   if (fr.t - m.lastKeep < 250) return;                       // ~4 frames per second are plenty
   m.lastKeep = fr.t;
-  m.obs.push({ head, w: fr.w, h: fr.h, markers: fr.markers.map(x => ({ id: x.id, corners: x.corners.map(c => ({ x: c.x, y: c.y })) })) });
+  m.obs.push({ head, w: fr.w, h: fr.h, gaze: app.gazeHit, markers: fr.markers.map(x => ({ id: x.id, corners: x.corners.map(c => ({ x: c.x, y: c.y })) })) });
   fr.markers.forEach(x => m.ids.add(x.id));
   // distinct viewpoints (≥ 5 cm or ≥ 8° apart) – the solver needs a few of them
   if (!m.views.some(v => Math.hypot(v[12] - head[12], v[13] - head[13], v[14] - head[14]) < 0.05 && (v[8] * head[8] + v[9] * head[9] + v[10] * head[10]) > Math.cos(8 * Math.PI / 180))) m.views.push(head);
@@ -531,12 +536,22 @@ function mcalFinish(manual) {
   }
   app.mcal = null;
   const w = m.obs[0].w;
-  const init = app.camcal ? { f: app.camcal.f, X: app.camcal.X, dist: app.camcal.dist, cxy: app.camcal.cxy } : { f: w * 0.5, X: fromRT([0, 0, 0], [0, -0.03, -0.08]) };
+  // the table plane from where the gaze hit the table while the sheets were in view (hit-test), tilt-checked
+  const gaze = m.obs.map(o => o.gaze).filter(Boolean);
+  let plane = fitPlane(gaze);
+  if (plane && plane.n[1] < Math.cos(12 * Math.PI / 180)) plane = null;                 // not a level surface: ignore
+  if (!plane && gaze.length) { const ys = gaze.map(g => g[1]).sort((a, b) => a - b); plane = { p: [gaze[0][0], ys[ys.length >> 1], gaze[0][2]], n: [0, 1, 0] }; }
+  const tPrior = [0, -0.02, -0.05];                                                        // camera: a little below / in front of the eyes
+  const init = app.camcal ? { f: app.camcal.f, X: app.camcal.X, plane, tPrior, wPrior: 150 } : { f: w * 0.65, X: fromRT([0, 0, 0], tPrior), plane, tPrior, wPrior: 150 };
   let res;
   try { res = guessLayout(m.obs, ids, init); } catch (e) { toast('Calibration failed: ' + (e.message || e)); return; }
-  app.mcalLast = { obs: m.obs, ids, res };            // kept for analysis (BRVR.mcalLast)
-  if (!res || !(res.rms < 12)) { cam.stop(); toast(`Calibration not good enough (error ${res ? res.rms.toFixed(1) : '?'} px) – try again, look at each sheet from closer`); return; }
-  app.camcal = { f: res.f, X: res.X, dist: res.dist, cxy: res.cxy }; store.set('camcal', app.camcal);
+  app.mcalLast = { obs: m.obs, ids, res, plane };     // kept for analysis (BRVR.mcalLast)
+  const tx = res && [res.X[12], res.X[13], res.X[14]];
+  const headY = m.obs.reduce((s, o) => s + o.head[13], 0) / m.obs.length;
+  const bad = !res ? 'no solution' : !(res.rms < 12) ? `error ${res.rms.toFixed(1)} px` : (res.f < w * 0.35 || res.f > w * 1.3) ? 'implausible focal length' : Math.hypot(...tx) > 0.2 ? 'implausible camera offset' : res.Y[9] < Math.cos(15 * Math.PI / 180) ? 'table not level' : res.Y[13] > headY - 0.3 ? 'table too high' : '';
+  if (bad) { cam.stop(); toast(`Calibration rejected (${bad}) – look at the sheets from above, from 2–3 spots, with two sheets in view at times`); return; }
+  if (!plane) toast('No table surface from the headset – using the markers alone');
+  app.camcal = { f: res.f, X: res.X, dist: res.dist, cxy: res.cxy, tPrior }; store.set('camcal', app.camcal);
   app.markers = res.layout; store.set('markers', app.markers);
   setTableFromY(res.Y, true);
   app.mtrack = true; cam.setInterval(1000);                // tracking: one frame a second keeps the table in place
@@ -566,7 +581,8 @@ function trackTick() {
   const obs = [{ head, w: fr.w, h: fr.h, markers: usable }];
   const Y0 = app.Y || (app.frame ? frameToY(app.frame) : null); if (!Y0) return;
   let r;
-  try { r = solveAll(obs, app.markers, { f: app.camcal.f, X: app.camcal.X, Y: Y0, dist: app.camcal.dist, cxy: app.camcal.cxy }, { f: true, X: true, dist: true }, 25); } catch { return; }
+  const plane = { p: [Y0[12], Y0[13], Y0[14]], n: [Y0[8], Y0[9], Y0[10]] };
+  try { r = solveAll(obs, app.markers, { f: app.camcal.f, X: app.camcal.X, Y: Y0, dist: app.camcal.dist, cxy: app.camcal.cxy, plane }, { f: true, X: true, dist: true }, 25); } catch { return; }
   if (!(r.rms < 8)) return;
   // smooth: blend rotation vector + translation
   const a = toRT(Y0), b = toRT(r.Y), k = 0.35;
@@ -666,6 +682,8 @@ function tapPoint(i) {
 }
 const reticles = [0, 1].map(() => { const m = new THREE.Mesh(new THREE.SphereGeometry(0.006, 10, 8), new THREE.MeshBasicMaterial({ color: 0xffd966, depthTest: false })); m.renderOrder = 9; m.visible = false; scene.add(m); return m; });
 async function setupHitTest(session) {
+  // gaze ray: where the user looks hits the table – gives the table plane for the marker calibration
+  try { const viewer = await session.requestReferenceSpace('viewer'); app.gazeSrc = await session.requestHitTestSource({ space: viewer }); } catch { app.gazeSrc = null; }
   const make = async src => {
     if (!src.targetRaySpace || typeof session.requestHitTestSource !== 'function') return;
     try { src.__hit = await session.requestHitTestSource({ space: src.targetRaySpace }); } catch { src.__hit = null; }
@@ -675,6 +693,8 @@ async function setupHitTest(session) {
 }
 function readHits(xrFrame) {
   const ref = renderer.xr.getReferenceSpace(); if (!ref) return;
+  app.gazeHit = null;
+  if (app.gazeSrc) { const r = xrFrame.getHitTestResults(app.gazeSrc)[0]; const pose = r && r.getPose(ref); if (pose) app.gazeHit = [pose.transform.position.x, pose.transform.position.y, pose.transform.position.z]; }
   for (let i = 0; i < 2; i++) {
     const src = controllers[i].c.userData.source;
     const hs = src && src.__hit;
@@ -958,6 +978,11 @@ function applyAction(a, btn) {
     else { cam.stop(); if (app.frame) createAnchor().catch(() => {}); }
   }
   else if (a.act === 'board') { app.board = a.v; rebuildBoard(); }
+  else if (a.act === 'mscale' || a.act === 'mscaleStep') {
+    app.markerScale = a.act === 'mscale' ? Number(a.v) : Math.max(0.3, app.markerScale + Number(a.v) / 52.5);
+    store.set('markerScale', app.markerScale); setMarkerScale(app.markerScale);
+    toast(`Sheets: black square ${(52.5 * app.markerScale).toFixed(1)} mm, centre ${(50 * app.markerScale).toFixed(1)} mm from the corner`);
+  }
   else if (a.act === 'cam') {
     if (a.v === 'on') cam.start().then(() => toast('Camera: ' + cam.state().label + ' ' + cam.state().w + '×' + cam.state().h)).catch(e => toast('Camera: ' + (e && e.message || e)));
     else cam.stop();
@@ -992,6 +1017,7 @@ function onSignal(sig) {
 
 async function main() {
   initUi();
+  setMarkerScale(app.markerScale);
   app.frame = unpackFrame(store.get('frame', null));
   applyFrame(); applyMirror();
   if (app.frame) $('#calib-info').textContent = `Last calibration: edge ${app.frame.edge.toFixed(1)}" – stored on this headset`;
