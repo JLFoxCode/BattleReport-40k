@@ -40,6 +40,7 @@ const app = {
   layoutId: null, pieces: [], selected: -1,
   drag: null,                  // { ctrl, idx, dx, dy } while a piece is held
   xr: { session: null, anchor: null, anchorId: null, mode: null },
+  step: 0.01,                  // fine adjustment step in metres (1 cm / 1 mm)
   track: 'room',               // room: the table follows its WebXR anchor | local: fixed in the reference space
   scan: true,                  // show the planes of the room scan (plane-detection)
   planes: []                   // detected planes { label, y, corners: [{x, y, z}] } (world), refreshed every ~0.5 s
@@ -78,22 +79,45 @@ hoverRing.rotation.x = -Math.PI / 2; hoverRing.visible = false; content.add(hove
 const calibDots = new THREE.Group(); scene.add(calibDots);
 
 // in-headset UI: 3D panel (no dom-overlay in the Quest browser) + HUD text in front of the camera
-const panel = new Panel(THREE, [
-  { title: 'Table' },
-  { buttons: [{ label: 'Calibrate', a: { tool: 'calib' } }, { label: 'Mirror', a: { act: 'mirror' } }, { label: '6" grid', a: { act: 'grid' } }, { label: 'Panel here', a: { act: 'panel' } }, { label: 'Undo', a: { act: 'undo' } }, { label: 'Leave', a: { act: 'enter' } }] },
-  { buttons: [{ label: 'Tracking: room', a: { act: 'track', v: 'room' }, w: 1.2 }, { label: 'Tracking: local', a: { act: 'track', v: 'local' }, w: 1.2 }, { label: 'Room scan', a: { act: 'scan' } }] },
-  { title: 'Terrain' },
-  { buttons: [{ label: '‹ Layout', a: { act: 'layoutPrev' } }, { label: 'Layout ›', a: { act: 'layoutNext' } }, { label: 'Reset', a: { act: 'reset' } }, { label: 'Capture piece', a: { tool: 'capture' }, w: 1.3 }] },
-  { buttons: [{ label: 'Move', a: { tool: 'move' } }, { label: '⟲ 15°', a: { act: 'rotl' } }, { label: '⟳ 15°', a: { act: 'rotr' } }, { label: 'Delete', a: { act: 'del' } }] },
-  { buttons: [{ label: '+ 6×4', a: { add: '6x4' } }, { label: '+ 10×5', a: { add: '10x5' } }, { label: '+ 12×6', a: { add: '12x6' } }, { label: '+ crater', a: { add: '6x6', kind: 'crater' } }, { label: '+ wall', a: { add: '6x1', kind: 'wall' } }] },
-  { title: 'Deployment' },
-  { buttons: [{ label: '9" band', a: { act: 'band' } }, { label: 'Tape', a: { tool: 'tape' } }, { label: '3"', a: { ring: 3 } }, { label: '6"', a: { ring: 6 } }, { label: '9"', a: { ring: 9 } }, { label: '12"', a: { ring: 12 } }, { label: 'Clear', a: { act: 'clear' } }] }
-], { width: 0.55 });
+/** One button per layout (by name), four per row. */
+function layoutRows() {
+  const rows = [];
+  for (let i = 0; i < TERRAIN_LAYOUTS.length; i += 4) rows.push({ tab: 'terrain', buttons: TERRAIN_LAYOUTS.slice(i, i + 4).map(t => ({ label: t.short || t.name, a: { layout: t.id } })) });
+  return rows;
+}
+const panel = new Panel(THREE, {
+  tabs: [{ id: 'table', label: 'Table' }, { id: 'terrain', label: 'Terrain' }, { id: 'deploy', label: 'Deploy' }, { id: 'system', label: 'System' }],
+  rows: [
+    // Table: calibration, fine adjustment, tracking
+    { tab: 'table', title: 'Calibration' },
+    { tab: 'table', buttons: [{ label: 'Calibrate (3 corners)', a: { tool: 'calib' }, w: 1.6 }, { label: 'Mirror', a: { act: 'mirror' } }, { label: 'Room scan', a: { act: 'scan' } }] },
+    { tab: 'table', title: 'Fine adjustment' },
+    { tab: 'table', buttons: [{ label: 'Step 1 cm', a: { act: 'step', v: 0.01 } }, { label: 'Step 1 mm', a: { act: 'step', v: 0.001 } }, { label: '↑ up', a: { act: 'nudge', v: 'z+' } }, { label: '↓ down', a: { act: 'nudge', v: 'z-' } }] },
+    { tab: 'table', buttons: [{ label: '← x', a: { act: 'nudge', v: 'x-' } }, { label: 'x →', a: { act: 'nudge', v: 'x+' } }, { label: '← y', a: { act: 'nudge', v: 'y-' } }, { label: 'y →', a: { act: 'nudge', v: 'y+' } }, { label: '⟲ 0.5°', a: { act: 'nudge', v: 'r-' } }, { label: '⟳ 0.5°', a: { act: 'nudge', v: 'r+' } }] },
+    { tab: 'table', title: 'Tracking' },
+    { tab: 'table', buttons: [{ label: 'Room anchor', a: { act: 'track', v: 'room' } }, { label: 'Local (fixed)', a: { act: 'track', v: 'local' } }, { label: '6" grid', a: { act: 'grid' } }] },
+    // Terrain
+    { tab: 'terrain', title: 'Layout' },
+    ...layoutRows(),
+    { tab: 'terrain', buttons: [{ label: 'No layout', a: { layout: '' } }, { label: 'Reset layout', a: { act: 'reset' } }, { label: 'Capture piece', a: { tool: 'capture' }, w: 1.3 }] },
+    { tab: 'terrain', title: 'Pieces (trigger: grab & move, twist: rotate, B/Y: delete)' },
+    { tab: 'terrain', buttons: [{ label: 'Move', a: { tool: 'move' } }, { label: '⟲ 15°', a: { act: 'rotl' } }, { label: '⟳ 15°', a: { act: 'rotr' } }, { label: 'Delete', a: { act: 'del' } }] },
+    { tab: 'terrain', buttons: [{ label: '+ 6×4', a: { add: '6x4' } }, { label: '+ 10×5', a: { add: '10x5' } }, { label: '+ 12×6', a: { add: '12x6' } }, { label: '+ crater', a: { add: '6x6', kind: 'crater' } }, { label: '+ wall', a: { add: '6x1', kind: 'wall' } }] },
+    // Deployment helpers
+    { tab: 'deploy', title: 'Deployment helpers' },
+    { tab: 'deploy', buttons: [{ label: '9" band', a: { act: 'band' } }, { label: 'Tape', a: { tool: 'tape' } }, { label: 'Clear marks', a: { act: 'clear' } }] },
+    { tab: 'deploy', buttons: [{ label: '3" ring', a: { ring: 3 } }, { label: '6" ring', a: { ring: 6 } }, { label: '9" ring', a: { ring: 9 } }, { label: '12" ring', a: { ring: 12 } }] },
+    // System
+    { tab: 'system', title: 'Panel & session' },
+    { tab: 'system', buttons: [{ label: 'Panel here', a: { act: 'panel' } }, { label: 'Undo', a: { act: 'undo' } }, { label: 'Leave headset', a: { act: 'enter' } }] }
+  ]
+}, { width: 0.55 });
 panel.mesh.visible = false;
 scene.add(panel.mesh);
 panel.setState(a => (a.tool && a.tool === app.tool) || (a.ring && app.tool === 'ring' && a.ring === app.ringR)
   || (a.act === 'band' && app.band === 'infiltrate') || (a.act === 'grid' && app.grid) || (a.act === 'mirror' && app.mirror)
-  || (a.act === 'track' && a.v === app.track) || (a.act === 'scan' && app.scan));
+  || (a.act === 'track' && a.v === app.track) || (a.act === 'scan' && app.scan) || (a.act === 'step' && a.v === app.step)
+  || (a.layout !== undefined && (a.layout || null) === app.layoutId));
 const hud = new Hud(THREE, { width: 0.5 });
 hud.mesh.position.set(0, -0.14, -0.7);
 camera.add(hud.mesh);
@@ -373,6 +397,27 @@ function setCalibText(n) {
     'Now the corner on your LEFT (the other end of the Attacker\'s edge).',
     'Now any corner of the Defender\'s edge (the far side).'];
   $('#calib-info').textContent = `Step ${n + 1} of 3 – ${steps[n]}`;
+}
+/** Fine adjustment of the calibrated table: x/y along the table's own axes, z = height, r = rotation about the
+ *  table's origin corner. Rewrites the frame, the stored copy and the anchor. */
+function nudge(v) {
+  const f = app.frame;
+  if (!f) { toast('Calibrate first'); return; }
+  const st = app.step, sign = v.endsWith('+') ? 1 : -1;
+  const add = (p, d, k) => ({ x: p.x + d.x * k, y: p.y + d.y * k, z: p.z + d.z * k });
+  if (v[0] === 'x') f.origin = add(f.origin, f.ex, sign * st);
+  else if (v[0] === 'y') f.origin = add(f.origin, f.ey, sign * st);
+  else if (v[0] === 'z') { f.origin = add(f.origin, f.up, sign * st); f.height = f.origin.y; }
+  else if (v[0] === 'r') {
+    const a = sign * 0.5 * Math.PI / 180, c = Math.cos(a), s = Math.sin(a);
+    const rot = d => ({ x: d.x * c + d.z * s, y: 0, z: -d.x * s + d.z * c });   // about world up
+    f.ex = rot(f.ex); f.ey = rot(f.ey);
+  }
+  store.set('frame', packFrame(f));
+  if (app.xr.anchor) { try { app.xr.anchor.delete(); } catch {} app.xr.anchor = null; store.set('anchor', null); }
+  applyFrame();
+  createAnchor().catch(() => {});
+  toast(`Adjusted ${v} by ${v[0] === 'r' ? '0.5°' : (st * 1000) + ' mm'}`);
 }
 function startCalibration() {
   app.calibPts = []; calibDots.clear(); app.frame = null; app.xr.anchor = null;
@@ -708,6 +753,9 @@ function applyAction(a, btn) {
   else if (a.act === 'track') { app.track = a.v === 'local' ? 'local' : 'room'; if (app.track === 'local' && app.frame) applyFrame(); toast(app.track === 'room' ? 'Tracking: the table follows its room anchor' : 'Tracking: the table stays fixed in the headset space'); }
   else if (a.act === 'scan') { app.scan = !app.scan; planesAt = 0; if (!app.scan) planeGroup.clear(); }
   else if (a.act === 'undo') undo();
+  else if (a.act === 'step') app.step = Number(a.v) || 0.01;
+  else if (a.act === 'nudge') nudge(a.v);
+  else if (a.tab) panel.setTab(a.tab);
   else if (a.act === 'ping') { /* status only */ }
   syncTools(); repaint(); sendStatus(); panel.draw();
 }

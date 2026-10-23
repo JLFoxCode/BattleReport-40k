@@ -1,16 +1,20 @@
 /* In-headset UI: the Quest browser has no WebXR dom-overlay, so the panel buttons are painted into a canvas texture
  * on a plane in the scene and hit by the controller ray (uv → button). Same action keys as the HTML buttons
  * (vr/index.html), so vr.js applies them through the one applyAction().
- *   const panel = new Panel(THREE, rows, { width: 0.6 });  scene.add(panel.mesh)
- *   panel.setState(fnIsOn) ; panel.hover(uv|null) ; panel.hit(uv) → button | null ; panel.draw()
+ *   const panel = new Panel(THREE, { tabs: [{ id, label }], rows: [{ tab, title } | { tab, buttons: [{ label, a, w? }] }] })
+ *   panel.setState(fnIsOn) ; panel.setTab(id) ; panel.hover(uv|null) ; panel.at(uv) → button | null ; panel.draw()
  * Also a small HUD plane for text lines (toast / note / calibration step), attached to the camera. */
 export class Panel {
-  constructor(THREE, rows, opts = {}) {
+  constructor(THREE, def, opts = {}) {
     this.THREE = THREE;
-    this.rows = rows;                              // [{ title }, { buttons: [{ label, a: {…}, w? }] }, …]
-    this.pxW = 1024; this.rowH = 84; this.pad = 16; this.titleH = 44;
-    const h = rows.reduce((s, r) => s + (r.title ? this.titleH : this.rowH), 0) + this.pad * 2;
-    this.pxH = h;
+    this.tabs = def.tabs || [];
+    this.rows = def.rows;
+    this.tab = this.tabs.length ? this.tabs[0].id : null;
+    this.pxW = 1024; this.rowH = 84; this.pad = 16; this.titleH = 44; this.tabH = 92;
+    // fixed height: the tallest tab
+    const tabH = id => this.rows.filter(r => !r.tab || r.tab === id).reduce((s, r) => s + (r.title ? this.titleH : this.rowH), 0);
+    const maxRows = Math.max(...(this.tabs.length ? this.tabs.map(t => tabH(t.id)) : [tabH(null)]));
+    this.pxH = maxRows + this.pad * 2 + (this.tabs.length ? this.tabH : 0);
     this.canvas = document.createElement('canvas');
     this.canvas.width = this.pxW; this.canvas.height = this.pxH;
     this.tex = new THREE.CanvasTexture(this.canvas);
@@ -19,16 +23,24 @@ export class Panel {
     this.mesh = new THREE.Mesh(new THREE.PlaneGeometry(width, width * this.pxH / this.pxW),
       new THREE.MeshBasicMaterial({ map: this.tex, transparent: true, side: THREE.DoubleSide, depthTest: false, depthWrite: false }));
     this.mesh.renderOrder = 10;
-    this.buttons = [];                             // { label, a, x, y, w, h }
+    this.buttons = [];                             // { label, a, x, y, w, h, isTab }
+    this.titles = [];
     this.hovered = null; this.isOn = () => false;
     this.layout();
     this.draw();
   }
+  setTab(id) { if (this.tabs.some(t => t.id === id)) { this.tab = id; this.layout(); this.draw(); } }
   layout() {
-    this.buttons = [];
+    this.buttons = []; this.titles = [];
     let y = this.pad;
+    if (this.tabs.length) {
+      const gap = 10, n = this.tabs.length, w = (this.pxW - this.pad * 2 - gap * (n - 1)) / n;
+      this.tabs.forEach((t, i) => this.buttons.push({ label: t.label, a: { tab: t.id }, x: this.pad + i * (w + gap), y, w, h: this.tabH - 16, isTab: true }));
+      y += this.tabH;
+    }
     for (const r of this.rows) {
-      if (r.title) { r._y = y; y += this.titleH; continue; }
+      if (r.tab && r.tab !== this.tab) continue;
+      if (r.title) { this.titles.push({ text: r.title, y }); y += this.titleH; continue; }
       const gap = 10, n = r.buttons.length;
       const sum = r.buttons.reduce((s, b) => s + (b.w || 1), 0);
       const unit = (this.pxW - this.pad * 2 - gap * (n - 1)) / sum;
@@ -48,16 +60,17 @@ export class Panel {
     c.fillStyle = 'rgba(14,17,23,0.88)';
     roundRect(c, 0, 0, this.pxW, this.pxH, 28); c.fill();
     c.textBaseline = 'middle';
-    for (const r of this.rows) if (r.title) {
+    for (const t of this.titles) {
       c.font = '600 24px sans-serif'; c.fillStyle = '#9aa3b2'; c.textAlign = 'left';
-      c.fillText(r.title.toUpperCase(), this.pad + 8, r._y + this.titleH / 2 + 4);
+      c.fillText(t.text.toUpperCase(), this.pad + 8, t.y + this.titleH / 2 + 4);
     }
     for (const b of this.buttons) {
-      const on = this.isOn(b.a), hov = this.hovered === b;
-      c.fillStyle = on ? '#4ad6ff' : hov ? '#334159' : '#1c2230';
-      c.strokeStyle = hov ? '#ffffff' : on ? '#4ad6ff' : '#3a4356'; c.lineWidth = hov ? 4 : 2;
+      const on = b.isTab ? b.a.tab === this.tab : this.isOn(b.a), hov = this.hovered === b;
+      c.fillStyle = on ? (b.isTab ? '#2f5fc4' : '#4ad6ff') : hov ? '#334159' : (b.isTab ? '#141922' : '#1c2230');
+      c.strokeStyle = hov ? '#ffffff' : on ? (b.isTab ? '#6f97f2' : '#4ad6ff') : '#3a4356'; c.lineWidth = hov ? 4 : 2;
       roundRect(c, b.x, b.y, b.w, b.h, 16); c.fill(); c.stroke();
-      c.font = (on ? '700 ' : '500 ') + '30px sans-serif'; c.fillStyle = on ? '#06202a' : '#e8ecf2'; c.textAlign = 'center';
+      c.font = (on ? '700 ' : '500 ') + (b.isTab ? '34px' : '30px') + ' sans-serif';
+      c.fillStyle = on && !b.isTab ? '#06202a' : '#e8ecf2'; c.textAlign = 'center';
       c.fillText(b.label, b.x + b.w / 2, b.y + b.h / 2 + 2);
     }
     this.tex.needsUpdate = true;
