@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Battle Report 40k – VR table setup</title>
+<link rel="icon" href="../icons/icon-192.png">
+<link rel="stylesheet" href="vr.css">
+<script type="importmap">{ "imports": { "three": "./vendor/three.module.min.js" } }</script>
+</head>
+<body>
+<canvas id="gl"></canvas>
+<div id="ui">
+  <header class="bar">
+    <div class="brand">BR40k <span class="muted">VR setup</span></div>
+    <div class="game">
+      <input id="code" maxlength="8" placeholder="CODE" autocapitalize="characters" spellcheck="false" aria-label="Game code">
+      <button data-act="open" class="sm">Open</button>
+      <span id="status" data-s="idle">No game</span>
+      <span id="user" class="muted"></span>
+    </div>
+    <div class="right">
+      <button data-act="panel" class="sm ghost">Hide</button>
+      <button id="enter" data-act="enter" class="primary" hidden>Enter headset</button>
+    </div>
+  </header>
+  <div id="login" class="note" hidden>Sign in on the <a href="../#/account">main page</a> of this server first (same browser), then open the game again.</div>
+  <div class="info"><span id="players"></span> <span id="mission" class="muted"></span></div>
+
+  <div id="panels" class="panels">
+    <section class="panel">
+      <h3>Table</h3>
+      <div class="row">
+        <button data-tool="calib">Calibrate</button>
+        <button id="mirror" data-act="mirror" title="Swap left and right if the card appears mirrored">Mirror</button>
+        <button id="grid" data-act="grid">6" grid</button>
+      </div>
+      <div id="calib-panel" class="help" hidden></div>
+      <div id="calib-info" class="muted small"></div>
+      <div id="xr-note" class="muted small"></div>
+    </section>
+
+    <section class="panel">
+      <h3>Terrain</h3>
+      <select id="layout" aria-label="Terrain layout"></select>
+      <div class="row">
+        <button data-tool="move">Move</button>
+        <button data-act="rotl">⟲ 15°</button>
+        <button data-act="rotr">⟳ 15°</button>
+        <button data-act="del">Delete</button>
+        <button data-act="reset" class="ghost">Reset layout</button>
+      </div>
+      <div class="row">
+        <button data-add="6x4">+ 6"×4"</button>
+        <button data-add="10x5">+ 10"×5"</button>
+        <button data-add="12x6">+ 12"×6"</button>
+        <button data-add="6x6" data-kind="crater">+ crater</button>
+        <button data-add="6x1" data-kind="wall">+ wall</button>
+      </div>
+      <div id="pieces" class="muted small"></div>
+      <div class="muted small">Trigger: grab &amp; move (snaps to ½") · thumbstick: rotate · B/Y: delete</div>
+    </section>
+
+    <section class="panel">
+      <h3>Deployment</h3>
+      <div class="row">
+        <button id="band" data-act="band" title="Everything within 9&quot; of a deployment zone">9" band</button>
+        <button data-tool="tape">Tape</button>
+        <button data-ring="3">3" ring</button>
+        <button data-ring="6">6" ring</button>
+        <button data-ring="9">9" ring</button>
+        <button data-ring="12">12" ring</button>
+        <button data-act="clear" class="ghost">Clear</button>
+      </div>
+    </section>
+  </div>
+  <div id="toast"></div>
+</div>
+<script type="module" src="vr.js"></script>
+</body>
+</html>

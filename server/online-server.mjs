@@ -32,7 +32,7 @@ export async function startOnlineServer(o = {}) {
     gamesDir: path.join(dataDir, 'games'),
     bsdataDir: path.join(ROOT, 'vendor-data', 'bsdata', 'wh40k-11e-main'),
     // only the web app itself – not the repo (server, tests, dev, desktop, android, docs …)
-    staticAllow: ['index.html', 'manifest.webmanifest', 'sw.js', 'css', 'js', 'engine', 'data', 'icons', 'vendor', 'bsdata', 'web-index.json'],
+    staticAllow: ['index.html', 'manifest.webmanifest', 'sw.js', 'css', 'js', 'engine', 'data', 'icons', 'vendor', 'bsdata', 'web-index.json', 'vr'],   // vr: the VR table setup (vr/), online only
     info: { name: 'Online server' },
     auth,
     log

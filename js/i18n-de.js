@@ -44,6 +44,8 @@ export const PHRASES = {
   'Main menu': 'Hauptmenü', 'Menu': 'Menü', 'New game': 'Neues Spiel', 'Host a battle on this device': 'Eine Schlacht auf diesem Gerät hosten',
   'Join game': 'Spiel beitreten', 'Nearby or by code': 'In der Nähe oder per Code', 'My armies': 'Meine Armeen', 'Build your army lists': 'Armeelisten erstellen',
   'Rulebook': 'Regelwerk', 'Core rules & missions': 'Grundregeln & Missionen', 'Finished games': 'Beendete Spiele', 'Results & battle logs': 'Ergebnisse & Schlachtberichte',
+  'VR table setup': 'VR-Tischaufbau', 'Meta Quest: zones & terrain on the table': 'Meta Quest: Zonen & Gelände auf dem Tisch',
+  'Meta Quest 3 · Mixed reality': 'Meta Quest 3 · Mixed Reality', 'Open here': 'Hier öffnen',
   'App & data': 'App & Daten', 'Updates & unit data': 'Updates & Einheitendaten', 'Continue game': 'Spiel fortsetzen',
   'Games nearby': 'Spiele in der Nähe', 'Join by code': 'Per Code beitreten', 'Games on this device': 'Spiele auf diesem Gerät', 
   'Refresh': 'Aktualisieren', 'No games on this device yet.': 'Noch keine Spiele auf diesem Gerät.', 'No finished games on this device yet.': 'Noch keine beendeten Spiele auf diesem Gerät.',

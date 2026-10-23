@@ -8,6 +8,7 @@ import { armyChoices } from './armies.js';
 import { getLang, setLang, keepTerms, setKeepTerms } from '../i18n.js';
 import { guideOn, setGuideOn } from './tutorial.js';
 import { accountInfo } from '../account.js';
+import { prepareQr, qrReady, qrSvg } from './qr.js';
 
 // the page comes from the online server (account session, games hosted there for players apart)
 const online = () => accountInfo().mode === 'same';
@@ -42,10 +43,11 @@ const ICON = {
   rules: '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><path d="M9 7h7"/><path d="M9 11h5"/>',
   history: '<path d="M8 21h8"/><path d="M12 17v4"/><path d="M7 4h10v5a5 5 0 0 1-10 0V4z"/><path d="M17 5h3v2a3 3 0 0 1-3 3"/><path d="M7 5H4v2a3 3 0 0 0 3 3"/>',
   account: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
+  vr: '<path d="M3 9a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2h-3.5l-1.5-2h-4l-1.5 2H5a2 2 0 0 1-2-2z"/><circle cx="8" cy="12" r="1.5"/><circle cx="16" cy="12" r="1.5"/>',
   app: '<circle cx="12" cy="12" r="3"/><path d="M12 2v3"/><path d="M12 19v3"/><path d="m4.93 4.93 2.12 2.12"/><path d="m16.95 16.95 2.12 2.12"/><path d="M2 12h3"/><path d="M19 12h3"/><path d="m4.93 19.07 2.12-2.12"/><path d="m16.95 7.05 2.12-2.12"/>'
 };
 const icon = k => `<svg class="menu-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON[k]}</svg>`;
-const PAGES = { join: 'Join game', history: 'Finished games', app: 'App & data' };
+const PAGES = { join: 'Join game', history: 'Finished games', app: 'App & data', vr: 'VR table setup' };
 
 export function render(root, ctx) {
   lastRoot = root;
@@ -107,6 +109,7 @@ function homeHtml(last, lastExists) {
       ${tile({ href: '#/armies', icon: 'army', label: 'My armies', sub: armies ? `${armies} list${armies === 1 ? '' : 's'}` : 'Build your army lists' })}
       ${tile({ href: '#/learn', icon: 'learn', label: 'Learn to play', sub: 'Step by step, phase by phase' })}
       ${tile({ href: '#/rules', icon: 'rules', label: 'Rulebook', sub: 'Core rules & missions' })}
+      ${tile({ href: '#/play/vr', icon: 'vr', label: 'VR table setup', sub: 'Meta Quest: zones & terrain on the table' })}
       ${tile({ href: '#/play/history', icon: 'history', label: 'Finished games', sub: finished ? `${finished} saved` : 'Results & battle logs' })}
       ${tile({ href: '#/account', icon: 'account', label: 'Account', sub: acct.user ? 'Signed in as ' + acct.user : 'Sync your lists across devices' })}
       ${tile({ href: '#/play/app', icon: 'app', label: 'App & data', sub: 'Updates & unit data' })}
@@ -137,6 +140,7 @@ function pageHtml(page) {
     </section>
   </div>`;
   }
+  if (page === 'vr') return `<div class="lobby page">${head}${vrPageHtml(last)}</div>`;
   if (page === 'history') {
     const f = finishedSection();
     return `<div class="lobby page">${head}${f || '<div class="card muted empty">No finished games on this device yet.</div>'}</div>`;
@@ -151,6 +155,26 @@ function pageHtml(page) {
     </section>
     <section class="card app-info">${devInfoHtml() || '<p class="muted">Running in the browser – updates come with the app.</p>'}${dataStatusHtml()}</section>
   </div>`;
+}
+
+/* VR table setup (vr/ – a separate web module, served by the online server only; the headset opens it in its own
+ * browser). The page here only shows where to open it and a QR code with the current game's code. */
+function vrPageHtml(last) {
+  const server = accountInfo().server;
+  if (!server) {
+    return `<section class="card"><div class="title">Meta Quest 3</div>
+      <p class="muted">The VR table setup runs on the online server (https is required for WebXR). Set the server address under <a href="#/account">Account</a> first.</p></section>`;
+  }
+  const url = `${server.replace(/\/+$/, '')}/vr/${last && last.code ? '#/g/' + last.code : ''}`;
+  if (!qrReady()) prepareQr().then(changed => { if (changed && lastRoot && lastCtx && document.body.dataset.view === 'lobby') render(lastRoot, lastCtx); }).catch(() => {});
+  return `<section class="card vr-card">
+    <div class="title">Meta Quest 3 · Mixed reality</div>
+    <p>Open this address in the headset's browser${last && last.code ? ` – it opens game <b>${esc(last.code)}</b>` : ''}:</p>
+    <div class="join-card">${qrReady() ? qrSvg(url, 200) : ''}<div class="join-url xs muted">${esc(url)}</div></div>
+    <p class="muted small">What it does: calibrate the real table by touching three corners, then see the deployment zones, the territory line and the five objectives of the game's Deployment card on the table, plan terrain with the GW layouts (move, rotate, add pieces) and use tape, range rings and the 9" band while deploying.</p>
+    <p class="muted xs">Sign in with the same account in the headset's browser (page ‹ Account). The VR module is loaded only there – nothing of it is part of this app.</p>
+    <a class="btn primary" href="${esc(url)}" target="_blank" rel="noopener">Open here</a>
+  </section>`;
 }
 
 /** The game's own player colours on its card – without them the defaults (player 1 / player 2), never the colours the

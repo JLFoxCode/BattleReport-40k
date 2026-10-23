@@ -1,0 +1,37 @@
+/* VR table setup – overlay UI (WebXR dom-overlay on the Quest, plain page in the preview). Dark, big touch targets. */
+:root { color-scheme: dark; --bg: rgba(14, 17, 23, 0.86); --fg: #e8ecf2; --muted: #9aa3b2; --line: #2b3240; --acc: #4ad6ff; --on: #2f5fc4; }
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: #0e1117; color: var(--fg); font: 15px/1.35 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; overflow: hidden; }
+body[data-xr] { background: transparent; }
+#gl { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+#ui { position: fixed; inset: 0; pointer-events: none; display: flex; flex-direction: column; padding: max(8px, env(safe-area-inset-top)) 10px 10px; gap: 8px; }
+#ui > * { pointer-events: auto; }
+.bar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 8px 12px; }
+.brand { font-weight: 700; letter-spacing: 0.02em; }
+.game { display: flex; align-items: center; gap: 8px; flex: 1; }
+.right { display: flex; gap: 8px; margin-left: auto; }
+.muted { color: var(--muted); }
+.small { font-size: 13px; }
+.info { background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 6px 12px; font-size: 14px; }
+.info:empty { display: none; }
+.note { background: #3a2b16; border: 1px solid #7a5a2a; border-radius: 10px; padding: 8px 12px; }
+.note a { color: var(--acc); }
+.help { background: #10304a; border: 1px solid #1f5c86; border-radius: 10px; padding: 8px 12px; margin: 6px 0; }
+.panels { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-start; }
+.panels[hidden] { display: none; }
+.panel { background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; min-width: 260px; max-width: 420px; flex: 1 1 260px; }
+.panel h3 { margin: 0 0 8px; font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+.row { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
+button, select, input { font: inherit; color: var(--fg); background: #1c2230; border: 1px solid #3a4356; border-radius: 10px; padding: 10px 14px; min-height: 44px; cursor: pointer; }
+button.sm { min-height: 36px; padding: 6px 12px; }
+button.ghost { background: transparent; }
+button.primary { background: var(--on); border-color: var(--on); font-weight: 600; }
+button.on { background: var(--acc); color: #06202a; border-color: var(--acc); font-weight: 600; }
+button[hidden] { display: none; }
+select { width: 100%; }
+#code { width: 110px; text-transform: uppercase; letter-spacing: 0.12em; font-weight: 700; }
+#status { font-size: 13px; padding: 4px 10px; border-radius: 999px; background: #2a3040; }
+#status[data-s="online"] { background: #1d4d33; }
+#status[data-s="login"], #status[data-s="notfound"], #status[data-s="offline"] { background: #5a2a2a; }
+#toast { position: fixed; left: 50%; bottom: 24px; transform: translate(-50%, 20px); background: #1c2230; border: 1px solid #3a4356; border-radius: 12px; padding: 10px 16px; opacity: 0; transition: opacity .2s, transform .2s; pointer-events: none; max-width: 90vw; }
+#toast.on { opacity: 1; transform: translate(-50%, 0); }
