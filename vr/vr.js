@@ -765,7 +765,12 @@ addEventListener('keydown', e => {
 addEventListener('resize', () => { if (renderer.xr.isPresenting) return; camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); });
 
 // ---------------------------------------------------------------- render loop
+const perf = { loopMs: 0, frameMs: 0, fps: 0, last: 0, n: 0, t0: 0 };
 renderer.setAnimationLoop(() => {
+  const tStart = performance.now();
+  if (perf.last) perf.frameMs = perf.frameMs * 0.95 + (tStart - perf.last) * 0.05;
+  perf.last = tStart; perf.n++;
+  if (tStart - perf.t0 > 1000) { perf.fps = Math.round(perf.n * 1000 / (tStart - perf.t0)); perf.n = 0; perf.t0 = tStart; }
   const xrFrame = renderer.xr.getFrame();
   if (xrFrame && app.xr.anchor && app.track === 'room') {
     const pose = xrFrame.getPose(app.xr.anchor.anchorSpace, renderer.xr.getReferenceSpace());
@@ -790,6 +795,7 @@ renderer.setAnimationLoop(() => {
     hudRefresh();
   } else placeCamera();
   renderer.render(scene, camera);
+  perf.loopMs = perf.loopMs * 0.95 + (performance.now() - tStart) * 0.05;
 });
 
 // ---------------------------------------------------------------- XR session
@@ -820,6 +826,8 @@ async function enterXR() {
     $('#enter').textContent = 'Enter headset';
   });
   await renderer.xr.setSession(session);
+  // run at the highest refresh rate the headset offers (Quest 3: 72 / 80 / 90 / 120 Hz; default 72 feels sluggish)
+  try { const rates = session.supportedFrameRates; if (rates && rates.length && session.updateTargetFrameRate) { app.xr.rates = Array.from(rates); await session.updateTargetFrameRate(Math.max(...rates)); } } catch (e) { console.warn('frame rate', e); }
   $('#enter').textContent = 'Leave';
   applyFrame();
   setTimeout(placePanel, 600);     // after the first frames, when the head pose is known
@@ -983,4 +991,4 @@ async function main() {
 main();
 
 // debug access for remote testing over DevTools (adb) – read-only use
-window.BRVR = { app, planesDebug: () => app.planesDebug, cam, mcalFinish, mcalStart, planes: () => app.planes.map(p => ({ label: p.label, o: p.orientation, n: p.corners.length, y: +p.y.toFixed(3) })), hits: () => controllers.map(c => c.hit), sources: () => (app.xr.session ? app.xr.session.inputSources.length : 0) };
+window.BRVR = { app, planesDebug: () => app.planesDebug, cam, mcalFinish, mcalStart, perf: () => ({ loopMs: +perf.loopMs.toFixed(2), frameMs: +perf.frameMs.toFixed(2), fps: perf.fps, render: renderer.info.render, mem: renderer.info.memory, rate: app.xr.session && app.xr.session.frameRate, rates: app.xr.rates, scale: renderer.xr.getFramebufferScaleFactor ? renderer.xr.getFramebufferScaleFactor() : null }), planes: () => app.planes.map(p => ({ label: p.label, o: p.orientation, n: p.corners.length, y: +p.y.toFixed(3) })), hits: () => controllers.map(c => c.hit), sources: () => (app.xr.session ? app.xr.session.inputSources.length : 0) };
