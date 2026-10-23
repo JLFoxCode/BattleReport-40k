@@ -942,6 +942,8 @@ async function enterXR() {
   applyFrame();
   setTimeout(placePanel, 600);     // after the first frames, when the head pose is known
   setupHitTest(session).catch(() => {});
+  // forget anchors of earlier attempts that are not the saved table (the room map keeps only ours)
+  try { const keep = store.get('anchor', null); for (const id of Array.from(session.persistentAnchors || [])) if (id !== keep && typeof session.deletePersistentAnchor === 'function') await session.deletePersistentAnchor(id); } catch (e) { console.warn('prune anchors', e); }
   if (await restoreAnchor(session)) toast('Saved table recalled from the room map');
   else if (app.frame) toast('No saved anchor - the table is placed from the last session coordinates, recalibrate if it does not fit');
   else { startCalibration(); toast('Calibrate the table first'); }
