@@ -18,6 +18,7 @@ import { PX, paintBoard, rectCorners, pieceAt, layoutPieces, pieceHeight } from 
 import { connect, session as apiSession, listGames } from './net.js';
 import { Panel, Hud } from './panel.js';
 import { createCamera } from './camera.js';
+import { generate as generateLayout } from './layoutgen.js';
 import { guessLayout, solveAll, fromRT, toRT, apply as mApply, fitPlane, setMarkerScale } from './markercal.js';
 
 const $ = s => document.querySelector(s);
@@ -129,6 +130,8 @@ const panel = new Panel(THREE, {
     { tab: 'terrain', title: 'Layout (✓ = recommended for the chosen deployment card)' },
     ...layoutRows(),
     { tab: 'terrain', buttons: [{ label: 'No layout', a: { layout: '' } }, { label: 'Reset layout', a: { act: 'reset' } }, { label: 'Capture piece', a: { tool: 'capture' }, w: 1.3 }] },
+    { tab: 'terrain', title: 'Random layout (fair: point-symmetric, lanes blocked, cover at every objective)' },
+    { tab: 'terrain', buttons: [{ label: 'Generate random layout', a: { act: 'gen' }, w: 1.6 }, { label: 'Re-roll', a: { act: 'gen' } }] },
     { tab: 'terrain', title: 'Pieces (trigger: grab & move, twist: rotate, B/Y: delete)' },
     { tab: 'terrain', buttons: [{ label: 'Move', a: { tool: 'move' } }, { label: '⟲ 15°', a: { act: 'rotl' } }, { label: '⟳ 15°', a: { act: 'rotr' } }, { label: 'Delete', a: { act: 'del' } }] },
     { tab: 'terrain', buttons: [{ label: '+ 6×4', a: { add: '6x4' } }, { label: '+ 10×5', a: { add: '10x5' } }, { label: '+ 12×6', a: { add: '12x6' } }, { label: '+ crater', a: { add: '6x6', kind: 'crater' } }, { label: '+ wall', a: { add: '6x1', kind: 'wall' } }] },
@@ -323,16 +326,16 @@ const labelCache = {};
 /** Small text sprite (canvas) – the size / class label on top of a piece. */
 function labelSprite(text) {
   if (!labelCache[text]) {
-    const c = document.createElement('canvas'); c.width = 256; c.height = 64;
+    const c = document.createElement('canvas'); c.width = 512; c.height = 128;
     const g = c.getContext('2d');
-    g.fillStyle = 'rgba(14,17,23,0.75)'; g.fillRect(0, 0, 256, 64);
-    g.font = '700 30px sans-serif'; g.fillStyle = '#fff'; g.textAlign = 'center'; g.textBaseline = 'middle';
-    g.fillText(text, 128, 34);
+    g.fillStyle = 'rgba(14,17,23,0.75)'; g.fillRect(0, 0, 512, 128);
+    g.font = '700 34px sans-serif'; g.fillStyle = '#fff'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillText(text, 256, 66);
     const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
     labelCache[text] = new THREE.SpriteMaterial({ map: t, transparent: true, depthTest: false });
   }
   const sp = new THREE.Sprite(labelCache[text]);
-  sp.scale.set(4 * IN, 1 * IN, 1); sp.renderOrder = 8;
+  sp.scale.set(6 * IN, 1.5 * IN, 1); sp.renderOrder = 8;
   return sp;
 }
 /** Height (inches) a piece is drawn with: the card's terrain key (tall > 4", low ≤ 2") or the kind. */
@@ -349,6 +352,16 @@ function buildTerrain() {
     const edges = new THREE.LineSegments(new THREE.EdgesGeometry(box.geometry), new THREE.LineBasicMaterial({ color: i === app.selected ? 0xffffff : 0xdde3ea, transparent: true, opacity: 0.9 }));
     edges.position.y = h * IN / 2;
     g.add(box, edges);
+    // low cover (≤ 2"): the card prescribes only the height – crates / rubble / barricades; drawn as a slab with
+    // small blocks on top so it reads differently from the tall ruins
+    if (p.tall === false) {
+      const n = Math.max(2, Math.round(p.w / 2));
+      for (let k = 0; k < n; k++) {
+        const bx = -p.w / 2 + (k + 0.5) * (p.w / n);
+        const crate = new THREE.Mesh(new THREE.BoxGeometry(Math.min(1.4, p.w / n * 0.7) * IN, 1 * IN, Math.min(1.4, p.h * 0.5) * IN), new THREE.MeshBasicMaterial({ color: 0x5fb3e6, transparent: true, opacity: 0.45, depthWrite: false }));
+        crate.position.set(bx * IN, (h + 0.5) * IN, 0); g.add(crate);
+      }
+    }
     // recommended Ruins wall placement: solid slabs 0.35" thick along the marked local edges, inset 0.3"
     if (p.tall && p.walls) {
       const t = 0.35, inset = 0.3, wh = h;
@@ -364,7 +377,7 @@ function buildTerrain() {
       }
     }
     // label: size + class
-    const lbl = labelSprite(`${p.w}"×${p.h}" ${p.tall === true ? '>4" tall' : p.tall === false ? '≤2" low' : (TERRAIN_KINDS[p.kind] || p.kind)}`);
+    const lbl = labelSprite(`${p.w}"×${p.h}" ${p.tall === true ? 'tall ruin >4" (walls = L)' : p.tall === false ? 'low cover ≤2": crates / rubble / barricade' : (TERRAIN_KINDS[p.kind] || p.kind)}`);
     lbl.position.set(0, (h + 1.2) * IN, 0); g.add(lbl);
     g.position.set(p.x * IN, 0, p.y * IN);
     g.rotation.y = -(p.rot || 0) * Math.PI / 180;
@@ -374,7 +387,7 @@ function buildTerrain() {
   $('#pieces').textContent = app.pieces.length ? app.pieces.length + ' pieces' + (app.selected >= 0 ? ' · selected: ' + describe(app.pieces[app.selected]) : '') : 'No terrain';
 }
 const describe = p => `${p.tall === true ? 'tall' : p.tall === false ? 'low' : (TERRAIN_KINDS[p.kind] || p.kind)} ${p.w}"×${p.h}" @ ${p.x.toFixed(1)}/${p.y.toFixed(1)} ${p.rot | 0}°`;
-const layoutById = id => TERRAIN_LAYOUTS.find(t => t.id === id) || null;
+const layoutById = id => TERRAIN_LAYOUTS.find(t => t.id === id) || (id && String(id).startsWith('random-') ? { id, name: 'Random layout #' + id.slice(7), pieces: [] } : null);
 
 function saveTerrain() { if (app.code) store.set('terrain.' + app.code, { layout: app.layoutId, pieces: app.pieces }); }
 // ---------------------------------------------------------------- undo (right grip without the panel in the ray, or panel button)
@@ -405,6 +418,22 @@ function setLayout(id, { fromState = false } = {}) {
     app.net.dispatch({ type: 'mission.set', terrainLayout: id || null }).catch(e => toast(e.message));
   }
   if (!app.state) { app.local.mission.terrainLayout = id || null; saveLocal(); }
+}
+/** Random fair layout for the current battlefield (full table or the chosen Incursion half) and deployment card. */
+function generateRandomLayout() {
+  const half = app.board !== 'full';
+  const map = cur().mission.deployment ? WH.DEPLOYMENT_MAPS[cur().mission.deployment] : null;
+  const objectives = !half && map ? [map.home.a, map.home.d, map.exp[0], map.exp[1], [22, 30]] : [];
+  const r = generateLayout({ board: half ? 'half' : 'full', objectives, tries: 1200 });
+  if (!r) { toast('No fair layout found – try again'); return; }
+  pushUndo('random layout');
+  const y0 = app.board === 'far' ? 30 : 0;
+  app.layoutId = 'random-' + r.seed;
+  app.pieces = r.pieces.map(p => Object.assign({}, p, { y: +(p.y + y0).toFixed(2) }));
+  app.selected = -1;
+  buildTerrain(); saveTerrain();
+  if (!app.state) { app.local.mission.terrainLayout = app.layoutId; saveLocal(); }
+  toast(`Random layout #${r.seed} (${r.pieces.length} pieces, ${r.pieces.filter(p => p.tall).length} tall)`);
 }
 function selectPiece(i) { app.selected = i; buildTerrain(); }
 function addPiece(w, h, kind = 'ruin') {
@@ -1026,6 +1055,7 @@ function applyAction(a, btn) {
   else if (a.act === 'board') { app.board = a.v; rebuildBoard(); }
   else if (a.open !== undefined) openGame(a.open);
   else if (a.act === 'games') refreshGames();
+  else if (a.act === 'gen') generateRandomLayout();
   else if (a.act === 'camReset') { app.camcal = null; app.markers = null; app.mtrack = false; store.set('camcal', null); store.set('markers', null); toast('Camera calibration forgotten – run the marker calibration again'); }
   else if (a.act === 'mscale' || a.act === 'mscaleStep') {
     app.markerScale = a.act === 'mscale' ? Number(a.v) : Math.max(0.3, app.markerScale + Number(a.v) / 52.5);
