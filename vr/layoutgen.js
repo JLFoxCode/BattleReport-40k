@@ -19,12 +19,27 @@
  *               8"×11.5" ×2 (dense ruins, tall), 6"×4" ×4, 10"×2.5" ×2, 6"×2" ×4 (light, low) = 16 areas
  *  gw10       – Chapter Approved 2025-26 tournament set: 12"×6" ×6, 10"×5" ×2 (tall), 6"×4" ×4 (low)
  *  half       – Incursion 44"×30": half a set */
+import { LAYOUTS11 } from '../data/layouts11.js';
+/* Calibrated on the 45 official layouts (measured 2026-10-23): 12 dense + 4 light areas – dense: 7×11.5 ×4,
+ * 8×11.5 polygon ×2 (the central block), 10×2.5 ×2, 6×4 ×2, 6×2 ×2; light: 6×4 ×2, 6×2 ×2. Sightlines between the
+ * deployment zones 94–100 % blocked, 14–27 % of each zone covered by terrain, areas may touch, ≥ 2" from the edge,
+ * objectives (nearly) always inside dense areas, the central objective inside the interlocking 8×11.5 pair. */
 export const SETS = {
-  armageddon: { size: [44, 60], centre: [8, 11.5, true], pieces: [[7, 11.5, true], [7, 11.5, true], [6, 4, false], [6, 4, false], [10, 2.5, false], [6, 2, false], [6, 2, false]] },
+  armageddon: { size: [44, 60], centreBlock: true, pieces: [[7, 11.5, true], [7, 11.5, true], [10, 2.5, true], [6, 4, true], [6, 4, false], [6, 2, true], [6, 2, false]] },
   gw10: { size: [44, 60], centre: [12, 6, true], pieces: [[12, 6, true], [12, 6, true], [10, 5, true], [6, 4, false], [6, 4, false]] },
-  half: { size: [44, 30], centre: [8, 11.5, true], pieces: [[7, 11.5, true], [6, 4, false], [6, 2, false]] }
+  half: { size: [44, 30], centre: [8, 11.5, true], pieces: [[7, 11.5, true], [6, 4, true], [6, 2, false]] }
 };
 SETS.full = SETS.armageddon;
+/** The official central block: the two interlocking 8×11.5 polygons of an Event Companion layout (relative to the
+ *  battlefield centre), reused by the generator with a random quarter turn. */
+const CENTRE_BLOCK = (() => {
+  const L = LAYOUTS11.find(l => l.pieces.filter(p => p.poly).length === 2);
+  if (!L) return null;
+  return L.pieces.filter(p => p.poly).map(p => ({ dx: p.x - 22, dy: p.y - 30, w: p.w, h: p.h, poly: p.poly, tall: true }));
+})();
+export const FAIL = {};                      // why candidates were rejected (debugging / tuning)
+const fail = why => { FAIL[why] = (FAIL[why] || 0) + 1; return false; };
+const rotPoint = ([x, y], q) => { const a = q * Math.PI / 2, c = Math.cos(a), s = Math.sin(a); return [x * c - y * s, x * s + y * c]; };
 
 export function rng(seed) {
   let s = (seed >>> 0) || 1;
@@ -33,7 +48,9 @@ export function rng(seed) {
 
 // ---------------------------------------------------------------- geometry
 const corners = p => {
-  const r = (p.rot || 0) * Math.PI / 180, c = Math.cos(r), s = Math.sin(r), hw = p.w / 2, hh = p.h / 2;
+  const r = (p.rot || 0) * Math.PI / 180, c = Math.cos(r), s = Math.sin(r);
+  if (p.poly) return p.poly.map(([dx, dy]) => [p.x + dx * c - dy * s, p.y + dx * s + dy * c]);
+  const hw = p.w / 2, hh = p.h / 2;
   return [[-hw, -hh], [hw, -hh], [hw, hh], [-hw, hh]].map(([dx, dy]) => [p.x + dx * c - dy * s, p.y + dx * s + dy * c]);
 };
 const axes = poly => poly.map((a, i) => { const b = poly[(i + 1) % poly.length]; const dx = b[0] - a[0], dy = b[1] - a[1]; const l = Math.hypot(dx, dy) || 1; return [-dy / l, dx / l]; });
@@ -64,7 +81,7 @@ const ROTS = [0, 90, 0, 90, 0, 90, 45, 135, 0, 90];
 function candidate(rand, set, objectives) {
   const [W, L] = set.size, cx = W / 2, cy = L / 2;
   const placed = [], polys = [];
-  const fits = poly => poly.every(c => c[0] >= 1 && c[0] <= W - 1 && c[1] >= 1 && c[1] <= L - 1) && polys.every(q => gap(poly, q) >= 2);
+  const fits = poly => poly.every(c => c[0] >= 2 && c[0] <= W - 2 && c[1] >= 2 && c[1] <= L - 2) && polys.every(q => gap(poly, q) >= 0);
   const add = (p, m) => { placed.push(p); polys.push(corners(p)); if (m) { placed.push(m); polys.push(corners(m)); } };
   // objectives of the first half (their partners are the mirror images); the centre one separately
   const objs = (objectives || []).filter(o => Math.hypot(o[0] - cx, o[1] - cy) > 1);
@@ -79,8 +96,13 @@ function candidate(rand, set, objectives) {
   const hasCentre = (objectives || []).some(o => Math.hypot(o[0] - cx, o[1] - cy) <= 1);
   const pieces = set.pieces.slice();
   const tallIdx = pieces.map((p, i) => (p[2] ? i : -1)).filter(i => i >= 0);
-  // centre piece
-  if (set.centre && (hasCentre || !objectives || !objectives.length)) {
+  // centre: the official interlocking 8×11.5 pair (quarter turn at random), or a single self-symmetric piece
+  if (set.centreBlock && CENTRE_BLOCK) {
+    const q = Math.floor(rand() * 4);
+    const pair = CENTRE_BLOCK.map(b => { const [dx, dy] = rotPoint([b.dx, b.dy], q); return { kind: 'ruin', w: b.w, h: b.h, rot: q * 90, tall: true, x: +(cx + dx).toFixed(2), y: +(cy + dy).toFixed(2), poly: b.poly }; });
+    if (!pair.every(p => corners(p).every(c => c[0] >= 2 && c[0] <= W - 2 && c[1] >= 2 && c[1] <= L - 2))) { FAIL.centre = (FAIL.centre || 0) + 1; return null; }
+    for (const p of pair) { placed.push(p); polys.push(corners(p)); }
+  } else if (set.centre && (hasCentre || !objectives || !objectives.length)) {
     const [w, h, tall] = set.centre;
     const rot = ROTS[Math.floor(rand() * ROTS.length)];
     const p = { kind: 'ruin', w, h, rot, tall, x: cx, y: cy };
@@ -90,6 +112,7 @@ function candidate(rand, set, objectives) {
   // one tall piece over each first-half objective, the objective well inside the footprint
   const cover = [];
   for (const o of firstHalf) {
+    if (polys.some(q => inPoly(o, q))) continue;                 // already inside the centre block
     const k = tallIdx.find(i => !cover.includes(i));
     if (k === undefined) break;
     cover.push(k);
@@ -101,10 +124,10 @@ function candidate(rand, set, objectives) {
       const p = { kind: 'ruin', w, h, rot, tall, x: +(o[0] - (lx * c - ly * sn)).toFixed(2), y: +(o[1] - (lx * sn + ly * c)).toFixed(2) };
       const m = { kind: 'ruin', w, h, rot, tall, x: +(W - p.x).toFixed(2), y: +(L - p.y).toFixed(2) };
       const pp = corners(p), mp = corners(m);
-      if (!fits(pp) || gap(pp, mp) < 2 || !fits(mp)) continue;
+      if (!fits(pp) || gap(pp, mp) < 0 || !fits(mp)) continue;
       add(p, m); ok = true;
     }
-    if (!ok) return null;
+    if (!ok) { FAIL.cover = (FAIL.cover || 0) + 1; return null; }
   }
   // the rest at random
   for (let i = 0; i < pieces.length; i++) {
@@ -116,16 +139,15 @@ function candidate(rand, set, objectives) {
       const p = { kind: 'ruin', w, h, rot, tall, x: +(1 + rand() * (W - 2)).toFixed(2), y: +(1 + rand() * (L / 2 + 3)).toFixed(2) };
       const m = { kind: 'ruin', w, h, rot, tall, x: +(W - p.x).toFixed(2), y: +(L - p.y).toFixed(2) };
       const pp = corners(p), mp = corners(m);
-      if (!fits(pp) || gap(pp, mp) < 2 || !fits(mp)) continue;
+      if (!fits(pp) || gap(pp, mp) < 0 || !fits(mp)) continue;
       add(p, m); ok = true;
     }
-    if (!ok) return null;
+    if (!ok) { FAIL.rest = (FAIL.rest || 0) + 1; return null; }
   }
   return placed;
 }
 
-export const FAIL = {};                      // why candidates were rejected (debugging / tuning)
-const fail = why => { FAIL[why] = (FAIL[why] || 0) + 1; return false; };
+
 /** random point inside a polygon (rejection sampling in its bounding box) */
 function pointIn(poly, r) {
   let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
@@ -145,17 +167,24 @@ export function evaluate(pieces, set, objectives, zones) {
     for (const z of [zones.a, zones.d]) {
       let cov = 0, n = 60;
       for (let k = 0; k < n; k++) { const pt = pointIn(z, r0); if (polys.some(q => inPoly(pt, q))) cov++; }
-      if (cov / n > 0.34) return fail('zone blocked');
+      if (cov / n > 0.30) return fail('zone blocked');
+      if (cov / n < 0.10) return fail('zone bare');
     }
   }
   // no open lane along the long axis (sampled every 3", ≥ 90 % of them blocked by a tall piece)
   let lanes = 0, lanesBlocked = 0;
-  for (let x = 2; x <= W - 2; x += 3) { lanes++; if (tallPolys.some(t => segHits([x, 0], [x, L], t))) lanesBlocked++; }
-  if (lanesBlocked < lanes * 0.9) return fail('lane');
-  // 11th edition: every objective lies within a terrain area (well inside it)
+  for (let x = 2; x <= W - 2; x += 2) { lanes++; if (tallPolys.some(t => segHits([x, 0], [x, L], t))) lanesBlocked++; }
+  if (lanesBlocked < lanes * 0.7) return fail('lane');
+  // 11th edition: every objective lies within a terrain area – home and central ones inside a dense (tall) area
   for (const o of objectives || []) {
-    if (!polys.some(p => inPoly(o, p) && distToPoly(o, p) === 0)) return fail('objective outside terrain');
+    // the interlocking centre polygons count as one terrain area: a marker in their seam is inside
+    const inside = polys.filter((p, i) => inPoly(o, p) || (pieces[i].poly && distToPoly(o, p) < 2));
+    if (!inside.length) return fail('objective outside terrain');
+    const central = Math.hypot(o[0] - W / 2, o[1] - L / 2) < 8, home = Math.min(o[1], L - o[1]) < 16;
+    if ((central || home) && !inside.some(p => tallPolys.includes(p))) return fail('objective not in dense');
   }
+  // dense terrain inside each deployment zone (the official layouts have 2–8 tall areas in the zones)
+  if (zones) for (const z of [zones.a, zones.d]) if (!pieces.some(p => p.tall && inPoly([p.x, p.y], z))) return fail('zone without dense');
   // centre covered, every quarter has a tall piece
   if (!tallPolys.some(t => distToPoly([W / 2, L / 2], t) <= 8)) return fail('centre open');
   const quarters = [[0, 0], [1, 0], [0, 1], [1, 1]].map(([qx, qy]) => pieces.some(p => (p.x < W / 2) === (qx === 0) && (p.y < L / 2) === (qy === 0)));
@@ -169,8 +198,7 @@ export function evaluate(pieces, set, objectives, zones) {
     n++; if (tallPolys.some(t => segHits(a, b, t))) blocked++;
   }
   const frac = blocked / n;
-  if (frac < 0.7) return fail('too open');
-  if (frac > 0.97) return fail('too closed');
+  if (frac < 0.92) return fail('too open');
   // prefer spread: mean nearest-neighbour gap around 3–6"
   let spread = 0;
   for (let i = 0; i < polys.length; i++) { let g = Infinity; for (let j = 0; j < polys.length; j++) if (j !== i) g = Math.min(g, gap(polys[i], polys[j])); spread += Math.min(g, 8); }
@@ -193,16 +221,17 @@ export function generate(opts = {}) {
   const set = SETS[opts.board === 'half' ? 'half' : (opts.set && SETS[opts.set]) ? opts.set : 'armageddon'];
   const seed = (opts.seed >>> 0) || Math.floor(Math.random() * 0xffffffff);
   const rand = rng(seed);
-  let best = null;
-  const tries = opts.tries || 1500;
-  for (let i = 0; i < tries; i++) {
+  let best = null, valid = 0;
+  const tries = opts.tries || 1500, enough = opts.enough || 12;     // best of the first `enough` valid candidates
+  for (let i = 0; i < tries && valid < enough; i++) {
     const pieces = candidate(rand, set, opts.objectives || []);
     if (!pieces) { FAIL.placement = (FAIL.placement || 0) + 1; continue; }
     const score = evaluate(pieces, set, opts.objectives || [], opts.zones || null);
     if (score === false) continue;
+    valid++;
     if (!best || score > best.score) best = { pieces, score };
   }
   if (!best) return null;
-  const pieces = best.pieces.map((p, i) => Object.assign({ id: 'g' + i }, p, p.tall ? { walls: wallsFor(p, set) } : {}));
+  const pieces = best.pieces.map((p, i) => Object.assign({ id: 'g' + i }, p, p.tall && !p.poly ? { walls: wallsFor(p, set) } : {}));
   return { seed, pieces, score: best.score, tries, size: set.size };
 }
