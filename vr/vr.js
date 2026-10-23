@@ -35,7 +35,7 @@ const app = {
   calibPts: [],                // corners touched so far
   tool: 'move',                // move | calib | tape | ring | capture
   ringR: 6,
-  base: 32,                    // base diameter in mm the tape / rings measure from (0 = hull: the tapped point itself)
+  base: 0,                     // tape / rings measure from the tapped point
   tapeA: null,
   capPts: [],                  // corners of a real terrain piece touched so far (capture tool)
   marks: [],                   // { kind: 'ring' | 'tape', … } on the board texture
@@ -51,6 +51,8 @@ const app = {
   Y: null,                     // table pose (table → world, 4×4) when known from markers
   board: 'full',               // 'full' = Strike Force 44×60 | 'near' / 'far' = Incursion 44×30 on that half of the table
   markerScale: store.get('markerScale', 1),  // print scale of the corner sheets: 1 = 10×15 at 100 %, 1.98 = fitted onto A4
+  // play aid without a game: deployment card, attacker and layout chosen here and kept on the headset
+  local: Object.assign({ mission: { deployment: null, attacker: 0, terrainLayout: null }, players: [{ name: 'Player 1', color: 0 }, { name: 'Player 2', color: 1 }], objectives: [], stage: 'setup' }, store.get('local', {})),
   track: 'room',               // room: the table follows its WebXR anchor | local: fixed in the reference space
   scan: true,                  // show the planes of the room scan (plane-detection)
   planes: []                   // detected planes { label, y, corners: [{x, y, z}] } (world), refreshed every ~0.5 s
@@ -124,9 +126,7 @@ const panel = new Panel(THREE, {
     { tab: 'terrain', buttons: [{ label: 'Move', a: { tool: 'move' } }, { label: '⟲ 15°', a: { act: 'rotl' } }, { label: '⟳ 15°', a: { act: 'rotr' } }, { label: 'Delete', a: { act: 'del' } }] },
     { tab: 'terrain', buttons: [{ label: '+ 6×4', a: { add: '6x4' } }, { label: '+ 10×5', a: { add: '10x5' } }, { label: '+ 12×6', a: { add: '12x6' } }, { label: '+ crater', a: { add: '6x6', kind: 'crater' } }, { label: '+ wall', a: { add: '6x1', kind: 'wall' } }] },
     // Deployment helpers
-    { tab: 'deploy', title: 'Measure from the base edge (tap the base centre) – hull: the tapped point' },
-    { tab: 'deploy', buttons: [{ label: 'Hull', a: { base: 0 } }, { label: '25', a: { base: 25 } }, { label: '28', a: { base: 28 } }, { label: '32', a: { base: 32 } }, { label: '40', a: { base: 40 } }, { label: '50', a: { base: 50 } }, { label: '60', a: { base: 60 } }, { label: '80', a: { base: 80 } }] },
-    { tab: 'deploy', title: 'Tape = movement / distance · rings = range' },
+    { tab: 'deploy', title: 'Tape = distance between two points · rings = range from a point' },
     { tab: 'deploy', buttons: [{ label: '9" band', a: { act: 'band' } }, { label: 'Tape', a: { tool: 'tape' } }, { label: 'Clear marks', a: { act: 'clear' } }] },
     { tab: 'deploy', buttons: [{ label: '3" ring', a: { ring: 3 } }, { label: '6" ring', a: { ring: 6 } }, { label: '9" ring', a: { ring: 9 } }, { label: '12" ring', a: { ring: 12 } }] },
     // Camera: passthrough camera + corner markers (vr/print/table-markers-10x15.pdf)
@@ -154,8 +154,8 @@ panel.setState(a => (a.tool && a.tool === app.tool) || (a.ring && app.tool === '
   || (a.act === 'mscale' && Math.abs(Number(a.v) - app.markerScale) < 0.02)
   || (a.layout !== undefined && (a.layout || null) === app.layoutId)
   || (a.open !== undefined && a.open === app.code)
-  || (a.deployment !== undefined && app.state && app.state.mission.deployment === a.deployment)
-  || (a.attacker !== undefined && app.state && app.state.mission.attacker === a.attacker));
+  || (a.deployment !== undefined && cur().mission.deployment === a.deployment)
+  || (a.attacker !== undefined && cur().mission.attacker === a.attacker));
 const hud = new Hud(THREE, { width: 0.5 });
 hud.mesh.position.set(0, -0.17, -0.7);
 camera.add(hud.mesh);
@@ -230,9 +230,8 @@ function hudRefresh() {
   } else if (app.mtrack) lines.push({ text: 'Marker tracking on', color: '#9ef' });
   const cs = cam.state();
   if (cs.on) lines.push({ text: `Camera ${cs.w}×${cs.h} · ${cs.fps} fps · markers: ${cs.markers.length ? cs.markers.map(m => m.id + 1).join(', ') : 'none'}` + (cs.error ? ' · ' + cs.error : ''), color: '#9ef' });
-  const st = app.state;
-  if (!st && !app.mcal && app.tool !== 'calib') lines.push({ text: app.signedIn === false ? 'No game: sign in on the main page of this server in this browser, then open the game (menu → VR table setup).' : 'No game open – Mission tab → Game, or start from the menu with the game code.', color: '#ffd966' });
-  if (st && !noteText && app.tool !== 'calib') lines.push({ text: (st.mission.deployment || 'No deployment card') + (app.layoutId ? ' · ' + ((layoutById(app.layoutId) || {}).name || '') : ''), color: '#9aa3b2' });
+  const st = cur();
+  if (!noteText && app.tool !== 'calib') lines.push({ text: (st.mission.deployment || 'No deployment card') + (app.layoutId ? ' · ' + ((layoutById(app.layoutId) || {}).name || '') : '') + (app.state ? '' : ' · local'), color: '#9aa3b2' });
   hud.set(lines);
 }
 
@@ -268,8 +267,11 @@ function fieldRect() {
   return { y0: 0, y1: 60 };
 }
 function rebuildBoard() { repaint(); }
+/** What the overlay shows: the connected game, else the local choices. */
+const cur = () => app.state || app.local;
+const saveLocal = () => store.set('local', { mission: app.local.mission });
 function repaint() {
-  const s = app.state;
+  const s = cur();
   const map = s && s.mission && s.mission.deployment ? WH.DEPLOYMENT_MAPS[s.mission.deployment] : null;
   const players = (s && s.players) || [];
   const colors = [colorHex(players[0]), colorHex(players[1])];
@@ -387,6 +389,7 @@ function setLayout(id, { fromState = false } = {}) {
   if (!fromState && app.net && app.state && app.state.stage !== 'over') {
     app.net.dispatch({ type: 'mission.set', terrainLayout: id || null }).catch(e => toast(e.message));
   }
+  if (!app.state) { app.local.mission.terrainLayout = id || null; saveLocal(); }
 }
 function selectPiece(i) { app.selected = i; buildTerrain(); }
 function addPiece(w, h, kind = 'ruin') {
@@ -958,12 +961,15 @@ function applyAction(a, btn) {
   else if (a.base !== undefined) { app.base = Number(a.base) || 0; toast(app.base ? `Measuring from the edge of ${app.base} mm bases` : 'Measuring from the tapped point (hull)'); }
   else if (a.layout !== undefined) setLayout(a.layout || null);
   else if (a.deployment !== undefined || a.attacker !== undefined) {
-    if (!app.net) toast('Open a game first');
-    else {
+    if (app.net && app.state) {
       const act = { type: 'mission.set' };
       if (a.deployment !== undefined) act.deployment = a.deployment;
       if (a.attacker !== undefined) act.attacker = Number(a.attacker);
       app.net.dispatch(act).catch(e => toast(e.message));
+    } else {
+      if (a.deployment !== undefined) app.local.mission.deployment = app.local.mission.deployment === a.deployment ? null : a.deployment;
+      if (a.attacker !== undefined) app.local.mission.attacker = Number(a.attacker);
+      saveLocal();
     }
   }
   else if (a.text !== undefined) note(String(a.text || ''));
@@ -1054,6 +1060,7 @@ async function main() {
   refreshGames();
   const m = location.hash.match(/#\/g\/([A-Z0-9]{3,8})/i);
   openGame(m ? m[1] : store.get('code', ''));
+  if (!app.code && app.local.mission.terrainLayout && !app.layoutId) { app.layoutId = app.local.mission.terrainLayout; app.pieces = layoutPieces(layoutById(app.layoutId)); }
   buildTerrain(); repaint();
 }
 main();
