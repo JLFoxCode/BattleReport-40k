@@ -12,7 +12,8 @@
  * Without a headset the page shows the same scene as a 3D preview (mouse: drag = orbit, wheel = zoom). */
 import * as THREE from './vendor/three.module.min.js';   // no import map: the online server's CSP allows no inline scripts
 import { WH } from '../data/rules.js';
-import { TERRAIN_LAYOUTS, TERRAIN_KINDS, RECOMMENDED_LAYOUTS } from '../data/terrain.js';
+import { TERRAIN_KINDS } from '../data/terrain.js';
+import { LAYOUTS11, DISPOSITIONS11, VARIANTS11, findLayout11 } from '../data/layouts11.js';
 import { IN, BOARD, frameFromCorners, frameMatrix, packFrame, unpackFrame, snap, onBoard } from './calib.js';
 import { PX, paintBoard, rectCorners, pieceAt, layoutPieces, pieceHeight } from './board.js';
 import { connect, session as apiSession, listGames } from './net.js';
@@ -55,7 +56,7 @@ const app = {
   halves: Object.assign({ near: { deployment: null, attacker: 0 }, far: { deployment: null, attacker: 0 } }, store.get('halves', {})),
   markerScale: store.get('markerScale', 1),  // print scale of the corner sheets: 1 = 10×15 at 100 %, 1.98 = fitted onto A4
   // play aid without a game: deployment card, attacker and layout chosen here and kept on the headset
-  local: Object.assign({ mission: { deployment: null, attacker: 0, terrainLayout: null }, players: [{ name: 'Player 1', color: 0 }, { name: 'Player 2', color: 1 }], objectives: [], stage: 'setup' }, store.get('local', {})),
+  local: Object.assign({ mission: { deployment: null, attacker: 0, terrainLayout: null, dispA: 'Take and Hold', dispD: 'Take and Hold', variant: 'A', layout11: null }, players: [{ name: 'Player 1', color: 0 }, { name: 'Player 2', color: 1 }], objectives: [], stage: 'setup' }, store.get('local', {})),
   track: 'room',               // room: the table follows its WebXR anchor | local: fixed in the reference space
   scan: true,                  // show the planes of the room scan (plane-detection)
   planes: []                   // detected planes { label, y, corners: [{x, y, z}] } (world), refreshed every ~0.5 s
@@ -99,21 +100,22 @@ const calibDots = new THREE.Group(); scene.add(calibDots);
 
 // in-headset UI: 3D panel (no dom-overlay in the Quest browser) + HUD text in front of the camera
 /** One button per layout (by name), four per row. */
-const recommended = () => RECOMMENDED_LAYOUTS[cur().mission.deployment] || null;
-const layoutButtons = (from, to) => TERRAIN_LAYOUTS.slice(from, to).map(t => { const rec = recommended(); return { label: (t.short || t.name) + (rec ? (rec.includes(t.id) ? ' ✓' : ' ·') : ''), a: { layout: t.id } }; });
-function layoutRows() {
-  const rows = [];
-  for (let i = 0; i < TERRAIN_LAYOUTS.length; i += 4) rows.push({ tab: 'terrain', key: 'layouts' + i, buttons: layoutButtons(i, i + 4) });
-  return rows;
-}
-function refreshLayoutRows() { for (let i = 0; i < TERRAIN_LAYOUTS.length; i += 4) panel.setRow('layouts' + i, layoutButtons(i, i + 4)); }
+/** The 11th-edition Event Companion layout in use (local play aid): chosen by the two Force Dispositions + A/B/C. */
+const eventLayout = () => (!app.state && app.local.mission.layout11) ? LAYOUTS11.find(l => l.id === app.local.mission.layout11) || null : null;
+const dispRow = (key, who) => ({ tab: 'mission', key, buttons: DISPOSITIONS11.map(n => ({ label: n, a: { [who]: n } })) });
+function refreshLayoutRows() { /* layouts are chosen in the Mission tab now */ }
 const panel = new Panel(THREE, {
   tabs: [{ id: 'table', label: 'Table' }, { id: 'mission', label: 'Mission' }, { id: 'terrain', label: 'Terrain' }, { id: 'deploy', label: 'Deploy' }, { id: 'camera', label: 'Camera' }, { id: 'system', label: 'System' }],
   rows: [
     // Mission: pick the game, then its Deployment card (zones + objectives on the table)
     { tab: 'mission', title: 'Game' },
     { tab: 'mission', key: 'games', buttons: [{ label: 'Loading games…', a: { act: 'games' } }] },
-    { tab: 'mission', title: 'Deployment card' },
+    { tab: 'mission', title: 'Event layout (11th ed. Event Companion): Attacker\'s Force Disposition' },
+    dispRow('dispA', 'dispA'),
+    { tab: 'mission', title: 'Defender\'s Force Disposition' },
+    dispRow('dispD', 'dispD'),
+    { tab: 'mission', buttons: [{ label: 'Layout A', a: { variant: 'A' } }, { label: 'Layout B', a: { variant: 'B' } }, { label: 'Layout C', a: { variant: 'C' } }, { label: 'Apply event layout', a: { act: 'applyLayout11' }, w: 1.6 }, { label: 'Clear', a: { act: 'clearLayout11' } }] },
+    { tab: 'mission', title: 'Pick-up game instead: deployment card of the mission deck' },
     { tab: 'mission', buttons: WH.DEPLOYMENTS.slice(0, 3).map(n => ({ label: n, a: { deployment: n } })) },
     { tab: 'mission', buttons: WH.DEPLOYMENTS.slice(3, 6).map(n => ({ label: n, a: { deployment: n } })) },
     { tab: 'mission', title: 'Attacker' },
@@ -131,8 +133,7 @@ const panel = new Panel(THREE, {
     { tab: 'table', buttons: [{ label: 'Room anchor', a: { act: 'track', v: 'room' } }, { label: 'Local (fixed)', a: { act: 'track', v: 'local' } }, { label: '6" grid', a: { act: 'grid' } }] },
     // Terrain
     { tab: 'terrain', title: 'Layout (✓ = recommended for the chosen deployment card)' },
-    ...layoutRows(),
-    { tab: 'terrain', buttons: [{ label: 'No layout', a: { layout: '' } }, { label: 'Reset layout', a: { act: 'reset' } }, { label: 'Capture piece', a: { tool: 'capture' }, w: 1.3 }] },
+    { tab: 'terrain', buttons: [{ label: 'Terrain of the event layout', a: { act: 'reset' }, w: 1.5 }, { label: 'No terrain', a: { layout: '' } }, { label: 'Capture piece', a: { tool: 'capture' }, w: 1.3 }] },
     { tab: 'terrain', title: 'Random layout, 11th ed. style: point-symmetric, every objective inside a terrain area, sightlines broken' },
     { tab: 'terrain', buttons: [{ label: 'Generate random layout', a: { act: 'gen' }, w: 1.6 }, { label: 'Re-roll', a: { act: 'gen' } }, { label: '★ Favourite', a: { act: 'fav' } }] },
     { tab: 'terrain', title: 'Recent random layouts (tap = restore exactly)' },
@@ -171,6 +172,7 @@ panel.setState(a => (a.tool && a.tool === app.tool) || (a.ring && app.tool === '
   || (a.act === 'mscale' && Math.abs(Number(a.v) - app.markerScale) < 0.02)
   || (a.layout !== undefined && (a.layout || null) === app.layoutId)
   || (a.open !== undefined && a.open === app.code)
+  || (a.dispA !== undefined && app.local.mission.dispA === a.dispA) || (a.dispD !== undefined && app.local.mission.dispD === a.dispD) || (a.variant !== undefined && app.local.mission.variant === a.variant)
   || (a.deployment !== undefined && (app.board === 'both' ? app.halves[app.editHalf].deployment : cur().mission.deployment) === a.deployment)
   || (a.attacker !== undefined && (app.board === 'both' ? app.halves[app.editHalf].attacker : cur().mission.attacker) === a.attacker));
 const hud = new Hud(THREE, { width: 0.5 });
@@ -252,9 +254,10 @@ function hudRefresh() {
     const near = app.halves.near, far = app.halves.far;
     lines.push({ text: `Near field: ${near.deployment || 'no card'} \u00b7 Far field: ${far.deployment || 'no card'} \u00b7 editing: ${app.editHalf}`, color: '#9aa3b2' });
   } else if (!noteText && app.tool !== 'calib') {
-    const rec = recommended();
-    const layoutNote = app.layoutId ? ' · ' + ((layoutById(app.layoutId) || {}).name || '') + (rec && !rec.includes(app.layoutId) ? ' (not recommended for this card)' : '') : rec ? ' · recommended layouts: ' + rec.map(id => id.replace('ca2025-', '')).join(', ') : '';
-    lines.push({ text: (st.mission.deployment || 'No deployment card') + layoutNote + (app.state ? '' : ' · local'), color: '#9aa3b2' });
+    const L = eventLayout();
+    const head = L ? `${L.attacker.disposition} vs ${L.defender.disposition} · Layout ${L.variant}` : (st.mission.deployment || 'No layout \– Mission tab: dispositions + Apply event layout');
+    const layoutNote = app.layoutId && !L ? ' · ' + ((layoutById(app.layoutId) || {}).name || '') : app.layoutId && String(app.layoutId).startsWith('random-') ? ' · random terrain' : '';
+    lines.push({ text: head + layoutNote + (app.state ? '' : ' · local'), color: '#9aa3b2' });
   }
   hud.set(lines);
 }
@@ -307,12 +310,15 @@ const saveHalves = () => store.set('halves', app.halves);
 function rebuildBoard() { repaint(); }
 function repaint() {
   const s = cur();
-  const map = s && s.mission && s.mission.deployment ? WH.DEPLOYMENT_MAPS[s.mission.deployment] : null;
+  const L = eventLayout();
+  const att = s && s.mission.attacker === 1 ? 1 : 0;
+  const map = L ? { zones: L.zones } : s && s.mission && s.mission.deployment ? WH.DEPLOYMENT_MAPS[s.mission.deployment] : null;
   const players = (s && s.players) || [];
   const colors = [colorHex(players[0]), colorHex(players[1])];
-  const objectives = s && s.objectives && s.objectives.length ? s.objectives : map ? [
-    { pos: map.home.a, name: 'Attacker Home', home: s && s.mission.attacker === 1 ? 1 : 0 },
-    { pos: map.home.d, name: 'Defender Home', home: s && s.mission.attacker === 1 ? 0 : 1 },
+  const objectives = L ? L.objectives.map((o, i) => ({ pos: o.pos, name: o.kind === 'home' ? (o.owner === 'a' ? 'Attacker Home' : 'Defender Home') : o.kind === 'central' ? 'Central' : 'Expansion', home: o.kind === 'home' ? (o.owner === 'a' ? att : 1 - att) : null }))
+    : s && s.objectives && s.objectives.length ? s.objectives : map ? [
+    { pos: map.home.a, name: 'Attacker Home', home: att },
+    { pos: map.home.d, name: 'Defender Home', home: 1 - att },
     { pos: map.exp[0], name: 'Expansion 1' }, { pos: map.exp[1], name: 'Expansion 2' }, { pos: [22, 30], name: 'Centre' }] : [];
   const field = fieldRect();
   const half = app.board !== 'full';
@@ -363,11 +369,20 @@ function buildTerrain() {
     const h = heightOf(p);
     const g = new THREE.Group();
     const col = p.tall === true ? TALL_COLOR : p.tall === false ? LOW_COLOR : (KIND_COLOR[p.kind] || 0x8d99ae);
-    const box = new THREE.Mesh(new THREE.BoxGeometry(p.w * IN, h * IN, p.h * IN),
-      new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: i === app.selected ? 0.5 : (p.tall === false ? 0.28 : 0.22), side: THREE.DoubleSide, depthWrite: false }));
-    box.position.y = h * IN / 2;
+    const mat = new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: i === app.selected ? 0.5 : (p.tall === false ? 0.28 : 0.22), side: THREE.DoubleSide, depthWrite: false });
+    let box;
+    if (p.poly && p.poly.length >= 3) {
+      // irregular footprint: extrude the outline (table x → local X, table y → local Z)
+      const shape = new THREE.Shape(p.poly.map(([x, y]) => new THREE.Vector2(x * IN, y * IN)));
+      const geo = new THREE.ExtrudeGeometry(shape, { depth: h * IN, bevelEnabled: false });
+      geo.rotateX(Math.PI / 2); geo.translate(0, h * IN, 0);       // shape in XY → lies in XZ, extruded upwards
+      box = new THREE.Mesh(geo, mat);
+    } else {
+      box = new THREE.Mesh(new THREE.BoxGeometry(p.w * IN, h * IN, p.h * IN), mat);
+      box.position.y = h * IN / 2;
+    }
     const edges = new THREE.LineSegments(new THREE.EdgesGeometry(box.geometry), new THREE.LineBasicMaterial({ color: i === app.selected ? 0xffffff : 0xdde3ea, transparent: true, opacity: 0.9 }));
-    edges.position.y = h * IN / 2;
+    edges.position.copy(box.position);
     g.add(box, edges);
     // low cover (≤ 2"): the card prescribes only the height – crates / rubble / barricades; drawn as a slab with
     // small blocks on top so it reads differently from the tall ruins
@@ -404,7 +419,7 @@ function buildTerrain() {
   $('#pieces').textContent = app.pieces.length ? app.pieces.length + ' pieces' + (app.selected >= 0 ? ' · selected: ' + describe(app.pieces[app.selected]) : '') : 'No terrain';
 }
 const describe = p => `${p.tall === true ? 'tall' : p.tall === false ? 'low' : (TERRAIN_KINDS[p.kind] || p.kind)} ${p.w}"×${p.h}" @ ${p.x.toFixed(1)}/${p.y.toFixed(1)} ${p.rot | 0}°`;
-const layoutById = id => TERRAIN_LAYOUTS.find(t => t.id === id) || (id && String(id).startsWith('random-') ? { id, name: 'Random layout #' + id.slice(7), pieces: [] } : null);
+const layoutById = id => { const L = id && LAYOUTS11.find(l => l.id === id); return L ? { id, name: `${L.attacker.disposition} vs ${L.defender.disposition} ${L.variant}`, pieces: L.pieces } : (id && String(id).startsWith('random-') ? { id, name: 'Random layout #' + id.slice(7), pieces: [] } : null); };
 
 function saveTerrain() { if (app.code) store.set('terrain.' + app.code, { layout: app.layoutId, pieces: app.pieces }); }
 // ---------------------------------------------------------------- undo (right grip without the panel in the ray, or panel button)
@@ -424,10 +439,26 @@ function undo() {
   buildTerrain(); saveTerrain(); repaint(); sendStatus();
   toast('Undo: ' + u.what);
 }
+/** Put the chosen Event Companion layout on the table: its deployment zones, objectives and the 16 terrain areas. */
+function applyEventLayout() {
+  const m = app.local.mission;
+  const L = findLayout11(m.dispA, m.dispD, m.variant);
+  if (!L) { toast('No layout for this pairing'); return; }
+  if (app.board !== 'full') { toast('Event layouts are 44\×60 \– switch the battlefield to Strike Force'); return; }
+  pushUndo('event layout');
+  m.layout11 = L.id; m.deployment = null; saveLocal();
+  // attacker's edge is y = 0 in the data; the layout is used as printed (swap sides with Mirror / attacker choice)
+  app.layoutId = L.id;
+  app.pieces = L.pieces.map((p, i) => Object.assign({ id: 'e' + i }, p));
+  app.selected = -1;
+  buildTerrain(); saveTerrain(); repaint();
+  toast(`${L.attacker.disposition} vs ${L.defender.disposition} \– Layout ${L.variant} (${L.attacker.mission} / ${L.defender.mission})`);
+}
 function setLayout(id, { fromState = false } = {}) {
   if (!fromState) pushUndo('layout');
   app.layoutId = id || null;
-  app.pieces = layoutPieces(layoutById(id));
+  const L11 = id && LAYOUTS11.find(l => l.id === id);
+  app.pieces = L11 ? L11.pieces.map((p, i) => Object.assign({ id: 'e' + i }, p)) : layoutPieces(layoutById(id));
   app.selected = -1;
   buildTerrain(); saveTerrain();
   $('#layout').value = id || '';
@@ -466,8 +497,9 @@ function restoreRandom(e) {
 }
 function generateRandomLayout(seed) {
   const half = app.board !== 'full';
-  const map = cur().mission.deployment ? WH.DEPLOYMENT_MAPS[cur().mission.deployment] : null;
-  const objectives = !half && map ? [map.home.a, map.home.d, map.exp[0], map.exp[1], [22, 30]] : [];
+  const L = eventLayout();
+  const map = L ? { zones: L.zones } : cur().mission.deployment ? WH.DEPLOYMENT_MAPS[cur().mission.deployment] : null;
+  const objectives = !half && L ? L.objectives.map(o => o.pos) : !half && map ? [map.home.a, map.home.d, map.exp[0], map.exp[1], [22, 30]] : [];
   const r = generateLayout({ seed, board: half ? 'half' : 'full', objectives, zones: !half && map ? map.zones : null, tries: 1500 });
   if (!r) { toast('No fair layout found – try again'); return; }
   historyAdd({ seed: r.seed, board: app.board, half: half ? app.editHalf : null, deployment: cur().mission.deployment || null, fav: !!(app.history || []).find(h => h.seed === r.seed && h.fav), t: Date.now() });
@@ -1058,7 +1090,7 @@ function openGame(code) {
 
 function initUi() {
   const sel = $('#layout');
-  sel.innerHTML = '<option value="">No terrain layout</option>' + TERRAIN_LAYOUTS.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
+  sel.innerHTML = '<option value="">No terrain layout</option>' + LAYOUTS11.map(t => `<option value="${t.id}">${t.attacker.disposition} vs ${t.defender.disposition} \– ${t.variant}</option>`).join('');
   sel.addEventListener('change', () => setLayout(sel.value || null));
   const ui = $('#ui');
   ui.addEventListener('beforexrselect', e => e.preventDefault());     // taps on the overlay are not table taps
@@ -1075,6 +1107,14 @@ function applyAction(a, btn) {
   if (a.tool) { app.tool = a.tool; app.tapeA = null; app.capPts = []; if (a.tool === 'calib') startCalibration(); if (a.tool === 'capture') toast('Capture: touch a corner of the real piece and press the trigger'); }
   else if (a.ring) { app.tool = 'ring'; app.ringR = Number(a.ring); }
   else if (a.add) { const [w, h] = String(a.add).split('x').map(Number); if (w > 0 && h > 0) addPiece(w, h, a.kind || 'ruin'); }
+  else if (a.dispA !== undefined || a.dispD !== undefined || a.variant !== undefined) {
+    if (a.dispA !== undefined) app.local.mission.dispA = a.dispA;
+    if (a.dispD !== undefined) app.local.mission.dispD = a.dispD;
+    if (a.variant !== undefined) app.local.mission.variant = a.variant;
+    saveLocal();
+  }
+  else if (a.act === 'applyLayout11') applyEventLayout();
+  else if (a.act === 'clearLayout11') { app.local.mission.layout11 = null; saveLocal(); }
   else if (a.base !== undefined) { app.base = Number(a.base) || 0; toast(app.base ? `Measuring from the edge of ${app.base} mm bases` : 'Measuring from the tapped point (hull)'); }
   else if (a.layout !== undefined) setLayout(a.layout || null);
   else if (a.deployment !== undefined || a.attacker !== undefined) {
@@ -1089,7 +1129,7 @@ function applyAction(a, btn) {
       if (a.attacker !== undefined) h.attacker = Number(a.attacker);
       saveHalves();
     } else {
-      if (a.deployment !== undefined) app.local.mission.deployment = app.local.mission.deployment === a.deployment ? null : a.deployment;
+      if (a.deployment !== undefined) { app.local.mission.deployment = app.local.mission.deployment === a.deployment ? null : a.deployment; if (app.local.mission.deployment) app.local.mission.layout11 = null; }
       if (a.attacker !== undefined) app.local.mission.attacker = Number(a.attacker);
       saveLocal();
     }
@@ -1098,7 +1138,7 @@ function applyAction(a, btn) {
   else if (a.act === 'rotl') rotateSelected(-15);
   else if (a.act === 'rotr') rotateSelected(15);
   else if (a.act === 'del') removeSelected();
-  else if (a.act === 'reset') setLayout(app.layoutId, { fromState: true });
+  else if (a.act === 'reset') { const L = eventLayout(); setLayout(L ? L.id : app.layoutId, { fromState: true }); }
   else if (a.act === 'clear') { app.marks = []; app.tapeA = null; repaint(); }
   else if (a.act === 'band') app.band = app.band === 'infiltrate' ? 'none' : 'infiltrate';
   else if (a.act === 'grid') app.grid = !app.grid;

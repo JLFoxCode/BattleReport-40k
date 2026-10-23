@@ -23,12 +23,27 @@ export function inRect(p, q) {
 
 /** Topmost piece under a board point (last in the list wins), or -1. */
 export function pieceAt(pieces, p) {
-  for (let i = pieces.length - 1; i >= 0; i--) if (inRect(p, pieces[i])) return i;
+  for (let i = pieces.length - 1; i >= 0; i--) {
+    const q = pieces[i];
+    if (q.poly && q.poly.length >= 3) { if (inPolyRel(p, q)) return i; }
+    else if (inRect(p, q)) return i;
+  }
   return -1;
+}
+/** point inside an irregular footprint (outline relative to the piece centre, rotated by rot) */
+function inPolyRel(p, q) {
+  const r = -(q.rot || 0) * Math.PI / 180, c = Math.cos(r), s = Math.sin(r);
+  const dx = p.x - q.x, dy = p.y - q.y, lx = dx * c - dy * s, ly = dx * s + dy * c;
+  let inside = false;
+  for (let i = 0, j = q.poly.length - 1; i < q.poly.length; j = i++) {
+    const a = q.poly[i], b = q.poly[j];
+    if ((a[1] > ly) !== (b[1] > ly) && lx < (b[0] - a[0]) * (ly - a[1]) / (b[1] - a[1]) + a[0]) inside = !inside;
+  }
+  return inside;
 }
 
 /** Deep copy of a layout's pieces with ids. */
-export const layoutPieces = layout => (layout && Array.isArray(layout.pieces) ? layout.pieces : []).map((p, i) => Object.assign({ id: 't' + i, kind: p.kind || 'ruin', x: p.x, y: p.y, w: p.w, h: p.h, rot: p.rot || 0 }, p.tall != null ? { tall: !!p.tall } : {}, p.walls ? { walls: p.walls } : {}));
+export const layoutPieces = layout => (layout && Array.isArray(layout.pieces) ? layout.pieces : []).map((p, i) => Object.assign({ id: 't' + i, kind: p.kind || 'ruin', x: p.x, y: p.y, w: p.w, h: p.h, rot: p.rot || 0 }, p.tall != null ? { tall: !!p.tall } : {}, p.walls ? { walls: p.walls } : {}, p.poly ? { poly: p.poly } : {}));
 
 /** Height (inches) a piece is drawn with. */
 export const pieceHeight = kind => ({ ruin: 5, wall: 2, crate: 2.5, crater: 0.25, wood: 3 })[kind] || 3;
