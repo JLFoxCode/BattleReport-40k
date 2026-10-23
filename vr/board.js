@@ -46,9 +46,16 @@ export function paintBoard(ctx, o) {
   ctx.scale(PX, PX);
   ctx.lineJoin = 'round'; ctx.lineCap = 'round';
 
-  // battlefield edge
+  // battlefield edge (Incursion: one 44×30 half of the table, the rest shaded)
+  const field = o.field || { y0: 0, y1: BOARD[1] };
+  if (field.y0 > 0) { ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fillRect(0, 0, BOARD[0], field.y0); }
+  if (field.y1 < BOARD[1]) { ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fillRect(0, field.y1, BOARD[0], BOARD[1] - field.y1); }
   ctx.strokeStyle = 'rgba(255,255,255,0.85)'; ctx.lineWidth = 0.15;
-  ctx.strokeRect(0, 0, BOARD[0], BOARD[1]);
+  ctx.strokeRect(0, field.y0, BOARD[0], field.y1 - field.y0);
+  if (field.y1 - field.y0 < BOARD[1]) {
+    ctx.font = 'bold 1.6px sans-serif'; ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('Incursion 44\" \u00d7 30\"', BOARD[0] / 2, (field.y0 + field.y1) / 2);
+  }
 
   if (o.grid) {
     ctx.strokeStyle = 'rgba(255,255,255,0.12)'; ctx.lineWidth = 0.04;

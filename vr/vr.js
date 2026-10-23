@@ -18,6 +18,7 @@ import { PX, paintBoard, rectCorners, pieceAt, layoutPieces, pieceHeight } from 
 import { connect, session as apiSession } from './net.js';
 import { Panel, Hud } from './panel.js';
 import { createCamera } from './camera.js';
+import { guessLayout, solveAll, fromRT, toRT, apply as mApply } from './markercal.js';
 
 const $ = s => document.querySelector(s);
 const $$ = s => Array.from(document.querySelectorAll(s));
@@ -43,6 +44,12 @@ const app = {
   drag: null,                  // { ctrl, idx, dx, dy } while a piece is held
   xr: { session: null, anchor: null, anchorId: null, mode: null },
   step: 0.01,                  // fine adjustment step in metres (1 cm / 1 mm)
+  mcal: null,                  // running marker calibration { obs, ids, lastT, lastHead, t0 }
+  mtrack: false,               // live marker tracking (re-solves the table pose from every still camera frame)
+  camcal: store.get('camcal', null),   // { f, X } – this headset's camera: focal length + head→camera transform
+  markers: store.get('markers', null), // { [id]: { corner, turn } } – where the printed sheets lie
+  Y: null,                     // table pose (table → world, 4×4) when known from markers
+  board: 'full',               // 'full' = Strike Force 44×60 | 'near' / 'far' = Incursion 44×30 on that half of the table
   track: 'room',               // room: the table follows its WebXR anchor | local: fixed in the reference space
   scan: true,                  // show the planes of the room scan (plane-detection)
   planes: []                   // detected planes { label, y, corners: [{x, y, z}] } (world), refreshed every ~0.5 s
@@ -99,6 +106,10 @@ const panel = new Panel(THREE, {
     // Table: calibration, fine adjustment, tracking
     { tab: 'table', title: 'Calibration' },
     { tab: 'table', buttons: [{ label: 'Calibrate (3 corners)', a: { tool: 'calib' }, w: 1.6 }, { label: 'Mirror', a: { act: 'mirror' } }, { label: 'Room scan', a: { act: 'scan' } }] },
+    { tab: 'table', title: 'Marker calibration (camera, printed corner sheets)' },
+    { tab: 'table', buttons: [{ label: 'Marker calibration', a: { act: 'mcal' }, w: 1.4 }, { label: 'Finish now', a: { act: 'mcalDone' } }, { label: 'Tracking', a: { act: 'mtrack' } }] },
+    { tab: 'table', title: 'Battlefield' },
+    { tab: 'table', buttons: [{ label: 'Strike Force 44×60', a: { act: 'board', v: 'full' }, w: 1.3 }, { label: 'Incursion near half', a: { act: 'board', v: 'near' }, w: 1.3 }, { label: 'Incursion far half', a: { act: 'board', v: 'far' }, w: 1.3 }] },
     { tab: 'table', title: 'Fine adjustment' },
     { tab: 'table', buttons: [{ label: 'Step 1 cm', a: { act: 'step', v: 0.01 } }, { label: 'Step 1 mm', a: { act: 'step', v: 0.001 } }, { label: '↑ up', a: { act: 'nudge', v: 'z+' } }, { label: '↓ down', a: { act: 'nudge', v: 'z-' } }] },
     { tab: 'table', buttons: [{ label: '← x', a: { act: 'nudge', v: 'x-' } }, { label: 'x →', a: { act: 'nudge', v: 'x+' } }, { label: '← y', a: { act: 'nudge', v: 'y-' } }, { label: 'y →', a: { act: 'nudge', v: 'y+' } }, { label: '⟲ 0.5°', a: { act: 'nudge', v: 'r-' } }, { label: '⟳ 0.5°', a: { act: 'nudge', v: 'r+' } }] },
@@ -132,6 +143,7 @@ panel.setState(a => (a.tool && a.tool === app.tool) || (a.ring && app.tool === '
   || (a.act === 'track' && a.v === app.track) || (a.act === 'scan' && app.scan) || (a.act === 'step' && a.v === app.step)
   || (a.base !== undefined && Number(a.base) === app.base)
   || (a.act === 'cam' && ((a.v === 'on') === cam.state().on))
+  || (a.act === 'mcal' && !!app.mcal) || (a.act === 'mtrack' && app.mtrack) || (a.act === 'board' && a.v === app.board)
   || (a.layout !== undefined && (a.layout || null) === app.layoutId)
   || (a.deployment !== undefined && app.state && app.state.mission.deployment === a.deployment)
   || (a.attacker !== undefined && app.state && app.state.mission.attacker === a.attacker));
@@ -200,6 +212,11 @@ function hudRefresh() {
   }
   else if (app.tool === 'capture') lines.push({ text: 'Capture: touch the corners of the real piece (' + app.capPts.length + '/3)', color: '#ffd966' });
   if (toastText && now < toastUntil) lines.push({ text: toastText });
+  if (app.mcal) {
+    const m = app.mcal, multi = m.obs.filter(o => o.markers.length >= 2).length;
+    lines.push({ text: `Marker calibration: ${m.ids.size} markers seen (${Array.from(m.ids).map(i => i + 1).join(', ') || '–'}), ${m.obs.length} frames, ${multi} with 2+ markers`, big: true, color: '#ffd966' });
+    lines.push({ text: 'Look at each corner sheet from 40–80 cm, hold still a moment, then move on. Finishes by itself with 3 markers and 24 frames.' });
+  } else if (app.mtrack) lines.push({ text: 'Marker tracking on', color: '#9ef' });
   const cs = cam.state();
   if (cs.on) lines.push({ text: `Camera ${cs.w}×${cs.h} · ${cs.fps} fps · markers: ${cs.markers.length ? cs.markers.map(m => m.id + 1).join(', ') : 'none'}` + (cs.error ? ' · ' + cs.error : ''), color: '#9ef' });
   const st = app.state;
@@ -232,6 +249,13 @@ function applyMirror() {
 
 // ---------------------------------------------------------------- board + objectives + terrain
 const objMat = {};
+/** Battlefield extent on the table (inches): Strike Force = the whole 44×60 table, Incursion = one 44×30 half. */
+function fieldRect() {
+  if (app.board === 'near') return { y0: 0, y1: 30 };
+  if (app.board === 'far') return { y0: 30, y1: 60 };
+  return { y0: 0, y1: 60 };
+}
+function rebuildBoard() { repaint(); }
 function repaint() {
   const s = app.state;
   const map = s && s.mission && s.mission.deployment ? WH.DEPLOYMENT_MAPS[s.mission.deployment] : null;
@@ -241,15 +265,17 @@ function repaint() {
     { pos: map.home.a, name: 'Attacker Home', home: s && s.mission.attacker === 1 ? 1 : 0 },
     { pos: map.home.d, name: 'Defender Home', home: s && s.mission.attacker === 1 ? 0 : 1 },
     { pos: map.exp[0], name: 'Expansion 1' }, { pos: map.exp[1], name: 'Expansion 2' }, { pos: [22, 30], name: 'Centre' }] : [];
+  const field = fieldRect();
+  const half = app.board !== 'full';
   paintBoard(boardCanvas.getContext('2d'), {
-    map, attacker: s && s.mission ? s.mission.attacker : null, colors, names: players.map(p => p.name),
-    objectives, band: app.band, grid: app.grid, marks: app.marks
+    map: half ? null : map, attacker: s && s.mission ? s.mission.attacker : null, colors, names: players.map(p => p.name),
+    objectives: half ? [] : objectives, band: app.band, grid: app.grid, marks: app.marks, field
   });
   boardTex.needsUpdate = true;
 
   // objective poles (visible from across the table)
   while (objGroup.children.length) objGroup.remove(objGroup.children[0]);
-  for (const ob of objectives) {
+  for (const ob of (half ? [] : objectives)) {
     const col = ob.home != null ? colors[ob.home] : '#F2C94C';
     const mat = objMat[col] || (objMat[col] = new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.85 }));
     const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.25 * IN, 0.25 * IN, 4 * IN, 12), mat);
@@ -459,6 +485,84 @@ function setCalibText(n) {
     'Now any corner of the Defender\'s edge (the far side).'];
   $('#calib-info').textContent = `Step ${n + 1} of 3 – ${steps[n]}`;
 }
+// ---------------------------------------------------------------- marker calibration (camera + printed corner sheets)
+const headPose = () => camera.matrixWorld.elements.slice();
+function stillEnough(a, b) {
+  if (!a || !b) return true;
+  const dt = Math.hypot(a[12] - b[12], a[13] - b[13], a[14] - b[14]);
+  const dz = a[8] * b[8] + a[9] * b[9] + a[10] * b[10];
+  return dt < 0.012 && dz > Math.cos(1.5 * Math.PI / 180);
+}
+function mcalStart() {
+  if (!renderer.xr.isPresenting) { toast('Marker calibration needs the headset'); return; }
+  app.mcal = { obs: [], ids: new Set(), lastT: 0, lastHead: null, prevHead: null, t0: performance.now(), lastKeep: 0 };
+  app.mtrack = false;
+  cam.start().then(() => toast('Look at the corner sheets one after the other, move a little between looks')).catch(e => { toast('Camera: ' + (e.message || e)); app.mcal = null; });
+}
+function mcalTick() {
+  const m = app.mcal; if (!m) return;
+  const fr = app.camFrame; if (!fr || fr.t === m.lastT) return;
+  m.lastT = fr.t;
+  const head = headPose();
+  const still = stillEnough(head, m.prevHead); m.prevHead = head;
+  if (!fr.markers.length || !still) return;
+  if (fr.t - m.lastKeep < 250) return;
+  // keep frames from different viewpoints: skip when the head hardly moved since the last kept frame
+  if (m.lastHead && stillEnough(head, m.lastHead) && Math.hypot(head[12] - m.lastHead[12], head[13] - m.lastHead[13], head[14] - m.lastHead[14]) < 0.03) return;
+  m.lastKeep = fr.t; m.lastHead = head;
+  m.obs.push({ head, w: fr.w, h: fr.h, markers: fr.markers.map(x => ({ id: x.id, corners: x.corners.map(c => ({ x: c.x, y: c.y })) })) });
+  fr.markers.forEach(x => m.ids.add(x.id));
+  const multi = m.obs.filter(o => o.markers.length >= 2).length;
+  if (m.ids.size >= 3 && m.obs.length >= 24 && multi >= 6) mcalFinish(false);
+}
+function mcalFinish(manual) {
+  const m = app.mcal; if (!m) return;
+  const ids = Array.from(m.ids).sort((a, b) => a - b);
+  if (ids.length < 2 || m.obs.length < 6) { if (manual) toast(`Not enough yet: ${ids.length} markers, ${m.obs.length} frames (need 2+ markers, 6+ frames)`); return; }
+  app.mcal = null;
+  const w = m.obs[0].w;
+  const init = app.camcal ? { f: app.camcal.f, X: app.camcal.X } : { f: w * 0.5, X: fromRT([0, 0, 0], [0, -0.03, -0.08]) };
+  let res;
+  try { res = guessLayout(m.obs, ids, init); } catch (e) { toast('Calibration failed: ' + (e.message || e)); return; }
+  if (!res || !(res.rms < 6)) { toast(`Calibration not good enough (error ${res ? res.rms.toFixed(1) : '?'} px) – try again, look at each sheet from closer`); return; }
+  app.camcal = { f: res.f, X: res.X }; store.set('camcal', app.camcal);
+  app.markers = res.layout; store.set('markers', app.markers);
+  setTableFromY(res.Y, true);
+  app.mtrack = true;
+  toast(`Table calibrated from ${ids.length} markers, ${m.obs.length} frames, error ${res.rms.toFixed(2)} px – tracking on`);
+  pushUndo('marker calibration');
+}
+/** Table pose (table → world) → the frame used by everything else; anchor unless tracking live. */
+function setTableFromY(Y, anchor) {
+  app.Y = Y;
+  const o = mApply(Y, [0, 0, 0]);
+  app.frame = { origin: { x: o[0], y: o[1], z: o[2] }, ex: { x: Y[0], y: Y[1], z: Y[2] }, ey: { x: Y[4], y: Y[5], z: Y[6] }, up: { x: Y[8], y: Y[9], z: Y[10] }, height: o[1], edge: 44 };
+  store.set('frame', packFrame(app.frame));
+  if (app.xr.anchor) { try { app.xr.anchor.delete(); } catch {} app.xr.anchor = null; store.set('anchor', null); }
+  applyFrame();
+  if (anchor && !app.mtrack) createAnchor().catch(() => {});
+  $('#calib-info').textContent = 'Calibrated from the corner markers';
+}
+let trackHead = null, trackT = 0;
+function trackTick() {
+  if (!app.mtrack || !app.camcal || !app.markers) return;
+  const fr = app.camFrame; if (!fr || fr.t === trackT) return; trackT = fr.t;
+  const head = headPose();
+  const still = stillEnough(head, trackHead); trackHead = head;
+  if (!still) return;
+  const usable = fr.markers.filter(x => app.markers[x.id]);
+  if (!usable.length) return;
+  const obs = [{ head, w: fr.w, h: fr.h, markers: usable }];
+  const Y0 = app.Y || (app.frame ? frameToY(app.frame) : null); if (!Y0) return;
+  let r;
+  try { r = solveAll(obs, app.markers, { f: app.camcal.f, X: app.camcal.X, Y: Y0 }, { f: true, X: true }, 25); } catch { return; }
+  if (!(r.rms < 4)) return;
+  // smooth: blend rotation vector + translation
+  const a = toRT(Y0), b = toRT(r.Y), k = 0.35;
+  const Y = fromRT(a.rv.map((v, i) => v + (b.rv[i] - v) * k), a.t.map((v, i) => v + (b.t[i] - v) * k));
+  setTableFromY(Y, false);
+}
+const frameToY = f => [f.ex.x, f.ex.y, f.ex.z, 0, f.ey.x, f.ey.y, f.ey.z, 0, f.up.x, f.up.y, f.up.z, 0, f.origin.x, f.origin.y, f.origin.z, 1];
 /** Fine adjustment of the calibrated table: x/y along the table's own axes, z = height, r = rotation about the
  *  table's origin corner. Rewrites the frame, the stored copy and the anchor. */
 function nudge(v) {
@@ -475,9 +579,10 @@ function nudge(v) {
     f.ex = rot(f.ex); f.ey = rot(f.ey);
   }
   store.set('frame', packFrame(f));
+  app.Y = frameToY(f);
   if (app.xr.anchor) { try { app.xr.anchor.delete(); } catch {} app.xr.anchor = null; store.set('anchor', null); }
   applyFrame();
-  createAnchor().catch(() => {});
+  if (!app.mtrack) createAnchor().catch(() => {});
   toast(`Adjusted ${v} by ${v[0] === 'r' ? '0.5°' : (st * 1000) + ' mm'}`);
 }
 function startCalibration() {
@@ -666,7 +771,7 @@ renderer.setAnimationLoop(() => {
     const pose = xrFrame.getPose(app.xr.anchor.anchorSpace, renderer.xr.getReferenceSpace());
     if (pose) { table.matrix.fromArray(pose.transform.matrix); table.matrixWorldNeedsUpdate = true; }
   }
-  if (xrFrame) { readPlanes(xrFrame); readHits(xrFrame); }
+  if (xrFrame) { readPlanes(xrFrame); readHits(xrFrame); mcalTick(); trackTick(); }
   if (renderer.xr.isPresenting) {
     pollGamepads();
     let hover = null;
@@ -824,6 +929,10 @@ function applyAction(a, btn) {
   else if (a.act === 'track') { app.track = a.v === 'local' ? 'local' : 'room'; if (app.track === 'local' && app.frame) applyFrame(); toast(app.track === 'room' ? 'Tracking: the table follows its room anchor' : 'Tracking: the table stays fixed in the headset space'); }
   else if (a.act === 'scan') { app.scan = !app.scan; planesAt = 0; if (!app.scan) planeGroup.clear(); }
   else if (a.act === 'undo') undo();
+  else if (a.act === 'mcal') mcalStart();
+  else if (a.act === 'mcalDone') mcalFinish(true);
+  else if (a.act === 'mtrack') { app.mtrack = !app.mtrack; if (app.mtrack) { if (!app.camcal || !app.markers) { app.mtrack = false; toast('Run the marker calibration first'); } else cam.start().catch(e => toast(String(e.message || e))); } else if (app.frame) createAnchor().catch(() => {}); }
+  else if (a.act === 'board') { app.board = a.v; rebuildBoard(); }
   else if (a.act === 'cam') {
     if (a.v === 'on') cam.start().then(() => toast('Camera: ' + cam.state().label + ' ' + cam.state().w + '×' + cam.state().h)).catch(e => toast('Camera: ' + (e && e.message || e)));
     else cam.stop();
@@ -874,4 +983,4 @@ async function main() {
 main();
 
 // debug access for remote testing over DevTools (adb) – read-only use
-window.BRVR = { app, planesDebug: () => app.planesDebug, cam, planes: () => app.planes.map(p => ({ label: p.label, o: p.orientation, n: p.corners.length, y: +p.y.toFixed(3) })), hits: () => controllers.map(c => c.hit), sources: () => (app.xr.session ? app.xr.session.inputSources.length : 0) };
+window.BRVR = { app, planesDebug: () => app.planesDebug, cam, mcalFinish, mcalStart, planes: () => app.planes.map(p => ({ label: p.label, o: p.orientation, n: p.corners.length, y: +p.y.toFixed(3) })), hits: () => controllers.map(c => c.hit), sources: () => (app.xr.session ? app.xr.session.inputSources.length : 0) };
