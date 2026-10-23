@@ -86,8 +86,14 @@ function layoutRows() {
   return rows;
 }
 const panel = new Panel(THREE, {
-  tabs: [{ id: 'table', label: 'Table' }, { id: 'terrain', label: 'Terrain' }, { id: 'deploy', label: 'Deploy' }, { id: 'system', label: 'System' }],
+  tabs: [{ id: 'table', label: 'Table' }, { id: 'mission', label: 'Mission' }, { id: 'terrain', label: 'Terrain' }, { id: 'deploy', label: 'Deploy' }, { id: 'system', label: 'System' }],
   rows: [
+    // Mission: the Deployment card of the game (zones + objectives on the table)
+    { tab: 'mission', title: 'Deployment card' },
+    { tab: 'mission', buttons: WH.DEPLOYMENTS.slice(0, 3).map(n => ({ label: n, a: { deployment: n } })) },
+    { tab: 'mission', buttons: WH.DEPLOYMENTS.slice(3, 6).map(n => ({ label: n, a: { deployment: n } })) },
+    { tab: 'mission', title: 'Attacker' },
+    { tab: 'mission', buttons: [{ label: 'Player 1 attacks', a: { attacker: 0 } }, { label: 'Player 2 attacks', a: { attacker: 1 } }] },
     // Table: calibration, fine adjustment, tracking
     { tab: 'table', title: 'Calibration' },
     { tab: 'table', buttons: [{ label: 'Calibrate (3 corners)', a: { tool: 'calib' }, w: 1.6 }, { label: 'Mirror', a: { act: 'mirror' } }, { label: 'Room scan', a: { act: 'scan' } }] },
@@ -117,7 +123,9 @@ scene.add(panel.mesh);
 panel.setState(a => (a.tool && a.tool === app.tool) || (a.ring && app.tool === 'ring' && a.ring === app.ringR)
   || (a.act === 'band' && app.band === 'infiltrate') || (a.act === 'grid' && app.grid) || (a.act === 'mirror' && app.mirror)
   || (a.act === 'track' && a.v === app.track) || (a.act === 'scan' && app.scan) || (a.act === 'step' && a.v === app.step)
-  || (a.layout !== undefined && (a.layout || null) === app.layoutId));
+  || (a.layout !== undefined && (a.layout || null) === app.layoutId)
+  || (a.deployment !== undefined && app.state && app.state.mission.deployment === a.deployment)
+  || (a.attacker !== undefined && app.state && app.state.mission.attacker === a.attacker));
 const hud = new Hud(THREE, { width: 0.5 });
 hud.mesh.position.set(0, -0.14, -0.7);
 camera.add(hud.mesh);
@@ -180,6 +188,8 @@ function hudRefresh() {
   }
   else if (app.tool === 'capture') lines.push({ text: 'Capture: touch the corners of the real piece (' + app.capPts.length + '/3)', color: '#ffd966' });
   if (toastText && now < toastUntil) lines.push({ text: toastText });
+  const st = app.state;
+  if (st && !noteText && app.tool !== 'calib') lines.push({ text: (st.mission.deployment || 'No deployment card') + (app.layoutId ? ' · ' + ((layoutById(app.layoutId) || {}).name || '') : ''), color: '#9aa3b2' });
   hud.set(lines);
 }
 
@@ -730,6 +740,15 @@ function applyAction(a, btn) {
   else if (a.ring) { app.tool = 'ring'; app.ringR = Number(a.ring); }
   else if (a.add) { const [w, h] = String(a.add).split('x').map(Number); if (w > 0 && h > 0) addPiece(w, h, a.kind || 'ruin'); }
   else if (a.layout !== undefined) setLayout(a.layout || null);
+  else if (a.deployment !== undefined || a.attacker !== undefined) {
+    if (!app.net) toast('Open a game first');
+    else {
+      const act = { type: 'mission.set' };
+      if (a.deployment !== undefined) act.deployment = a.deployment;
+      if (a.attacker !== undefined) act.attacker = Number(a.attacker);
+      app.net.dispatch(act).catch(e => toast(e.message));
+    }
+  }
   else if (a.text !== undefined) note(String(a.text || ''));
   else if (a.act === 'rotl') rotateSelected(-15);
   else if (a.act === 'rotr') rotateSelected(15);
