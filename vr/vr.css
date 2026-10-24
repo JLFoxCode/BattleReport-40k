@@ -37,3 +37,12 @@ select { width: 100%; }
 #toast.on { opacity: 1; transform: translate(-50%, 0); }
 .note-big { position: fixed; left: 50%; top: 18%; transform: translateX(-50%); max-width: 80vw; background: rgba(16, 48, 74, 0.92); border: 2px solid var(--acc); border-radius: 16px; padding: 16px 24px; font-size: 26px; font-weight: 600; text-align: center; pointer-events: none; }
 .note-big[hidden] { display: none; }
+
+/* the headset panel as page menu (no headset): tabs + rows of buttons */
+.panel-menu { flex: 3 1 520px; max-width: 900px; }
+.panel-side { flex: 1 1 260px; }
+.tabs { gap: 4px; margin: 0 0 8px; border-bottom: 1px solid var(--line); padding-bottom: 8px; }
+.tabs .tab { border-radius: 999px; }
+.menu-title { margin: 10px 0 2px; }
+#menu-body button { max-width: 100%; }
+#layout { width: 100%; margin: 4px 0 6px; }

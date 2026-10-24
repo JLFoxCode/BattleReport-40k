@@ -177,6 +177,25 @@ panel.setState(a => (a.tool && a.tool === app.tool) || (a.ring && app.tool === '
   || (a.dispA !== undefined && app.local.mission.dispA === a.dispA) || (a.dispD !== undefined && app.local.mission.dispD === a.dispD) || (a.variant !== undefined && app.local.mission.variant === a.variant)
   || (a.deployment !== undefined && (app.board !== 'full' ? app.halves[app.editHalf].deployment : cur().mission.deployment) === a.deployment)
   || (a.attacker !== undefined && (app.board !== 'full' ? app.halves[app.editHalf].attacker : cur().mission.attacker) === a.attacker));
+// Without a headset the same panel is the page's menu (#menu): the same tabs, rows and actions as HTML buttons, so the
+// whole table setup – game, deployment card, Event Companion layout, battlefield size, random layouts, pieces, rings –
+// works in a normal browser too. Headset-only rows (calibration, fine adjustment, tracking, camera, system) stay out.
+const DOM_TABS = ['mission', 'table', 'terrain', 'deploy'];
+{ let xr = false; for (const r of panel.rows) { if (r.title) xr = r.tab === 'table' && /Calibration|Fine adjustment|Tracking/.test(r.title); r.xr = xr; } }
+const escH = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+function drawDomPanel() {
+  const tabsEl = $('#menu-tabs'), body = $('#menu-body');
+  if (!tabsEl || !body) return;
+  const tab = DOM_TABS.includes(panel.tab) ? panel.tab : 'mission';
+  tabsEl.innerHTML = panel.tabs.filter(t => DOM_TABS.includes(t.id)).map(t => `<button type="button" class="tab sm${t.id === tab ? ' on' : ''}" data-tab="${t.id}">${escH(t.label)}</button>`).join('');
+  const rows = panel.rows.filter(r => r.tab === tab && !r.xr).slice();
+  if (tab === 'table') rows.push({ title: 'View' }, { buttons: [{ label: 'Mirror', a: { act: 'mirror' } }, { label: '6" grid', a: { act: 'grid' } }] });
+  body.innerHTML = rows.map(r => r.title
+    ? `<div class="menu-title muted small">${escH(r.title.replace(/point the ray at three table corners \(right, left, far\) and press the trigger/, 'needs the headset'))}</div>`
+    : `<div class="row">${(r.buttons || []).map(b => `<button type="button" class="${panel.isOn(b.a) ? 'on' : ''}" data-a="${escH(JSON.stringify(b.a))}">${escH(b.label)}</button>`).join('')}</div>`).join('');
+}
+const panelDraw3d = panel.draw.bind(panel);
+panel.draw = () => { panelDraw3d(); drawDomPanel(); };
 const hud = new Hud(THREE, { width: 0.5 });
 hud.mesh.position.set(0, -0.17, -0.7);
 camera.add(hud.mesh);
@@ -1112,9 +1131,8 @@ function toast(msg) {
 function syncTools() {
   $$('[data-tool]').forEach(b => b.classList.toggle('on', b.dataset.tool === app.tool));
   $$('[data-ring]').forEach(b => b.classList.toggle('on', Number(b.dataset.ring) === app.ringR && app.tool === 'ring'));
-  $('#band').classList.toggle('on', app.band === 'infiltrate');
-  $('#grid').classList.toggle('on', app.grid);
-  $('#mirror').classList.toggle('on', app.mirror);
+  const on = (id, v) => { const el = $(id); if (el) el.classList.toggle('on', v); };
+  on('#band', app.band === 'infiltrate'); on('#grid', app.grid); on('#mirror', app.mirror);
   $('#calib-panel').hidden = app.tool !== 'calib';
 }
 function setStatus(s) {
@@ -1175,10 +1193,11 @@ function initUi() {
   ui.addEventListener('beforexrselect', e => e.preventDefault());     // taps on the overlay are not table taps
   ui.addEventListener('click', e => {
     const b = e.target.closest('button'); if (!b) return;
+    if (b.dataset.a) { let a = null; try { a = JSON.parse(b.dataset.a); } catch {} if (a) applyAction(a, b); return; }   // menu (#menu) button
     applyAction(Object.assign({}, b.dataset), b);
   });
   $('#code').addEventListener('keydown', e => { if (e.key === 'Enter') openGame(e.target.value); });
-  syncTools();
+  syncTools(); drawDomPanel();
 }
 
 /** One UI action – from a panel button (dataset) or from the remote control (signal { type: 'vr', …same keys }). */
@@ -1245,7 +1264,11 @@ function applyAction(a, btn) {
     if (app.mtrack) { if (!app.camcal || !app.markers) { app.mtrack = false; toast('Run the marker calibration first'); } else cam.start().then(() => cam.setInterval(1000)).catch(e => toast(String(e.message || e))); }
     else { cam.stop(); if (app.frame) createAnchor().catch(() => {}); }
   }
-  else if (a.act === 'board') { app.board = a.v; if (a.v === 'near' || a.v === 'far') app.editHalf = a.v; rebuildBoard(); }
+  else if (a.act === 'board') {
+    // full table ↔ half tables: the pieces of the other format would lie in the wrong places – start clean (halves keep theirs)
+    if ((app.board === 'full') !== (a.v === 'full') && app.pieces.length) { app.pieces = []; app.layoutId = null; app.selected = -1; buildTerrain(); saveTerrain(); $('#layout').value = ''; }
+    app.board = a.v; if (a.v === 'near' || a.v === 'far') app.editHalf = a.v; rebuildBoard();
+  }
   else if (a.act === 'editHalf') { app.editHalf = a.v; repaint(); }
   else if (a.open !== undefined) openGame(a.open);
   else if (a.act === 'games') refreshGames();
@@ -1300,6 +1323,7 @@ async function main() {
   const xrOk = navigator.xr && await navigator.xr.isSessionSupported('immersive-ar').catch(() => false);
   const vrOk = navigator.xr && await navigator.xr.isSessionSupported('immersive-vr').catch(() => false);
   $('#enter').hidden = !(xrOk || vrOk);
+  if (!(xrOk || vrOk)) panel.setTab('mission');   // no headset: nothing to calibrate – start with the game / deployment card
   $('#xr-note').textContent = xrOk ? 'Mixed reality (passthrough) available' : vrOk ? 'VR available (no passthrough – the table is shown at 75 cm height)' : 'No headset detected – 3D preview. Open this page in the Meta Quest browser.';
   const ses = await apiSession();
   if (ses && ses.user) $('#user').textContent = ses.user;
