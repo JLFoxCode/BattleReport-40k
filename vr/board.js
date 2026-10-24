@@ -91,9 +91,8 @@ export function paintBoard(ctx, o) {
     ctx.stroke();
   }
 
-  const map = o.map;
-  if (map) {
-    const att = o.attacker === 1 ? 1 : 0;                 // without a roll-off: player 1 attacks
+  const drawMap = (map, attacker) => {
+    const att = attacker === 1 ? 1 : 0;                 // without a roll-off: player 1 attacks
     const colA = (o.colors && o.colors[att]) || '#2F5FC4', colD = (o.colors && o.colors[1 - att]) || '#B23A31';
     const poly = (pts, fill, stroke) => {
       ctx.beginPath(); pts.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); ctx.closePath();
@@ -136,7 +135,9 @@ export function paintBoard(ctx, o) {
     };
     label(map.zones.a, ((o.names && o.names[att]) || 'Attacker') + ' · Attacker', colA);
     label(map.zones.d, ((o.names && o.names[1 - att]) || 'Defender') + ' · Defender', colD);
-  }
+  };
+  if (o.map) drawMap(o.map, o.attacker);
+  for (const l of o.layers || []) if (l.map) drawMap(l.map, l.attacker);      // half-table fields: one card each
 
   // objectives: 40 mm marker + 3" control range
   for (const ob of o.objectives || []) {

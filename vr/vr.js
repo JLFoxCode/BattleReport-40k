@@ -14,6 +14,7 @@ import * as THREE from './vendor/three.module.min.js';   // no import map: the o
 import { WH } from '../data/rules.js';
 import { TERRAIN_KINDS } from '../data/terrain.js';
 import { LAYOUTS11, PARTS11, DISPOSITIONS11, VARIANTS11, findLayout11 } from '../data/layouts11.js';
+import { HALF_MAPS, halfMapAt } from '../data/half-table.js';
 import { IN, BOARD, frameFromCorners, frameMatrix, packFrame, unpackFrame, snap, onBoard } from './calib.js';
 import { PX, paintBoard, rectCorners, pieceAt, layoutPieces, pieceHeight } from './board.js';
 import { connect, session as apiSession, listGames } from './net.js';
@@ -174,8 +175,8 @@ panel.setState(a => (a.tool && a.tool === app.tool) || (a.ring && app.tool === '
   || (a.layout !== undefined && (a.layout || null) === app.layoutId)
   || (a.open !== undefined && a.open === app.code)
   || (a.dispA !== undefined && app.local.mission.dispA === a.dispA) || (a.dispD !== undefined && app.local.mission.dispD === a.dispD) || (a.variant !== undefined && app.local.mission.variant === a.variant)
-  || (a.deployment !== undefined && (app.board === 'both' ? app.halves[app.editHalf].deployment : cur().mission.deployment) === a.deployment)
-  || (a.attacker !== undefined && (app.board === 'both' ? app.halves[app.editHalf].attacker : cur().mission.attacker) === a.attacker));
+  || (a.deployment !== undefined && (app.board !== 'full' ? app.halves[app.editHalf].deployment : cur().mission.deployment) === a.deployment)
+  || (a.attacker !== undefined && (app.board !== 'full' ? app.halves[app.editHalf].attacker : cur().mission.attacker) === a.attacker));
 const hud = new Hud(THREE, { width: 0.5 });
 hud.mesh.position.set(0, -0.17, -0.7);
 camera.add(hud.mesh);
@@ -306,7 +307,7 @@ function fieldRect() {
 /** the two half-table fields when both are shown: [{ y0, y1, name, active }] */
 function fields() {
   if (app.board !== 'both') return null;
-  return ['near', 'far'].map(k => ({ y0: k === 'far' ? 30 : 0, y1: k === 'far' ? 60 : 30, key: k, name: app.halves[k].deployment || 'Half table (no card)', active: k === app.editHalf }));
+  return ['near', 'far'].map(k => ({ y0: k === 'far' ? 30 : 0, y1: k === 'far' ? 60 : 30, key: k, name: app.halves[k].deployment ? app.halves[k].deployment + ' (half table)' : 'Half table (no card)', active: k === app.editHalf }));
 }
 const saveHalves = () => store.set('halves', app.halves);
 function rebuildBoard() { repaint(); }
@@ -324,15 +325,18 @@ function repaint() {
     { pos: map.exp[0], name: 'Expansion 1' }, { pos: map.exp[1], name: 'Expansion 2' }, { pos: [22, 30], name: 'Centre' }] : [];
   const field = fieldRect();
   const half = app.board !== 'full';
+  // half-table games: each half has its own card (the 10th edition's 44"×30" Incursion maps) and Attacker
+  const halfLayers = half ? (app.board === 'both' ? ['near', 'far'] : [app.board]).map(k => { const h = app.halves[k]; const m = h.deployment ? halfMapAt(h.deployment, k === 'far' ? 30 : 0, h.attacker) : null; return m ? { map: m, attacker: h.attacker, objectives: m.objectives } : null; }).filter(Boolean) : [];
+  const halfObjectives = halfLayers.flatMap(l => l.objectives);
   paintBoard(boardCanvas.getContext('2d'), {
     map: half ? null : map, attacker: s && s.mission ? s.mission.attacker : null, colors, names: players.map(p => p.name),
-    objectives: half ? [] : objectives, band: app.band, grid: app.grid, marks: app.marks, field, fields: fields()
+    objectives: half ? halfObjectives : objectives, band: app.band, grid: app.grid, marks: app.marks, field, fields: fields(), layers: halfLayers
   });
   boardTex.needsUpdate = true;
 
   // objective poles (visible from across the table)
   while (objGroup.children.length) objGroup.remove(objGroup.children[0]);
-  for (const ob of (half ? [] : objectives)) {
+  for (const ob of (half ? halfObjectives : objectives)) {
     const col = ob.home != null ? colors[ob.home] : '#F2C94C';
     const mat = objMat[col] || (objMat[col] = new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.85 }));
     const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.25 * IN, 0.25 * IN, 4 * IN, 12), mat);
@@ -566,8 +570,9 @@ function generateRandomLayout(seed) {
   const half = app.board !== 'full';
   const L = eventLayout();
   const map = L ? { zones: L.zones } : cur().mission.deployment ? WH.DEPLOYMENT_MAPS[cur().mission.deployment] : null;
-  const objectives = !half && L ? L.objectives.map(o => o.pos) : !half && map ? [map.home.a, map.home.d, map.exp[0], map.exp[1], [22, 30]] : [];
-  const r = generateLayout({ seed, board: half ? 'half' : 'full', objectives, zones: !half && map ? map.zones : null, tries: 1500 });
+  const hm = half ? HALF_MAPS[app.halves[app.editHalf].deployment] || null : null;
+  const objectives = half ? (hm ? hm.objectives.map(o => o.pos) : []) : L ? L.objectives.map(o => o.pos) : map ? [map.home.a, map.home.d, map.exp[0], map.exp[1], [22, 30]] : [];
+  const r = generateLayout({ seed, board: half ? 'half' : 'full', objectives, zones: half ? (hm ? hm.zones : null) : map ? map.zones : null, tries: 1500 });
   if (!r) { toast('No fair layout found – try again'); return; }
   historyAdd({ seed: r.seed, board: app.board, half: half ? app.editHalf : null, deployment: cur().mission.deployment || null, fav: !!(app.history || []).find(h => h.seed === r.seed && h.fav), t: Date.now() });
   pushUndo('random layout');
@@ -1190,7 +1195,7 @@ function applyAction(a, btn) {
       if (a.deployment !== undefined) act.deployment = a.deployment;
       if (a.attacker !== undefined) act.attacker = Number(a.attacker);
       app.net.dispatch(act).catch(e => toast(e.message));
-    } else if (app.board === 'both') {
+    } else if (app.board !== 'full') {
       const h = app.halves[app.editHalf];
       if (a.deployment !== undefined) h.deployment = h.deployment === a.deployment ? null : a.deployment;
       if (a.attacker !== undefined) h.attacker = Number(a.attacker);

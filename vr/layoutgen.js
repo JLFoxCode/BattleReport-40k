@@ -27,7 +27,7 @@ import { LAYOUTS11 } from '../data/layouts11.js';
 export const SETS = {
   armageddon: { size: [44, 60], centreBlock: true, pieces: [[7, 11.5, true], [7, 11.5, true], [10, 2.5, true], [6, 4, true], [6, 4, false], [6, 2, true], [6, 2, false]] },
   gw10: { size: [44, 60], centre: [12, 6, true], pieces: [[12, 6, true], [12, 6, true], [10, 5, true], [6, 4, false], [6, 4, false]] },
-  half: { size: [44, 30], centre: [8, 11.5, true], pieces: [[7, 11.5, true], [6, 4, true], [6, 2, false]] }
+  half: { size: [44, 30], centre: 'wedge', pieces: [[7, 11.5, true], [6, 4, true], [6, 2, false]] }   // half the Armageddon set: one wedge plate in the centre, 2× 7×11.5, 2× 6×4, 2× 6×2
 };
 SETS.full = SETS.armageddon;
 /** The official centre block of the Event Companion layouts: one 12"×10" rectangle (the two interlocking plates) with its
@@ -42,6 +42,25 @@ const WEDGE = (() => {
   return p ? { w: p.w, h: p.h, rot: p.rot || 0, poly: p.poly, parts: p.parts || [] } : null;
 })();
 /** The official parts of a piece turned with it: positions and rotations relative to the piece's centre (table orientation). */
+/** Official features per footprint (first Event Companion plate of that size and class): generated plates get the same
+ *  ruin sections / cover pieces, turned with the plate. */
+const PARTS_BY_SIZE = (() => {
+  const m = {};
+  for (const L of LAYOUTS11) for (const p of L.pieces) {
+    if (p.poly || !p.parts || !p.parts.length) continue;
+    const k = `${p.w}x${p.h}:${p.tall ? 1 : 0}`;
+    if (!m[k]) m[k] = { rot: p.rot || 0, parts: p.parts };
+  }
+  return m;
+})();
+const withParts = (p) => {
+  if (p.parts) return p;
+  const tpl = PARTS_BY_SIZE[`${p.w}x${p.h}:${p.tall ? 1 : 0}`] || PARTS_BY_SIZE[`${p.h}x${p.w}:${p.tall ? 1 : 0}`];
+  if (!tpl) return p;
+  const swapped = !PARTS_BY_SIZE[`${p.w}x${p.h}:${p.tall ? 1 : 0}`];           // template drawn with w/h the other way round
+  p.parts = partsAt(tpl, (p.rot || 0) + (swapped ? 90 : 0));
+  return p;
+};
 const partsAt = (tpl, rot) => {
   const a = (rot - tpl.rot) * Math.PI / 180, c = Math.cos(a), s = Math.sin(a);
   return tpl.parts.map(pt => Object.assign({}, pt, { x: +(pt.x * c - pt.y * s).toFixed(2), y: +(pt.x * s + pt.y * c).toFixed(2), rot: ((pt.rot || 0) + rot - tpl.rot + 360) % 360 }));
@@ -92,7 +111,7 @@ function candidate(rand, set, objectives) {
   const [W, L] = set.size, cx = W / 2, cy = L / 2;
   const placed = [], polys = [];
   const fits = poly => poly.every(c => c[0] >= EDGE && c[0] <= W - EDGE && c[1] >= EDGE && c[1] <= L - EDGE) && polys.every(q => gap(poly, q) >= 0);
-  const add = (p, m) => { placed.push(p); polys.push(corners(p)); if (m) { placed.push(m); polys.push(corners(m)); } };
+  const add = (p, m) => { placed.push(withParts(p)); polys.push(corners(p)); if (m) { placed.push(withParts(m)); polys.push(corners(m)); } };
   // objectives of the first half (their partners are the mirror images); the centre one separately
   // one central objective near the middle (the official single-central layouts put it up to ~4" off centre, inside
   // the interlocking block); two central objectives → the polygons go elsewhere as a pair
@@ -119,9 +138,10 @@ function candidate(rand, set, objectives) {
     if (!corners(block).every(c => c[0] >= EDGE && c[0] <= W - EDGE && c[1] >= EDGE && c[1] <= L - EDGE)) { FAIL.centre = (FAIL.centre || 0) + 1; return null; }
     placed.push(block); polys.push(corners(block));
   } else if (set.centre && (hasCentre || !objectives || !objectives.length)) {
-    const [w, h, tall] = set.centre;
     const rot = ROTS[Math.floor(rand() * ROTS.length)];
-    const p = { kind: 'ruin', w, h, rot, tall, x: cx, y: cy };
+    const p = set.centre === 'wedge' && WEDGE
+      ? { kind: 'ruin', w: WEDGE.w, h: WEDGE.h, rot, tall: true, x: cx, y: cy, poly: WEDGE.poly, parts: partsAt(WEDGE, rot) }   // one of the card's wedge plates with its parts
+      : (([w, h, tall]) => ({ kind: 'ruin', w, h, rot, tall, x: cx, y: cy }))(set.centre);
     if (!fits(corners(p))) return null;
     add(p, null);
   }
