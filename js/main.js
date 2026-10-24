@@ -275,6 +275,13 @@ async function connect(code) {
     // The game was handed over to another device (it hosts it now) → continue there in the same role
     if (sig && sig.type === 'game.moved' && sig.code === code) { followMove(code, sig); return; }
     if (sig && sig.type === 'who') { sendHello(true); return; }
+    if (sig && sig.type === 'game.deleted' && sig.code === code) {
+      if (store.code !== code) return;
+      forgetGame(code);
+      toast('Game ' + code + ' was deleted by the host.', 'warn', 5000);
+      nav('#/');
+      return;
+    }
     if (!sig || sig.type !== 'game.closed' || store.code !== code) return;
     toast('Game ' + code + ' was closed by the host – it is saved on this device.', 'ok', 5000);
     const href = archiveHref(code);

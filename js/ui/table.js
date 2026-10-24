@@ -8,6 +8,7 @@ import { CORE } from '../../data/core.js';
 import { reduce } from '../../engine/index.js';
 import { esc, btn, badge, chip, sheet, confirmSheet, toast, colorOf } from './components.js';
 import { prepareQr, qrReady, qrSvg, joinUrl } from './qr.js';
+import { api } from '../net.js';
 
 /* ───────── Originaltexte (englisch, unverändert) aus data/orig/* – Loader wird nachgeladen, falls vorhanden ───────── */
 const ORIG = { mod: undefined, missions: null, fac: new Map() };
@@ -606,6 +607,7 @@ function moreTab(ctx, ui) {
           ${btn({ label: 'Move host to another device…', kind: 'ghost', action: 'move-host' })}
           ${btn({ label: 'Back to setup', kind: 'ghost', action: 'go', data: { hash: `#/g/${ctx.code}/setup` } })}
           <a class="btn ghost" href="#/">Lobby</a>
+          ${ctx.spectator ? '' : btn({ label: 'Delete this game', kind: 'danger', action: 'delete-game', title: 'Removes the game from the host – all devices leave it' })}
         </div>
         <div class="cp-grid">${[0, 1].map(p => `<div class="cp-row p${p}">
           <div class="main"><div class="name text-p${p}">${esc(pName(s, p))}</div><div class="sub xs muted">Command points</div></div>
@@ -1490,7 +1492,21 @@ async function onClick(e) {
     case 'cp-sheet': return openCpSheet(p);
     case 'phase-set': return openPhaseSetSheet();
     case 'end-game': return openEndSheet();
+    case 'delete-game': return deleteThisGame(ctx);
   }
+}
+
+/** Delete the running game on its host (only the hosting device / the creating account may) – every device leaves it. */
+async function deleteThisGame(ctx) {
+  const code = ctx.code;
+  const ok = await confirmSheet({ title: `Delete game ${code}?`, text: 'All actions and the score will be removed permanently on the host. Phones connected to this game return to the lobby. For a finished game use "End battle" instead – that keeps the result.', ok: 'Delete', kind: 'danger' });
+  if (!ok) return;
+  try {
+    await api.deleteGame(code);
+    if (ctx.forgetGame) ctx.forgetGame(code);
+    toast(`Game ${code} deleted`, 'ok');
+    ctx.nav('#/');
+  } catch (e) { toast(e && e.message ? e.message : 'Could not delete game', 'bad'); }
 }
 
 function findCond(ctx, p, src, card, ci) {

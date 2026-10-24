@@ -135,7 +135,8 @@ function pageHtml(page) {
       ${window.BR ? '' : `<p class="muted hint">Battle Report 40k is an app for <b>Android</b> and <b>Windows</b>: <a class="apk" href="https://github.com/JLFoxCode/BattleReport-40k/releases/latest" target="_blank" rel="noopener">download the latest release</a>. Devices without the app (e.g. iPhone) can still join a game by scanning its QR code.</p>${devServerHtml()}`}
     </section>
     <section class="games">
-      <div class="title">${online() ? 'Your games on the online server' : onHost() ? 'Games on this device' : 'Games on the host device'}</div>
+      <div class="row between"><div class="title">${online() ? 'Your games on the online server' : onHost() ? 'Games on this device' : 'Games on the host device'}</div>
+        ${deletable().length >= 2 ? btn({ label: `Delete all (${deletable().length})`, kind: 'danger', small: true, action: 'delete-all', title: 'Delete every game you may delete here – e.g. after a series of test games' }) : ''}</div>
       ${renderList(host)}
     </section>
   </div>`;
@@ -418,6 +419,7 @@ function onClick(e) {
   }
   if (action === 'open' && code) return lastCtx.nav(hashFor(code, b.dataset.view, b.dataset.me));
   if (action === 'delete' && code) return deleteGame(code);
+  if (action === 'delete-all') return deleteAll();
 }
 
 function onSubmit(e) {
@@ -470,6 +472,23 @@ function newGame() {
       }));
     }
   });
+}
+
+/** Games this device / account may delete (the same rule as the Delete button on the card). */
+function deletable() { return (games || []).filter(g => (online() ? g.own : onHost()) && !(g.movedTo && g.movedTo.host)); }
+
+async function deleteAll() {
+  const list = deletable();
+  if (!list.length) return;
+  const ok = await confirmSheet({ title: `Delete ${list.length} games?`, text: `${list.map(g => g.code).join(', ')} – all actions and scores will be removed permanently. Finished games that are already saved on this device stay in "Finished games".`, ok: 'Delete all', kind: 'danger' });
+  if (!ok) return;
+  let n = 0, fail = 0;
+  for (const g of list) {
+    try { await api.deleteGame(g.code); if (lastCtx.forgetGame) lastCtx.forgetGame(g.code); n++; }
+    catch (e) { fail++; console.warn('delete', g.code, e); }
+  }
+  toast(fail ? `${n} deleted, ${fail} could not be deleted` : `${n} games deleted`, fail ? 'warn' : 'ok');
+  await load(true);
 }
 
 async function deleteGame(code) {

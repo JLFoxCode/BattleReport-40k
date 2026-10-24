@@ -613,3 +613,22 @@ Object.assign(PHRASES, {
   'No layout for this pairing': 'Kein Layout für diese Paarung', 'Spectator – view only': 'Zuschauer – nur Ansicht'
 });
 PATTERNS.push(['^([0-9]+) units? from the 2D map[.]$', (m, n) => n + (n === '1' ? ' Einheit' : ' Einheiten') + ' von der 2D-Karte.']);
+
+/* deleting games (lobby list, score display More tab) */
+Object.assign(EXACT, { 'Delete this game': 'Dieses Spiel löschen', 'Delete all': 'Alle löschen' });
+Object.assign(PHRASES, {
+  'Removes the game from the host – all devices leave it': 'Entfernt das Spiel vom Host – alle Geräte verlassen es',
+  'Delete every game you may delete here – e.g. after a series of test games': 'Alle Spiele löschen, die hier gelöscht werden dürfen – z. B. nach einer Reihe Testspiele',
+  'All actions and the score will be removed permanently on the host. Phones connected to this game return to the lobby. For a finished game use "End battle" instead – that keeps the result.': 'Alle Aktionen und der Spielstand werden auf dem Host endgültig entfernt. Verbundene Handys kehren zur Lobby zurück. Für ein beendetes Spiel stattdessen „End battle“ nutzen – das behält das Ergebnis.',
+  'All actions and the score will be removed permanently.': 'Alle Aktionen und der Spielstand werden endgültig entfernt.'
+});
+PATTERNS.push(
+  ['^Delete all [(]([0-9]+)[)]$', (m, n) => 'Alle löschen (' + n + ')'],
+  ['^Delete ([0-9]+) games[?]$', (m, n) => n + ' Spiele löschen?'],
+  ['^Delete game ([A-Za-z0-9]+)[?]$', (m, c) => 'Spiel ' + c + ' löschen?'],
+  ['^Game ([A-Za-z0-9]+) deleted$', (m, c) => 'Spiel ' + c + ' gelöscht'],
+  ['^Game ([A-Za-z0-9]+) was deleted by the host[.]$', (m, c) => 'Spiel ' + c + ' wurde vom Host gelöscht.'],
+  ['^([0-9]+) games deleted$', (m, n) => n + ' Spiele gelöscht'],
+  ['^([0-9]+) deleted, ([0-9]+) could not be deleted$', (m, a, b) => a + ' gelöscht, ' + b + ' nicht löschbar'],
+  ['^(.+) – all actions and scores will be removed permanently[.] Finished games that are already saved on this device stay in "Finished games"[.]$', (m, l) => l + ' – alle Aktionen und Spielstände werden endgültig entfernt. Bereits auf diesem Gerät gespeicherte beendete Spiele bleiben unter „Finished games“.']
+);
