@@ -398,7 +398,9 @@ function createScene(inst) {
             const m = new THREE.Mesh(geo, mat); m.position.set(pt.x, 0, pt.y);
             const e = new THREE.LineSegments(new THREE.EdgesGeometry(geo, 30), new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.35 }));
             e.position.copy(m.position);
-            pg[pt.k === 'dense' ? 'dense' : 'light'].add(m, e);
+            // footprint on the plate (bright line at ground level): where the piece really stands, whatever the viewing angle
+            const fp = outline(poly, 0.14, 0xffffff, 0.9); fp.position.copy(m.position);
+            pg[pt.k === 'dense' ? 'dense' : 'light'].add(m, e, fp);
           }
           if (pt.label) {
             const lb = label(pt.label, { w: 2.4, h: 1.2, size: 46, bg: 'rgba(10,70,55,.92)' });

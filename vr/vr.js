@@ -401,7 +401,10 @@ function buildTerrain() {
           const m = new THREE.Mesh(geo, mat); m.position.set(pt.x * IN, 0, pt.y * IN);
           const e = new THREE.LineSegments(new THREE.EdgesGeometry(geo, 30), new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.5 }));
           e.position.copy(m.position);
-          pg.add(m, e);
+          // footprint on the plate (ground level) – where the piece really stands, whatever the viewing angle
+          const fp = new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(shape.getPoints().map(v => new THREE.Vector3(v.x, 0.12 * IN, v.y))), new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.95 }));
+          fp.position.copy(m.position);
+          pg.add(m, e, fp);
         }
         if (pt.label) { const lb = labelSprite(pt.label); lb.scale.set(2.4 * IN, 0.6 * IN, 1); lb.position.set(pt.x * IN, (ph + 0.8) * IN, pt.y * IN); pg.add(lb); }
       }
