@@ -31,6 +31,7 @@ import * as setup from './ui/setup.js';
 import * as player from './ui/player.js';
 import * as desktop from './ui/desktop.js';
 import * as map from './ui/map.js';
+import * as table3d from './ui/table3d.js';
 import * as table from './ui/table.js';
 import * as camera from './ui/camera.js';
 import * as markers from './ui/markers.js';
@@ -42,7 +43,7 @@ import * as account from './ui/account.js';
 import { initAccount, needsLogin, onAccount } from './account.js';
 
 const LS_KEY = 'sb40k.last';
-const MODULES = { lobby, setup, player, desktop, map, table, camera, markers, photo, rules: rulebook, archive: archiveView, armies, learn: tutorial, account };
+const MODULES = { lobby, setup, player, desktop, map, table3d, table, camera, markers, photo, rules: rulebook, archive: archiveView, armies, learn: tutorial, account };
 const data = Object.freeze({ WH, FACTIONS, TERRAIN_LAYOUTS });
 
 // ---------------------------------------------------------------- Store
@@ -179,6 +180,8 @@ export function parseHash(hash = location.hash) {
   if (v === 'camera') return { view: 'camera', code, me: 'camera' };
   if (v === 'photo') return { view: 'photo', code, me: idx == null ? 'desktop' : idx };
   if (v === 'map') return { view: 'map', code, me: idx == null ? 'desktop' : idx };
+  // 3D battle table (js/ui/table3d.js): /3d (shared display), /3d/0|1 (a player's phone), /3d/w (spectator)
+  if (v === '3d') return parts[3] === 'w' ? { view: 'table3d', code, me: 'desktop', spectator: true } : { view: 'table3d', code, me: idx == null ? 'desktop' : idx };
   if (v === 'setup') return { view: 'setup', code, me: idx };
   if (v === 'rules') return { view: 'rules', code, me: null };
   return { view: 'setup', code, me: null };
@@ -198,6 +201,7 @@ export function roleHash(code, me, view) {
   if (view === 'camera') return `#/g/${code}/camera`;
   if (view === 'photo') return `#/g/${code}/photo${typeof me === 'number' ? '/' + me : ''}`;
   if (view === 'map') return `#/g/${code}/map${typeof me === 'number' ? '/' + me : ''}`;
+  if (view === 'table3d') return `#/g/${code}/3d${typeof me === 'number' ? '/' + me : ''}`;
   if (view === 'setup') return `#/g/${code}/setup${typeof me === 'number' ? '/' + me : ''}`;
   return `#/g/${code}/p/${typeof me === 'number' ? me : 0}`;
 }

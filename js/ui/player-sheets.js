@@ -265,6 +265,7 @@ export function openMoreSheet(ctx, ui) {
     cls: 'p' + me,
     body: `<div class="more-sec"><div class="title sm">Views</div><div class="row wrap">
         ${btn({ label: 'Score view (read-only)', kind: 'ghost', small: true, action: 'nav', data: { href: `#/g/${code}/watch` } })}
+        ${btn({ label: 'Battle table (3D)', kind: 'ghost', small: true, action: 'nav', data: { href: ctx.spectator ? `#/g/${code}/3d/w` : `#/g/${code}/3d/${me}` } })}
         ${btn({ label: 'Rulebook', kind: 'ghost', small: true, action: 'nav', data: { href: `#/g/${code}/rules` } })}
         ${btn({ label: 'Lobby', kind: 'ghost', small: true, action: 'nav', data: { href: '#/' } })}
         ${btn({ label: 'Setup', kind: 'ghost', small: true, action: 'nav', data: { href: ctx.roleHash(code, me, 'setup') } })}

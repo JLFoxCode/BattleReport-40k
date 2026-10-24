@@ -595,3 +595,21 @@ PATTERNS.push(
   ['^(.+): “(.+)” discarded and redrawn \\(1 CP, (\\d+) left\\)(?: – drew “(.+)”|( – no card left to draw))?$', (m, n, c, k, d, none) => n + ': „' + c + '“ abgeworfen und neu gezogen (1 CP, ' + k + ' übrig)' + (d ? ' – gezogen: „' + d + '“' : none ? ' – keine Karte mehr zum Ziehen' : '')],
   ['^No pending scoring for (.+)$', (m, n) => 'Keine offene Wertung für ' + n]
 );
+
+/* 3D battle table (js/ui/table3d.js) */
+Object.assign(EXACT, { 'Battle table': 'Spieltisch', 'Battle table (3D)': 'Spieltisch (3D)', 'Flip side': 'Seite wechseln', 'Top': 'Von oben', 'Reset': 'Zurücksetzen',
+  'Layout': 'Layout', 'Zones': 'Zonen', '3" range': '3"-Reichweite', 'Dense terrain': 'Dichtes Gelände', 'Light terrain': 'Leichtes Gelände', 'Walls': 'Wände',
+  'Units': 'Einheiten', 'Grid': 'Raster', 'Labels': 'Beschriftung', 'Apply event layout': 'Event-Layout übernehmen', 'No terrain': 'Kein Gelände', '‹ Back': '‹ Zurück' });
+Object.assign(PHRASES, {
+  'Loading 3D view …': '3D-Ansicht wird geladen …',
+  'The table as a 3D model: zones, objectives, terrain': 'Der Tisch als 3D-Modell: Zonen, Missionsziele, Gelände',
+  'Choose the terrain layout': 'Geländelayout wählen', 'Look from the other table edge': 'Von der anderen Tischkante schauen', 'Straight from above': 'Senkrecht von oben',
+  'Reset the view': 'Ansicht zurücksetzen', 'Fullscreen': 'Vollbild', 'Fullscreen is not available here': 'Vollbild ist hier nicht verfügbar',
+  'No terrain layout chosen yet – “Layout” picks one of the 45 Event Companion layouts.': 'Noch kein Geländelayout gewählt – „Layout“ wählt eines der 45 Event-Companion-Layouts.',
+  'Random layout: its pieces are only known on the VR headset that generated it – pick an official layout here to see terrain.': 'Zufallslayout: Seine Teile kennt nur die VR-Brille, die es erzeugt hat – hier ein offizielles Layout wählen, um Gelände zu sehen.',
+  'No deployment zones: choose the Deployment card in the setup or an Event Companion layout.': 'Keine Aufstellungszonen: im Setup die Deployment-Karte oder ein Event-Companion-Layout wählen.',
+  'No deployment zones: choose the Deployment card in the setup.': 'Keine Aufstellungszonen: im Setup die Deployment-Karte wählen.',
+  'Drag = turn · pinch / wheel = zoom · two fingers or right button = move · double tap = reset.': 'Ziehen = drehen · Pinch / Mausrad = zoomen · zwei Finger oder rechte Taste = verschieben · Doppeltipp = zurücksetzen.',
+  'No layout for this pairing': 'Kein Layout für diese Paarung', 'Spectator – view only': 'Zuschauer – nur Ansicht'
+});
+PATTERNS.push(['^(\d+) units? from the 2D map\.$', (m, n) => n + (n === '1' ? ' Einheit' : ' Einheiten') + ' von der 2D-Karte.']);
