@@ -612,4 +612,4 @@ Object.assign(PHRASES, {
   'Drag = turn · pinch / wheel = zoom · two fingers or right button = move · double tap = reset.': 'Ziehen = drehen · Pinch / Mausrad = zoomen · zwei Finger oder rechte Taste = verschieben · Doppeltipp = zurücksetzen.',
   'No layout for this pairing': 'Kein Layout für diese Paarung', 'Spectator – view only': 'Zuschauer – nur Ansicht'
 });
-PATTERNS.push(['^(\d+) units? from the 2D map\.$', (m, n) => n + (n === '1' ? ' Einheit' : ' Einheiten') + ' von der 2D-Karte.']);
+PATTERNS.push(['^([0-9]+) units? from the 2D map[.]$', (m, n) => n + (n === '1' ? ' Einheit' : ' Einheiten') + ' von der 2D-Karte.']);
