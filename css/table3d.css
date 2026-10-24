@@ -20,7 +20,7 @@
 .t3d-foot { padding: 6px 8px 8px; background: rgba(0, 0, 0, .35); border-top: 1px solid rgba(255, 255, 255, .08); }
 .t3d-layers { display: flex; flex-wrap: wrap; gap: 4px; }
 .t3d-note { margin-top: 4px; line-height: 1.35; }
-.tbl-tabs .chip.tbl-3d { margin-left: 6px; }
+.tbl-tabs .btn.tbl-3d { margin-left: 6px; }
 @media (max-width: 480px) {
   .t3d-bar .btn.sm { padding-left: 8px; padding-right: 8px; }
   .t3d-title { display: none; }

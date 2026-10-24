@@ -170,6 +170,7 @@ function setupStage(ctx) {
       </div>
       <div class="mt">
         ${btn({ label: 'Go to setup', kind: 'primary', cta: true, action: 'go', data: { hash: `#/g/${code}/setup` } })}
+        ${btn({ label: 'Battle table (3D)', kind: 'ghost', action: 'go', data: { hash: `#/g/${code}/3d` }, title: 'The table as a 3D model: zones, objectives, terrain' })}
         <p class="xs muted center mt">Once both players are ready and setup has started "Go to deployment", the deployment checklist appears here.</p>
       </div>
       <div class="row mt"><a class="btn ghost" href="#/">Lobby</a></div>
@@ -234,8 +235,8 @@ function battleStage(ctx, ui) {
     <nav class="tbl-tabs" aria-label="View">
       ${chip({ label: 'Score', on: ui.tab === 'score', action: 'tab', data: { tab: 'score' } })}
       ${chip({ label: 'More', on: ui.tab === 'more', action: 'tab', data: { tab: 'more' } })}
-      ${chip({ label: 'Battle table', action: 'go', data: { hash: `#/g/${ctx.code}/3d` }, cls: 'tbl-3d' })}
       <span class="spacer"></span>
+      ${btn({ label: 'Battle table (3D)', kind: 'ghost', small: true, action: 'go', data: { hash: `#/g/${ctx.code}/3d` }, cls: 'tbl-3d', title: 'The table as a 3D model: zones, objectives, terrain' })}
       <span class="xs muted code">Game ${esc(ctx.code)}</span>
     </nav>
     <main class="tbl-main">
