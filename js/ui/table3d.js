@@ -242,6 +242,7 @@ function createScene(inst) {
   renderer.setClearColor(0x0b0f14, 1);
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(48, 1, 0.5, 600);
+  const ortho = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 800);   // 'Top': true plan view, no perspective (compare with the card)
   scene.add(new THREE.HemisphereLight(0xffffff, 0x2a3340, 1.1));
   const sun = new THREE.DirectionalLight(0xffffff, 0.9); sun.position.set(30, 70, -10); scene.add(sun);
 
@@ -476,10 +477,20 @@ function createScene(inst) {
     if (typeof c.me === 'number') return c.me === (d.att ?? 0) ? Math.PI : 0;   // from the player's own table edge
     return 0;                                                                     // shared display: from the Defender's edge
   }
-  function reset() { view.theta = homeTheta(); view.phi = 0.9; view.dist = 70; view.tx = MAP_W / 2; view.tz = MAP_H / 2; dirty = true; }
+  function reset() { view.theta = homeTheta(); view.phi = 0.9; view.dist = 70; view.tx = MAP_W / 2; view.tz = MAP_H / 2; view.ortho = false; dirty = true; }
   function flip() { view.theta += Math.PI; dirty = true; }
-  function top() { view.phi = PHI_MIN; view.tx = MAP_W / 2; view.tz = MAP_H / 2; view.dist = 78; dirty = true; }
+  function top() { view.phi = PHI_MIN; view.tx = MAP_W / 2; view.tz = MAP_H / 2; view.dist = 78; view.ortho = true; dirty = true; }
+  let aspect = 1;
   function place() {
+    if (view.ortho) {
+      // plan view straight down, the table edge the player looks from at the bottom of the screen
+      ortho.position.set(view.tx, 300, view.tz);
+      ortho.up.set(-Math.sin(view.theta), 0, -Math.cos(view.theta));
+      ortho.lookAt(view.tx, 0, view.tz);
+      const hh = view.dist * 0.45, hw = hh * aspect;
+      ortho.left = -hw; ortho.right = hw; ortho.top = hh; ortho.bottom = -hh; ortho.updateProjectionMatrix();
+      return;
+    }
     const s = Math.sin(view.phi);
     camera.position.set(view.tx + view.dist * s * Math.sin(view.theta), view.dist * Math.cos(view.phi), view.tz + view.dist * s * Math.cos(view.theta));
     camera.up.set(0, 1, 0);
@@ -509,7 +520,7 @@ function createScene(inst) {
     p.x = e.clientX; p.y = e.clientY;
     if (pts.size === 1) {
       if (panMode) pan(dx, dy);
-      else { view.theta -= dx * 0.006; view.phi = Math.max(PHI_MIN, Math.min(PHI_MAX, view.phi - dy * 0.005)); dirty = true; }
+      else { view.theta -= dx * 0.006; view.phi = Math.max(PHI_MIN, Math.min(PHI_MAX, view.phi - dy * 0.005)); if (view.ortho && Math.abs(dy) > 2) view.ortho = false; dirty = true; }   // tilting leaves the plan view
     } else if (pts.size === 2) {
       const [a, b] = [...pts.values()];
       const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }, span = Math.hypot(a.x - b.x, a.y - b.y);
@@ -528,13 +539,13 @@ function createScene(inst) {
   function resize() {
     const w = stage.clientWidth || 300, h = stage.clientHeight || 300;
     renderer.setSize(w, h, false);
-    camera.aspect = w / h; camera.updateProjectionMatrix(); dirty = true;
+    aspect = w / h; camera.aspect = aspect; camera.updateProjectionMatrix(); dirty = true;
   }
   const ro = new ResizeObserver(resize); ro.observe(stage); resize();
   (function loop() {
     if (destroyed) return;
     if (!stage.isConnected) { destroyed = true; ro.disconnect(); renderer.dispose(); return; }
-    if (dirty) { dirty = false; place(); renderer.render(scene, camera); }
+    if (dirty) { dirty = false; place(); renderer.render(scene, view.ortho ? ortho : camera); }
     requestAnimationFrame(loop);
   })();
   return { setData, applyLayers, reset, flip, top };
