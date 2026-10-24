@@ -8,6 +8,7 @@ import { loadOrig, origArmyRules, origDetachmentRule } from '../data/orig.js';
 import { loadDatasheets, matchUnit, normName, ALLY_PACKS } from '../data/datasheets.js';
 import { armyChoices, armyForGame } from './armies.js';
 import { WH } from '../../data/rules.js';
+import { LAYOUTS11, VARIANTS11, findLayout11 } from '../../data/layouts11.js';
 
 /* Army rule + detachment rules: BSData (New Recruit) only – one source for everything about the army. */
 const BS = new Map(); // factionId → loaded data | null (loading) | false (none)
@@ -440,6 +441,9 @@ export function missionStep(ctx, ui) {
       </div>`).join('')}</div>
     ${samePrimary ? `<p class="small muted same-primary">Both players have the same Primary Mission:</p>${primaryCard(WH, m.primary[0], m.attacker === 1 ? 1 : 0)}` : ''}
 
+    <h3 class="title mt">Terrain layout</h3>
+    ${terrainSection(ctx, m, att)}
+
     <h3 class="title mt">Twist</h3>
     <div class="grid twist-row">
       <label class="field"><span>Twist</span>
@@ -450,6 +454,30 @@ export function missionStep(ctx, ui) {
       </label>` : ''}
     </div>
     ${twist ? `<p class="small twist-text"><b>${esc(twist.name)}:</b> ${esc(twist.t)}</p>` : ''}`;
+}
+
+/** Terrain layout of the game: the Event Companion layout (A/B/C) for the two Force Dispositions – the official table for
+ *  this pairing, with zones, objectives inside terrain areas and 16 terrain areas – or one of the Chapter Approved layouts. */
+function terrainSection(ctx, m, att) {
+  const WH = ctx.data.WH;
+  const nameOf = id => { const d = (WH.DISPOSITIONS || []).find(x => x.id === id); return d ? d.name : null; };
+  const dispA = nameOf(m.dispositions[att]), dispD = nameOf(m.dispositions[1 - att]);
+  const cur = m.terrainLayout || null;
+  const curEc = cur && LAYOUTS11.find(l => l.id === cur);
+  const pairing = dispA && dispD ? VARIANTS11.map(v => findLayout11(dispA, dispD, v)).filter(Boolean) : [];
+  const other = curEc && !pairing.some(l => l.id === curEc.id) ? curEc : null;
+  return `
+    <p class="muted small">Warhammer Event Companion (11th edition): three official layouts per pairing of Force Dispositions – deployment zones, objectives inside terrain areas and 16 terrain areas. The 3D battle table shows the chosen layout.</p>
+    <div class="chips terrain-chips">
+      ${pairing.length ? pairing.map(l => chip({ html: `<b>Layout ${esc(l.variant)}</b> <span class="muted">${esc(l.attacker.disposition)} vs ${esc(l.defender.disposition)}</span>`, on: cur === l.id, action: 'terrain', data: { id: l.id } })).join('')
+        : `<span class="muted small self-center">Choose both Dispositions – then the three Event Companion layouts of this pairing appear here.</span>`}
+      ${other ? chip({ html: `<b>Layout ${esc(other.variant)}</b> <span class="muted">${esc(other.attacker.disposition)} vs ${esc(other.defender.disposition)}</span>`, on: true, action: 'terrain', data: { id: other.id } }) : ''}
+    </div>
+    <div class="chips terrain-chips mt">
+      ${(ctx.data.TERRAIN_LAYOUTS || []).map(t => chip({ label: t.short || t.name, cls: 'sm', on: cur === t.id, action: 'terrain', data: { id: t.id } })).join('')}
+      ${chip({ label: 'No terrain layout', cls: 'sm', on: !cur, action: 'terrain', data: { id: '' } })}
+    </div>
+    ${cur && !curEc && !(ctx.data.TERRAIN_LAYOUTS || []).some(t => t.id === cur) ? `<p class="muted xs">Current: ${esc(cur)} (set by the VR headset).</p>` : ''}`;
 }
 
 function primaryCard(WH, id, p) {

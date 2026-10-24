@@ -1,6 +1,6 @@
 /* ═══════════════════════════════════════════════════════════════════
    Battle table (js/ui/table3d.js) – the game's table as a 3D model to compare with the real one: deployment zones,
-   the objective markers with their 3" range, the terrain layout (Event Companion or Chapter Approved) with its dense and
+   the objective markers with their control range (the terrain area of a terrain objective, otherwise 3"), the terrain layout (Event Companion or Chapter Approved) with its dense and
    light areas and recommended walls, and the units placed on the 2D map. No tracking: the model is turned, zoomed and
    panned by hand (one finger / left button = orbit, two fingers / right button = pan, pinch / wheel = zoom), always seen
    from above the table – never from below it. Layers can be switched on and off; the choice is kept on the device.
@@ -17,7 +17,7 @@ const [MAP_W, MAP_H] = WH.MAP_SIZE || [44, 60];
 const OBJ_R = 20 / 25.4;                 // 40 mm objective marker
 const OBJ_RANGE = 3 + OBJ_R;             // "within range of an objective marker"
 const LAYERS = [
-  ['zones', 'Zones'], ['objectives', 'Objectives'], ['ranges', '3" range'], ['dense', 'Dense terrain'],
+  ['zones', 'Zones'], ['objectives', 'Objectives'], ['ranges', 'Control range'], ['dense', 'Dense terrain'],
   ['light', 'Light terrain'], ['walls', 'Walls'], ['units', 'Units'], ['grid', 'Grid'], ['labels', 'Labels']
 ];
 const LS_LAYERS = 'sb40k.t3d.layers';
@@ -32,14 +32,36 @@ function readLayers() {
   return on;
 }
 function saveLayers(on) { try { localStorage.setItem(LS_LAYERS, JSON.stringify(on)); } catch {} }
+/** Footprint of a terrain piece in table inches: the rotated rectangle or its irregular outline. */
+function footprint(p) {
+  const r = (p.rot || 0) * Math.PI / 180, c = Math.cos(r), sn = Math.sin(r);
+  const pts = p.poly && p.poly.length >= 3 ? p.poly : [[-p.w / 2, -p.h / 2], [p.w / 2, -p.h / 2], [p.w / 2, p.h / 2], [-p.w / 2, p.h / 2]];
+  return pts.map(([x, y]) => [p.x + x * c - y * sn, p.y + x * sn + y * c]);
+}
+function inPoly(pt, poly) {
+  let inside = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const [xi, yi] = poly[i], [xj, yj] = poly[j];
+    if ((yi > pt.y) !== (yj > pt.y) && pt.x < ((xj - xi) * (pt.y - yi)) / (yj - yi) + xi) inside = !inside;
+  }
+  return inside;
+}
+const inPiece = (pt, p) => inPoly(pt, footprint(p));
 const cssColor = (hex) => (typeof hex === 'string' && hex[0] === '#' ? parseInt(hex.slice(1), 16) : 0x9aa4b2);
 
 /* ───────── What is on the table (from the game state) ───────── */
 export function tableData(state) {
   const m = (state && state.mission) || {};
   const att = m.attacker === 1 ? 1 : 0;
-  const tl = m.terrainLayout || null;
-  const ec = tl ? LAYOUTS11.find(l => l.id === tl) || null : null;
+  let tl = m.terrainLayout || null;
+  let ec = tl ? LAYOUTS11.find(l => l.id === tl) || null : null;
+  // no layout chosen yet: assume Layout A of the two Force Dispositions (the game's official pairing) – marked as assumed
+  let assumed = false;
+  if (!tl && Array.isArray(m.dispositions)) {
+    const nameOf = id => { const d = (WH.DISPOSITIONS || []).find(x => x.id === id); return d ? d.name : null; };
+    const L = findLayout11(nameOf(m.dispositions[att]), nameOf(m.dispositions[1 - att]), 'A');
+    if (L) { ec = L; tl = L.id; assumed = true; }
+  }
   const ca = !ec && tl ? TERRAIN_LAYOUTS.find(l => l.id === tl) || null : null;
   const dep = m.deployment ? WH.DEPLOYMENT_MAPS[m.deployment] || null : null;
   const zones = ec ? ec.zones : dep ? dep.zones : null;
@@ -65,12 +87,15 @@ export function tableData(state) {
     objectives = stObjs.filter(o => o && o.pos).map(o => ({ id: o.id, name: o.name || o.id, pos: { x: o.pos.x ?? o.pos[0], y: o.pos.y ?? o.pos[1] }, home: o.home === 0 || o.home === 1 ? o.home : null, exp: !!o.exp, ctrl: ctrlOf(o) }));
   }
   const pieces = ec ? ec.pieces : ca ? ca.pieces : [];
-  const terrainName = ec ? `${ec.attacker.disposition} vs ${ec.defender.disposition} · Layout ${ec.variant}` : ca ? ca.name : tl && String(tl).startsWith('random-') ? `Random layout #${String(tl).slice(7)}` : null;
+  // 11th edition: an objective inside a terrain area is a terrain objective – a model is within range of it while it is
+  // within that terrain area (otherwise: within 3" horizontally). → area = footprint of that terrain area, or null
+  for (const o of objectives) { const i = pieces.findIndex(p => inPiece(o.pos, p)); o.area = i >= 0 ? footprint(pieces[i]) : null; }
+  const terrainName = ec ? `${ec.attacker.disposition} vs ${ec.defender.disposition} · Layout ${ec.variant}${assumed ? ' (assumed)' : ''}` : ca ? ca.name : tl && String(tl).startsWith('random-') ? `Random layout #${String(tl).slice(7)}` : null;
   const units = [];
   ((state && state.players) || []).forEach((pl, pi) => (pl && pl.units || []).forEach(u => {
     if (u && u.pos && u.status !== 'destroyed') units.push({ id: u.id, player: pi, name: u.name || '?', models: u.models, r: Math.max(.5, +u.r || 1), pos: { x: u.pos.x ?? u.pos[0], y: u.pos.y ?? u.pos[1] }, shocked: u.status === 'shocked' });
   }));
-  return { att, zones, line, circle, objectives, pieces, terrainName, terrainId: tl, random: !!(tl && !ec && !ca && String(tl).startsWith('random-')), deployment: m.deployment || null, units,
+  return { att, zones, line, circle, objectives, pieces, terrainName, terrainId: tl, assumed, random: !!(tl && !ec && !ca && String(tl).startsWith('random-')), deployment: m.deployment || null, units,
     names: ((state && state.players) || []).map(p => (p && p.name) || '?'), colors: ((state && state.players) || []).map(p => colorOf(p && p.color)) };
 }
 
@@ -166,7 +191,8 @@ function paintLayers(inst) {
 }
 function noteHtml(inst, data) {
   const parts = [];
-  if (!data.terrainId) parts.push('No terrain layout chosen yet – “Layout” picks one of the 45 Event Companion layouts.');
+  if (data.assumed) parts.push('No terrain layout chosen yet – Layout A of your two Force Dispositions is assumed. “Layout” or the setup sets the real one.');
+  else if (!data.terrainId) parts.push('No terrain layout chosen yet – “Layout” picks one of the 45 Event Companion layouts.');
   else if (data.random) parts.push('Random layout: its pieces are only known on the VR headset that generated it – pick an official layout here to see terrain.');
   if (!data.zones) parts.push('No deployment zones: choose the Deployment card in the setup' + (data.terrainId ? '' : ' or an Event Companion layout') + '.');
   if (data.units.length) parts.push(`${data.units.length} unit${data.units.length === 1 ? '' : 's'} from the 2D map.`);
@@ -266,7 +292,7 @@ function createScene(inst) {
   function setData(d) {
     const kZ = JSON.stringify([d.zones, d.line, d.circle, d.att, d.colors, d.names]);
     if (kZ !== keys.z) { keys.z = kZ; buildZones(d); }
-    const kO = JSON.stringify([d.objectives, d.colors]);
+    const kO = JSON.stringify([d.objectives, d.colors]);   // includes each objective's terrain area
     if (kO !== keys.o) { keys.o = kO; buildObjectives(d); }
     const kT = d.terrainId + '|' + d.pieces.length;
     if (kT !== keys.t) { keys.t = kT; buildTerrain(d); }
@@ -305,11 +331,17 @@ function createScene(inst) {
         const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 2.4, 8), new THREE.MeshBasicMaterial({ color: cssColor(d.colors[o.home]) }));
         pole.position.set(o.pos.x, 1.3, o.pos.y); groups.objectives.add(pole);
       }
-      const ring = new THREE.Mesh(new THREE.RingGeometry(OBJ_RANGE - 0.12, OBJ_RANGE, 72), new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.7, depthWrite: false, side: THREE.DoubleSide }));
-      ring.rotation.x = -Math.PI / 2; ring.position.set(o.pos.x, 0.06, o.pos.y);
-      const disc = new THREE.Mesh(new THREE.CircleGeometry(OBJ_RANGE, 72), new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.08, depthWrite: false, side: THREE.DoubleSide }));
-      disc.rotation.x = -Math.PI / 2; disc.position.set(o.pos.x, 0.04, o.pos.y);
-      groups.ranges.add(ring, disc);
+      if (o.area) {
+        // terrain objective (11th edition): the whole terrain area is the objective – highlight its footprint
+        const fill = new THREE.Mesh(flatPoly(o.area, 0.045), new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.22, depthWrite: false, side: THREE.DoubleSide }));
+        groups.ranges.add(fill, outline(o.area, 0.07, col, 0.95));
+      } else {
+        const ring = new THREE.Mesh(new THREE.RingGeometry(OBJ_RANGE - 0.12, OBJ_RANGE, 72), new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.7, depthWrite: false, side: THREE.DoubleSide }));
+        ring.rotation.x = -Math.PI / 2; ring.position.set(o.pos.x, 0.06, o.pos.y);
+        const disc = new THREE.Mesh(new THREE.CircleGeometry(OBJ_RANGE, 72), new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.08, depthWrite: false, side: THREE.DoubleSide }));
+        disc.rotation.x = -Math.PI / 2; disc.position.set(o.pos.x, 0.04, o.pos.y);
+        groups.ranges.add(ring, disc);
+      }
       const lb = label(o.name, { w: 7, h: 1.75, size: 34 }); lb.position.set(o.pos.x, o.home != null ? 3.2 : 1.6, o.pos.y); lb.userData.layer = 'objectives'; groups.labels.add(lb);
     }
   }

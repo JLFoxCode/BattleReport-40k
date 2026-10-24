@@ -632,3 +632,12 @@ PATTERNS.push(
   ['^([0-9]+) deleted, ([0-9]+) could not be deleted$', (m, a, b) => a + ' gelöscht, ' + b + ' nicht löschbar'],
   ['^(.+) – all actions and scores will be removed permanently[.] Finished games that are already saved on this device stay in "Finished games"[.]$', (m, l) => l + ' – alle Aktionen und Spielstände werden endgültig entfernt. Bereits auf diesem Gerät gespeicherte beendete Spiele bleiben unter „Finished games“.']
 );
+
+/* terrain layout in the setup + terrain objectives in the 3D battle table */
+Object.assign(EXACT, { 'Terrain layout': 'Geländelayout', 'No terrain layout': 'Kein Geländelayout', 'Control range': 'Kontrollbereich' });
+Object.assign(PHRASES, {
+  'Warhammer Event Companion (11th edition): three official layouts per pairing of Force Dispositions – deployment zones, objectives inside terrain areas and 16 terrain areas. The 3D battle table shows the chosen layout.': 'Warhammer Event Companion (11. Edition): drei offizielle Layouts je Paarung der Force Dispositions – Aufstellungszonen, Missionsziele in Geländeflächen und 16 Geländeflächen. Der 3D-Spieltisch zeigt das gewählte Layout.',
+  'Choose both Dispositions – then the three Event Companion layouts of this pairing appear here.': 'Beide Dispositions wählen – dann erscheinen hier die drei Event-Companion-Layouts dieser Paarung.',
+  'No terrain layout chosen yet – Layout A of your two Force Dispositions is assumed. “Layout” or the setup sets the real one.': 'Noch kein Geländelayout gewählt – Layout A eurer beiden Force Dispositions wird angenommen. „Layout“ oder das Setup setzt das echte.'
+});
+PATTERNS.push(['^Current: (.+) [(]set by the VR headset[)][.]$', (m, c) => 'Aktuell: ' + c + ' (von der VR-Brille gesetzt).']);
