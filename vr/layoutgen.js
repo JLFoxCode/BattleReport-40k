@@ -30,13 +30,22 @@ export const SETS = {
   half: { size: [44, 30], centre: [8, 11.5, true], pieces: [[7, 11.5, true], [6, 4, true], [6, 2, false]] }
 };
 SETS.full = SETS.armageddon;
-/** The official central block: the two interlocking 8×11.5 polygons of an Event Companion layout (relative to the
- *  battlefield centre), reused by the generator with a random quarter turn. */
+/** The official centre block of the Event Companion layouts: one 12"×10" rectangle (the two interlocking plates) with its
+ *  ruin parts and cover pieces in the corners; reused by the generator at any angle. WEDGE = one of the card's separated
+ *  8"×11.5" wedge plates (outline in its local frame) with its parts, for the point-symmetric pair. */
 const CENTRE_BLOCK = (() => {
-  const L = LAYOUTS11.find(l => l.pieces.filter(p => p.poly).length === 2);
-  if (!L) return null;
-  return L.pieces.filter(p => p.poly).map(p => ({ dx: p.x - 22, dy: p.y - 30, w: p.w, h: p.h, poly: p.poly, tall: true }));
+  const b = LAYOUTS11.flatMap(l => l.pieces).find(p => p.w === 12 && p.h === 10 && !p.poly);
+  return b ? { w: 12, h: 10, rot: b.rot || 0, parts: b.parts || [] } : null;
 })();
+const WEDGE = (() => {
+  const p = LAYOUTS11.flatMap(l => l.pieces).find(p => p.poly);
+  return p ? { w: p.w, h: p.h, rot: p.rot || 0, poly: p.poly, parts: p.parts || [] } : null;
+})();
+/** The official parts of a piece turned with it: positions and rotations relative to the piece's centre (table orientation). */
+const partsAt = (tpl, rot) => {
+  const a = (rot - tpl.rot) * Math.PI / 180, c = Math.cos(a), s = Math.sin(a);
+  return tpl.parts.map(pt => Object.assign({}, pt, { x: +(pt.x * c - pt.y * s).toFixed(2), y: +(pt.x * s + pt.y * c).toFixed(2), rot: ((pt.rot || 0) + rot - tpl.rot + 360) % 360 }));
+};
 export const FAIL = {};                      // why candidates were rejected (debugging / tuning)
 const fail = why => { FAIL[why] = (FAIL[why] || 0) + 1; return false; };
 const EDGE = 1.5;                            // official footprints keep ≥ 1.9" from the table edge (their features may overhang)
@@ -102,13 +111,13 @@ function candidate(rand, set, objectives) {
   // the 8×11.5 polygon pair: with a single central objective the official interlocking centre block (17 of the 45
   // official layouts, at any angle), otherwise a normal point-symmetric pair placed like the other pieces
   const useBlock = set.centreBlock && CENTRE_BLOCK && hasCentre;
-  if (set.centreBlock && CENTRE_BLOCK && !useBlock) pieces = [[CENTRE_BLOCK[0].w, CENTRE_BLOCK[0].h, true, CENTRE_BLOCK[0].poly]].concat(pieces);
+  if (set.centreBlock && WEDGE && !useBlock) pieces = [[WEDGE.w, WEDGE.h, true, WEDGE.poly]].concat(pieces);
   const tallIdx = pieces.map((p, i) => (p[2] ? i : -1)).filter(i => i >= 0);
   if (useBlock) {
-    const ang = 15 * Math.floor(rand() * 24), a = ang * Math.PI / 180, ca = Math.cos(a), sa = Math.sin(a);
-    const pair = CENTRE_BLOCK.map(b => ({ kind: 'ruin', w: b.w, h: b.h, rot: ang, tall: true, x: +(cx + b.dx * ca - b.dy * sa).toFixed(2), y: +(cy + b.dx * sa + b.dy * ca).toFixed(2), poly: b.poly }));
-    if (!pair.every(p => corners(p).every(c => c[0] >= EDGE && c[0] <= W - EDGE && c[1] >= EDGE && c[1] <= L - EDGE))) { FAIL.centre = (FAIL.centre || 0) + 1; return null; }
-    for (const p of pair) { placed.push(p); polys.push(corners(p)); }
+    const ang = 15 * Math.floor(rand() * 24);
+    const block = { kind: 'ruin', w: CENTRE_BLOCK.w, h: CENTRE_BLOCK.h, rot: ang, tall: true, x: cx, y: cy, parts: partsAt(CENTRE_BLOCK, ang) };
+    if (!corners(block).every(c => c[0] >= EDGE && c[0] <= W - EDGE && c[1] >= EDGE && c[1] <= L - EDGE)) { FAIL.centre = (FAIL.centre || 0) + 1; return null; }
+    placed.push(block); polys.push(corners(block));
   } else if (set.centre && (hasCentre || !objectives || !objectives.length)) {
     const [w, h, tall] = set.centre;
     const rot = ROTS[Math.floor(rand() * ROTS.length)];
@@ -128,8 +137,8 @@ function candidate(rand, set, objectives) {
     for (let t = 0; t < 60 && !ok; t++) {
       const rot = ROTS[Math.floor(rand() * ROTS.length)], r = rot * Math.PI / 180, c = Math.cos(r), sn = Math.sin(r);
       const lx = (rand() - 0.5) * (w - 3), ly = (rand() - 0.5) * (h - 3);           // objective ≥ 1.5" inside the edges
-      const p = Object.assign({ kind: 'ruin', w, h, rot, tall, x: +(o[0] - (lx * c - ly * sn)).toFixed(2), y: +(o[1] - (lx * sn + ly * c)).toFixed(2) }, shape ? { poly: shape } : {});
-      const m = Object.assign({ kind: 'ruin', w, h, rot: shape ? (rot + 180) % 360 : rot, tall, x: +(W - p.x).toFixed(2), y: +(L - p.y).toFixed(2) }, shape ? { poly: shape } : {});
+      const p = Object.assign({ kind: 'ruin', w, h, rot, tall, x: +(o[0] - (lx * c - ly * sn)).toFixed(2), y: +(o[1] - (lx * sn + ly * c)).toFixed(2) }, shape ? { poly: shape, parts: partsAt(WEDGE, rot) } : {});
+      const m = Object.assign({ kind: 'ruin', w, h, rot: shape ? (rot + 180) % 360 : rot, tall, x: +(W - p.x).toFixed(2), y: +(L - p.y).toFixed(2) }, shape ? { poly: shape, parts: partsAt(WEDGE, (rot + 180) % 360) } : {});
       const pp = corners(p), mp = corners(m);
       if (!fits(pp) || gap(pp, mp) < 0 || !fits(mp)) continue;
       add(p, m); ok = true;
@@ -143,8 +152,8 @@ function candidate(rand, set, objectives) {
     let ok = false;
     for (let t = 0; t < 40 && !ok; t++) {
       const rot = ROTS[Math.floor(rand() * ROTS.length)];
-      const p = Object.assign({ kind: 'ruin', w, h, rot, tall, x: +(1 + rand() * (W - 2)).toFixed(2), y: +(1 + rand() * (L / 2 + 3)).toFixed(2) }, shape ? { poly: shape } : {});
-      const m = Object.assign({ kind: 'ruin', w, h, rot: shape ? (rot + 180) % 360 : rot, tall, x: +(W - p.x).toFixed(2), y: +(L - p.y).toFixed(2) }, shape ? { poly: shape } : {});
+      const p = Object.assign({ kind: 'ruin', w, h, rot, tall, x: +(1 + rand() * (W - 2)).toFixed(2), y: +(1 + rand() * (L / 2 + 3)).toFixed(2) }, shape ? { poly: shape, parts: partsAt(WEDGE, rot) } : {});
+      const m = Object.assign({ kind: 'ruin', w, h, rot: shape ? (rot + 180) % 360 : rot, tall, x: +(W - p.x).toFixed(2), y: +(L - p.y).toFixed(2) }, shape ? { poly: shape, parts: partsAt(WEDGE, (rot + 180) % 360) } : {});
       const pp = corners(p), mp = corners(m);
       if (!fits(pp) || gap(pp, mp) < 0 || !fits(mp)) continue;
       add(p, m); ok = true;
