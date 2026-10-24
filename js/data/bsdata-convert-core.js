@@ -320,6 +320,8 @@ export function convertAll(catalogues, opts = {}) {
     const factionRules = {};
     const modelCats = [];  // category names of the unit's model entries
     const seenW = new Set(), seenP = new Set(), seenA = new Set(), seenCore = new Set();
+    let curModel = null;   // name of the model entry being walked (depth > 0) – a faction rule linked there belongs to that model
+    const facFrom = {};    // faction ability → Set of model entries that carry it, or null when the unit itself links it (every model)
     if (!unitGateStats.has(factionId)) unitGateStats.set(factionId, { tagged: new Map(), other: new Set() });
     const stats = unitGateStats.get(factionId);
     let inh = [];  // von übergeordneten (Wargear-)Einträgen geerbte Detachment-Abhängigkeit
@@ -497,6 +499,8 @@ export function convertAll(catalogues, opts = {}) {
       } else {
         const k = up(name);
         if (!u.abilities.faction.includes(k)) { u.abilities.faction.push(k); factionRules[k] = S(target.description); RULE_CAT.set(k, catOf(target)); }
+        // which model entry carries it (Cabal of Sorcerers on the Aspiring Sorcerer only): linked by the unit itself → every model
+        if (!(k in facFrom) || facFrom[k]) { if (curModel) (facFrom[k] = facFrom[k] || new Set()).add(curModel); else facFrom[k] = null; }
       }
     };
     const handleProfile = (p, kind, link) => {
@@ -523,7 +527,7 @@ export function convertAll(catalogues, opts = {}) {
       if (depth > 0 && (ancHidden(node) || (node.__linkObj && ancHidden(node.__linkObj)))) return;
       const isModel = node.type === 'model' || (depth === 0 && node.type === 'unit');
       const k = node.type === 'upgrade' ? 'wargear' : (node.type ? 'unit' : kind);
-      const savedInh = inh, savedAnc = anc, savedOpt = optWg, savedPm = pmods, savedWg = curWg, savedComp = comp, savedOH = optHidden;
+      const savedInh = inh, savedAnc = anc, savedOpt = optWg, savedPm = pmods, savedWg = curWg, savedComp = comp, savedOH = optHidden, savedCur = curModel;
       // groups above that may be hidden for the unit on its own (Crusade "Specialisms" …)
       if (depth > 0 && !node.type && (node.modifiers || []).some(m => m.field === 'hidden' && m.type === 'set' && (m.value === true || m.value === 'true') && dGroup({ type: 'and', conditions: m.conditions, conditionGroups: m.conditionGroups }) !== false)) optHidden = true;
       anc = new Set([...anc, ...ancIds(node)]);
@@ -543,6 +547,7 @@ export function convertAll(catalogues, opts = {}) {
         }
       }
       if (node.type === 'model' && companions.has(node.id)) comp = cleanName(name);
+      if (node.type === 'model' && depth > 0) curModel = cleanName(name);
       if (depth > 0) inh = gateOf(null, node, node.__linkObj);
       // "C'tan Powers" (Tesseract Vault): a ranged-weapon profile type of its own (Range/A/BS/S/AP/D/Keywords)
       for (const p0 of node.profiles || []) { const p = p0.typeName === "C'tan Powers" ? { ...p0, typeName: 'Ranged Weapons' } : p0; if (handleProfile(p, k) !== false && modelCtx && (p.typeName === 'Ranged Weapons' || p.typeName === 'Melee Weapons')) modelCtx.weapons.add(parseWeapon(p).name); }
@@ -582,9 +587,17 @@ export function convertAll(catalogues, opts = {}) {
         u.models.push(ctx0);
         for (const w of [...u.ranged, ...u.melee]) ctx0.weapons.add(w.name);
       }
-      inh = savedInh; anc = savedAnc; optWg = savedOpt; pmods = savedPm; curWg = savedWg; comp = savedComp; optHidden = savedOH;
+      inh = savedInh; anc = savedAnc; optWg = savedOpt; pmods = savedPm; curWg = savedWg; comp = savedComp; optHidden = savedOH; curModel = savedCur;
     }
     walk(root, 'unit', 0, null, new Set());
+    // faction abilities only some model entries carry (abilities.factionModels: "CABAL OF SORCERERS": ["Aspiring Sorcerer"]) –
+    // the unit has the ability only while such a model is alive; linked by the unit itself or by every model → not listed
+    {
+      const names = new Set(u.models.map(m => m.name));
+      const fm = {};
+      for (const [k, s] of Object.entries(facFrom)) { if (!s) continue; const arr = [...s].filter(n => names.has(n)); if (arr.length && arr.length < names.size) fm[k] = arr; }
+      if (Object.keys(fm).length) u.abilities.factionModels = fm;
+    }
     // a SUPPORT unit whose attach text BSData still names 'Leader' (GSC Biophagus, Clamavus, Locus, Nexos): the core
     // ability decides – it attaches as a support unit
     if (u.leader && !u.support && u.abilities.core.some(c => /^SUPPORT\b/.test(c)) && !u.abilities.core.some(c => /^LEADER\b/.test(c))) {

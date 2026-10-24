@@ -116,3 +116,15 @@
 .ds-mod-src { display: inline-block; margin: 2px 4px 0 0; padding: 0 6px; border-radius: 999px; font-size: .7rem; font-weight: 700; color: var(--ok); background: var(--ok-soft); }
 .ds-mod-notes { margin: -2px 0 6px; }
 .ds-mod-kw .kw-tag, .ds-mod-kw { color: var(--ok); }
+
+/* model-bound keywords / faction abilities: the model's colour (--mdl), its name on the chip, tappable (keywords.js info) */
+button.ds-kw { font: inherit; color: inherit; line-height: inherit; cursor: pointer; }
+.ds-kw.mdl { color: var(--mdl); border-color: color-mix(in srgb, var(--mdl) 60%, transparent); background: color-mix(in srgb, var(--mdl) 10%, transparent); }
+.ds-kw-m { display: inline-block; margin-left: 5px; padding-left: 5px; border-left: 1px solid color-mix(in srgb, currentColor 40%, transparent); font-size: .62rem; text-transform: none; letter-spacing: 0; opacity: .9; }
+.ds-mkw-m.mdl { color: var(--mdl); font-weight: 600; }
+.ds-facab { display: inline-flex; align-items: center; gap: 4px; }
+.ds-facab.mdl .kw-tag { color: var(--mdl); }
+.ds-tag.mdl { color: var(--mdl); border-color: color-mix(in srgb, var(--mdl) 60%, transparent); }
+.ds-group .ds-facab.from-leader .kw-tag { color: var(--ldr); }
+button.ds-kw.from-leader { cursor: pointer; }
+.kw-bound { padding: 8px 10px; border-left: 3px solid var(--warn); background: color-mix(in srgb, var(--warn) 8%, transparent); border-radius: 4px; font-size: .9rem; }

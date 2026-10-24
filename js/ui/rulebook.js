@@ -364,7 +364,11 @@ function fullHtml(e, toks) {
     }
     case 'armyrule': case 'detrule': {
       // BSData (New Recruit) text only
-      const rules = (e.rules || []).filter(r => !r.core).map(r => `<div class="rb-orig-rule"><b>${esc(r.name)}</b><div class="rb-text">${mdBold(r.text || '')}</div></div>`).join('');
+      // "models with this ability": the datasheets that carry the army rule as a faction ability (BSData: abilities.faction)
+      const pack = e.type === 'armyrule' ? S.ds.get(e.fac) : null;
+      const same = (a, b) => { const n = s => String(s || '').toUpperCase().replace(/\s*\(.*\)$/, '').trim(); return n(a) === n(b); };
+      const withAb = r => pack ? pack.units.filter(u => ((u.abilities || {}).faction || []).some(a => same(a, r.name))).map(u => u.name) : [];
+      const rules = (e.rules || []).filter(r => !r.core).map(r => { const us = withAb(r); return `<div class="rb-orig-rule"><b>${esc(r.name)}</b><div class="rb-text">${mdBold(r.text || '')}</div>${us.length ? `<div class="rb-sub mt">Units with this ability <span class="rb-count">${us.length}</span></div><p class="small" data-no-i18n>${us.map(esc).join(' · ')}</p>` : ''}</div>`; }).join('');
       const enh = (e.enh || []).map(x => `<div class="rb-orig-rule"><b>${esc(x.name)}${x.cost != null ? ` (${esc(String(x.cost))} pts)` : ''}</b><div class="rb-text">${mdBold(x.text || '')}</div></div>`).join('');
       return rules + (enh ? `<div class="rb-sub mt">Enhancements</div>${enh}` : '');
     }

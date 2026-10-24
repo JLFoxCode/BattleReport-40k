@@ -8,8 +8,14 @@
  * LEADER · TRANSPORT · UNIT COMPOSITION / Optionen · Keywords-Leiste + Faction Keywords.
  */
 import { esc } from './components.js';
-import { kwify, kwList } from './keywords.js';
+import { kwify, kwList, facAbTag } from './keywords.js';
 import { normName as normKey } from '../data/datasheets.js';   // same normalisation as the callers' detachment/enhancement lists
+import { FACTIONS } from '../../data/factions/index.js';
+
+/** Faction id of a datasheet from its FACTION KEYWORDS ("THOUSAND SONS" → thousand-sons) – the faction-ability tags open
+ *  that faction's army rule. */
+const FAC_BY_KW = new Map(FACTIONS.map(f => [String(f.name).toUpperCase(), f.id]));
+const facIdOf = ds => (ds && ds.factionKeywords || []).map(k => FAC_BY_KW.get(String(k).toUpperCase())).find(Boolean) || '';
 
 const STAT_KEYS = [['M', 'M'], ['T', 'T'], ['SV', 'SV'], ['W', 'W'], ['LD', 'LD'], ['OC', 'OC']];
 
@@ -146,7 +152,7 @@ export function datasheetCard(ds, opt = {}) {
     ${weaponTable(ds.melee, 'melee', chosen, unit && unit.mods)}
     <div class="ds-section"><div class="ds-section-h">ABILITIES</div>
       ${(ab.core || []).length ? `<div class="ds-ab"><b>CORE:</b> ${kwList(ab.core)}</div>` : ''}
-      ${(ab.faction || []).length ? `<div class="ds-ab"><b>FACTION:</b> ${ab.faction.map(esc).join(', ')}</div>` : ''}
+      ${(ab.faction || []).length ? `<div class="ds-ab"><b>FACTION:</b> ${ab.faction.map(a => facAbChip(ds, a)).join(' ')}</div>` : ''}
       ${abilityList((ab.unit || []).filter(a => abilityVisible(a, opt.detachments || null, opt.enhNames || null) && notSupportAb(ds)(a)), marks)}
       ${ab.invul ? `<div class="ds-ab ds-inv"><b>INVULNERABLE SAVE:</b> ${esc(String(ab.invul))}</div>` : ''}
       ${ab.damaged ? `<div class="ds-ab"><b>DAMAGED:</b> ${rich(ab.damaged)}</div>` : ''}
@@ -156,7 +162,7 @@ export function datasheetCard(ds, opt = {}) {
     ${['leader', 'support'].map(k => ds[k] ? `<div class="ds-section"><div class="ds-section-h">${k.toUpperCase()}</div><div class="ds-ab">${ds[k].text ? rich(ds[k].text) : (ds[k].canLead || []).length ? `This model can be attached to the following units:<ul class="ds-list">${ds[k].canLead.map(n => `<li>${esc(n)}</li>`).join('')}</ul>` : ''}</div></div>` : '').join('')}
     ${ds.transport ? `<div class="ds-section"><div class="ds-section-h">TRANSPORT</div><div class="ds-ab">${rich(ds.transport)}</div></div>` : ''}
     ${ds.composition || (ds.options || []).length || (ds.pointsTiers || []).length ? `<div class="ds-section"><div class="ds-section-h">UNIT COMPOSITION</div>${ds.composition ? `<div class="ds-ab">${rich(ds.composition)}</div>` : ''}${(ds.options || []).length ? `<ul class="ds-list ds-options">${ds.options.map(o => `<li>${esc(o)}</li>`).join('')}</ul>` : ''}${tiersLine(ds)}</div>` : ''}
-    <div class="ds-keywords"><span class="ds-kw-label">KEYWORDS:</span> ${(ds.keywords || []).map(k => `<span class="ds-kw">${esc(k)}</span>`).join('')}${optKw.map(k => `<span class="ds-kw opt" title="from a chosen option">${esc(k)}</span>`).join('')}</div>
+    <div class="ds-keywords"><span class="ds-kw-label">KEYWORDS:</span> ${(ds.keywords || []).map(k => kwChip(ds, k)).join('')}${optKw.map(k => `<span class="ds-kw opt" title="from a chosen option">${esc(k)}</span>`).join('')}</div>
     ${modelKwLine(ds)}${unit ? '' : optionKwLine(ds)}
     ${(ds.factionKeywords || []).length ? `<div class="ds-keywords faction"><span class="ds-kw-label">FACTION KEYWORDS:</span> ${ds.factionKeywords.map(k => `<span class="ds-kw">${esc(k)}</span>`).join('')}</div>` : ''}`;
   const flags = [unit && unit.warlord ? '<span class="ds-tag wl">Warlord</span>' : '', enh.length ? `<span class="ds-tag">${enh.length} enhancement${enh.length === 1 ? '' : 's'}</span>` : ''].filter(Boolean).join('');
@@ -254,11 +260,37 @@ function tiersLine(ds) {
   const many = (ds.points || []).length > 1 || t.some(x => (x.points || []).length > 1);
   return `<div class="ds-ab ds-tiers"><b>POINTS:</b> ${t.map(x => `<span class="ds-tier">${ORD(x.copy)}+ copy: ${(x.points || []).map(p => `${many && p.models ? p.models + ' × ' : ''}${p.pts}`).join(' · ')} pts</span>`).join(' ')}</div>`;
 }
-/** Keywords only some models of the unit have (ds.modelKeywords: Dark Commune "Mindwitch: PSYKER"). */
+/* Model-bound keywords and faction abilities: a keyword only one model entry carries (PSYKER of the Aspiring Sorcerer,
+ * ds.modelKeywords) or a faction ability only one model entry links (CABAL OF SORCERERS, ds.abilities.factionModels) is
+ * shown in that model's colour with the model's name and is tappable – the info says whose it is, that the unit loses it
+ * when that model is destroyed, and what the keyword / ability does. */
+const MDL = ['#ECAA48', '#B48CFF', '#46C8C0', '#F07FA8', '#8FD17A', '#FF9F66'];
+/** Colour of a model entry of the unit (by its position in ds.models). */
+export function modelColor(ds, name) { const i = ((ds && ds.models) || []).findIndex(m => m.name === name); return MDL[(i < 0 ? 0 : i) % MDL.length]; }
+/** Model entries that carry the keyword while the others do not → [names] | null (every model has it). */
+function kwOwners(ds, kw) {
+  const mk = (ds && ds.modelKeywords) || {};
+  const own = Object.entries(mk).filter(([, v]) => (v || []).includes(kw)).map(([m]) => m);
+  return own.length ? own : null;
+}
+const mdlStyle = (ds, names) => ` style="--mdl:${modelColor(ds, names[0])}"`;
+/** Keyword chip: plain, or model-bound (coloured, with the model's name, tappable → keywords.js info). */
+function kwChip(ds, k, cls = '') {
+  const own = kwOwners(ds, k);
+  if (!own) return `<span class="ds-kw${cls}">${esc(k)}</span>`;
+  return `<button type="button" class="ds-kw mdl${cls}"${mdlStyle(ds, own)} data-kw="${esc(k)}" data-fac="${esc(facIdOf(ds))}" data-model="${esc(own.join(' / '))}" data-unit="${esc(ds.name)}">${esc(k)}<span class="ds-kw-m">${esc(own.join(' / '))}</span></button>`;
+}
+/** Faction-ability tag of a datasheet, with the model that carries it when only some do (ds.abilities.factionModels). */
+function facAbChip(ds, a, from) {
+  const own = from ? [from] : (((ds && ds.abilities) || {}).factionModels || {})[a] || null;
+  if (!own) return facAbTag(a, facIdOf(ds));
+  return `<span class="ds-facab mdl"${mdlStyle(ds, own)}>${facAbTag(a, facIdOf(ds), own.join(' / '), ds.name)}<span class="ds-tag mdl">${esc(own.join(' / '))}</span></span>`;
+}
+/** Keywords only some models of the unit have (ds.modelKeywords: Dark Commune "Mindwitch: PSYKER") – in the model's colour. */
 function modelKwLine(ds) {
   const mk = (ds && ds.modelKeywords) || {};
   const e = Object.entries(mk).filter(([, v]) => (v || []).length);
-  return e.length ? `<div class="ds-keywords models"><span class="ds-kw-label">MODEL KEYWORDS:</span> ${e.map(([m, v]) => `<span class="ds-mkw"><span class="ds-mkw-m">${esc(m)}:</span> ${v.map(k => `<span class="ds-kw">${esc(k)}</span>`).join('')}</span>`).join('')}</div>` : '';
+  return e.length ? `<div class="ds-keywords models"><span class="ds-kw-label">MODEL KEYWORDS:</span> ${e.map(([m, v]) => `<span class="ds-mkw"${mdlStyle(ds, [m])}><span class="ds-mkw-m mdl">${esc(m)}:</span> ${v.map(k => `<button type="button" class="ds-kw mdl" data-kw="${esc(k)}" data-fac="${esc(facIdOf(ds))}" data-model="${esc(m)}" data-unit="${esc(ds.name)}">${esc(k)}</button>`).join('')}</span>`).join('')}</div>` : '';
 }
 /** Without a list unit (rulebook): which option adds which keywords, compact. */
 function optionKwLine(ds) {
@@ -330,7 +362,10 @@ export function datasheetGroupCard(group, opt = {}) {
     .filter(a => { const k = normName(a.name); if (seen.has(k)) return false; seen.add(k); return true; }).map(a => Object.assign({ leaderName: l.ds.name }, a)));
   const abRow = (a, leader) => `<div class="ds-ab${leader ? ' from-leader' : ''}"${leader ? st(colorByName.get(leader)) : ''}><b>${esc(a.name)}:</b> ${rich(a.text || '')}${leader ? tagOf(leader) : ''}${detTag(a)}</div>`;
   const core = [...new Set([...((body.ds.abilities || {}).core || []), ...leaders.flatMap(l => (l.ds.abilities || {}).core || [])])];
-  const fac = [...new Set([...((body.ds.abilities || {}).faction || []), ...leaders.flatMap(l => (l.ds.abilities || {}).faction || [])])];
+  // faction abilities with the model they come from: the unit's own first, then a Leader's (only while he is attached and alive)
+  const fac = [];
+  for (const a of (body.ds.abilities || {}).faction || []) if (!fac.some(x => normName(x.name) === normName(a))) fac.push({ name: a, from: null });
+  for (const l of leaders) for (const a of (l.ds.abilities || {}).faction || []) if (!fac.some(x => normName(x.name) === normName(a))) fac.push({ name: a, from: l.ds.name });
   const invs = [body, ...leaders].map(m => (m.ds.abilities || {}).invul).filter(Boolean);
   const enh = leaders.flatMap(l => (l.enh || []).map(e => Object.assign({ leaderName: l.ds.name }, e))).concat((body.enh || []).map(e => Object.assign({ leaderName: null }, e)));
   const kwOf = m => [...(m.ds.keywords || []), ...optionKeywords(m.ds, m.unit)];   // chosen options' keywords included
@@ -347,13 +382,15 @@ export function datasheetGroupCard(group, opt = {}) {
     ${weaponTable2('melee')}
     <div class="ds-section"><div class="ds-section-h">ABILITIES</div>
       ${core.length ? `<div class="ds-ab"><b>CORE:</b> ${kwList(core)}</div>` : ''}
-      ${fac.length ? `<div class="ds-ab"><b>FACTION:</b> ${fac.map(esc).join(', ')}</div>` : ''}
+      ${fac.length ? `<div class="ds-ab"><b>FACTION:</b> ${fac.map(x => x.from
+        ? `<span class="ds-facab from-leader"${st(colorByName.get(x.from))}>${facAbTag(x.name, facIdOf(body.ds), x.from, x.from)}${tagOf(x.from)}</span>`
+        : facAbChip(body.ds, x.name)).join(' ')}</div>${fac.some(x => x.from) ? `<div class="ds-ab muted xs">${esc('A faction ability marked with a Leader\'s tag comes from that model only – the unit loses it when he is destroyed or leaves the unit.')}</div>` : ''}` : ''}
       ${unitAb.map(a => abRow(a, null)).join('')}
       ${leaderAb.map(a => abRow(a, a.leaderName)).join('')}
       ${invs.length ? `<div class="ds-ab ds-inv"><b>INVULNERABLE SAVE:</b> ${[...new Set(invs.map(String))].map(esc).join(' / ')}</div>` : ''}
     </div>
     ${enh.length ? `<div class="ds-section"><div class="ds-section-h">ENHANCEMENTS</div>${enh.map(e => `<div class="ds-ab${e.leaderName ? ' from-leader' : ''}"${e.leaderName ? st(colorByName.get(e.leaderName)) : ''}><b>${esc(e.name)}${e.cost ? ` (${esc(String(e.cost))} pts)` : ''}${e.text ? ':' : ''}</b> ${e.text ? rich(e.text) : '<span class="muted xs">not in the BSData (New Recruit) data</span>'}${e.leaderName ? tagOf(e.leaderName) : ''}</div>`).join('')}</div>` : ''}
-    <div class="ds-keywords"><span class="ds-kw-label">KEYWORDS:</span> ${[...kwUnit].map(k => `<span class="ds-kw">${esc(k)}</span>`).join('')}${kwLeader.map(k => `<span class="ds-kw from-leader"${st(colorById.get((leaders.find(l => kwOf(l).includes(k)) || { unit: {} }).unit.id))}>${esc(k)}</span>`).join('')}</div>`;
+    <div class="ds-keywords"><span class="ds-kw-label">KEYWORDS:</span> ${[...kwUnit].map(k => kwChip(body.ds, k)).join('')}${kwLeader.map(k => { const l = leaders.find(x => kwOf(x).includes(k)) || { unit: {}, ds: {} }; return `<button type="button" class="ds-kw from-leader"${st(colorById.get(l.unit.id))} data-kw="${esc(k)}" data-fac="${esc(facIdOf(body.ds))}" data-model="${esc(l.ds.name || '')}" data-unit="${esc(l.ds.name || '')}">${esc(k)}<span class="ds-kw-m">${esc(l.ds.name || '')}</span></button>`; }).join('')}</div>`;
   const head = `<div class="ds-head"><div class="ds-head-main"><div class="ds-title">${leaderNames} + ${esc(body.ds.name)}</div><div class="ds-attach-label leader">Attached unit · acts as one unit</div></div><div class="ds-meta">${models} models${pts ? ` · ${pts} pts` : ''}</div></div>`;
   return `<details class="ds-card ds-group"${opt.key ? ` data-key="${esc(opt.key)}"` : ''}${opt.defaultOpen ? ' data-default-open="1"' : ''}${opt.open ? ' open' : ''}><summary>${head}</summary><div class="ds-body">${html}</div></details>`;
 }
