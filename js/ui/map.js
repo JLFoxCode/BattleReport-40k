@@ -216,14 +216,15 @@ export function createMap(el, opts = {}) {
           for (const poly of tpl.poly) svg('polygon', { class: `part ${pt.k}`, points: poly.map(([x, y0]) => { const y = pt.flip ? -y0 : y0; const [bx, by] = clip(pt.x + x * c - y * sn, pt.y + x * sn + y * c); return `${bx.toFixed(2)},${by.toFixed(2)}`; }).join(' ') }, pg);
           if (pt.label) { const t = svg('text', { class: 'part-label lbl', x: pt.x, y: pt.y, transform: `rotate(${-rot} ${pt.x} ${pt.y})` }, pg); t.textContent = pt.label; }
         }
-        // corners no feature reaches: white corner marker (shows how far the terrain feature extends)
-        for (const [sx, sy] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) {
-          const cx = cx0 + sx * hw, cy = cy0 + sy * hh;
-          if (p.poly && p.poly.length >= 3 && !p.poly.some(([x, y]) => Math.abs(x - cx) < 0.3 && Math.abs(y - cy) < 0.3)) continue;
-          if (boxes.some(b => b.minx <= cx + 1.2 && b.maxx >= cx - 1.2 && b.miny <= cy + 1.2 && b.maxy >= cy - 1.2)) continue;
-          const L = Math.min(1.5, hw, hh);
-          svg('polyline', { class: 'part corner', points: `${cx - sx * L},${cy} ${cx},${cy} ${cx},${cy - sy * L}` }, g);
-        }
+        // corners no feature reaches: white corner marker along the two edges meeting there (shows how far the feature extends)
+        const verts = p.poly && p.poly.length >= 3 ? p.poly : [[-p.w / 2, -p.h / 2], [p.w / 2, -p.h / 2], [p.w / 2, p.h / 2], [-p.w / 2, p.h / 2]];
+        verts.forEach((v, i) => {
+          const [cx, cy] = v;
+          if (boxes.some(b => b.minx <= cx + 1.2 && b.maxx >= cx - 1.2 && b.miny <= cy + 1.2 && b.maxy >= cy - 1.2)) return;
+          const a = verts[(i + 1) % verts.length], b = verts[(i + verts.length - 1) % verts.length];
+          const end = q => { const dx = q[0] - cx, dy = q[1] - cy, len = Math.hypot(dx, dy) || 1, L = Math.min(1.5, len / 2); return `${(cx + dx / len * L).toFixed(2)},${(cy + dy / len * L).toFixed(2)}`; };
+          svg('polyline', { class: 'part corner', points: `${end(a)} ${cx},${cy} ${end(b)}` }, g);
+        });
       }
       if (kind === 'ruin' && p.w >= 4 && p.h >= 3) {
         const t = svg('text', { class: 'terrain-label', transform: `rotate(${-rot - (p.rot || 0)})` }, g);

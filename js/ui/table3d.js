@@ -378,22 +378,27 @@ function createScene(inst) {
     }
     return b;
   }
-  /** Corners of the plate no feature reaches get a white corner marker (two short bars) – shows how far the terrain
-   *  feature extends when the table is set up and later during play. Added to the plate's (rotated) group. */
+  /** Corners of the plate no feature reaches get a white corner marker: two short bars running along the two edges
+   *  that meet in that corner (a wedge plate's slanted edge included) – shows how far the terrain feature extends. */
   function cornerMarkers(p, boxes, g) {
-    let hw = p.w / 2, hh = p.h / 2, cx0 = 0, cy0 = 0;
-    if (p.poly && p.poly.length >= 3) { const xs = p.poly.map(v => v[0]), ys = p.poly.map(v => v[1]); hw = (Math.max(...xs) - Math.min(...xs)) / 2; hh = (Math.max(...ys) - Math.min(...ys)) / 2; cx0 = (Math.min(...xs) + Math.max(...xs)) / 2; cy0 = (Math.min(...ys) + Math.max(...ys)) / 2; }
+    const verts = p.poly && p.poly.length >= 3 ? p.poly : [[-p.w / 2, -p.h / 2], [p.w / 2, -p.h / 2], [p.w / 2, p.h / 2], [-p.w / 2, p.h / 2]];
+    const inside = (x, y) => { let ins = false; for (let i = 0, j = verts.length - 1; i < verts.length; j = i++) { const [xi, yi] = verts[i], [xj, yj] = verts[j]; if ((yi > y) !== (yj > y) && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) ins = !ins; } return ins; };
     const mat = new THREE.MeshLambertMaterial({ color: 0xf2f5f8 });
-    for (const [sx, sy] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) {
-      const cx = cx0 + sx * hw, cy = cy0 + sy * hh;
-      if (p.poly && p.poly.length >= 3 && !p.poly.some(([x, y]) => Math.abs(x - cx) < 0.3 && Math.abs(y - cy) < 0.3)) continue;   // wedge: only real corners
-      const covered = boxes.some(b => b.minx <= cx + 1.2 && b.maxx >= cx - 1.2 && b.miny <= cy + 1.2 && b.maxy >= cy - 1.2);
-      if (covered) continue;
-      const L = Math.min(1.5, hw, hh), t = 0.25, h = 0.5;
-      const bx = new THREE.Mesh(new THREE.BoxGeometry(L, h, t), mat); bx.position.set(cx - sx * L / 2, h / 2 + 0.12, cy - sy * t / 2);
-      const bz = new THREE.Mesh(new THREE.BoxGeometry(t, h, L), mat); bz.position.set(cx - sx * t / 2, h / 2 + 0.12, cy - sy * L / 2);
-      g.add(bx, bz);
-    }
+    const t = 0.25, h = 0.5;
+    verts.forEach((v, i) => {
+      const [cx, cy] = v;
+      if (boxes.some(b => b.minx <= cx + 1.2 && b.maxx >= cx - 1.2 && b.miny <= cy + 1.2 && b.maxy >= cy - 1.2)) return;
+      for (const q of [verts[(i + 1) % verts.length], verts[(i + verts.length - 1) % verts.length]]) {
+        const dx = q[0] - cx, dy = q[1] - cy, len = Math.hypot(dx, dy) || 1, ux = dx / len, uy = dy / len;
+        const L = Math.min(1.5, len / 2);
+        let nx = -uy, ny = ux;                                            // inward normal (into the plate)
+        if (!inside(cx + ux * L / 2 + nx * 0.3, cy + uy * L / 2 + ny * 0.3)) { nx = -nx; ny = -ny; }
+        const bar = new THREE.Mesh(new THREE.BoxGeometry(L, h, t), mat);
+        bar.position.set(cx + ux * L / 2 + nx * t / 2, h / 2 + 0.12, cy + uy * L / 2 + ny * t / 2);
+        bar.rotation.y = -Math.atan2(uy, ux);
+        g.add(bar);
+      }
+    });
   }
   function extrude(poly, h) {
     const shape = new THREE.Shape(poly.map(([x, y]) => new THREE.Vector2(x, y)));

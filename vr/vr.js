@@ -412,17 +412,24 @@ function buildTerrain() {
         }
         if (pt.label) { const lb = labelSprite(pt.label); lb.scale.set(2.4 * IN, 0.6 * IN, 1); lb.position.set(pt.x * IN, (ph + 0.8) * IN, pt.y * IN); pg.add(lb); }
       }
-      // corners no feature reaches: white corner marker in the plate's (rotated) group – shows how far the feature extends
+      // corners no feature reaches: white corner marker along the two edges meeting there (plate's rotated group)
       const cmat = new THREE.MeshBasicMaterial({ color: 0xf2f5f8, transparent: true, opacity: 0.9 });
-      for (const [sx, sy] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) {
-        const cx = cx0 + sx * hw, cy = cy0 + sy * hh;
-        if (p.poly && p.poly.length >= 3 && !p.poly.some(([x, y]) => Math.abs(x - cx) < 0.3 && Math.abs(y - cy) < 0.3)) continue;
-        if (boxes.some(b => b.minx <= cx + 1.2 && b.maxx >= cx - 1.2 && b.miny <= cy + 1.2 && b.maxy >= cy - 1.2)) continue;
-        const Lc = Math.min(1.5, hw, hh), t = 0.25, hc = 0.5;
-        const bx = new THREE.Mesh(new THREE.BoxGeometry(Lc * IN, hc * IN, t * IN), cmat); bx.position.set((cx - sx * Lc / 2) * IN, (hc / 2 + 0.1) * IN, (cy - sy * t / 2) * IN);
-        const bz = new THREE.Mesh(new THREE.BoxGeometry(t * IN, hc * IN, Lc * IN), cmat); bz.position.set((cx - sx * t / 2) * IN, (hc / 2 + 0.1) * IN, (cy - sy * Lc / 2) * IN);
-        g.add(bx, bz);
-      }
+      const verts = p.poly && p.poly.length >= 3 ? p.poly : [[-p.w / 2, -p.h / 2], [p.w / 2, -p.h / 2], [p.w / 2, p.h / 2], [-p.w / 2, p.h / 2]];
+      const insideV = (x, y) => { let ins = false; for (let i2 = 0, j2 = verts.length - 1; i2 < verts.length; j2 = i2++) { const [xi, yi] = verts[i2], [xj, yj] = verts[j2]; if ((yi > y) !== (yj > y) && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) ins = !ins; } return ins; };
+      verts.forEach((v, vi) => {
+        const [cx, cy] = v;
+        if (boxes.some(b => b.minx <= cx + 1.2 && b.maxx >= cx - 1.2 && b.miny <= cy + 1.2 && b.maxy >= cy - 1.2)) return;
+        for (const q of [verts[(vi + 1) % verts.length], verts[(vi + verts.length - 1) % verts.length]]) {
+          const dx = q[0] - cx, dy = q[1] - cy, len = Math.hypot(dx, dy) || 1, ux = dx / len, uy = dy / len;
+          const Lc = Math.min(1.5, len / 2), t = 0.25, hc = 0.5;
+          let nx = -uy, ny = ux;
+          if (!insideV(cx + ux * Lc / 2 + nx * 0.3, cy + uy * Lc / 2 + ny * 0.3)) { nx = -nx; ny = -ny; }
+          const bar = new THREE.Mesh(new THREE.BoxGeometry(Lc * IN, hc * IN, t * IN), cmat);
+          bar.position.set((cx + ux * Lc / 2 + nx * t / 2) * IN, (hc / 2 + 0.1) * IN, (cy + uy * Lc / 2 + ny * t / 2) * IN);
+          bar.rotation.y = -Math.atan2(uy, ux);
+          g.add(bar);
+        }
+      });
       terrainGroup.add(pg);
       return;
     }
