@@ -42,7 +42,7 @@ function coreEntries(re) {
   return all.filter(g => re.test(g.title + ' ' + (g.tags || []).join(' ') + ' ' + g.id));
 }
 function coreList(entries) {
-  return entries.length ? `<dl class="info-dl" data-no-i18n>${entries.map(g => `<dt>${esc(g.title)}</dt><dd>${esc(g.text)}</dd>`).join('')}</dl>` : '';
+  return entries.length ? `<dl class="info-dl" data-no-i18n>${entries.map(g => `<dt>${esc(g.title)}</dt><dd>${esc(g.text).replace(/\n/g, '<br>')}</dd>`).join('')}</dl>` : '';
 }
 function infoBtn(action, data, title = 'Info') {
   return btn({ icon: 'i', kind: 'ghost', cls: 'info', action, data, title });

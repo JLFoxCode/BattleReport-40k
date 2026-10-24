@@ -8,7 +8,7 @@
 import { CORE } from '../../data/core.js';
 import { WH } from '../../data/rules.js';
 import { FACTIONS } from '../../data/factions/index.js';
-import { esc, btn } from './components.js';
+import { esc, btn, sheet } from './components.js';
 import { TERMS, EXACT_TERMS } from '../i18n-de.js';
 import { tr } from '../i18n.js';
 import { kwify } from './keywords.js';
@@ -64,6 +64,8 @@ function mk(e) {
   ALL.set(e.id, e);
   return e;
 }
+/** The printed text of a stratagem, verbatim (no summaries): WHEN / TARGET / EFFECT / RESTRICTIONS. */
+const stratText = s => [s.when ? 'WHEN: ' + s.when : '', s.target ? 'TARGET: ' + s.target : '', s.effect ? 'EFFECT: ' + s.effect : '', (s.restr || s.restrictions) ? 'RESTRICTIONS: ' + (s.restr || s.restrictions) : ''].filter(Boolean).join('\n');
 function stratMeta(s) {
   const ph = Array.isArray(s.ph) ? s.ph : ['any'];
   const full = p => { const x = WH.PHASES.find(y => y.id === p); return x ? x.full : p; };
@@ -86,10 +88,10 @@ function staticIndex() {
   Object.entries(WH.PRIMARY || {}).forEach(([k, m]) => add({ id: `prim:${k}`, type: 'primary', title: m.name, text: m.desc || (m.c || []).map(c => c.t).join(' '), extra: (m.c || []).map(c => c.t).join(' '), sub: 'Primary mission', key: k, conds: m.c || [], note: m.note }));
   Object.entries(WH.SECONDARY || {}).forEach(([k, m]) => add({ id: `sec:${k}`, type: 'secondary', title: m.name, text: m.note || (m.c || []).map(c => c.t).join(' '), extra: (m.c || []).map(c => c.t).join(' '), sub: 'Secondary mission', key: k, conds: m.c || [], note: m.note }));
   (WH.TWISTS || []).forEach(t => add({ id: `twist:${t.id}`, type: 'twist', title: t.name, text: t.t, sub: 'Twist', key: t.id }));
-  (WH.STRATAGEMS || []).forEach(s => add({ id: `cstrat:${s.id}`, type: 'corestrat', title: s.name, text: s.t || s.effect, extra: [s.when, s.target, s.effect, s.restr].join(' '), sub: stratMeta(s), strat: s }));
+  (WH.STRATAGEMS || []).forEach(s => add({ id: `cstrat:${s.id}`, type: 'corestrat', title: s.name, text: stratText(s), extra: [s.when, s.target, s.effect, s.restr].join(' '), sub: stratMeta(s), strat: s }));
   FACTIONS.forEach(f => {
     (f.detachments || []).forEach(d => {
-      (d.strats || []).forEach(s => add({ id: `strat:${d.id}:${s.id}`, type: 'strat', title: s.name, text: s.t || s.effect, extra: [s.when, s.target, s.effect, s.restr, (s.kw || []).join(' ')].join(' '), sub: `${f.name} · ${d.name} · ${s.cost || 0} CP`, fac: f.id, det: d.name, strat: s }));
+      (d.strats || []).forEach(s => add({ id: `strat:${d.id}:${s.id}`, type: 'strat', title: s.name, text: stratText(s), extra: [s.when, s.target, s.effect, s.restr, (s.kw || []).join(' ')].join(' '), sub: `${f.name} · ${d.name} · ${s.cost || 0} CP`, fac: f.id, det: d.name, strat: s }));
     });
   });
   STATIC = out;
@@ -203,10 +205,12 @@ function hlToks(q) { return [...new Set(terms(q).flatMap(t => t.alts))].sort((a,
 /** Factions searched by default: the game's armies (else the own army lists), factions picked above, factions the query names. null = all. */
 function scopeFactions(T) {
   if (S.allFac) return null;
-  const ids = new Set(S.picked);
+  // on a faction's page the search is that faction's (plus core rules); otherwise the picked factions, the game's
+  // armies / the own army lists
+  const ids = new Set(S.faction ? [S.faction] : S.picked);
   const st = lastCtx && lastCtx.state;
   const game = st && Array.isArray(st.players) ? st.players.filter(p => p && p.faction).map(p => p.faction) : [];
-  (game.length ? game : S.armyFac).forEach(id => ids.add(id));
+  if (!S.faction) (game.length ? game : S.armyFac).forEach(id => ids.add(id));
   if (T) for (const f of FACTIONS) {
     const nm = norm(f.name);
     if (T.some(t => t.alts.some(a => a.length >= 4 && nm.includes(a)))) ids.add(f.id);
@@ -349,17 +353,16 @@ function fullHtml(e, toks) {
       return text + note + extra + (S.missions === undefined || S.missionsLoading ? origBlock('', 'Original text', true) : origBlock(orig && orig.text ? hl(orig.text, toks) : ''));
     }
     case 'corestrat': {
-      const s = e.strat;
-      const o = s.orig;
-      return stratBody(s, toks, `<div class="rb-sub">${esc(stratMeta(s))}${s.once ? ' · once per battle' : ''}${s.notRound1 ? ' · not in the first battle round' : ''}</div>`)
-        + (o ? origBlock(stratBody(o, toks)) : '');
+      const s = e.strat;   // when/target/effect/restr are the Core Rules' verbatim text (data/rules.js)
+      return `<div class="rb-sub">${esc(stratMeta(s))}${s.once ? ' · once per battle' : ''}${s.notRound1 ? ' · not in the first battle round' : ''}</div>` + origBlock(stratBody(s, toks), 'Original text (verbatim)');
     }
     case 'strat': {
       const s = e.strat;
       ensureOrig(e.fac);
       const o = S.orig.has(e.fac) ? origStratagem(S.orig.get(e.fac), e.det, s.name) : null;
       const kw = (s.kw || []).length ? tagChips(s.kw) : '';
-      return stratBody(s, toks, `<div class="rb-sub">${esc(stratMeta(s))}</div>`) + kw
+      const ba = /Boarding Actions/i.test(e.det || '') ? `<p class="rb-note muted small">Boarding Actions detachment – for boarding-action games on a ship-interior board (Hatchways, Walls, Boarding Action terrain), not for a normal game on the battlefield.</p>` : '';
+      return stratBody(s, toks, `<div class="rb-sub">${esc(stratMeta(s))}</div>`) + ba + kw
         + (S.orig.has(e.fac) ? origBlock(o ? (o.text ? `<div class="rb-text">${hl(o.text, toks)}</div>` : stratBody(o, toks)) : '') : origBlock('', 'Original text', true));
     }
     case 'armyrule': case 'detrule': {
@@ -395,18 +398,38 @@ function rows(list, toks, opts) { return list.map(e => rowHtml(e, toks, opts)).j
 // ---------------------------------------------------------------- Views
 const facName = id => (FACTIONS.find(f => f.id === id) || {}).name || id;
 function unitChips() {
-  // only the game's factions and those picked here (not every faction the rulebook loaded in the background)
+  // the game's factions and those picked here (not every faction the rulebook loaded in the background); a chip opens
+  // the faction's page (army rule, detachments with their stratagems, units) and scopes the search to it
   const st = lastCtx && lastCtx.state;
   const picked = [...new Set([...(st && Array.isArray(st.players) ? st.players.filter(p => p && p.faction).map(p => p.faction) : []), ...S.picked])];
   return `<div class="rb-chips">
-    <label class="rb-chips-label" for="rb-fac">Search units of:</label>
-    <select id="rb-fac" data-rb="facsel" aria-label="Load datasheets of a faction">
-      <option value="">${esc(tr('– choose faction –'))}</option>
-      <option value="__all"${S.allFac ? ' disabled' : ''}>${esc(tr('All factions (every datasheet)'))}</option>
-      ${FACTIONS.map(f => `<option value="${esc(f.id)}"${S.picked.has(f.id) ? ' disabled' : ''}>${esc(f.name)}${S.picked.has(f.id) ? ' ✓' : ''}</option>`).join('')}
-    </select>
-    ${S.allFac ? `<span class="chip sm on">All factions</span>` : picked.map(id => `<span class="chip sm${S.ds.has(id) ? ' on' : ''}" data-no-i18n>${esc(facName(id))}${S.ds.has(id) ? ' · ' + S.ds.get(id).units.length : ' …'}</span>`).join('')}
+    <span class="rb-chips-label">Faction:</span>
+    <button type="button" class="chip sm rb-pick" data-rb="pick">Choose faction …</button>
+    ${picked.map(id => `<button type="button" class="chip sm${S.faction === id ? ' on' : ''}" data-rb="faction" data-fac="${esc(id)}" aria-pressed="${S.faction === id ? 'true' : 'false'}" data-no-i18n>${esc(facName(id))}${S.ds.has(id) ? ' · ' + S.ds.get(id).units.length : ''}</button>`).join('')}
+    ${S.allFac ? `<span class="chip sm on">All factions</span>` : ''}
   </div>`;
+}
+/** Faction picker: a sheet with every faction by alliance (a native select scrolls the page behind it on some phones). */
+function openPicker() {
+  const groups = [...new Set(FACTIONS.map(f => f.group || ''))];
+  const body = `<div class="rb-faclist rb-picklist">
+    <button class="rb-fac" type="button" data-pick="__all"><span class="rb-fac-name">All factions</span><span class="rb-fac-meta">every datasheet and stratagem in the search</span><span class="rb-caret">›</span></button>
+    ${groups.map(g => `${g ? `<div class="rb-letter">${esc(g)}</div>` : ''}${FACTIONS.filter(f => (f.group || '') === g).map(f => `<button class="rb-fac${S.faction === f.id ? ' on' : ''}" type="button" data-pick="${esc(f.id)}"><span class="rb-fac-name" data-no-i18n>${esc(f.name)}</span><span class="rb-fac-meta">${f.detachments.length} detachment${f.detachments.length === 1 ? '' : 's'}</span><span class="rb-caret">›</span></button>`).join('')}`).join('')}
+  </div>`;
+  sheet({
+    title: 'Faction', body, cls: 'rb-pick-sheet',
+    onOpen: (el, close) => el.addEventListener('click', e => {
+      const b = e.target.closest('[data-pick]');
+      if (!b) return;
+      const id = b.dataset.pick;
+      if (id === '__all') { S.allFac = true; S.faction = null; FACTIONS.forEach(f => ensureDs(f.id)); }
+      else { S.allFac = false; S.picked.add(id); S.faction = id; ensureDs(id); }
+      close();
+      paint();
+      if (!S.q.trim()) try { lastRoot.querySelector('.rb-facpage').scrollIntoView({ block: 'start' }); } catch {}
+    }),
+    actions: [{ label: 'Cancel', kind: 'ghost' }]
+  });
 }
 /** While searching: one line – which factions are searched, and the switch to search all of them. */
 function scopeLine(r) {
@@ -527,7 +550,7 @@ function paint() {
   if (!body) return;
   const q = S.q.trim();
   const fac = S.faction ? FACTIONS.find(f => f.id === S.faction) : null;
-  if (q) { const r = search(q); body.innerHTML = scopeLine(r) + resultsHtml(q, r); }
+  if (q) { const r = search(q); body.innerHTML = (S.faction ? unitChips() : '') + scopeLine(r) + resultsHtml(q, r); }
   else body.innerHTML = unitChips() + (fac ? factionPage(fac) : browseHtml());
   const clr = lastRoot.querySelector('.rb-clear');
   if (clr) clr.hidden = !q;
@@ -567,15 +590,7 @@ function setQuery(q) {
 function onInput(e) {
   if (e.target && e.target.id === 'rb-q') setQuery(e.target.value);
 }
-function onChange(e) {
-  const t = e.target;
-  if (t && t.dataset.rb === 'facsel' && t.value) {
-    const id = t.value;
-    t.value = '';
-    if (id === '__all') { S.allFac = true; FACTIONS.forEach(f => ensureDs(f.id)); } else { S.picked.add(id); ensureDs(id); }
-    paint();
-  }
-}
+function onChange() {}
 function onKey(e) {
   const t = e.target;
   if (t && t.id === 'rb-q' && e.key === 'Escape') { t.value = ''; setQuery(''); return; }
@@ -620,14 +635,18 @@ function onClick(e) {
     paint();
     return;
   }
+  if (act === 'pick') { openPicker(); return; }
   if (act === 'faction') {
     S.faction = b.dataset.fac || null;
+    if (S.faction) { S.allFac = false; S.picked.add(S.faction); ensureDs(S.faction); }
     paint();
+    if (S.q.trim()) return;
     try { lastRoot.querySelector('.rb-facpage').scrollIntoView({ block: 'start' }); } catch {}
     return;
   }
   if (act === 'allfac') {
     S.allFac = !S.allFac;
+    if (S.allFac) S.faction = null;
     if (S.allFac) FACTIONS.forEach(f => ensureDs(f.id));
     paint();
     return;

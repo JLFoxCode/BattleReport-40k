@@ -562,6 +562,9 @@ const STRATAGEMS = [
     t: 'After an enemy unit has resolved its attacks: one friendly unit eligible to fight gains Fights First and must be the next unit you select to fight (2 CP).'
   }
 ];
+// Printed texts are the Core Rules' own wording: WHEN / TARGET / EFFECT / RESTRICTIONS of every core stratagem are the
+// verbatim original (orig); summaries (t) are not kept – the app shows original texts only.
+for (const s of STRATAGEMS) { if (s.orig) { s.when = s.orig.when; s.target = s.orig.target; s.effect = s.orig.effect; s.restr = s.orig.restr; } delete s.t; }
 
 const PHASES = [
   { id: 'command', name: 'Command', full: 'Command phase' },

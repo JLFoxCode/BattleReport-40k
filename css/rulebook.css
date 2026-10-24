@@ -104,6 +104,9 @@ mark { background: color-mix(in srgb, var(--warn) 45%, transparent); color: inhe
 }
 .rb-fac:last-child { border-bottom: 0; }
 .rb-fac:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
+.rb-fac.on { background: color-mix(in srgb, var(--text) 8%, transparent); }
+.rb-pick-sheet .sheet-body { padding-top: 4px; }
+.rb-note { margin: 6px 0 4px; }
 .rb-fac-name { font-weight: 600; flex: 1 1 auto; }
 .rb-fac-meta { font-size: 12px; color: var(--muted); text-align: right; }
 .rb-facpage { display: flex; flex-direction: column; gap: var(--gap); }

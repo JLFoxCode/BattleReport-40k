@@ -165,8 +165,8 @@ export function openStratSheet(ctx, ui, stratId, secPhase) {
         ${cpBadge(s.cost, inBattle ? cp : Infinity)}${phasePill(phase)}${turnBadge(s.whose)}${stratSrc(s)}
         ${s.once ? '<span class="badge xs">once per battle</span>' : ''}${s.notRound1 ? '<span class="badge xs">not in round 1</span>' : ''}
       </div>
-      ${s.t ? `<p class="strat-t">${esc(s.t)}</p>` : ''}
       ${stratOrigBlock(s, c0)}
+      ${/Boarding Actions/i.test(s.detName || '') ? `<p class="muted small strat-ba">Boarding Actions detachment – for boarding-action games on a ship-interior board (Hatchways, Walls, Boarding Action terrain), not for a normal game on the battlefield.</p>` : ''}
       ${s.plus && s.plus.name ? `<div class="orig-block"><div class="orig-label">${esc(s.plus.name)} (+${Number(s.plus.cost) || 0} CP – raise the CP cost below)</div><div class="orig-text">${esc(cleanOrig(s.plus.text || ''))}</div></div>` : ''}
       ${kwLine(kws)}
       

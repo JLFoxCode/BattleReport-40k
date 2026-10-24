@@ -63,7 +63,7 @@ export const CORE = {
         },
         {
           id: 'cmd-insane', title: 'Insane Bravery (1 CP, once per battle)',
-          text: 'Battle-shock step of your Command phase, just before you make a battle-shock roll for a friendly unit: that battle-shock roll is automatically successful. You cannot use this stratagem more than once per battle, and not on a unit that is already battle-shocked (you cannot target battle-shocked units with stratagems).',
+          text: "WHEN: Battle-shock step of your Command phase, just before you make a battle-shock roll for a friendly unit.\nTARGET: That unit.\nEFFECT: That battle-shock roll is automatically successful.\nRESTRICTIONS: You cannot use this stratagem more than once per battle.",
           tags: ['STRATAGEM', 'BATTLE-SHOCK']
         },
         {
@@ -83,7 +83,7 @@ export const CORE = {
         },
         {
           id: 'cmd-reroll', title: 'Command Re-roll (1 CP)',
-          text: 'Any phase, just after you make an Advance roll, Charge roll, Damage roll, Hazard roll, Hit roll, Save roll, Wound roll or a roll to determine the number of attacks for a friendly unit or model: re-roll that roll. If you rolled more than one dice together, select one of those dice to re-roll (excluding charge rolls, which you must re-roll in full). Battle-shock rolls are not in this list and cannot be re-rolled with it.',
+          text: "WHEN: Any phase, just after you make one of the following rolls for a friendly unit or model:\n- Advance roll\n- Charge roll\n- Damage roll\n- Hazard roll\n- Hit roll\n- Save roll\n- Wound roll\n- A roll to determine the number of attacks generated with a weapon.\nTARGET: That unit or model.\nEFFECT: You re-roll that roll. If you are rolling more than one dice together, select one of those dice to re-roll (excluding charge rolls, which you must re-roll in full).",
           tags: ['STRATAGEM', 'RE-ROLL'], ed: 11
         }
       ]
@@ -183,7 +183,7 @@ export const CORE = {
         },
         {
           id: 'mov-overwatch', title: 'Opponent: Fire Overwatch (1 CP)',
-          text: 'At the end of your Movement phase, your opponent can select one of their unengaged units (excluding TITANIC units) to shoot using snap shooting: only one visible enemy unit within 24" can be targeted, each attack only hits on an unmodified hit roll of 6 (those hits are not critical hits), hit rolls cannot be re-rolled, and the unit cannot start an action until the end of the phase.',
+          text: "WHEN: End of your opponent’s Movement phase.\nTARGET: One friendly unengaged unit (excluding TITANIC units).\nEFFECT: Your unit shoots using snap shooting.\n\nSNAP SHOOTING (15.09)\nWHILE SHOOTING:\n- You can only target one visible enemy unit within 24\" of your unit (and only if it is an eligible target).\n- Each attack only hits on an unmodified hit roll of 6 (irrespective of the attacking weapon’s BS characteristic or any modifiers). Those hits are not critical hits.\n- You cannot re-roll hit rolls.\nAFTER SHOOTING: Until the end of the phase, your unit is not eligible to start an action.",
           tags: ['STRATAGEM', 'SNAP SHOOTING'], ed: 11
         }
       ]
@@ -283,12 +283,12 @@ export const CORE = {
         },
         {
           id: 'sho-explosives', title: 'Explosives (1 CP)',
-          text: 'Your Shooting phase: one friendly unengaged EXPLOSIVES/GRENADES unit that is eligible to shoot and did not advance this turn. Select one EXPLOSIVES/GRENADES model in it, then one unengaged enemy unit within 8" of and visible to that model. Roll six D6: for each 4+, that enemy unit suffers 1 mortal wound.',
+          text: "WHEN: Your Shooting phase.\nTARGET: One friendly unengaged EXPLOSIVES/GRENADES unit that is eligible to shoot and did not make an advance move this turn.\nEFFECT: Resolve the following sequence:\n- Select one EXPLOSIVES/GRENADES model in your unit.\n- Select one unengaged enemy unit within 8\" of and visible to that model.\n- Roll six D6: for each 4+, that enemy unit suffers 1 mortal wound (06.02).",
           tags: ['STRATAGEM', 'EXPLOSIVES'], ed: 11
         },
         {
           id: 'sho-smoke', title: 'Opponent: Smokescreen (1 CP)',
-          text: 'Start of your Shooting phase: your opponent selects one of their SMOKE units. Until the end of the phase, each time an attack targets that SMOKE unit, or a unit that is not fully visible to the attacking model because of models in that SMOKE unit, the target has the benefit of cover against that attack.',
+          text: "WHEN: Start of your opponent’s Shooting phase.\nTARGET: One friendly SMOKE unit.\nEFFECT: Until the end of the phase, each time an attack targets either your SMOKE unit, or a unit that is not fully visible to the attacking model because of one or more models in your SMOKE unit, the target has the benefit of cover against that attack (13.08).",
           tags: ['STRATAGEM', 'SMOKE'], ed: 11
         },
         {
@@ -348,12 +348,12 @@ export const CORE = {
         },
         {
           id: 'chg-crushing', title: 'Crushing Impact (1 CP)',
-          text: 'Your Charge phase, just after a friendly MONSTER/VEHICLE unit ends a charge move: select one enemy unit engaged with your unit, then one model in your unit engaged with that enemy unit. Roll a number of D6 equal to that model\'s T characteristic: for each 1, your unit suffers 1 mortal wound; for each 5+, that enemy unit suffers 1 mortal wound (to a maximum of 6 mortal wounds per unit).',
+          text: "WHEN: Your Charge phase, just after a friendly MONSTER/VEHICLE unit ends a charge move.\nTARGET: That MONSTER/VEHICLE unit.\nEFFECT: Resolve the following sequence:\n- Select one enemy unit engaged with your unit.\n- Select one model in your unit engaged with that enemy unit.\n- Roll a number of D6 equal to the T characteristic of that model: for each 1, your unit suffers 1 mortal wound; for each 5+, that enemy unit suffers 1 mortal wound (to a maximum of 6 mortal wounds per unit).",
           tags: ['STRATAGEM', 'MONSTER', 'VEHICLE'], ed: 11
         },
         {
           id: 'chg-heroic', title: 'Opponent: Heroic Intervention (1 CP)',
-          text: 'End of your Charge phase: your opponent selects one of their unengaged units within 12" of one or more of your units (a VEHICLE only if it is a CHARACTER/WALKER unit) and resolves a charge with it. Before the charge roll they select a mode: Leap to Defend – only enemy units that made a charge move this phase can be charge targets. Into the Fray (+1 CP) – a charge roll greater than 6 (after modifiers) is changed to 6, and any enemy units within 6" and within the maximum distance can be charge targets.',
+          text: "WHEN: End of your opponent’s Charge phase.\nTARGET: One friendly unengaged unit within 12\" of one or more enemy units. You can only select a VEHICLE unit if it is a CHARACTER/WALKER unit.\nEFFECT: Resolve a charge with your unit (11.02). While doing so, before making the charge roll, you must select one of the following modes:\n- Leap to Defend: When selecting charge targets, you can only select enemy units that made a charge move this phase and are within the maximum distance.\n- Into the Fray (+1CP):\n  - When making the charge roll, if the result is greater than 6 (after modifiers), change it to 6.\n  - When selecting charge targets, you can select any enemy units that are within 6\" of your unit and within the maximum distance.",
           tags: ['STRATAGEM', 'HEROIC INTERVENTION'], ed: 11
         },
         {
@@ -418,12 +418,12 @@ export const CORE = {
         },
         {
           id: 'fgt-epic', title: 'Epic Challenge (1 CP)',
-          text: 'Fight phase, just after a friendly CHARACTER unit is selected to fight: select one CHARACTER model in it. Until the end of the phase, that model\'s melee weapons have the [PRECISION] ability. Can be used in either player\'s turn.',
+          text: "WHEN: Fight phase, just after a friendly CHARACTER unit is selected to fight.\nTARGET: That CHARACTER unit.\nEFFECT: Select one CHARACTER model in your unit. Until the end of the phase, that model’s melee weapons have the [PRECISION] ability.",
           tags: ['STRATAGEM', 'CHARACTER', 'PRECISION']
         },
         {
           id: 'fgt-counter', title: 'Opponent: Counteroffensive (2 CP)',
-          text: 'Fight step of your Fight phase, just after one of your units has resolved its attacks: your opponent selects one of their units that is eligible to fight. Until the end of the phase it has the Fights First ability and must be the next unit they select to fight.',
+          text: "WHEN: Fight step of your opponent’s Fight phase, just after an enemy unit has resolved its attacks.\nTARGET: One friendly unit that is eligible to fight.\nEFFECT: Until the end of the phase, your unit has the Fights First ability and it must be the next unit you select to fight (12.04).",
           tags: ['STRATAGEM', 'FIGHTS FIRST']
         },
         {
@@ -609,7 +609,7 @@ export const CORE = {
     },
     {
       id: 'gen-rapid', title: 'Rapid Ingress (1 CP)',
-      text: 'End of your opponent\'s Movement phase: one friendly unit in strategic reserves (excluding AIRCRAFT) makes an ingress move – with all the usual restrictions. Cannot be used during the first battle round.',
+      text: "WHEN: End of your opponent’s Movement phase.\nTARGET: One friendly unit that is in strategic reserves (excluding AIRCRAFT).\nEFFECT: Your unit makes an ingress move (20.04).\nRESTRICTIONS: You cannot use this stratagem during the first battle round.",
       tags: ['STRATAGEM', 'RESERVES'], ed: 11
     },
     {
