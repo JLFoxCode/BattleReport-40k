@@ -1467,7 +1467,9 @@ function openAdd(q0 = '') {
       return null;
     }
     const src = ownerOf(sys, n);
-    return { n, l, ...addInfo(V, n), cat: sys.categoryNames.get(n.primaryCategory) || 'Other', src, ally: !ownCatalogue(src, armyCat) };
+    // the unit's keywords: BSData keeps them as its categories (INFANTRY, PSYKER, FLY, GREY KNIGHTS …)
+    const kws = [...new Set(n.categoryLinks.map(c => sys.categoryNames.get(c.targetId)).filter(Boolean).map(k => k.replace(/s*[.*?]s*/g, '').trim()).filter(Boolean))];
+    return { n, l, ...addInfo(V, n), cat: sys.categoryNames.get(n.primaryCategory) || 'Other', src, ally: !ownCatalogue(src, armyCat), kws };
   }).filter(Boolean);
   rows.sort((a, b) => a.l.name.localeCompare(b.l.name));
   // the same name twice (Ministorum Priest of the Astra Militarum at 35 pts and of the Agents of the Imperium at 40):
@@ -1478,7 +1480,7 @@ function openAdd(q0 = '') {
     const full = r.max >= 0 && r.have >= r.max;
     const over = !full && r.pts > rest;
     const tag = dupName.has(r.l.name) ? ` <span class="arm-src muted xs">${esc(allyLabel(r.src))}</span>` : '';
-    return `<div class="arm-addline" data-name="${esc(fold(r.l.name))}">
+    return `<div class="arm-addline" data-name="${esc(fold(r.l.name))}" data-kws="|${esc(r.kws.map(fold).join('|'))}|">
       <button type="button" class="arm-addrow${over ? ' over' : ''}" data-tok="${esc(r.n.token)}"${full ? ' disabled' : ''}${over ? ' title="More than the points left"' : ''}>
         <span class="arm-add-n">${esc(r.l.name)}${tag}</span><span class="arm-have muted xs">${haveTxt(r)}</span><span class="arm-u-pts">${r.pts}</span><span class="arm-plus" aria-hidden="true">+</span></button>
       <button type="button" class="arm-minus" data-minus="${esc(r.n.token)}"${r.have ? '' : ' disabled'} aria-label="Remove one ${esc(r.l.name)}" title="Remove the last copy">−</button>
@@ -1487,8 +1489,16 @@ function openAdd(q0 = '') {
   const own = rows.filter(r => !r.ally), allies = rows.filter(r => r.ally);
   const cats = [...new Set(own.map(r => r.cat))].sort(byRole);
   const allySrc = [...new Set(allies.map(r => allyLabel(r.src)))].sort();
+  // keyword filter: the keywords of the army's units with how many carry them. Out: a keyword all units share (the
+  // faction keyword), a role (Infantry, Character – the chips above), the data's configuration categories
+  // ("Faction: …", "Allies: …") and keywords only one unit carries (mostly the unit's own name, kept for limits)
+  const kwCount = new Map();
+  for (const r of rows) for (const k of r.kws) kwCount.set(k, (kwCount.get(k) || 0) + 1);
+  const roleKeys = new Set(cats.map(fold));
+  const kwChips = [...kwCount].filter(([k, c]) => c >= 2 && c < rows.length && !roleKeys.has(fold(k)) && !/^(Faction|Allies|Show|Hide|Configuration|Warlord)\b/i.test(k)).sort((a, b) => a[0].localeCompare(b[0]));
   const body = `<div class="arm-add-top"><input type="search" class="arm-search" placeholder="Search units" autocomplete="off" enterkeyhint="go" aria-label="Search units">
-    <div class="arm-roles">${cats.map(c => `<button type="button" class="chip sm" data-jump="${esc(c)}">${esc(c)}</button>`).join('')}${allies.length ? `<button type="button" class="chip sm" data-jump="__allies">Allies</button>` : ''}</div></div>
+    <div class="arm-roles">${cats.map(c => `<button type="button" class="chip sm" data-jump="${esc(c)}">${esc(c)}</button>`).join('')}${allies.length ? `<button type="button" class="chip sm" data-jump="__allies">Allies</button>` : ''}</div>
+    ${kwChips.length ? `<div class="arm-kws" role="group" aria-label="Filter by keyword"><button type="button" class="chip sm arm-kw-clear" data-kw-clear hidden aria-label="Clear keyword filter">×</button>${kwChips.map(([k, c]) => `<button type="button" class="chip sm" data-kwf="${esc(fold(k))}" aria-pressed="false">${esc(k)} <span class="arm-kw-n">${c}</span></button>`).join('')}</div>` : ''}</div>
     <div class="arm-addlist">${cats.map(c => `<div class="arm-sec-h" data-role="${esc(c)}">${esc(c)}</div>${own.filter(r => r.cat === c).map(rowHtml).join('')}`).join('')}
     ${allies.length ? `<details class="arm-allies" data-role="__allies"><summary><span class="arm-sec-h">Allies</span> <span class="muted xs">${esc(allySrc.join(' · '))} – other catalogues this army may include</span> <span class="badge">${allies.length}</span></summary>
       ${allySrc.map(s => `<div class="arm-ally-h" data-role="ally:${esc(s)}">${esc(s)}</div>${allies.filter(r => allyLabel(r.src) === s).map(rowHtml).join('')}`).join('')}</details>` : ''}
@@ -1501,18 +1511,24 @@ function openAdd(q0 = '') {
       const q = el.querySelector('.arm-search');
       const allyBox = el.querySelector('.arm-allies');
       let allyWasOpen = false;
+      const kwOn = new Set();   // chosen keywords (folded) – a unit must carry all of them
       const filter = () => {
         const s = q.value.trim();
-        el.querySelectorAll('.arm-addline').forEach(b => { b.hidden = !!s && !matches(b.dataset.name, s); });
+        const ks = [...kwOn];
+        el.querySelectorAll('.arm-addline').forEach(b => { b.hidden = (!!s && !matches(b.dataset.name, s)) || !ks.every(k => b.dataset.kws.includes('|' + k + '|')); });
+        const clr = el.querySelector('[data-kw-clear]'); if (clr) clr.hidden = !ks.length;
+        // chosen keywords first in their row (the row scrolls – a chosen chip must stay in sight), then the rest alphabetically
+        const kr = el.querySelector('.arm-kws');
+        if (kr) { const cs = [...kr.querySelectorAll('[data-kwf]')]; cs.sort((a, b) => (kwOn.has(b.dataset.kwf) - kwOn.has(a.dataset.kwf)) || a.textContent.localeCompare(b.textContent)); cs.forEach(c => kr.appendChild(c)); kr.scrollTo({ left: 0 }); }
         // headings without a visible row go away
         el.querySelectorAll('.arm-addlist .arm-sec-h[data-role], .arm-ally-h').forEach(h => { let n = h.nextElementSibling, any = false; while (n && n.classList.contains('arm-addline')) { if (!n.hidden) any = true; n = n.nextElementSibling; } h.hidden = !any; });
         if (allyBox) {
           const any = !!allyBox.querySelector('.arm-addline:not([hidden])');
           allyBox.hidden = !any;
-          if (s && any) { if (!allyBox.dataset.auto) { allyWasOpen = allyBox.open; allyBox.dataset.auto = '1'; } allyBox.open = true; }
-          else if (!s && allyBox.dataset.auto) { allyBox.open = allyWasOpen; delete allyBox.dataset.auto; }
+          if ((s || ks.length) && any) { if (!allyBox.dataset.auto) { allyWasOpen = allyBox.open; allyBox.dataset.auto = '1'; } allyBox.open = true; }
+          else if (!(s || ks.length) && allyBox.dataset.auto) { allyBox.open = allyWasOpen; delete allyBox.dataset.auto; }
         }
-        el.querySelector('.arm-noresult').hidden = !s || !!el.querySelector('.arm-addline:not([hidden])');
+        el.querySelector('.arm-noresult').hidden = !(s || ks.length) || !!el.querySelector('.arm-addline:not([hidden])');
         // matches the data hides behind a switch: named, with the switch to show them
         const hh = el.querySelector('.arm-hidden-hits');
         const hits = s ? hiddenHits.filter((h, i, a) => h.sw && matches(h.key, s) && a.findIndex(y => y.name === h.name) === i) : [];
@@ -1562,6 +1578,20 @@ function openAdd(q0 = '') {
         if (!touch && q.value.trim()) { try { q.focus({ preventScroll: true }); q.select(); } catch {} }
       };
       el.addEventListener('click', e => {
+        const kc = e.target.closest('[data-kwf]');
+        if (kc) {
+          const k = kc.dataset.kwf, on = !kwOn.has(k);
+          if (on) kwOn.add(k); else kwOn.delete(k);
+          kc.classList.toggle('on', on); kc.setAttribute('aria-pressed', String(on));
+          filter();
+          return;
+        }
+        if (e.target.closest('[data-kw-clear]')) {
+          kwOn.clear();
+          el.querySelectorAll('.arm-kws .chip.on').forEach(c => { c.classList.remove('on'); c.setAttribute('aria-pressed', 'false'); });
+          filter();
+          return;
+        }
         const j = e.target.closest('[data-jump]');
         if (j) {
           const h = el.querySelector(`.arm-addlist [data-role="${CSS.escape(j.dataset.jump)}"]`);

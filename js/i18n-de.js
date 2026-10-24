@@ -74,7 +74,7 @@ export const PHRASES = {
   'Stratagem lock': 'Stratagem-Sperre', 'Per phase (rule)': 'Pro Phase (Regel)', 'Per round (house rule)': 'Pro Runde (Hausregel)', 'Colour': 'Farbe',
   '– light/dark depending on the theme': '– hell/dunkel je nach Design', '(taken by opponent)': '(vom Gegner gewählt)',
   'Search faction': 'Fraktion suchen', 'Clear search': 'Suche leeren', 'no faction chosen': 'keine Fraktion gewählt', 
-  'Add unit': 'Einheit hinzufügen', 'Remove the last copy': 'Letzte Kopie entfernen',
+  'Add unit': 'Einheit hinzufügen', 'Remove the last copy': 'Letzte Kopie entfernen', 'Filter by keyword': 'Nach Keyword filtern', 'Clear keyword filter': 'Keyword-Filter löschen',
   'belongs to the model': 'gehört zum Modell', 'belongs to the models': 'gehört zu den Modellen', 'comes from the attached Leader': 'kommt vom angeschlossenen Leader', 'of': 'von',
   'The unit has it only while that model is alive – once it is destroyed, the unit no longer counts as having it (for rules, Stratagems and abilities that ask for it).': 'Die Einheit hat es nur, solange dieses Modell lebt – ist es zerstört, zählt die Einheit nicht mehr als Träger (für Regeln, Strategeme und Fähigkeiten, die danach fragen).',
   'The unit has it only while that Leader is attached and alive – once he is destroyed or leaves, it is gone.': 'Die Einheit hat es nur, solange dieser Leader angeschlossen ist und lebt – ist er zerstört oder weg, ist es weg.',

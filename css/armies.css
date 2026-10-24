@@ -127,6 +127,12 @@
 .arm-roles { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; overscroll-behavior-x: contain; }
 .arm-roles::-webkit-scrollbar { display: none; }
 .arm-roles .chip { flex: none; white-space: nowrap; }
+.arm-kws { display: flex; gap: 6px; overflow-x: auto; padding: 4px 0; scrollbar-width: none; overscroll-behavior-x: contain; }
+.arm-kws::-webkit-scrollbar { display: none; }
+.arm-kws .chip { flex: none; white-space: nowrap; }
+.arm-kws .arm-kw-n { opacity: .55; font-size: 11px; margin-left: 2px; }
+.arm-kws .chip.on .arm-kw-n { opacity: .7; }
+.arm-kws .arm-kw-clear { min-width: 32px; padding: 0 8px; }
 /* detachment points */
 .arm-dp { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 8px 10px; margin-bottom: 8px; border-radius: 10px; background: var(--sunk); border: 1px solid var(--line); }
 .arm-dp.bad { border-color: var(--bad); background: var(--bad-soft); }
