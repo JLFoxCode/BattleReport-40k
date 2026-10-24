@@ -66,6 +66,19 @@ let appState = 'unknown';   // last result of the app version check: current | a
 const rawUrl = (repo, tag, p) => `https://raw.githubusercontent.com/${repo}/${encodeURIComponent(tag)}/${p.split('/').map(encodeURIComponent).join('/')}`;
 /** Release notes (written in English, content – not translated). */
 const relNotes = body => (body ? `<p class="muted small" data-no-i18n lang="en">${esc(String(body).slice(0, 300))}</p>` : '');
+/** Notes of every release newer than the installed version (newest first): an app that skipped several releases jumps
+ *  straight to the newest one and still sees what changed in between. */
+function relNotesSince(list, codeOf, installed, max = 1400) {
+  const newer = (list || []).filter(x => codeOf(x) > installed && x.body);
+  if (!newer.length) return '';
+  let out = '', used = 0;
+  for (const x of newer) {
+    const t = `${x.tag_name}: ${String(x.body).replace(/\s+/g, ' ').trim()}`;
+    if (used + t.length > max) { out += `<p class="muted xs" data-no-i18n lang="en">… ${newer.length - out.split('</p>').length + 1} more release${newer.length - out.split('</p>').length + 1 === 1 ? '' : 's'}</p>`; break; }
+    out += `<p class="muted small" data-no-i18n lang="en">${esc(t)}</p>`; used += t.length;
+  }
+  return out;
+}
 const kb = n => (n >= 1e6 ? (n / 1e6).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB');
 function toBase64(buf) {
   const bytes = new Uint8Array(buf);
@@ -73,7 +86,7 @@ function toBase64(buf) {
   for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
   return btoa(s);
 }
-async function partialUpdate(repo, latest, code, me, platform) {
+async function partialUpdate(repo, latest, code, me, platform, list, codeOf) {
   if (!window.BR.saveWeb || !window.BR.applyWebUpdate) return null;
   const tag = latest.tag_name;
   const rel = await (await fetch(rawUrl(repo, tag, 'release/app-release.json'), { cache: 'no-store' })).json();
@@ -89,7 +102,7 @@ async function partialUpdate(repo, latest, code, me, platform) {
     title: 'New app version available',
     body: `<p>${esc(`Battle Report 40k ${tag}${latest.published_at ? ' from ' + fmt(latest.published_at) : ''} is available (installed: ${me.versionCode}).`)}</p>`
       + `<p>${esc(`Only the changes are downloaded: ${changed.length} file${changed.length === 1 ? '' : 's'}, ${kb(bytes)}.`)}</p>`
-      + relNotes(latest.body) + '<p>Your games stay on this device.</p>',
+      + (list ? relNotesSince(list, codeOf, Number(me.versionCode || 0)) : relNotes(latest.body)) + '<p>Your games stay on this device.</p>',
     ok: 'Update now', cancel: 'Later'
   });
   if (!ok) return false;
@@ -113,7 +126,7 @@ async function checkAppUpdate() {
   if (!rel.repo || me.dev || !install) return false;
   // newest release by version code – web-only releases carry no installer and are not marked "latest" on GitHub
   // (that stays the last release with installers, the download link for new devices)
-  const r = await fetch(`https://api.github.com/repos/${rel.repo}/releases?per_page=30`, { cache: 'no-store', headers: { Accept: 'application/vnd.github+json' } });
+  const r = await fetch(`https://api.github.com/repos/${rel.repo}/releases?per_page=100`, { cache: 'no-store', headers: { Accept: 'application/vnd.github+json' } });
   if (!r.ok) return false;
   const codeOf = x => Number(String(x.tag_name || '').split(/[.\-]/).pop()) || 0;
   const list = (await r.json()).filter(x => !x.draft && !x.prerelease).sort((a, b) => codeOf(b) - codeOf(a));
@@ -126,7 +139,7 @@ async function checkAppUpdate() {
   if (!(code > Number(me.versionCode || 0)) && !(localVer && code > localVer)) { appState = 'current'; return false; }
   appState = 'available';
   // Partial update if the native part (shell) of the new version is the one installed: only the changed web files
-  try { const done = await partialUpdate(rel.repo, latest, code, me, platform); if (done !== null) return done; }
+  try { const done = await partialUpdate(rel.repo, latest, code, me, platform, list, codeOf); if (done !== null) return done; }
   catch (e) { console.warn('partial update', e); }   // → full update below
   // full update: the installer of the newest release that has one (a new shell always comes with its installers)
   const isInstaller = a => (platform === 'windows' ? /setup.*\.exe$/i : /\.apk$/i).test(a.name);
@@ -136,7 +149,7 @@ async function checkAppUpdate() {
   const ok = await confirmSheet({
     title: 'New app version available',
     body: `<p>${esc(`Battle Report 40k ${full.tag_name}${full.published_at ? ' from ' + fmt(full.published_at) : ''} is available (installed: ${me.versionCode}).`)}</p>`
-      + relNotes(full.body) + `<p>${platform === 'windows' ? 'The update installs in the background and the app restarts by itself; your games stay on this computer.' : 'Android will ask you to confirm the installation; your games stay on the device.'}</p>`,
+      + relNotesSince(list, codeOf, Number(me.versionCode || 0)) + `<p>${platform === 'windows' ? 'The update installs in the background and the app restarts by itself; your games stay on this computer.' : 'Android will ask you to confirm the installation; your games stay on the device.'}</p>`,
     ok: 'Update now', cancel: 'Later'
   });
   if (!ok) return false;
