@@ -204,7 +204,9 @@ function playerCard(ctx, p) {
 
 function optionsCard(ctx) {
   const o = ctx.state.opts, WH = ctx.data.WH;
-  const sizeNote = { strike: 'Strike Force · 2000 points · 3 Detachment Points', incursion: 'Incursion · 1000 points · 2 Detachment Points' };
+  // 11th edition: both battle sizes are played on the 44"×60" battlefield with the same Deployment cards and layouts (Chapter
+  // Approved 2026-27 / Event Companion name no Incursion maps – unlike the 10th edition's 44"×30" Incursion cards)
+  const sizeNote = { strike: 'Strike Force · 2000 points · 3 Detachment Points · battlefield 44"×60"', incursion: 'Incursion · 1000 points · 2 Detachment Points · same 44"×60" battlefield, Deployment cards and layouts as Strike Force' };
   const dp = dpLimit(ctx.state), dpAuto = o.dp == null;
   return `
     <div class="card opts-card">

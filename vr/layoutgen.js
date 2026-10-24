@@ -3,7 +3,7 @@
  * Fairness by construction: every layout is point-symmetric about the battlefield centre (180° rotation), so both
  * players get the same terrain. Competitive by rules checked on every candidate:
  *   - the standard tournament set: Strike Force 44"×60" = 6× 12"×6" tall ruins, 2× 10"×5" tall, 4× 6"×4" low;
- *     Incursion 44"×30" = 3× 12"×6", 1× 10"×5", 2× 6"×4"
+ *     half table 44"×30" (casual; 11th-edition Incursion uses the full 44"×60") = 3× 12"×6", 1× 10"×5", 2× 6"×4"
  *   - pieces fully on the board, ≥ 2" apart (model movement), ≥ 1" from the edge
  *   - no open firing lane along the long axis: every straight line from one short edge to the other (sampled every
  *     2") crosses a tall piece; most lines between the two deployment bands are blocked (≥ 70 %)
@@ -18,7 +18,7 @@
  *  armageddon – Warhammer 40,000 11th edition Event Companion (Oct 2026) terrain area footprints: 7"×11.5" ×4 and
  *               8"×11.5" ×2 (dense ruins, tall), 6"×4" ×4, 10"×2.5" ×2, 6"×2" ×4 (light, low) = 16 areas
  *  gw10       – Chapter Approved 2025-26 tournament set: 12"×6" ×6, 10"×5" ×2 (tall), 6"×4" ×4 (low)
- *  half       – Incursion 44"×30": half a set */
+ *  half       – half table 44"×30" (casual game on half a table): half a set */
 import { LAYOUTS11 } from '../data/layouts11.js';
 /* Calibrated on the 45 official layouts (measured 2026-10-23): 12 dense + 4 light areas – dense: 7×11.5 ×4,
  * 8×11.5 polygon ×2 (the central block), 10×2.5 ×2, 6×4 ×2, 6×2 ×2; light: 6×4 ×2, 6×2 ×2. Sightlines between the

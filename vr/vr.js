@@ -51,7 +51,8 @@ const app = {
   camcal: store.get('camcal', null),   // { f, X } – this headset's camera: focal length + head→camera transform
   markers: store.get('markers', null), // { [id]: { corner, turn } } – where the printed sheets lie
   Y: null,                     // table pose (table → world, 4×4) when known from markers
-  board: 'full',               // 'full' = Strike Force 44×60 | 'near' / 'far' = one Incursion 44×30 half | 'both' = two Incursion games on one table
+  board: 'full',               // 'full' = the 44×60 battlefield (11th edition: Strike Force AND Incursion) | 'near' / 'far' = one 44×30 half-table
+                               // game (casual, as the 10th edition's Incursion format) | 'both' = two half-table games on one table
   editHalf: 'near',            // with 'both': the half that terrain tools, card and attacker apply to
   halves: Object.assign({ near: { deployment: null, attacker: 0 }, far: { deployment: null, attacker: 0 } }, store.get('halves', {})),
   markerScale: store.get('markerScale', 1),  // print scale of the corner sheets: 1 = 10×15 at 100 %, 1.98 = fitted onto A4
@@ -124,7 +125,7 @@ const panel = new Panel(THREE, {
     { tab: 'table', title: 'Calibration: point the ray at three table corners (right, left, far) and press the trigger' },
     { tab: 'table', buttons: [{ label: 'Calibrate (3 corners)', a: { tool: 'calib' }, w: 1.6 }, { label: 'Recall saved table', a: { act: 'recall' }, w: 1.2 }, { label: 'Mirror', a: { act: 'mirror' } }, { label: 'Room scan', a: { act: 'scan' } }] },
     { tab: 'table', title: 'Battlefield' },
-    { tab: 'table', buttons: [{ label: 'Strike Force 44\u00d760', a: { act: 'board', v: 'full' }, w: 1.3 }, { label: 'Incursion near', a: { act: 'board', v: 'near' } }, { label: 'Incursion far', a: { act: 'board', v: 'far' } }, { label: '2\u00d7 Incursion (both)', a: { act: 'board', v: 'both' }, w: 1.3 }] },
+    { tab: 'table', buttons: [{ label: '44\u00d760 (Strike Force + Incursion)', a: { act: 'board', v: 'full' }, w: 1.8 }, { label: 'Half table near', a: { act: 'board', v: 'near' } }, { label: 'Half table far', a: { act: 'board', v: 'far' } }, { label: '2\u00d7 half table', a: { act: 'board', v: 'both' }, w: 1.1 }] },
     { tab: 'table', buttons: [{ label: 'Edit: near field', a: { act: 'editHalf', v: 'near' }, w: 1.2 }, { label: 'Edit: far field', a: { act: 'editHalf', v: 'far' }, w: 1.2 }] },
     { tab: 'table', title: 'Fine adjustment' },
     { tab: 'table', buttons: [{ label: 'Step 1 cm', a: { act: 'step', v: 0.01 } }, { label: 'Step 1 mm', a: { act: 'step', v: 0.001 } }, { label: '↑ up', a: { act: 'nudge', v: 'z+' } }, { label: '↓ down', a: { act: 'nudge', v: 'z-' } }] },
@@ -294,17 +295,18 @@ function applyMirror() {
 
 // ---------------------------------------------------------------- board + objectives + terrain
 const objMat = {};
-/** Battlefield extent on the table (inches): Strike Force = the whole 44×60 table, Incursion = one 44×30 half. */
+/** Battlefield extent on the table (inches): the whole 44×60 battlefield (Strike Force and Incursion alike), or one 44×30
+ *  half for a casual half-table game. */
 function fieldRect() {
   if (app.board === 'near') return { y0: 0, y1: 30 };
   if (app.board === 'far') return { y0: 30, y1: 60 };
   if (app.board === 'both') return app.editHalf === 'far' ? { y0: 30, y1: 60 } : { y0: 0, y1: 30 };
   return { y0: 0, y1: 60 };
 }
-/** the two Incursion fields when both are shown: [{ y0, y1, name, active }] */
+/** the two half-table fields when both are shown: [{ y0, y1, name, active }] */
 function fields() {
   if (app.board !== 'both') return null;
-  return ['near', 'far'].map(k => ({ y0: k === 'far' ? 30 : 0, y1: k === 'far' ? 60 : 30, key: k, name: app.halves[k].deployment || 'Incursion (no card)', active: k === app.editHalf }));
+  return ['near', 'far'].map(k => ({ y0: k === 'far' ? 30 : 0, y1: k === 'far' ? 60 : 30, key: k, name: app.halves[k].deployment || 'Half table (no card)', active: k === app.editHalf }));
 }
 const saveHalves = () => store.set('halves', app.halves);
 function rebuildBoard() { repaint(); }
@@ -532,7 +534,7 @@ function setLayout(id, { fromState = false } = {}) {
   }
   if (!app.state) { app.local.mission.terrainLayout = id || null; saveLocal(); }
 }
-/** Random fair layout for the current battlefield (full table or the chosen Incursion half) and deployment card. */
+/** Random fair layout for the current battlefield (full table or the chosen half) and deployment card. */
 /** history of random layouts: [{ seed, board, half, deployment, fav, t }] newest first, kept on the headset */
 function historyAdd(e) {
   app.history = (app.history || []).filter(h => h.seed !== e.seed);

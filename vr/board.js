@@ -61,7 +61,7 @@ export function paintBoard(ctx, o) {
   ctx.scale(PX, PX);
   ctx.lineJoin = 'round'; ctx.lineCap = 'round';
 
-  // battlefield edge: Strike Force = the whole table; one Incursion half (rest shaded); or two Incursion fields
+  // battlefield edge: the whole 44×60 battlefield; one half-table game (rest shaded); or two half-table fields
   const field = o.field || { y0: 0, y1: BOARD[1] };
   if (o.fields) {
     for (const f of o.fields) {
@@ -79,7 +79,7 @@ export function paintBoard(ctx, o) {
     ctx.strokeRect(0, field.y0, BOARD[0], field.y1 - field.y0);
     if (field.y1 - field.y0 < BOARD[1]) {
       ctx.font = 'bold 1.6px sans-serif'; ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillText('Incursion 44\" \u00d7 30\"', BOARD[0] / 2, (field.y0 + field.y1) / 2);
+      ctx.fillText('Half table 44\" \u00d7 30\"', BOARD[0] / 2, (field.y0 + field.y1) / 2);
     }
   }
 

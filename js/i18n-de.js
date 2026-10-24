@@ -641,3 +641,9 @@ Object.assign(PHRASES, {
   'No terrain layout chosen yet – Layout A of your two Force Dispositions is assumed. “Layout” or the setup sets the real one.': 'Noch kein Geländelayout gewählt – Layout A eurer beiden Force Dispositions wird angenommen. „Layout“ oder das Setup setzt das echte.'
 });
 PATTERNS.push(['^Current: (.+) [(]set by the VR headset[)][.]$', (m, c) => 'Aktuell: ' + c + ' (von der VR-Brille gesetzt).']);
+
+/* battle size note (11th edition: one battlefield size) */
+Object.assign(PHRASES, {
+  'Strike Force · 2000 points · 3 Detachment Points · battlefield 44"×60"': 'Strike Force · 2000 Punkte · 3 Detachment Points · Spielfeld 44"×60"',
+  'Incursion · 1000 points · 2 Detachment Points · same 44"×60" battlefield, Deployment cards and layouts as Strike Force': 'Incursion · 1000 Punkte · 2 Detachment Points · gleiches 44"×60"-Spielfeld, gleiche Deployment-Karten und Layouts wie Strike Force'
+});
