@@ -74,7 +74,7 @@ export const PHRASES = {
   'Stratagem lock': 'Stratagem-Sperre', 'Per phase (rule)': 'Pro Phase (Regel)', 'Per round (house rule)': 'Pro Runde (Hausregel)', 'Colour': 'Farbe',
   '– light/dark depending on the theme': '– hell/dunkel je nach Design', '(taken by opponent)': '(vom Gegner gewählt)',
   'Search faction': 'Fraktion suchen', 'Clear search': 'Suche leeren', 'no faction chosen': 'keine Fraktion gewählt', 
-  'Add unit': 'Einheit hinzufügen', 'Add units': 'Einheiten hinzufügen', 'Add army list': 'Armeeliste hinzufügen',
+  'Add unit': 'Einheit hinzufügen', 'Remove the last copy': 'Letzte Kopie entfernen', 'Add units': 'Einheiten hinzufügen', 'Add army list': 'Armeeliste hinzufügen',
   'No units yet. Add them manually or import the export from the GW app / New Recruit.': 'Noch keine Einheiten. Füge sie von Hand hinzu oder importiere den Export aus der GW-App / New Recruit.',
   'Optional: the army list is only used for keyword matching': 'Optional: Die Armeeliste wird nur für den Keyword-Abgleich genutzt',
   'The game works the same without it – points and objective markers are tracked on the tablet.': 'Das Spiel funktioniert auch ohne sie – Punkte und Objective markers werden auf dem Tablet geführt.',
@@ -240,7 +240,7 @@ export const PATTERNS = [
   ['^Round (\\d+)', (m, n) => 'Runde ' + n], ['(?<![A-Za-z])Round (\\d+)/(\\d+)', (m, a, b) => 'Runde ' + a + '/' + b], ['^ROUND (\\d+)', (m, n) => 'RUNDE ' + n],
   ['(?<![A-Za-z])(\\d+) more possible', (m, n) => n + ' weitere möglich'],
   ['^(\\d+) / (\\d+) chosen', (m, a, b) => a + ' / ' + b + ' gewählt'], ['at least (\\d+)', (m, n) => 'mindestens ' + n],
-  ['^(\\d+) added', (m, n) => n + ' hinzugefügt'], ['^Add units · (\\d+) added', (m, n) => 'Einheiten hinzufügen · ' + n + ' hinzugefügt'],
+  ['^(\\d+) added', (m, n) => n + ' hinzugefügt'], ['^(.+) removed$', (m, n) => n + ' entfernt'], ['^Add units · (\\d+) added', (m, n) => 'Einheiten hinzufügen · ' + n + ' hinzugefügt'],
   ['(\\d+) Detachment Points used', (m, n) => n + ' Detachment Points verbraucht'],
   ['^(.+) is ready\\.$', (m, n) => n + ' ist bereit.'], ['^(.+) is the Attacker', (m, n) => n + ' ist der Attacker'], ['^(.+) is the Defender', (m, n) => n + ' ist der Defender'],
   ['^(.+)\'s turn$', (m, n) => 'Zug von ' + n], ['^Your turn · (.+)$', (m, n) => 'Dein Zug · ' + n], ['^(.+) \\(you\\)$', (m, n) => n + ' (du)']

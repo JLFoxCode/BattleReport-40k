@@ -1481,6 +1481,7 @@ function openAdd(q0 = '') {
     return `<div class="arm-addline" data-name="${esc(fold(r.l.name))}">
       <button type="button" class="arm-addrow${over ? ' over' : ''}" data-tok="${esc(r.n.token)}"${full ? ' disabled' : ''}${over ? ' title="More than the points left"' : ''}>
         <span class="arm-add-n">${esc(r.l.name)}${tag}</span><span class="arm-have muted xs">${haveTxt(r)}</span><span class="arm-u-pts">${r.pts}</span><span class="arm-plus" aria-hidden="true">+</span></button>
+      <button type="button" class="arm-minus" data-minus="${esc(r.n.token)}"${r.have ? '' : ' disabled'} aria-label="Remove one ${esc(r.l.name)}" title="Remove the last copy">−</button>
       <button type="button" class="arm-info" data-info="${esc(r.n.token)}" aria-label="Datasheet of ${esc(r.l.name)}" title="Datasheet">i</button></div>`;
   };
   const own = rows.filter(r => !r.ally), allies = rows.filter(r => r.ally);
@@ -1542,6 +1543,7 @@ function openAdd(q0 = '') {
           hv.textContent = haveTxt(info);
           if (x === b) { hv.classList.toggle('added', info.have > 0); x.querySelector('.arm-u-pts').textContent = info.pts; }
           x.disabled = info.max >= 0 && info.have >= info.max;
+          const mn = x.parentElement && x.parentElement.querySelector('.arm-minus'); if (mn) mn.disabled = !info.have;
           const over = !x.disabled && Number(x.querySelector('.arm-u-pts').textContent) > rest;
           x.classList.toggle('over', over);
           if (over) x.title = tr('More than the points left'); else x.removeAttribute('title');
@@ -1572,6 +1574,23 @@ function openAdd(q0 = '') {
         if (shw) { const s = q.value; closeAdd(); toggleShow(shw.dataset.showSw); toast(`${shw.textContent}: on`, 'ok', 1500); openAdd(s); return; }
         const inf = e.target.closest('[data-info]');
         if (inf) { const r = rows.find(x => x.n.token === inf.dataset.info); if (r) openAddInfo(r); return; }
+        const mn = e.target.closest('[data-minus]');
+        if (mn && !mn.disabled) {
+          const V2 = E.view(ed.sys, ed.army);
+          const node = ed.sys.rootNodes(ed.army.catalogueId).find(n => n.token === mn.dataset.minus);
+          const sels = node ? E.selsOf(V2, V2.force, node) : [];
+          const last = sels[sels.length - 1];
+          if (!last) return;
+          const nm = unitName(V2, last);
+          apply(r => E.removeSel(r, last.s.id));
+          const row = mn.parentElement.querySelector('.arm-addrow');
+          const V3 = refresh(row);
+          if (added > 0) added--;
+          const t = el.querySelector('.sheet-head .title');
+          if (t) t.textContent = added ? `Add units · ${added} added · ${E.totalPoints(V3)} pts` : tr('Add units');
+          toast(`${nm} removed`, 'ok', 1200);
+          return;
+        }
         const b = e.target.closest('.arm-addrow');
         if (!b || b.disabled) return;
         add(b);

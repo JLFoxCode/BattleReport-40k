@@ -337,6 +337,8 @@ button.arm-saved { all: unset; font: 700 11px/1.1 var(--font-body); color: var(-
 .arm-src { display: block; font-weight: 600; }
 .arm-addrow.over:not(:disabled) { opacity: .55; }
 .arm-addrow.over .arm-u-pts { color: var(--bad); }
+.arm-minus { flex: none; align-self: center; width: 36px; height: 36px; margin: 0 0 0 4px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel2); color: var(--text); font-weight: 800; font-size: 18px; cursor: pointer; }
+.arm-minus:disabled { opacity: .3; cursor: default; }
 .arm-info { flex: none; align-self: center; width: 36px; height: 36px; margin: 0 2px 0 4px; border-radius: 50%; border: 1px solid var(--line); background: var(--panel); color: var(--text);
   font: italic 700 16px/1 Georgia, 'Times New Roman', serif; cursor: pointer; }
 .arm-info:active { background: var(--panel2); }
