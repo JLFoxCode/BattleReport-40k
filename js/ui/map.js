@@ -27,6 +27,7 @@
      onRange(center, r)                 Reichweitenwerkzeug losgelassen
    ═══════════════════════════════════════════════════════════════════ */
 import { WH } from '../../data/rules.js';
+import { LAYOUTS11, PARTS11 } from '../../data/layouts11.js';
 
 export const OBJ_RANGE = 3.79;          // 3" + Markerradius (40 mm ≈ 0.79")
 export const OBJ_R = 0.79;
@@ -184,7 +185,7 @@ export function createMap(el, opts = {}) {
   }
   function patchTerrain() {
     const id = state?.mission?.terrainLayout;
-    const layout = (o.terrain || []).find(t => t.id === id) || null;
+    const layout = (o.terrain || []).find(t => t.id === id) || LAYOUTS11.find(t => t.id === id) || null;
     const key = layout ? `${id}|${layout.pieces?.length}` : 'none';
     if (key === terrainKey) return;
     terrainKey = key;
@@ -193,8 +194,20 @@ export function createMap(el, opts = {}) {
     for (const p of layout.pieces || []) {
       const g = svg('g', { transform: `translate(${p.x} ${p.y}) rotate(${p.rot || 0})` }, gTerrain);
       const kind = p.kind || 'ruin';
-      if (kind === 'crater' || kind === 'wood') svg('ellipse', { class: `terrain ${kind}`, rx: p.w / 2, ry: p.h / 2 }, g);
-      else svg('rect', { class: `terrain ${kind}`, x: -p.w / 2, y: -p.h / 2, width: p.w, height: p.h, rx: .3 }, g);
+      const cls = `terrain ${kind}${p.tall === true ? ' dense' : p.tall === false ? ' light' : ''}${p.parts ? ' area' : ''}`;
+      if (p.poly && p.poly.length >= 3) svg('polygon', { class: cls, points: p.poly.map(q => q.join(',')).join(' ') }, g);
+      else if (kind === 'crater' || kind === 'wood') svg('ellipse', { class: cls, rx: p.w / 2, ry: p.h / 2 }, g);
+      else svg('rect', { class: cls, x: -p.w / 2, y: -p.h / 2, width: p.w, height: p.h, rx: .3 }, g);
+      // Event Companion: the individual features on the area (table orientation, not rotated with the area)
+      if (p.parts && p.parts.length) {
+        const pg = svg('g', { transform: `translate(${p.x} ${p.y})` }, gTerrain);
+        for (const pt of p.parts) {
+          const tpl = PARTS11[pt.t]; if (!tpl) continue;
+          const r = (pt.rot || 0) * Math.PI / 180, c = Math.cos(r), sn = Math.sin(r);
+          for (const poly of tpl.poly) svg('polygon', { class: `part ${pt.k}`, points: poly.map(([x, y0]) => { const y = pt.flip ? -y0 : y0; return `${(pt.x + x * c - y * sn).toFixed(2)},${(pt.y + x * sn + y * c).toFixed(2)}`; }).join(' ') }, pg);
+          if (pt.label) { const t = svg('text', { class: 'part-label lbl', x: pt.x, y: pt.y, transform: `rotate(${-rot} ${pt.x} ${pt.y})` }, pg); t.textContent = pt.label; }
+        }
+      }
       if (kind === 'ruin' && p.w >= 4 && p.h >= 3) {
         const t = svg('text', { class: 'terrain-label', transform: `rotate(${-rot - (p.rot || 0)})` }, g);
         t.textContent = `${p.w}×${p.h}`;

@@ -10,7 +10,7 @@
    ═══════════════════════════════════════════════════════════════════ */
 import { WH } from '../../data/rules.js';
 import { TERRAIN_LAYOUTS } from '../../data/terrain.js';
-import { LAYOUTS11, DISPOSITIONS11, VARIANTS11, findLayout11 } from '../../data/layouts11.js';
+import { LAYOUTS11, PARTS11, DISPOSITIONS11, VARIANTS11, findLayout11 } from '../../data/layouts11.js';
 import { esc, btn, chip, toast, colorOf } from './components.js';
 
 const [MAP_W, MAP_H] = WH.MAP_SIZE || [44, 60];
@@ -346,23 +346,63 @@ function createScene(inst) {
     }
   }
   const heightOf = p => p.tall === true ? 5 : p.tall === false ? 2 : ({ ruin: 5, wall: 2, crate: 2.5, crater: 0.25, wood: 3 })[p.kind] || 3;
+  const PART_COL = { dense: 0x1f8f74, light: 0xd9a21b };          // the card's legend: green = dense, yellow = light
+  /** A feature's outline(s) in table orientation relative to its own centre (template mirrored, then rotated). */
+  function partOutlines(tpl, pt) {
+    const r = (pt.rot || 0) * Math.PI / 180, c = Math.cos(r), s = Math.sin(r);
+    return tpl.poly.map(poly => poly.map(([x, y0]) => { const y = pt.flip ? -y0 : y0; return [x * c - y * s, x * s + y * c]; }));
+  }
+  function extrude(poly, h) {
+    const shape = new THREE.Shape(poly.map(([x, y]) => new THREE.Vector2(x, y)));
+    const geo = new THREE.ExtrudeGeometry(shape, { depth: h, bevelEnabled: false });
+    geo.rotateX(Math.PI / 2); geo.translate(0, h, 0);            // shape in XY → lies in XZ, extruded upwards
+    return geo;
+  }
   function buildTerrain(d) {
     clear(groups.dense); clear(groups.light); clear(groups.walls);
     for (const c of [...groups.labels.children]) if (c.userData.layer === 'terrain') groups.labels.remove(c);
     d.pieces.forEach(p => {
       const h = heightOf(p), low = p.tall === false;
       const g = new THREE.Group();
+      g.position.set(p.x, 0, p.y); g.rotation.y = -(p.rot || 0) * Math.PI / 180;
+      if (p.parts && p.parts.length) {
+        // Event Companion area: a flat plate marks the terrain area (its boundary is what the rules use); on it stand the
+        // individual features the players put down – green dense ruin parts (lettered), yellow light cover
+        const plateMat = new THREE.MeshLambertMaterial({ color: low ? 0x9a8650 : 0x8b96a3, transparent: true, opacity: 0.4, depthWrite: false });
+        const plate = new THREE.Mesh(p.poly && p.poly.length >= 3 ? extrude(p.poly, 0.12) : new THREE.BoxGeometry(p.w, 0.12, p.h), plateMat);
+        if (!(p.poly && p.poly.length >= 3)) plate.position.y = 0.06;
+        const rim = new THREE.LineSegments(new THREE.EdgesGeometry(plate.geometry, 20), new THREE.LineBasicMaterial({ color: low ? 0xe0c060 : 0xdde3ea, transparent: true, opacity: 0.9 }));
+        rim.position.copy(plate.position);
+        g.add(plate, rim);
+        (low ? groups.light : groups.dense).add(g);
+        const pg = { dense: new THREE.Group(), light: new THREE.Group() };
+        pg.dense.position.set(p.x, 0, p.y); pg.light.position.set(p.x, 0, p.y);
+        for (const pt of p.parts) {
+          const tpl = PARTS11[pt.t]; if (!tpl) continue;
+          const ph = pt.k === 'dense' ? 5 : 2;
+          const mat = new THREE.MeshLambertMaterial({ color: PART_COL[pt.k] || 0x8d99ae, transparent: true, opacity: 0.92 });
+          for (const poly of partOutlines(tpl, pt)) {
+            const geo = extrude(poly, ph);
+            const m = new THREE.Mesh(geo, mat); m.position.set(pt.x, 0, pt.y);
+            const e = new THREE.LineSegments(new THREE.EdgesGeometry(geo, 30), new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.35 }));
+            e.position.copy(m.position);
+            pg[pt.k === 'dense' ? 'dense' : 'light'].add(m, e);
+          }
+          if (pt.label) {
+            const lb = label(pt.label, { w: 2.4, h: 1.2, size: 46, bg: 'rgba(10,70,55,.92)' });
+            lb.position.set(p.x + pt.x, ph + 0.9, p.y + pt.y); lb.userData.layer = 'terrain'; lb.userData.low = pt.k !== 'dense'; groups.labels.add(lb);
+          }
+        }
+        groups.dense.add(pg.dense); groups.light.add(pg.light);
+        const lb = label(`${p.w}"×${p.h}" ${low ? 'light' : 'dense'} area`, { w: 5.5, h: 1.25, size: 28, bg: 'rgba(0,0,0,.3)' });
+        lb.position.set(p.x, 0.5, p.y); lb.userData.layer = 'terrain'; lb.userData.low = low; groups.labels.add(lb);
+        return;
+      }
+      // Chapter Approved layouts: the area as a block (dense: tall ruin with its recommended walls, light: low cover)
       const mat = new THREE.MeshLambertMaterial({ color: low ? COL.light : COL.dense, transparent: true, opacity: low ? 0.55 : 0.75 });
       let body;
-      if (p.poly && p.poly.length >= 3) {
-        const shape = new THREE.Shape(p.poly.map(([x, y]) => new THREE.Vector2(x, y)));
-        const geo = new THREE.ExtrudeGeometry(shape, { depth: h, bevelEnabled: false });
-        geo.rotateX(Math.PI / 2); geo.translate(0, h, 0);
-        body = new THREE.Mesh(geo, mat);
-      } else {
-        body = new THREE.Mesh(new THREE.BoxGeometry(p.w, h, p.h), mat);
-        body.position.y = h / 2;
-      }
+      if (p.poly && p.poly.length >= 3) body = new THREE.Mesh(extrude(p.poly, h), mat);
+      else { body = new THREE.Mesh(new THREE.BoxGeometry(p.w, h, p.h), mat); body.position.y = h / 2; }
       const edges = new THREE.LineSegments(new THREE.EdgesGeometry(body.geometry, 20), new THREE.LineBasicMaterial({ color: COL.edge, transparent: true, opacity: 0.75 }));
       edges.position.copy(body.position);
       g.add(body, edges);
@@ -373,7 +413,6 @@ function createScene(inst) {
           crate.position.set(-p.w / 2 + (k + 0.5) * (p.w / n), h + 0.45, 0); g.add(crate);
         }
       }
-      g.position.set(p.x, 0, p.y); g.rotation.y = -(p.rot || 0) * Math.PI / 180;
       (low ? groups.light : groups.dense).add(g);
       // recommended Ruins walls (Chapter Approved layouts): slabs along the marked local edges
       if (p.tall && p.walls) {

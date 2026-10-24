@@ -13,7 +13,7 @@
 import * as THREE from './vendor/three.module.min.js';   // no import map: the online server's CSP allows no inline scripts
 import { WH } from '../data/rules.js';
 import { TERRAIN_KINDS } from '../data/terrain.js';
-import { LAYOUTS11, DISPOSITIONS11, VARIANTS11, findLayout11 } from '../data/layouts11.js';
+import { LAYOUTS11, PARTS11, DISPOSITIONS11, VARIANTS11, findLayout11 } from '../data/layouts11.js';
 import { IN, BOARD, frameFromCorners, frameMatrix, packFrame, unpackFrame, snap, onBoard } from './calib.js';
 import { PX, paintBoard, rectCorners, pieceAt, layoutPieces, pieceHeight } from './board.js';
 import { connect, session as apiSession, listGames } from './net.js';
@@ -368,6 +368,41 @@ function buildTerrain() {
   app.pieces.forEach((p, i) => {
     const h = heightOf(p);
     const g = new THREE.Group();
+    if (p.parts && p.parts.length) {
+      // Event Companion area: a flat plate marks the terrain area, on it the individual features the players put down –
+      // green dense ruin parts (lettered as on the card), yellow light cover (table orientation around the area's centre)
+      const low = p.tall === false;
+      const plateMat = new THREE.MeshBasicMaterial({ color: low ? 0x9a8650 : 0x8b96a3, transparent: true, opacity: i === app.selected ? 0.5 : 0.25, side: THREE.DoubleSide, depthWrite: false });
+      let plate;
+      if (p.poly && p.poly.length >= 3) {
+        const geo = new THREE.ExtrudeGeometry(new THREE.Shape(p.poly.map(([x, y]) => new THREE.Vector2(x * IN, y * IN))), { depth: 0.1 * IN, bevelEnabled: false });
+        geo.rotateX(Math.PI / 2); geo.translate(0, 0.1 * IN, 0); plate = new THREE.Mesh(geo, plateMat);
+      } else { plate = new THREE.Mesh(new THREE.BoxGeometry(p.w * IN, 0.1 * IN, p.h * IN), plateMat); plate.position.y = 0.05 * IN; }
+      const rim = new THREE.LineSegments(new THREE.EdgesGeometry(plate.geometry), new THREE.LineBasicMaterial({ color: i === app.selected ? 0xffffff : (low ? 0xe0c060 : 0xdde3ea), transparent: true, opacity: 0.9 }));
+      rim.position.copy(plate.position);
+      g.add(plate, rim);
+      g.position.set(p.x * IN, 0, p.y * IN); g.rotation.y = -(p.rot || 0) * Math.PI / 180; g.userData.idx = i;
+      terrainGroup.add(g);
+      const pg = new THREE.Group(); pg.position.set(p.x * IN, 0, p.y * IN); pg.userData.idx = i;
+      for (const pt of p.parts) {
+        const tpl = PARTS11[pt.t]; if (!tpl) continue;
+        const ph = pt.k === 'dense' ? 5 : 2;
+        const r = (pt.rot || 0) * Math.PI / 180, c = Math.cos(r), sn = Math.sin(r);
+        const mat = new THREE.MeshBasicMaterial({ color: pt.k === 'dense' ? 0x1f8f74 : 0xd9a21b, transparent: true, opacity: 0.45, side: THREE.DoubleSide, depthWrite: false });
+        for (const poly of tpl.poly) {
+          const shape = new THREE.Shape(poly.map(([x, y0]) => { const y = pt.flip ? -y0 : y0; return new THREE.Vector2((x * c - y * sn) * IN, (x * sn + y * c) * IN); }));
+          const geo = new THREE.ExtrudeGeometry(shape, { depth: ph * IN, bevelEnabled: false });
+          geo.rotateX(Math.PI / 2); geo.translate(0, ph * IN, 0);
+          const m = new THREE.Mesh(geo, mat); m.position.set(pt.x * IN, 0, pt.y * IN);
+          const e = new THREE.LineSegments(new THREE.EdgesGeometry(geo, 30), new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.5 }));
+          e.position.copy(m.position);
+          pg.add(m, e);
+        }
+        if (pt.label) { const lb = labelSprite(pt.label); lb.scale.set(2.4 * IN, 0.6 * IN, 1); lb.position.set(pt.x * IN, (ph + 0.8) * IN, pt.y * IN); pg.add(lb); }
+      }
+      terrainGroup.add(pg);
+      return;
+    }
     const col = p.tall === true ? TALL_COLOR : p.tall === false ? LOW_COLOR : (KIND_COLOR[p.kind] || 0x8d99ae);
     const mat = new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: i === app.selected ? 0.5 : (p.tall === false ? 0.28 : 0.22), side: THREE.DoubleSide, depthWrite: false });
     let box;

@@ -46,6 +46,12 @@
 /* Gelände */
 .terrain { fill: var(--map-terrain); stroke: var(--map-terrain-edge); stroke-width: .1; }
 .terrain.ruin { fill: rgba(190, 170, 140, .22); stroke: rgba(220, 200, 170, .55); }
+.terrain.area { fill: rgba(190, 195, 205, .18); stroke: rgba(220, 225, 235, .6); }
+.terrain.area.light { fill: rgba(217, 162, 27, .12); stroke: rgba(230, 190, 90, .6); }
+.part { stroke-width: .08; }
+.part.dense { fill: rgba(31, 143, 116, .85); stroke: rgba(200, 255, 230, .7); }
+.part.light { fill: rgba(217, 162, 27, .85); stroke: rgba(255, 230, 150, .7); }
+.part-label { font-size: 1.1px; font-weight: 700; fill: #fff; text-anchor: middle; dominant-baseline: central; paint-order: stroke; stroke: rgba(0, 0, 0, .7); stroke-width: .25; pointer-events: none; }
 .terrain.wall { fill: rgba(200, 200, 200, .4); stroke: rgba(240, 240, 240, .7); }
 .terrain.crate { fill: rgba(160, 130, 90, .3); stroke: rgba(210, 180, 130, .6); stroke-dasharray: .3 .2; }
 .terrain.crater { fill: rgba(120, 90, 70, .25); stroke: rgba(170, 130, 100, .5); }
