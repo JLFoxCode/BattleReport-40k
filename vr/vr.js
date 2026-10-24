@@ -384,13 +384,18 @@ function buildTerrain() {
       g.position.set(p.x * IN, 0, p.y * IN); g.rotation.y = -(p.rot || 0) * Math.PI / 180; g.userData.idx = i;
       terrainGroup.add(g);
       const pg = new THREE.Group(); pg.position.set(p.x * IN, 0, p.y * IN); pg.userData.idx = i;
+      const ar = (p.rot || 0) * Math.PI / 180, ac = Math.cos(ar), as = Math.sin(ar);
+      let hw = p.w / 2, hh = p.h / 2, cx0 = 0, cy0 = 0;
+      if (p.poly && p.poly.length >= 3) { const xs = p.poly.map(v => v[0]), ys = p.poly.map(v => v[1]); hw = (Math.max(...xs) - Math.min(...xs)) / 2; hh = (Math.max(...ys) - Math.min(...ys)) / 2; cx0 = (Math.min(...xs) + Math.max(...xs)) / 2; cy0 = (Math.min(...ys) + Math.max(...ys)) / 2; }
+      // outline point (relative to the area centre) → clipped to the area: the plate is the feature's boundary
+      const clip = (tx, ty) => { let lx = tx * ac + ty * as - cx0, ly = -tx * as + ty * ac - cy0; lx = Math.max(-hw, Math.min(hw, lx)) + cx0; ly = Math.max(-hh, Math.min(hh, ly)) + cy0; return [lx * ac - ly * as, lx * as + ly * ac]; };
       for (const pt of p.parts) {
         const tpl = PARTS11[pt.t]; if (!tpl) continue;
         const ph = pt.k === 'dense' ? 5 : 2;
         const r = (pt.rot || 0) * Math.PI / 180, c = Math.cos(r), sn = Math.sin(r);
         const mat = new THREE.MeshBasicMaterial({ color: pt.k === 'dense' ? 0x1f8f74 : 0xd9a21b, transparent: true, opacity: 0.45, side: THREE.DoubleSide, depthWrite: false });
         for (const poly of tpl.poly) {
-          const shape = new THREE.Shape(poly.map(([x, y0]) => { const y = pt.flip ? -y0 : y0; return new THREE.Vector2((x * c - y * sn) * IN, (x * sn + y * c) * IN); }));
+          const shape = new THREE.Shape(poly.map(([x, y0]) => { const y = pt.flip ? -y0 : y0; const [bx, by] = clip(pt.x + x * c - y * sn, pt.y + x * sn + y * c); return new THREE.Vector2((bx - pt.x) * IN, (by - pt.y) * IN); }));
           const geo = new THREE.ExtrudeGeometry(shape, { depth: ph * IN, bevelEnabled: false });
           geo.rotateX(Math.PI / 2); geo.translate(0, ph * IN, 0);
           const m = new THREE.Mesh(geo, mat); m.position.set(pt.x * IN, 0, pt.y * IN);

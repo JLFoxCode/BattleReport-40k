@@ -201,10 +201,15 @@ export function createMap(el, opts = {}) {
       // Event Companion: the individual features on the area (table orientation, not rotated with the area)
       if (p.parts && p.parts.length) {
         const pg = svg('g', { transform: `translate(${p.x} ${p.y})` }, gTerrain);
+        const ar = (p.rot || 0) * Math.PI / 180, ac = Math.cos(ar), as = Math.sin(ar);
+        let hw = p.w / 2, hh = p.h / 2, cx0 = 0, cy0 = 0;
+        if (p.poly && p.poly.length >= 3) { const xs = p.poly.map(v => v[0]), ys = p.poly.map(v => v[1]); hw = (Math.max(...xs) - Math.min(...xs)) / 2; hh = (Math.max(...ys) - Math.min(...ys)) / 2; cx0 = (Math.min(...xs) + Math.max(...xs)) / 2; cy0 = (Math.min(...ys) + Math.max(...ys)) / 2; }
+        // outline point → clipped to the area (the plate is the feature's boundary, nothing sticks out)
+        const clip = (tx, ty) => { let lx = tx * ac + ty * as - cx0, ly = -tx * as + ty * ac - cy0; lx = Math.max(-hw, Math.min(hw, lx)) + cx0; ly = Math.max(-hh, Math.min(hh, ly)) + cy0; return [lx * ac - ly * as, lx * as + ly * ac]; };
         for (const pt of p.parts) {
           const tpl = PARTS11[pt.t]; if (!tpl) continue;
           const r = (pt.rot || 0) * Math.PI / 180, c = Math.cos(r), sn = Math.sin(r);
-          for (const poly of tpl.poly) svg('polygon', { class: `part ${pt.k}`, points: poly.map(([x, y0]) => { const y = pt.flip ? -y0 : y0; return `${(pt.x + x * c - y * sn).toFixed(2)},${(pt.y + x * sn + y * c).toFixed(2)}`; }).join(' ') }, pg);
+          for (const poly of tpl.poly) svg('polygon', { class: `part ${pt.k}`, points: poly.map(([x, y0]) => { const y = pt.flip ? -y0 : y0; const [bx, by] = clip(pt.x + x * c - y * sn, pt.y + x * sn + y * c); return `${bx.toFixed(2)},${by.toFixed(2)}`; }).join(' ') }, pg);
           if (pt.label) { const t = svg('text', { class: 'part-label lbl', x: pt.x, y: pt.y, transform: `rotate(${-rot} ${pt.x} ${pt.y})` }, pg); t.textContent = pt.label; }
         }
       }

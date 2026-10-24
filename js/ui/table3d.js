@@ -347,10 +347,22 @@ function createScene(inst) {
   }
   const heightOf = p => p.tall === true ? 5 : p.tall === false ? 2 : ({ ruin: 5, wall: 2, crate: 2.5, crater: 0.25, wood: 3 })[p.kind] || 3;
   const PART_COL = { dense: 0x1f8f74, light: 0xd9a21b };          // the card's legend: green = dense, yellow = light
-  /** A feature's outline(s) in table orientation relative to its own centre (template mirrored, then rotated). */
-  function partOutlines(tpl, pt) {
+  /** A feature's outline(s) relative to its own centre, in table orientation (template mirrored, then rotated) and clipped
+   *  to its terrain area: the plate is the feature's boundary, nothing sticks out (the card draws e.g. the pipes longer). */
+  function partOutlines(tpl, pt, area) {
     const r = (pt.rot || 0) * Math.PI / 180, c = Math.cos(r), s = Math.sin(r);
-    return tpl.poly.map(poly => poly.map(([x, y0]) => { const y = pt.flip ? -y0 : y0; return [x * c - y * s, x * s + y * c]; }));
+    const ar = (area.rot || 0) * Math.PI / 180, ac = Math.cos(ar), as = Math.sin(ar);
+    let hw = area.w / 2, hh = area.h / 2, cx = 0, cy = 0;
+    if (area.poly && area.poly.length >= 3) { const xs = area.poly.map(v => v[0]), ys = area.poly.map(v => v[1]); hw = (Math.max(...xs) - Math.min(...xs)) / 2; hh = (Math.max(...ys) - Math.min(...ys)) / 2; cx = (Math.min(...xs) + Math.max(...xs)) / 2; cy = (Math.min(...ys) + Math.max(...ys)) / 2; }
+    return tpl.poly.map(poly => poly.map(([x0, y0]) => {
+      const y = pt.flip ? -y0 : y0;
+      const tx = pt.x + x0 * c - y * s, ty = pt.y + x0 * s + y * c;                 // relative to the area centre
+      let lx = tx * ac + ty * as - cx, ly = -tx * as + ty * ac - cy;                 // area's local frame
+      lx = Math.max(-hw, Math.min(hw, lx)); ly = Math.max(-hh, Math.min(hh, ly));
+      lx += cx; ly += cy;
+      const bx = lx * ac - ly * as, by = lx * as + ly * ac;                          // back to table orientation
+      return [bx - pt.x, by - pt.y];
+    }));
   }
   function extrude(poly, h) {
     const shape = new THREE.Shape(poly.map(([x, y]) => new THREE.Vector2(x, y)));
@@ -381,7 +393,7 @@ function createScene(inst) {
           const tpl = PARTS11[pt.t]; if (!tpl) continue;
           const ph = pt.k === 'dense' ? 5 : 2;
           const mat = new THREE.MeshLambertMaterial({ color: PART_COL[pt.k] || 0x8d99ae, transparent: true, opacity: 0.92 });
-          for (const poly of partOutlines(tpl, pt)) {
+          for (const poly of partOutlines(tpl, pt, p)) {
             const geo = extrude(poly, ph);
             const m = new THREE.Mesh(geo, mat); m.position.set(pt.x, 0, pt.y);
             const e = new THREE.LineSegments(new THREE.EdgesGeometry(geo, 30), new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.35 }));
