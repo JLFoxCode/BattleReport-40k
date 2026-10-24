@@ -658,3 +658,34 @@ Object.assign(PHRASES, {
   'Choose the Deployment card first.': 'Zuerst die Deployment-Karte wählen.', 'No fair layout found – try again': 'Kein faires Layout gefunden – noch einmal versuchen',
   'Measurements: distances from the table edges to the nearest corner of every plate and to every objective, and each plate\'s angle – set the real terrain up by them.': 'Maße: Abstände von den Tischkanten zur nächsten Ecke jeder Platte und zu jedem Missionsziel, dazu der Winkel jeder Platte – danach lässt sich das echte Gelände stellen.'
 });
+
+/* mission sequence (Event Companion steps 1–12) */
+Object.assign(EXACT, { 'Now': 'Jetzt', 'Reopen': 'Wieder öffnen', 'Mission sequence complete': 'Missionsablauf abgeschlossen' });
+Object.assign(PHRASES, {
+  'Mission sequence (Warhammer Event Companion)': 'Missionsablauf (Warhammer Event Companion)',
+  'Warhammer Event Companion – Mission Sequence, steps 1–12.': 'Warhammer Event Companion – Missionsablauf, Schritte 1–12.',
+  'This step follows on the score display once setup is finished (“Go to deployment”).': 'Dieser Schritt folgt auf dem Spielstand-Tablet, sobald das Setup abgeschlossen ist („Go to deployment“).',
+  'Muster armies': 'Armeen aufstellen',
+  'Each player loads their army roster (Army step) and selects one Force Disposition available to their detachment – noted on the roster.': 'Jeder Spieler lädt seine Armeeliste (Schritt Armee) und wählt eine seinem Detachment erlaubte Force Disposition – auf der Liste vermerkt.',
+  'Determine mission': 'Mission bestimmen',
+  'Each player finds the opponent\'s Force Disposition on their own card: the Primary Mission listed there is theirs. The app shows both once both Dispositions are chosen.': 'Jeder Spieler sucht die Force Disposition des Gegners auf seiner eigenen Karte: Die dort genannte Primary Mission ist seine. Die App zeigt beide, sobald beide Dispositions gewählt sind.',
+  'Determine a layout': 'Layout bestimmen',
+  'Choose layout A, B or C of your two Force Dispositions (Mission step → Terrain layout). Events usually go A, B, C in order.': 'Layout A, B oder C eurer beiden Force Dispositions wählen (Schritt Mission → Terrain layout). Auf Events meist A, B, C der Reihe nach.',
+  'Half table: generate the layout for this half table (Mission step → Random layout).': 'Tischhälfte: das Layout für diese Tischhälfte erzeugen (Schritt Mission → Random layout).',
+  'Create the battlefield': 'Spielfeld aufbauen',
+  'Set up the terrain areas and the terrain features on them exactly as the layout shows – open the Battle table (3D), turn on Measurements, and place the real pieces by the distances shown. Confirm when the table is built.': 'Geländeflächen und die Geländeteile darauf genau wie im Layout aufstellen – Spieltisch (3D) öffnen, Maße einschalten und die echten Teile nach den Abständen setzen. Bestätigen, wenn der Tisch steht.',
+  'Determine Attacker and Defender': 'Angreifer und Verteidiger bestimmen',
+  'Agree which real table edges are the Attacker\'s and the Defender\'s edge of the card. Then roll off: the winner decides who is the Attacker – set it in the Mission step.': 'Einigt euch, welche echten Tischkanten die Angreifer- und die Verteidigerkante der Karte sind. Dann Roll-off: Der Gewinner entscheidet, wer Angreifer ist – im Schritt Mission eintragen.',
+  'Select Secondary Missions': 'Secondary Missions wählen',
+  'Each player secretly notes Tactical or Fixed (and which two Fixed Missions), then both reveal at once – enter the choice in the Secondary step. Confirm when both are revealed.': 'Jeder Spieler notiert geheim Tactical oder Fixed (und welche zwei Fixed Missions), dann decken beide gleichzeitig auf – die Wahl im Schritt Secondary eintragen. Bestätigen, wenn beide aufgedeckt haben.',
+  'Declare Battle Formations': 'Battle Formations erklären',
+  'Each player secretly notes which units start embarked in which TRANSPORTS and which start in strategic reserves, then both reveal at once.': 'Jeder Spieler notiert geheim, welche Einheiten in welchen TRANSPORTS starten und welche in den strategischen Reserven, dann decken beide gleichzeitig auf.',
+  'Deploy armies': 'Armeen aufstellen',
+  'Starting with the Defender, set up one unit at a time wholly within your own deployment zone (a TITANIC unit: skip your next turn to set up). Confirm when both armies stand.': 'Beginnend mit dem Verteidiger abwechselnd je eine Einheit vollständig in der eigenen Aufstellungszone aufstellen (TITANIC: danach eine Aufstellung aussetzen). Bestätigen, wenn beide Armeen stehen.',
+  'Redeploy units': 'Einheiten umstellen',
+  'Rules that let you redeploy after both armies are deployed are resolved now, alternating, starting with the Attacker (Scouts, Infiltrators\' redeploys …). Confirm when done or if nobody has such rules.': 'Regeln, die nach der Aufstellung ein Umstellen erlauben, jetzt abwechselnd abhandeln, beginnend mit dem Angreifer. Bestätigen, wenn fertig oder niemand solche Regeln hat.',
+  'Determine first turn': 'Ersten Zug bestimmen', 'Roll off: the winner takes the first turn – set it below.': 'Roll-off: Der Gewinner hat den ersten Zug – unten eintragen.',
+  'Resolve pre-battle rules': 'Vor-Schlacht-Regeln abhandeln',
+  'Alternating, starting with the player who takes the first turn, resolve pre-battle rules of your units. Confirm when done.': 'Abwechselnd, beginnend mit dem Spieler mit dem ersten Zug, die Vor-Schlacht-Regeln eurer Einheiten abhandeln. Bestätigen, wenn fertig.',
+  'Begin the battle': 'Schlacht beginnen', 'The first battle round begins – “Start battle” on the score display.': 'Die erste Schlachtrunde beginnt – „Start battle“ auf dem Spielstand-Tablet.'
+});

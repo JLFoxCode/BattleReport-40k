@@ -9,6 +9,7 @@ import { reduce } from '../../engine/index.js';
 import { esc, btn, badge, chip, sheet, confirmSheet, toast, colorOf } from './components.js';
 import { prepareQr, qrReady, qrSvg, joinUrl } from './qr.js';
 import { api } from '../net.js';
+import { sequenceStrip } from './sequence.js';
 
 /* ───────── Originaltexte (englisch, unverändert) aus data/orig/* – Loader wird nachgeladen, falls vorhanden ───────── */
 const ORIG = { mod: undefined, missions: null, fac: new Map() };
@@ -157,6 +158,7 @@ function setupStage(ctx) {
         <div class="xs muted">Game <b>${esc(code)}</b> · ${esc(STAGE_LABEL.setup)}</div>
         <h1 class="title">Score – setup in progress</h1>
       </header>
+      ${sequenceStrip(ctx, !!uiFor(code).seqOpen)}
       <div class="tbl-two">${[0, 1].map(p => `
         <div class="card p${p}">
           <div class="card-head"><div class="title">${esc(pName(s, p))}</div>${s.players[p].ready ? badge('ready', 'ok') : badge('open', 'warn')}</div>
@@ -197,12 +199,11 @@ function deployStage(ctx, ui) {
         <div class="xs muted">Game <b>${esc(code)}</b> · ${esc(STAGE_LABEL.deploy)} · ${esc(m.deployment || '')}</div>
         <h1 class="title">Deployment</h1>
       </header>
+      ${sequenceStrip(ctx, !!ui.seqOpen)}
       <div class="card pad0">
         <ul class="list dep-list">
           ${item('roles', `<span class="text-p${att}">${esc(pName(s, att))}</span> is the Attacker · <span class="text-p${def}">${esc(pName(s, def))}</span> is the Defender`,
             'The Attacker uses the Attacker deployment zone of the deployment map, the Defender the opposite one.')}
-          ${item('reserves', 'Declare Battle Formations', 'Before deploying, each player secretly notes which Leaders are attached to which units, which units start embarked in TRANSPORTS and which start in Reserves (Strategic Reserves, Deep Strike); then both reveal them.')}
-          ${item('alt', 'Deploy alternately', `<span class="text-p${def}">${esc(pName(s, def))}</span> (Defender) deploys first: one unit each, alternating, wholly within your own deployment zone, until all units are deployed or in Reserves. After deploying a TITANIC unit, skip your next deployment. Redeployments afterwards alternate, starting with the Attacker.`)}
           <li class="dep-item first ${first != null ? 'done' : ''}">
             <span class="ck">${first != null ? '✓' : ''}</span>
             <div class="main">
@@ -1407,6 +1408,9 @@ async function onClick(e) {
   switch (a) {
     case 'tab': ui.tab = d.tab; return paint();
     case 'go': return ctx.nav(d.hash);
+    case 'seq-done': return ctx.dispatch({ type: 'sequence.set', key: d.key, done: true });
+    case 'seq-undo': return ctx.dispatch({ type: 'sequence.set', key: d.key, done: false });
+    case 'seq-toggle': ui.seqOpen = !ui.seqOpen; return paint();
     case 'undo': return ctx.undo();
     case 'log-more': ui.logN += 100; return paint();
     case 'check': ui.checks[d.key] = !ui.checks[d.key]; return paint();

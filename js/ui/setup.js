@@ -4,6 +4,8 @@
  * Events: einmalige Delegation auf root (root.__setupBound), Aktionen über data-action / data-field. */
 import { esc, btn, chip, badge, confirmSheet, toast, colorOf, playerLabel } from './components.js';
 import { prepareQr, qrReady, joinUrl } from './qr.js';
+import { randomLayoutAction } from './random-layout.js';
+import { sequenceStrip } from './sequence.js';
 import { armyStep, unitsStep, missionStep, secStep, facListHtml, openUnitSheet, openImportSheet, importSavedArmy, dpLimit, dpOf, SIZE_LABEL } from './setup-steps.js';
 
 const STEPS = [
@@ -91,6 +93,7 @@ function paint() {
   root.innerHTML = `
     <div class="setup wrap">
       ${header(ctx, ui)}
+      ${sequenceStrip(ctx, !!ui.seqOpen)}
       <section class="step-body" data-step="${STEPS[ui.step].id}">
         <h2 class="title step-title"><span class="step-no">${ui.step + 1}</span>${esc(STEPS[ui.step].label)}</h2>
         ${stepHtml(ctx, ui)}
@@ -375,6 +378,9 @@ async function onClick(e) {
     case 'go': return ctx.nav(d.hash);
     case 'color': return ctx.dispatch({ type: 'player.set', player: p, color: Number(d.c) });
     case 'opt': return ctx.dispatch({ type: 'opts.set', key: d.key, value: d.value });
+    case 'seq-done': return ctx.dispatch({ type: 'sequence.set', key: d.key, done: true });
+    case 'seq-undo': return ctx.dispatch({ type: 'sequence.set', key: d.key, done: false });
+    case 'seq-toggle': ui.seqOpen = !ui.seqOpen; return render(cur.root, ctx);
     case 'dp-step': return ctx.dispatch({ type: 'opts.set', key: 'dp', value: Math.max(0, Math.min(9, dpLimit(s) + Number(d.delta))) });
     case 'dp-auto': return ctx.dispatch({ type: 'opts.set', key: 'dp', value: null });
 

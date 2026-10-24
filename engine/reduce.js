@@ -19,7 +19,7 @@ export const ACTIONS = {
   OBJECTIVE_OVERRIDE: 'objective.override', OBJECTIVE_MARK: 'objective.mark', OBJECTIVE_STICKY: 'objective.sticky',
   SCORE_ADD: 'score.add', SCORE_REMOVE: 'score.remove', SCORE_CONFIRM: 'score.confirm', SCORE_CORRECT: 'score.correct', CP_OFFER: 'cp.offer',
   RESOURCE_SET: 'resource.set', NOTE_ADD: 'note.add', GAME_END: 'game.end', GAME_RESET: 'game.reset',
-  ABILITY_USE: 'ability.use', ABILITY_UNDO: 'ability.undo', EFFECT_SET: 'effect.set'
+  ABILITY_USE: 'ability.use', ABILITY_UNDO: 'ability.undo', EFFECT_SET: 'effect.set', SEQUENCE_SET: 'sequence.set'
 };
 export const ACTION_TYPES = Object.values(ACTIONS);
 
@@ -65,6 +65,7 @@ export function initialState(code, seed) {
     v: 1, code: String(code || 'XXXX'), createdAt: null, seq: 0,
     stage: 'setup',
     opts: { stratLock: 'phase', autoScore: true, points: 2000, size: 'strike', phases: 'off', dp: null, board: 'full' },
+    sequence: {},                 // mission sequence (Event Companion steps 1–12): confirmed stops { key: true }
     rngState: (num(seed, 123456) >>> 0),
     mission: { deployment: null, dispositions: [null, null], primary: [null, null], twist: null, mirrored: null, attacker: null, first: null, terrainLayout: null, terrainPieces: null },
     players: [emptyPlayer(0), emptyPlayer(1)],
@@ -510,6 +511,15 @@ H['game.init'] = (s0, a) => {
   s.createdAt = a.ts || null;
   log(s, a, 'Game ' + s.code + ' created.', null, { seed: s.rngState });
   return s;
+};
+
+/** Mission sequence: a step the players confirm by hand ('Create the battlefield', 'Declare Battle Formations' …). */
+H['sequence.set'] = (s, a) => {
+  const k = String(a.key || '');
+  if (!/^[a-z-]{2,32}$/.test(k)) fail('Invalid sequence step');
+  if (!s.sequence) s.sequence = {};
+  if (a.done) s.sequence[k] = true; else delete s.sequence[k];
+  log(s, a, 'Mission sequence: ' + k + (a.done ? ' done' : ' reopened'));
 };
 
 H['opts.set'] = (s, a) => {
