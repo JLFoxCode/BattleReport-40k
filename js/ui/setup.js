@@ -218,6 +218,9 @@ function optionsCard(ctx) {
         </label>
         <label class="field"><span>Points limit</span><input type="number" data-field="points" value="${esc(o.points)}" min="100" step="50" inputmode="numeric"></label>
       </div>
+      <div class="label mt">Battlefield</div>
+      <div class="chips">${chip({ label: '44"×60" (official)', on: (o.board || 'full') === 'full', action: 'opt', data: { key: 'board', value: 'full' } })}${chip({ label: '44"×30" half table (unofficial)', on: o.board === 'half', action: 'opt', data: { key: 'board', value: 'half' } })}</div>
+      ${o.board === 'half' ? `<p class="xs muted">${esc('Half table: two games on one 44"×60" table. Unofficial – the 11th edition has no half-size format: the Deployment card is scaled to half length and the terrain comes from the random generator (half the Armageddon set).')}</p>` : ''}
       <div class="label mt">Detachment Points</div>
       <div class="row dp-row">
         <div class="stepper"><button type="button" data-action="dp-step" data-delta="-1"${dp <= 0 ? ' disabled' : ''} aria-label="Fewer">−</button><span class="stepper-value">${dp}</span><button type="button" data-action="dp-step" data-delta="1"${dp >= 9 ? ' disabled' : ''} aria-label="More">+</button></div>
@@ -401,6 +404,11 @@ async function onClick(e) {
     case 'disp': { if (s.mission.dispositions[p] === d.id) return;   // null = „behalten“ im Reducer, Abwählen gibt es nicht
       const disp = [null, null]; disp[p] = d.id; return ctx.dispatch({ type: 'mission.set', dispositions: disp }); }
     case 'terrain': return ctx.dispatch({ type: 'mission.set', terrainLayout: d.id || null });
+    case 'terrain-random': {
+      if (!s.mission.deployment) return toast('Choose the Deployment card first.', 'warn');
+      const a = randomLayoutAction(s);
+      return a ? ctx.dispatch(a) : toast('No fair layout found – try again', 'warn');
+    }
 
     case 'sec-mode': {
       if (d.mode === 'tactical') { ui.secMode[p] = null; ui.fixedSel[p] = []; return ctx.dispatch({ type: 'secondaries.mode', player: p, mode: 'tactical' }); }

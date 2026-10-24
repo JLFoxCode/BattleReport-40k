@@ -3,7 +3,7 @@ const VERSION = 'sb40k-v4-' + '2026-10-24a';
 const CORE = ['/index.html', '/manifest.webmanifest', '/css/app.css', '/css/lobby.css', '/css/setup.css', '/css/player.css', '/css/table.css',
   '/js/main.js', '/js/net.js', '/js/ui/components.js', '/js/ui/lobby.js', '/js/ui/setup.js', '/js/ui/setup-steps.js',
   '/js/ui/table.js', '/js/ui/player.js', '/js/ui/player-tabs.js', '/js/ui/player-sheets.js', '/js/ui/player-common.js', '/js/ui/table3d.js', '/css/table3d.css', '/vendor/three.module.min.js', '/data/layouts11.js',
-  '/engine/index.js', '/engine/reduce.js', '/engine/derive.js', '/engine/scoring.js', '/engine/stratagems.js', '/engine/geometry.js', '/engine/rng.js',
+  '/engine/index.js', '/engine/reduce.js', '/engine/derive.js', '/engine/scoring.js', '/engine/stratagems.js', '/engine/geometry.js', '/engine/layoutgen.js', '/data/half-table.js', '/js/ui/random-layout.js', '/engine/rng.js',
   '/data/rules.js', '/data/core.js', '/data/terrain.js', '/data/factions/index.js', '/data/factions/seed.js', '/icons/icon-192.png', '/icons/icon-512.png'];
 
 self.addEventListener('install', e => {

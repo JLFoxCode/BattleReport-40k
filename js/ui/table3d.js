@@ -12,13 +12,14 @@ import { WH } from '../../data/rules.js';
 import { TERRAIN_LAYOUTS } from '../../data/terrain.js';
 import { LAYOUTS11, PARTS11, DISPOSITIONS11, VARIANTS11, findLayout11 } from '../../data/layouts11.js';
 import { esc, btn, chip, toast, colorOf } from './components.js';
+import { deploymentMapOf, boardSize } from '../../engine/derive.js';
+import { randomLayoutAction } from './random-layout.js';
 
-const [MAP_W, MAP_H] = WH.MAP_SIZE || [44, 60];
 const OBJ_R = 20 / 25.4;                 // 40 mm objective marker
 const OBJ_RANGE = 3 + OBJ_R;             // "within range of an objective marker"
 const LAYERS = [
   ['zones', 'Zones'], ['objectives', 'Objectives'], ['ranges', 'Control range'], ['dense', 'Dense terrain'],
-  ['light', 'Light terrain'], ['walls', 'Walls'], ['units', 'Units'], ['grid', 'Grid'], ['labels', 'Labels']
+  ['light', 'Light terrain'], ['walls', 'Walls'], ['units', 'Units'], ['grid', 'Grid'], ['labels', 'Labels'], ['dims', 'Measurements']
 ];
 const LS_LAYERS = 'sb40k.t3d.layers';
 const COL = { table: 0x1b222a, tableSide: 0x0f1419, grid: 0xffffff, dense: 0x8a9aa8, light: 0xd3b35a, wall: 0xe6ecf2, obj: 0x6b757d, edge: 0xdde3ea };
@@ -27,7 +28,7 @@ let THREE = null;                         // three.js, loaded on first use (690 
 const instances = new WeakMap();          // root element → instance
 
 function readLayers() {
-  const on = {}; LAYERS.forEach(([k]) => (on[k] = true));
+  const on = {}; LAYERS.forEach(([k]) => (on[k] = k !== 'dims'));
   try { Object.assign(on, JSON.parse(localStorage.getItem(LS_LAYERS) || '{}')); } catch {}
   return on;
 }
@@ -53,20 +54,23 @@ const cssColor = (hex) => (typeof hex === 'string' && hex[0] === '#' ? parseInt(
 export function tableData(state) {
   const m = (state && state.mission) || {};
   const att = m.attacker === 1 ? 1 : 0;
+  const size = boardSize(state);
+  const half = size[1] !== 60;
   let tl = m.terrainLayout || null;
-  let ec = tl ? LAYOUTS11.find(l => l.id === tl) || null : null;
+  let ec = !half && tl ? LAYOUTS11.find(l => l.id === tl) || null : null;
   // no layout chosen yet: assume Layout A of the two Force Dispositions (the game's official pairing) – marked as assumed
   let assumed = false;
-  if (!tl && Array.isArray(m.dispositions)) {
+  if (!half && !tl && Array.isArray(m.dispositions)) {
     const nameOf = id => { const d = (WH.DISPOSITIONS || []).find(x => x.id === id); return d ? d.name : null; };
     const L = findLayout11(nameOf(m.dispositions[att]), nameOf(m.dispositions[1 - att]), 'A');
     if (L) { ec = L; tl = L.id; assumed = true; }
   }
   const ca = !ec && tl ? TERRAIN_LAYOUTS.find(l => l.id === tl) || null : null;
-  const dep = m.deployment ? WH.DEPLOYMENT_MAPS[m.deployment] || null : null;
+  const rnd = tl && String(tl).startsWith('random-') && Array.isArray(m.terrainPieces) ? m.terrainPieces : null;
+  const dep = deploymentMapOf(state);                      // the card, scaled to half length on a half table
   const zones = ec ? ec.zones : dep ? dep.zones : null;
-  const line = !ec && dep ? (dep.zones && dep.zones.line) || dep.line || null : null;
-  const circle = !ec && dep ? (dep.zones && dep.zones.circle) || dep.circle || null : null;
+  const line = !ec && dep ? dep.line : null;
+  const circle = !ec && dep ? dep.circle : null;
   const stObjs = Array.isArray(state && state.objectives) ? state.objectives : [];
   const ctrlOf = (ob) => {
     if (!ob) return null;
@@ -86,16 +90,16 @@ export function tableData(state) {
   } else {
     objectives = stObjs.filter(o => o && o.pos).map(o => ({ id: o.id, name: o.name || o.id, pos: { x: o.pos.x ?? o.pos[0], y: o.pos.y ?? o.pos[1] }, home: o.home === 0 || o.home === 1 ? o.home : null, exp: !!o.exp, ctrl: ctrlOf(o) }));
   }
-  const pieces = ec ? ec.pieces : ca ? ca.pieces : [];
+  const pieces = ec ? ec.pieces : ca ? ca.pieces : rnd ? rnd : [];
   // 11th edition: an objective inside a terrain area is a terrain objective – a model is within range of it while it is
   // within that terrain area (otherwise: within 3" horizontally). → area = footprint of that terrain area, or null
   for (const o of objectives) { const i = pieces.findIndex(p => inPiece(o.pos, p)); o.area = i >= 0 ? footprint(pieces[i]) : null; }
-  const terrainName = ec ? `${ec.attacker.disposition} vs ${ec.defender.disposition} · Layout ${ec.variant}${assumed ? ' (assumed)' : ''}` : ca ? ca.name : tl && String(tl).startsWith('random-') ? `Random layout #${String(tl).slice(7)}` : null;
+  const terrainName = ec ? `${ec.attacker.disposition} vs ${ec.defender.disposition} · Layout ${ec.variant}${assumed ? ' (assumed)' : ''}` : ca ? ca.name : tl && String(tl).startsWith('random-') ? `Random layout #${String(tl).slice(7)}${half ? ' · half table 44"×30"' : ''}` : null;
   const units = [];
   ((state && state.players) || []).forEach((pl, pi) => (pl && pl.units || []).forEach(u => {
     if (u && u.pos && u.status !== 'destroyed') units.push({ id: u.id, player: pi, name: u.name || '?', models: u.models, r: Math.max(.5, +u.r || 1), pos: { x: u.pos.x ?? u.pos[0], y: u.pos.y ?? u.pos[1] }, shocked: u.status === 'shocked' });
   }));
-  return { att, zones, line, circle, objectives, pieces, terrainName, terrainId: tl, assumed, random: !!(tl && !ec && !ca && String(tl).startsWith('random-')), deployment: m.deployment || null, units,
+  return { att, size, half, zones, line, circle, objectives, pieces, terrainName, terrainId: tl, assumed, random: !!(tl && !ec && !ca && String(tl).startsWith('random-')), randomKnown: !!rnd, deployment: m.deployment || null, units,
     names: ((state && state.players) || []).map(p => (p && p.name) || '?'), colors: ((state && state.players) || []).map(p => colorOf(p && p.color)) };
 }
 
@@ -109,6 +113,7 @@ export function render(root, ctx) {
 
 function createInstance(root, ctx) {
   const inst = { root, ctx, layers: readLayers(), three: null, pick: false, dataKey: '', theta: null };
+  window.__t3d = inst;                                   // debugging handle (headless checks)
   root.innerHTML = `<div class="t3d">
       <div class="t3d-bar">
         ${btn({ label: '‹ Back', kind: 'ghost', small: true, action: 'back' })}
@@ -149,6 +154,14 @@ function createInstance(root, ctx) {
       c.dispatch({ type: 'mission.set', terrainLayout: L.id }).then(() => { inst.pick = false; paintPicker(inst); }).catch(err => toast(err.message, 'bad'));
       return;
     }
+    if (act === 'pick-random') {
+      if (c.spectator) { toast('Spectator – view only', 'warn', 1800); return; }
+      if (!c.state.mission.deployment) { toast('Choose the Deployment card first.', 'warn'); return; }
+      const a = randomLayoutAction(c.state);
+      if (!a) { toast('No fair layout found – try again', 'warn'); return; }
+      c.dispatch(a).then(() => { inst.pick = false; paintPicker(inst); }).catch(err => toast(err.message, 'bad'));
+      return;
+    }
     if (act === 'pick-ca') {
       if (c.spectator) { toast('Spectator – view only', 'warn', 1800); return; }
       c.dispatch({ type: 'mission.set', terrainLayout: d.id || null }).then(() => { inst.pick = false; paintPicker(inst); }).catch(err => toast(err.message, 'bad'));
@@ -167,11 +180,17 @@ function createInstance(root, ctx) {
     inst.el.note.innerHTML = noteHtml(inst, data);
     paintPicker(inst);
     if (!THREE) {
-      loadThree().then(() => { if (root.isConnected) { inst.three = createScene(inst); inst.three.setData(inst.data); inst.el.loading.remove(); } })
+      loadThree().then(() => { if (root.isConnected && !inst.three) { inst.three = createScene(inst); inst.three.setData(inst.data); inst.el.loading.remove(); } })
         .catch(err => { inst.el.loading.textContent = 'The 3D view needs WebGL – ' + (err && err.message || err); });
     } else if (!inst.three) {
       try { inst.three = createScene(inst); inst.el.loading.remove(); } catch (err) { inst.el.loading.textContent = 'The 3D view needs WebGL – ' + (err && err.message || err); return; }
       inst.three.setData(data);
+    } else if (inst.three.size.join('x') !== data.size.join('x')) {
+      // the game's battlefield changed (44×60 ↔ 44×30 half table): new table, new scene
+      inst.three.destroy();
+      const fresh = document.createElement('canvas'); fresh.className = 't3d-canvas';
+      inst.el.canvas.replaceWith(fresh); inst.el.canvas = fresh;
+      inst.three = createScene(inst); inst.three.setData(data);
     } else inst.three.setData(data);
   };
   return inst;
@@ -191,9 +210,11 @@ function paintLayers(inst) {
 }
 function noteHtml(inst, data) {
   const parts = [];
-  if (data.assumed) parts.push('No terrain layout chosen yet – Layout A of your two Force Dispositions is assumed. “Layout” or the setup sets the real one.');
+  if (data.half && !data.terrainId) parts.push('Half table: the Event Companion layouts are for the 44"×60" battlefield – generate a layout for this half table instead.');
+  else if (data.half && data.randomKnown) parts.push('Generated layout: half the Armageddon set placed by the Event Companion principles around this Deployment card.');
+  else if (data.assumed) parts.push('No terrain layout chosen yet – Layout A of your two Force Dispositions is assumed. “Layout” or the setup sets the real one.');
   else if (!data.terrainId) parts.push('No terrain layout chosen yet – “Layout” picks one of the 45 Event Companion layouts.');
-  else if (data.random) parts.push('Random layout: its pieces are only known on the VR headset that generated it – pick an official layout here to see terrain.');
+  else if (data.random && !data.randomKnown) parts.push('Random layout: its pieces are only known on the VR headset that generated it – pick an official layout here to see terrain.');
   if (!data.zones) parts.push('No deployment zones: choose the Deployment card in the setup' + (data.terrainId ? '' : ' or an Event Companion layout') + '.');
   if (data.units.length) parts.push(`${data.units.length} unit${data.units.length === 1 ? '' : 's'} from the 2D map.`);
   parts.push('Drag = turn · pinch / wheel = zoom · two fingers or right button = move · double tap = reset.');
@@ -210,6 +231,13 @@ function paintPicker(inst) {
   const dispD = cur ? cur.defender.disposition : (m.dispositions || [])[1 - att] || DISPOSITIONS11[0];
   const variant = cur ? cur.variant : 'A';
   const opt = (list, v) => list.map(x => `<option value="${esc(x)}"${x === v ? ' selected' : ''}>${esc(x)}</option>`).join('');
+  const half = boardSize(s)[1] !== 60;
+  if (half) {
+    el.innerHTML = `<div class="t3d-pick-row">${btn({ label: (m.terrainLayout || '').startsWith('random-') ? 'New random layout' : 'Random layout', kind: 'primary', small: true, action: 'pick-random', disabled: !!c.spectator })}
+        ${chip({ label: 'No terrain', on: !m.terrainLayout, action: 'pick-ca', data: { id: '' }, cls: 'sm' })}</div>
+      <div class="t3d-pick-hint xs muted">${esc('Half table: two games on one 44"×60" table. Unofficial – the 11th edition has no half-size format: the Deployment card is scaled to half length and the terrain comes from the random generator (half the Armageddon set).')}</div>`;
+    return;
+  }
   el.innerHTML = `<div class="t3d-pick-row">
       <label class="field"><span>Attacker's Force Disposition</span><select data-pick-a>${opt(DISPOSITIONS11, dispA)}</select></label>
       <label class="field"><span>Defender's Force Disposition</span><select data-pick-d>${opt(DISPOSITIONS11, dispD)}</select></label>
@@ -217,7 +245,8 @@ function paintPicker(inst) {
       ${btn({ label: 'Apply event layout', kind: 'primary', small: true, action: 'pick-set', disabled: !!c.spectator })}
     </div>
     <div class="t3d-pick-hint xs muted" data-pick-hint></div>
-    <div class="t3d-pick-row chips">${(TERRAIN_LAYOUTS || []).map(t => chip({ label: t.short || t.name, on: m.terrainLayout === t.id, action: 'pick-ca', data: { id: t.id }, cls: 'sm' })).join('')}${chip({ label: 'No terrain', on: !m.terrainLayout, action: 'pick-ca', data: { id: '' }, cls: 'sm' })}</div>`;
+    <div class="t3d-pick-row chips">${(TERRAIN_LAYOUTS || []).map(t => chip({ label: t.short || t.name, on: m.terrainLayout === t.id, action: 'pick-ca', data: { id: t.id }, cls: 'sm' })).join('')}${chip({ label: 'No terrain', on: !m.terrainLayout, action: 'pick-ca', data: { id: '' }, cls: 'sm' })}
+      ${btn({ label: (m.terrainLayout || '').startsWith('random-') ? 'New random layout' : 'Random layout', kind: 'ghost', small: true, action: 'pick-random', disabled: !!c.spectator, title: 'The full Armageddon set placed by the Event Companion principles around the Deployment card' })}</div>`;
   paintPickHint(inst);
 }
 function paintPickHint(inst) {
@@ -237,6 +266,7 @@ async function loadThree() {
 /* ───────── three.js scene ───────── */
 function createScene(inst) {
   const { canvas, stage } = inst.el;
+  const [MAP_W, MAP_H] = (inst.data && inst.data.size) || boardSize(inst.ctx && inst.ctx.state) || [44, 60];
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false, powerPreference: 'low-power' });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
   renderer.setClearColor(0x0b0f14, 1);
@@ -262,8 +292,8 @@ function createScene(inst) {
     gGrid.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineBasicMaterial({ color: COL.grid, transparent: true, opacity: 0.1 })));
     gGrid.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(major), new THREE.LineBasicMaterial({ color: COL.grid, transparent: true, opacity: 0.28 })));
   }
-  const groups = { zones: new THREE.Group(), objectives: new THREE.Group(), ranges: new THREE.Group(), dense: new THREE.Group(), light: new THREE.Group(), walls: new THREE.Group(), units: new THREE.Group(), labels: new THREE.Group(), grid: gGrid, edges: new THREE.Group() };
-  for (const k of ['zones', 'objectives', 'ranges', 'dense', 'light', 'walls', 'units', 'labels', 'edges']) scene.add(groups[k]);
+  const groups = { zones: new THREE.Group(), objectives: new THREE.Group(), ranges: new THREE.Group(), dense: new THREE.Group(), light: new THREE.Group(), walls: new THREE.Group(), units: new THREE.Group(), labels: new THREE.Group(), grid: gGrid, edges: new THREE.Group(), dims: new THREE.Group() };
+  for (const k of ['zones', 'objectives', 'ranges', 'dense', 'light', 'walls', 'units', 'labels', 'edges', 'dims']) scene.add(groups[k]);
 
   /* labels: canvas sprites, sizes in inches */
   const labelCache = new Map();
@@ -295,8 +325,10 @@ function createScene(inst) {
     if (kZ !== keys.z) { keys.z = kZ; buildZones(d); }
     const kO = JSON.stringify([d.objectives, d.colors]);   // includes each objective's terrain area
     if (kO !== keys.o) { keys.o = kO; buildObjectives(d); }
-    const kT = d.terrainId + '|' + d.pieces.length;
+    const kT = d.terrainId + '|' + d.pieces.length + '|' + JSON.stringify(d.pieces.map(p => [p.x, p.y, p.rot]));
     if (kT !== keys.t) { keys.t = kT; buildTerrain(d); }
+    const kD = kT + '||' + kO;
+    if (kD !== keys.d) { keys.d = kD; buildDims(d); }
     const kU = JSON.stringify([d.units, d.colors]);
     if (kU !== keys.u) { keys.u = kU; buildUnits(d); }
     applyLayers();
@@ -481,6 +513,37 @@ function createScene(inst) {
       lb.position.set(p.x, h + 0.9, p.y); lb.userData.layer = 'terrain'; lb.userData.low = low; groups.labels.add(lb);
     });
   }
+  /** Measurements as on the official cards: for every plate the distances from the two nearest table edges to its nearest
+   *  corner (and its angle when not square to the table), for every objective its distances from the two nearest edges –
+   *  dimension lines with end ticks on the ground, labels in inches. */
+  function buildDims(d) {
+    clear(groups.dims);
+    const fmt = v => { const r = Math.round(v * 4) / 4; return (Number.isInteger(r) ? String(r) : r.toFixed(2).replace(/0$/, '')) + '"'; };
+    const dimMat = new THREE.LineBasicMaterial({ color: 0xffe680, transparent: true, opacity: 0.95 });
+    const dimLine = (ax, az, bx, bz) => {
+      const pts = [new THREE.Vector3(ax, 0.2, az), new THREE.Vector3(bx, 0.2, bz)];
+      const dx = bx - ax, dz = bz - az, l = Math.hypot(dx, dz) || 1, nx = -dz / l * 0.5, nz = dx / l * 0.5;
+      pts.push(new THREE.Vector3(ax + nx, 0.2, az + nz), new THREE.Vector3(ax - nx, 0.2, az - nz), new THREE.Vector3(bx + nx, 0.2, bz + nz), new THREE.Vector3(bx - nx, 0.2, bz - nz));
+      groups.dims.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(pts), dimMat));
+      const lb = label(fmt(l), { w: 3.2, h: 1.1, size: 40, color: '#ffe680', bg: 'rgba(0,0,0,.55)' });
+      lb.position.set((ax + bx) / 2 + nx * 1.6, 0.7, (az + bz) / 2 + nz * 1.6); groups.dims.add(lb);   // follows the Measurements toggle, not Labels
+    };
+    const dimsFor = (px, pz) => {
+      const ex = px < MAP_W / 2 ? 0 : MAP_W, ez = pz < MAP_H / 2 ? 0 : MAP_H;
+      if (Math.abs(px - ex) > 0.05) dimLine(ex, pz, px, pz);
+      if (Math.abs(pz - ez) > 0.05) dimLine(px, ez, px, pz);
+    };
+    for (const p of d.pieces) {
+      const fp = footprint(p);
+      // the corner nearest to its nearest table corner
+      let best = null;
+      for (const [x, z] of fp) { const dd = Math.min(x, MAP_W - x) + Math.min(z, MAP_H - z); if (!best || dd < best.dd) best = { x, z, dd }; }
+      if (best) dimsFor(best.x, best.z);
+      const r = ((p.rot || 0) % 90 + 90) % 90;
+      if (r > 0.5 && r < 89.5) { const lb = label(`${Math.round((p.rot || 0) % 180 * 2) / 2}°`, { w: 2.4, h: 1.1, size: 40, color: '#ffe680', bg: 'rgba(0,0,0,.55)' }); lb.position.set(p.x, 0.7, p.y); groups.dims.add(lb); }
+    }
+    for (const o of d.objectives) dimsFor(o.pos.x, o.pos.y);
+  }
   function buildUnits(d) {
     clear(groups.units);
     for (const c of [...groups.labels.children]) if (c.userData.layer === 'units') groups.labels.remove(c);
@@ -495,12 +558,12 @@ function createScene(inst) {
   }
   function applyLayers() {
     const on = inst.layers;
-    for (const k of ['zones', 'objectives', 'ranges', 'dense', 'light', 'walls', 'units', 'grid']) groups[k].visible = !!on[k];
+    for (const k of ['zones', 'objectives', 'ranges', 'dense', 'light', 'walls', 'units', 'grid', 'dims']) groups[k].visible = !!on[k];
     groups.edges.visible = !!on.labels;
     groups.labels.visible = !!on.labels;
     for (const c of groups.labels.children) {
       const L = c.userData.layer;
-      c.visible = L === 'terrain' ? (c.userData.low ? !!on.light : !!on.dense) : L === 'units' ? !!on.units : !!on.objectives;
+      c.visible = L === 'dims' ? !!on.dims : L === 'terrain' ? (c.userData.low ? !!on.light : !!on.dense) : L === 'units' ? !!on.units : !!on.objectives;
     }
     dirty = true;
   }
@@ -584,5 +647,6 @@ function createScene(inst) {
     if (dirty) { dirty = false; place(); renderer.render(scene, view.ortho ? ortho : camera); }
     requestAnimationFrame(loop);
   })();
-  return { setData, applyLayers, reset, flip, top };
+  const destroy = () => { destroyed = true; ro.disconnect(); renderer.dispose(); };
+  return { setData, applyLayers, reset, flip, top, destroy, size: [MAP_W, MAP_H], _dbg: { scene, groups, labelCache } };
 }

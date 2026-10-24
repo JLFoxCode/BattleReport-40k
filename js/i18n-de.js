@@ -647,3 +647,14 @@ Object.assign(PHRASES, {
   'Strike Force · 2000 points · 3 Detachment Points · battlefield 44"×60"': 'Strike Force · 2000 Punkte · 3 Detachment Points · Spielfeld 44"×60"',
   'Incursion · 1000 points · 2 Detachment Points · same 44"×60" battlefield, Deployment cards and layouts as Strike Force': 'Incursion · 1000 Punkte · 2 Detachment Points · gleiches 44"×60"-Spielfeld, gleiche Deployment-Karten und Layouts wie Strike Force'
 });
+
+/* half table in the app + measurements layer */
+Object.assign(EXACT, { 'Measurements': 'Maße', 'Random layout': 'Zufallslayout', 'New random layout': 'Neues Zufallslayout', 'Battlefield': 'Spielfeld' });
+Object.assign(PHRASES, {
+  '44"×60" (official)': '44"×60" (offiziell)', '44"×30" half table (unofficial)': '44"×30" Tischhälfte (inoffiziell)',
+  'Half table: two games on one 44"×60" table. Unofficial – the 11th edition has no half-size format: the Deployment card is scaled to half length and the terrain comes from the random generator (half the Armageddon set).': 'Tischhälfte: zwei Spiele auf einem 44"×60"-Tisch. Inoffiziell – die 11. Edition kennt kein halbes Format: Die Deployment-Karte wird auf halbe Länge skaliert, das Gelände kommt aus dem Zufallsgenerator (halber Armageddon-Satz).',
+  'Half table: the Event Companion layouts are for the 44"×60" battlefield – generate a layout for this half table instead.': 'Tischhälfte: Die Event-Companion-Layouts gelten für das 44"×60"-Spielfeld – erzeuge stattdessen ein Layout für diese Tischhälfte.',
+  'Generated layout: half the Armageddon set placed by the Event Companion principles around this Deployment card.': 'Erzeugtes Layout: der halbe Armageddon-Satz nach den Event-Companion-Prinzipien um diese Deployment-Karte gesetzt.',
+  'Choose the Deployment card first.': 'Zuerst die Deployment-Karte wählen.', 'No fair layout found – try again': 'Kein faires Layout gefunden – noch einmal versuchen',
+  'Measurements: distances from the table edges to the nearest corner of every plate and to every objective, and each plate\'s angle – set the real terrain up by them.': 'Maße: Abstände von den Tischkanten zur nächsten Ecke jeder Platte und zu jedem Missionsziel, dazu der Winkel jeder Platte – danach lässt sich das echte Gelände stellen.'
+});

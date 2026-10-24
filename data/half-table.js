@@ -20,6 +20,7 @@ export function halfMap(name) {
     zones: { a: (zones.a || []).map(sc), d: (zones.d || []).map(sc) },
     line: (zones.line || m.line) ? (zones.line || m.line).map(sc) : null,
     circle: (zones.circle || m.circle) ? [(zones.circle || m.circle)[0], (zones.circle || m.circle)[1] / 2, (zones.circle || m.circle)[2] / 2] : null,
+    home: { a: sc(m.home.a), d: sc(m.home.d) }, exp: [sc(m.exp[0]), sc(m.exp[1])], centre: [22, 15],
     objectives: [
       { kind: 'home', owner: 'a', pos: sc(m.home.a) }, { kind: 'home', owner: 'd', pos: sc(m.home.d) },
       { kind: 'exp', pos: sc(m.exp[0]) }, { kind: 'exp', pos: sc(m.exp[1]) }, { kind: 'central', pos: [22, 15] }

@@ -20,7 +20,7 @@ import { PX, paintBoard, rectCorners, pieceAt, layoutPieces, pieceHeight } from 
 import { connect, session as apiSession, listGames } from './net.js';
 import { Panel, Hud } from './panel.js';
 import { createCamera } from './camera.js';
-import { generate as generateLayout } from './layoutgen.js';
+import { generate as generateLayout } from '../engine/layoutgen.js';
 import { guessLayout, solveAll, fromRT, toRT, apply as mApply, fitPlane, setMarkerScale } from './markercal.js';
 
 const $ = s => document.querySelector(s);
@@ -583,6 +583,8 @@ function generateRandomLayout(seed) {
   app.pieces = half ? app.pieces.filter(p => p.y < f.y0 || p.y >= f.y1).concat(fresh) : fresh;
   app.selected = -1;
   buildTerrain(); saveTerrain();
+  // connected to a game: the layout travels with it (every device and the app's 3D battle table show the same table)
+  if (app.net && app.state && app.state.stage !== 'over') app.net.dispatch({ type: 'mission.set', terrainLayout: app.layoutId, terrainPieces: app.pieces.map(p => ({ kind: p.kind || 'ruin', x: p.x, y: p.y, w: p.w, h: p.h, rot: p.rot || 0, tall: !!p.tall, poly: p.poly, parts: p.parts })) }).catch(e => toast(e.message));
   if (!app.state) { app.local.mission.terrainLayout = app.layoutId; saveLocal(); }
   toast(`Random layout #${r.seed} (${r.pieces.length} pieces, ${r.pieces.filter(p => p.tall).length} tall)`);
 }
@@ -1127,10 +1129,15 @@ function onState(s) {
   app.state = s;
   if (before !== s.mission.deployment) refreshLayoutRows();
   $('#players').textContent = s.players.map(p => p.name).join(' vs ');
+  // a half-table game (opts.board 'half'): the headset shows the near half unless a half is chosen already
+  if (s.opts && s.opts.board === 'half' && app.board === 'full') { app.board = 'near'; app.editHalf = 'near'; }
   const id = s.mission && s.mission.terrainLayout ? s.mission.terrainLayout : null;
   if (id !== app.layoutId) {
     const saved = store.get('terrain.' + app.code, null);
-    if (saved && saved.layout === id && Array.isArray(saved.pieces)) { app.layoutId = id; app.pieces = saved.pieces; app.selected = -1; buildTerrain(); $('#layout').value = id || ''; }
+    if (id && String(id).startsWith('random-') && Array.isArray(s.mission.terrainPieces)) {
+      // a generated layout travels with the game (plates incl. their features)
+      app.layoutId = id; app.pieces = s.mission.terrainPieces.map((p, i) => Object.assign({ id: 'g' + i }, p)); app.selected = -1; buildTerrain(); saveTerrain(); $('#layout').value = '';
+    } else if (saved && saved.layout === id && Array.isArray(saved.pieces)) { app.layoutId = id; app.pieces = saved.pieces; app.selected = -1; buildTerrain(); $('#layout').value = id || ''; }
     else setLayout(id, { fromState: true });
   }
   repaint();

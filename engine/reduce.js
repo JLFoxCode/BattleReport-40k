@@ -4,7 +4,7 @@ import { WH } from '../data/rules.js';
 import { factionById, detachmentById } from '../data/factions/index.js';
 import { shuffle } from './rng.js';
 import { dist, pointInPolygon, round2 } from './geometry.js';
-import { deriveBase, zoneOf, activePlayer } from './derive.js';
+import { deriveBase, zoneOf, activePlayer, deploymentMapOf, boardSize } from './derive.js';
 import { checkpointItems, checkpointKey, applyCaps, vpTotals, CAPS } from './scoring.js';
 import { stratById, stratCheck, useKeyPhase } from './stratagems.js';
 
@@ -64,9 +64,9 @@ export function initialState(code, seed) {
   return {
     v: 1, code: String(code || 'XXXX'), createdAt: null, seq: 0,
     stage: 'setup',
-    opts: { stratLock: 'phase', autoScore: true, points: 2000, size: 'strike', phases: 'off', dp: null },
+    opts: { stratLock: 'phase', autoScore: true, points: 2000, size: 'strike', phases: 'off', dp: null, board: 'full' },
     rngState: (num(seed, 123456) >>> 0),
-    mission: { deployment: null, dispositions: [null, null], primary: [null, null], twist: null, mirrored: null, attacker: null, first: null, terrainLayout: null },
+    mission: { deployment: null, dispositions: [null, null], primary: [null, null], twist: null, mirrored: null, attacker: null, first: null, terrainLayout: null, terrainPieces: null },
     players: [emptyPlayer(0), emptyPlayer(1)],
     objectives: [],
     round: 0, turn: 0, phase: 'command',
@@ -185,7 +185,7 @@ function offerCpRules(s, p, roundStart) {
 }
 
 function buildObjectives(s) {
-  const map = WH.DEPLOYMENT_MAPS[s.mission.deployment];
+  const map = deploymentMapOf(s);
   if (!map) return [];
   const att = s.mission.attacker === 1 ? 1 : s.mission.attacker === 0 ? 0 : null;
   const def = att == null ? null : 1 - att;
@@ -197,7 +197,7 @@ function buildObjectives(s) {
     mk('o2', 'Defender Home', 'home', map.home.d, def),
     mk('o3', 'Expansion 1', 'exp', map.exp[0], null),
     mk('o4', 'Expansion 2', 'exp', map.exp[1], null),
-    mk('o5', 'Center', 'central', [22, 30], null)
+    mk('o5', 'Center', 'central', map.centre || [22, 30], null)
   ];
   return objs;
 }
@@ -520,10 +520,13 @@ H['opts.set'] = (s, a) => {
   if (k === 'size' && !SIZES.includes(v)) fail('Invalid game size');
   if (k === 'autoScore') v = !!v;
   if (k === 'phases' && !['off', 'manual'].includes(v)) fail('Invalid phases option');
+  if (k === 'board' && !['full', 'half'].includes(v)) fail('Invalid battlefield');   // 44"×60" or the unofficial 44"×30" half table
   if (k === 'dp' && v != null) { v = Math.floor(num(v, NaN)); if (!(v >= 0 && v <= 9)) fail('Invalid Detachment Points'); }
   if (k === 'points') { v = Math.floor(num(v, NaN)); if (!Number.isFinite(v) || v <= 0) fail('Invalid points value'); }
   if (k === 'size' && v !== s.opts.size && s.opts.points === SIZE_POINTS[s.opts.size]) s.opts.points = SIZE_POINTS[v];
+  const boardChanged = k === 'board' && s.opts.board !== v;
   s.opts[k] = v;
+  if (boardChanged) { s.mission.terrainPieces = null; if (String(s.mission.terrainLayout || '').startsWith('random-')) s.mission.terrainLayout = null; if (s.mission.deployment) { s.objectives = buildObjectives(s); recalcControl(s); } }
   log(s, a, 'Option ' + k + ' = ' + String(v));
 };
 
@@ -683,7 +686,22 @@ H['mission.set'] = (s, a) => {
   }
   if ('attacker' in a) { if (a.attacker != null && !isIdx(a.attacker)) fail('Invalid Attacker'); m.attacker = a.attacker == null ? null : a.attacker; changes.push('Attacker ' + (m.attacker == null ? '–' : pName(s, m.attacker))); }
   if ('first' in a) { if (a.first != null && !isIdx(a.first)) fail('Invalid first player'); m.first = a.first == null ? null : a.first; changes.push('first turn ' + (m.first == null ? '–' : pName(s, m.first))); }
-  if ('terrainLayout' in a) { m.terrainLayout = a.terrainLayout == null ? null : String(a.terrainLayout); changes.push('terrain ' + (m.terrainLayout || '–')); }
+  if ('terrainLayout' in a) { m.terrainLayout = a.terrainLayout == null ? null : String(a.terrainLayout); changes.push('terrain ' + (m.terrainLayout || '–')); if (!('terrainPieces' in a) && !String(m.terrainLayout || '').startsWith('random-')) m.terrainPieces = null; }
+  // a generated (random) layout travels with the game: its plates incl. their features – every device and the VR headset show the same table
+  if ('terrainPieces' in a) {
+    if (a.terrainPieces == null) m.terrainPieces = null;
+    else {
+      if (!Array.isArray(a.terrainPieces) || a.terrainPieces.length > 40) fail('Invalid terrain pieces');
+      m.terrainPieces = a.terrainPieces.map(p => {
+        const q = { kind: 'ruin', x: round2(num(p.x)), y: round2(num(p.y)), w: round2(num(p.w)), h: round2(num(p.h)), rot: round2(num(p.rot, 0)), tall: !!p.tall };
+        if (!(q.w > 0 && q.h > 0) || !Number.isFinite(q.x) || !Number.isFinite(q.y)) fail('Invalid terrain piece');
+        if (Array.isArray(p.poly) && p.poly.length >= 3) q.poly = p.poly.slice(0, 64).map(v => [round2(num(v[0])), round2(num(v[1]))]);
+        if (Array.isArray(p.parts)) q.parts = p.parts.slice(0, 12).map(pt => Object.assign({ t: String(pt.t), k: pt.k === 'light' ? 'light' : 'dense', x: round2(num(pt.x)), y: round2(num(pt.y)), rot: round2(num(pt.rot, 0)) }, pt.flip ? { flip: true } : {}, pt.label ? { label: String(pt.label).slice(0, 4) } : {}));
+        return q;
+      });
+      changes.push(m.terrainPieces.length + ' terrain pieces');
+    }
+  }
   computePrimary(s);
   if (m.deployment && (before.deployment !== m.deployment || before.attacker !== m.attacker || !s.objectives.length)) {
     s.objectives = buildObjectives(s);
@@ -743,7 +761,7 @@ H['unit.place'] = (s, a) => {
   if (u.status === 'destroyed') fail('Destroyed units cannot be placed');
   const pos = a.pos && Number.isFinite(num(a.pos.x, NaN)) && Number.isFinite(num(a.pos.y, NaN)) ? { x: round2(num(a.pos.x)), y: round2(num(a.pos.y)) } : null;
   if (!pos) fail('Invalid position');
-  const [W, Hh] = WH.MAP_SIZE;
+  const [W, Hh] = boardSize(s);
   if (pos.x < 0 || pos.y < 0 || pos.x > W || pos.y > Hh) fail('Position outside the battlefield');
   let kind = 'move';
   if (s.stage === 'deploy') {

@@ -460,6 +460,16 @@ export function missionStep(ctx, ui) {
  *  this pairing, with zones, objectives inside terrain areas and 16 terrain areas – or one of the Chapter Approved layouts. */
 function terrainSection(ctx, m, att) {
   const WH = ctx.data.WH;
+  if (ctx.state.opts && ctx.state.opts.board === 'half') {
+    const cur = m.terrainLayout || null;
+    return `
+    <p class="muted small">${esc('Half table: the Event Companion layouts are for the 44"×60" battlefield – generate a layout for this half table instead.')}</p>
+    <div class="chips terrain-chips">
+      ${btn({ label: String(cur || '').startsWith('random-') ? 'New random layout' : 'Random layout', kind: 'primary', small: true, action: 'terrain-random' })}
+      ${chip({ label: 'No terrain layout', cls: 'sm', on: !cur, action: 'terrain', data: { id: '' } })}
+      ${String(cur || '').startsWith('random-') ? `<span class="muted small self-center">${esc('Generated layout: half the Armageddon set placed by the Event Companion principles around this Deployment card.')}</span>` : ''}
+    </div>`;
+  }
   const nameOf = id => { const d = (WH.DISPOSITIONS || []).find(x => x.id === id); return d ? d.name : null; };
   const dispA = nameOf(m.dispositions[att]), dispD = nameOf(m.dispositions[1 - att]);
   const cur = m.terrainLayout || null;
@@ -476,6 +486,7 @@ function terrainSection(ctx, m, att) {
     <div class="chips terrain-chips mt">
       ${(ctx.data.TERRAIN_LAYOUTS || []).map(t => chip({ label: t.short || t.name, cls: 'sm', on: cur === t.id, action: 'terrain', data: { id: t.id } })).join('')}
       ${chip({ label: 'No terrain layout', cls: 'sm', on: !cur, action: 'terrain', data: { id: '' } })}
+      ${btn({ label: String(cur || '').startsWith('random-') ? 'New random layout' : 'Random layout', kind: 'ghost', small: true, action: 'terrain-random', title: 'The full Armageddon set placed by the Event Companion principles around the Deployment card' })}
     </div>
     ${cur && !curEc && !(ctx.data.TERRAIN_LAYOUTS || []).some(t => t.id === cur) ? `<p class="muted xs">Current: ${esc(cur)} (set by the VR headset).</p>` : ''}`;
 }

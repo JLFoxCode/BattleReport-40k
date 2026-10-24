@@ -28,10 +28,11 @@
    ═══════════════════════════════════════════════════════════════════ */
 import { WH } from '../../data/rules.js';
 import { LAYOUTS11, PARTS11 } from '../../data/layouts11.js';
+import { deploymentMapOf, boardSize } from '../../engine/derive.js';
 
 export const OBJ_RANGE = 3.79;          // 3" + Markerradius (40 mm ≈ 0.79")
 export const OBJ_R = 0.79;
-const [MAP_W, MAP_H] = WH.MAP_SIZE || [44, 60];
+let [MAP_W, MAP_H] = WH.MAP_SIZE || [44, 60];      // the current game's battlefield (44×60, or 44×30 for a half table)
 const NS = 'http://www.w3.org/2000/svg';
 const TAP_PX = 8;                       // Bewegung in Pixeln, ab der ein Tipp zum Ziehen wird
 
@@ -81,15 +82,12 @@ function abbrev(name) {
   const s = words.length >= 2 ? words[0][0] + words[1][0] : words[0].slice(0, 3);
   return s.toUpperCase().slice(0, 4);
 }
-function deploymentOf(state) {
-  const name = state?.mission?.deployment;
-  return (name && WH.DEPLOYMENT_MAPS[name]) || null;
-}
+function deploymentOf(state) { return deploymentMapOf(state); }
 function rootTransform(rot) {
   switch (rot) {
-    case 90: return 'translate(60 0) rotate(90)';
-    case 180: return 'translate(44 60) rotate(180)';
-    case 270: return 'translate(0 44) rotate(270)';
+    case 90: return `translate(${MAP_H} 0) rotate(90)`;
+    case 180: return `translate(${MAP_W} ${MAP_H}) rotate(180)`;
+    case 270: return `translate(0 ${MAP_W}) rotate(270)`;
     default: return '';
   }
 }
@@ -107,19 +105,34 @@ export function createMap(el, opts = {}) {
   el.innerHTML = '';
   const svgEl = svg('svg', { viewBox: viewBoxOf(0), preserveAspectRatio: 'xMidYMid meet', role: 'img', 'aria-label': 'Spielfeld' }, el);
   const root = svg('g', { class: 'map-root' }, svgEl);
-  svg('rect', { class: 'map-bg', x: 0, y: 0, width: MAP_W, height: MAP_H }, root);
+  const bgRect = svg('rect', { class: 'map-bg', x: 0, y: 0, width: MAP_W, height: MAP_H }, root);
   const gGrid = svg('g', { class: 'map-grid-layer' }, root);
   const gZones = svg('g', { class: 'map-zones' }, root);
   const gTerrain = svg('g', { class: 'map-terrain' }, root);
   const gObjs = svg('g', { class: 'map-objectives' }, root);
   const gUnits = svg('g', { class: 'map-units' }, root);
   const gOverlay = svg('g', { class: 'map-overlay' }, root);
-  svg('rect', { class: 'map-edge', x: 0, y: 0, width: MAP_W, height: MAP_H, 'pointer-events': 'none' }, root);
+  const edgeRect = svg('rect', { class: 'map-edge', x: 0, y: 0, width: MAP_W, height: MAP_H, 'pointer-events': 'none' }, root);
   buildGrid();
+  let sizeKey = MAP_W + 'x' + MAP_H;
+  /** battlefield size of the game (44×60 or the 44×30 half table): resize background, grid and viewBox when it changes */
+  function applySize(s) {
+    const [w, h] = boardSize(s);
+    if (w + 'x' + h === sizeKey) return;
+    MAP_W = w; MAP_H = h; sizeKey = w + 'x' + h;
+    setAttrs(bgRect, { width: w, height: h }); setAttrs(edgeRect, { width: w, height: h });
+    gGrid.innerHTML = ''; buildGrid();
+    setAttrs(svgEl, { viewBox: viewBoxOf(rot) }); setAttrs(root, { transform: rootTransform(rot) || null });
+    zoneKey = null; terrainKey = null;
+    if (!o.fill) layout();
+  }
 
   /* ── Layout / Rotation ── */
+  // the rot option means the DISPLAY orientation of a 44×60 table (90 = landscape); a landscape table (44×30 half table)
+  // needs the opposite turn for the same display orientation
+  const normRot = r => (MAP_W > MAP_H ? (r + 90) % 360 : r);
   function layout() {
-    const wantRot = o.rot === 'auto' ? autoRot() : (+o.rot || 0);
+    const wantRot = o.rot === 'auto' ? autoRot() : normRot(+o.rot || 0);
     el.classList.toggle('fill', !!o.fill);
     if (!o.fill) {
       const w = wantRot === 90 || wantRot === 270 ? MAP_H : MAP_W, h = w === MAP_W ? MAP_H : MAP_W;
@@ -143,7 +156,7 @@ export function createMap(el, opts = {}) {
     const h = o.fill ? (el.clientHeight || el.getBoundingClientRect().height)
       : (window.innerHeight * (o.maxVh || 100)) / 100;
     if (!w || !h) return rot;
-    return w > h ? 90 : 0;
+    return normRot(w > h ? 90 : 0);          // container landscape → the table's long side horizontal
   }
   const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(() => { if (!destroyed) layout(); }) : null;
   ro?.observe(el);
@@ -185,7 +198,8 @@ export function createMap(el, opts = {}) {
   }
   function patchTerrain() {
     const id = state?.mission?.terrainLayout;
-    const layout = (o.terrain || []).find(t => t.id === id) || LAYOUTS11.find(t => t.id === id) || null;
+    const rnd = id && String(id).startsWith('random-') && Array.isArray(state?.mission?.terrainPieces) ? { id, pieces: state.mission.terrainPieces } : null;
+    const layout = rnd || (o.terrain || []).find(t => t.id === id) || LAYOUTS11.find(t => t.id === id) || null;
     const key = layout ? `${id}|${layout.pieces?.length}` : 'none';
     if (key === terrainKey) return;
     terrainKey = key;
@@ -340,6 +354,7 @@ export function createMap(el, opts = {}) {
   function update(s, d) {
     if (destroyed) return;
     state = s || null; derived = d || {};
+    if (state) { MAP_W = boardSize(state)[0]; MAP_H = boardSize(state)[1]; applySize(state); }
     patchZones(); patchTerrain(); patchObjectives(); patchUnits();
   }
 

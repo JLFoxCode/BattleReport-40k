@@ -1,6 +1,7 @@
 /* Abgeleitete Daten (SPEC §4). deriveBase() = Kontrolle/Territorium/Zählungen (vom Reducer genutzt),
  * derive() = vollständiges Objekt für den Client. */
 import { WH } from '../data/rules.js';
+import { halfMap } from '../data/half-table.js';
 import { factionById, detachmentById } from '../data/factions/index.js';
 import { dist, pointInPolygon, centroid, sideOfLine } from './geometry.js';
 import { stratsWithAvailability, fitsPhase } from './stratagems.js';
@@ -16,8 +17,21 @@ export function activePlayer(state) {
 
 export function attackerOf(state) { return state.mission && state.mission.attacker === 1 ? 1 : 0; }
 
+/** Battlefield size [w, h] in inches: 44×60, or 44×30 for a half-table game (opts.board 'half' – unofficial, see data/half-table.js). */
+export function boardSize(state) { return state && state.opts && state.opts.board === 'half' ? [44, 30] : (WH.MAP_SIZE || [44, 60]); }
+/** The game's Deployment card as { zones: { a, d }, line, circle, home: { a, d }, exp: [..], centre } – the Chapter Approved
+ *  card, or the same card scaled to half length for a half-table game. */
+export function deploymentMapOf(state) {
+  const name = state && state.mission && state.mission.deployment;
+  if (!name) return null;
+  if (state.opts && state.opts.board === 'half') { const m = halfMap(name); return m ? Object.assign({}, m, { zones: m.zones }) : null; }
+  const m = WH.DEPLOYMENT_MAPS[name];
+  if (!m) return null;
+  return { zones: { a: m.zones.a, d: m.zones.d }, line: (m.zones && m.zones.line) || m.line || null, circle: (m.zones && m.zones.circle) || m.circle || null, home: m.home, exp: m.exp, centre: [22, 30] };
+}
+
 export function zonesOf(state) {
-  const map = WH.DEPLOYMENT_MAPS[state.mission && state.mission.deployment] || null;
+  const map = deploymentMapOf(state);
   if (!map) return { a: [], d: [], line: null, circle: null };
   return { a: map.zones.a, d: map.zones.d, line: map.line, circle: map.circle || null };
 }
