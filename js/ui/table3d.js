@@ -365,6 +365,36 @@ function createScene(inst) {
       return [bx - pt.x, by - pt.y];
     }));
   }
+  /** Bounding box of a feature in its area's local frame (unrotated plate coordinates). */
+  function partLocalBox(tpl, pt, area) {
+    const r = (pt.rot || 0) * Math.PI / 180, c = Math.cos(r), s = Math.sin(r);
+    const ar = (area.rot || 0) * Math.PI / 180, ac = Math.cos(ar), as = Math.sin(ar);
+    const b = { minx: 1e9, maxx: -1e9, miny: 1e9, maxy: -1e9 };
+    for (const poly of tpl.poly) for (const [x0, y0] of poly) {
+      const y = pt.flip ? -y0 : y0;
+      const tx = pt.x + x0 * c - y * s, ty = pt.y + x0 * s + y * c;
+      const lx = tx * ac + ty * as, ly = -tx * as + ty * ac;
+      b.minx = Math.min(b.minx, lx); b.maxx = Math.max(b.maxx, lx); b.miny = Math.min(b.miny, ly); b.maxy = Math.max(b.maxy, ly);
+    }
+    return b;
+  }
+  /** Corners of the plate no feature reaches get a white corner marker (two short bars) – shows how far the terrain
+   *  feature extends when the table is set up and later during play. Added to the plate's (rotated) group. */
+  function cornerMarkers(p, boxes, g) {
+    let hw = p.w / 2, hh = p.h / 2, cx0 = 0, cy0 = 0;
+    if (p.poly && p.poly.length >= 3) { const xs = p.poly.map(v => v[0]), ys = p.poly.map(v => v[1]); hw = (Math.max(...xs) - Math.min(...xs)) / 2; hh = (Math.max(...ys) - Math.min(...ys)) / 2; cx0 = (Math.min(...xs) + Math.max(...xs)) / 2; cy0 = (Math.min(...ys) + Math.max(...ys)) / 2; }
+    const mat = new THREE.MeshLambertMaterial({ color: 0xf2f5f8 });
+    for (const [sx, sy] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) {
+      const cx = cx0 + sx * hw, cy = cy0 + sy * hh;
+      if (p.poly && p.poly.length >= 3 && !p.poly.some(([x, y]) => Math.abs(x - cx) < 0.3 && Math.abs(y - cy) < 0.3)) continue;   // wedge: only real corners
+      const covered = boxes.some(b => b.minx <= cx + 1.2 && b.maxx >= cx - 1.2 && b.miny <= cy + 1.2 && b.maxy >= cy - 1.2);
+      if (covered) continue;
+      const L = Math.min(1.5, hw, hh), t = 0.25, h = 0.5;
+      const bx = new THREE.Mesh(new THREE.BoxGeometry(L, h, t), mat); bx.position.set(cx - sx * L / 2, h / 2 + 0.12, cy - sy * t / 2);
+      const bz = new THREE.Mesh(new THREE.BoxGeometry(t, h, L), mat); bz.position.set(cx - sx * t / 2, h / 2 + 0.12, cy - sy * L / 2);
+      g.add(bx, bz);
+    }
+  }
   function extrude(poly, h) {
     const shape = new THREE.Shape(poly.map(([x, y]) => new THREE.Vector2(x, y)));
     const geo = new THREE.ExtrudeGeometry(shape, { depth: h, bevelEnabled: false });
@@ -408,6 +438,7 @@ function createScene(inst) {
             lb.position.set(p.x + pt.x, ph + 0.9, p.y + pt.y); lb.userData.layer = 'terrain'; lb.userData.low = pt.k !== 'dense'; groups.labels.add(lb);
           }
         }
+        cornerMarkers(p, p.parts.map(pt => PARTS11[pt.t] ? partLocalBox(PARTS11[pt.t], pt, p) : null).filter(Boolean), g);
         groups.dense.add(pg.dense); groups.light.add(pg.light);
         const lb = label(`${p.w}"×${p.h}" ${low ? 'light' : 'dense'} area`, { w: 5.5, h: 1.25, size: 28, bg: 'rgba(0,0,0,.3)' });
         lb.position.set(p.x, 0.5, p.y); lb.userData.layer = 'terrain'; lb.userData.low = low; groups.labels.add(lb);

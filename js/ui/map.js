@@ -206,11 +206,23 @@ export function createMap(el, opts = {}) {
         if (p.poly && p.poly.length >= 3) { const xs = p.poly.map(v => v[0]), ys = p.poly.map(v => v[1]); hw = (Math.max(...xs) - Math.min(...xs)) / 2; hh = (Math.max(...ys) - Math.min(...ys)) / 2; cx0 = (Math.min(...xs) + Math.max(...xs)) / 2; cy0 = (Math.min(...ys) + Math.max(...ys)) / 2; }
         // outline point → clipped to the area (the plate is the feature's boundary, nothing sticks out)
         const clip = (tx, ty) => { let lx = tx * ac + ty * as - cx0, ly = -tx * as + ty * ac - cy0; lx = Math.max(-hw, Math.min(hw, lx)) + cx0; ly = Math.max(-hh, Math.min(hh, ly)) + cy0; return [lx * ac - ly * as, lx * as + ly * ac]; };
+        const boxes = [];                      // each feature's bbox in the plate's local frame (for the corner markers)
         for (const pt of p.parts) {
           const tpl = PARTS11[pt.t]; if (!tpl) continue;
           const r = (pt.rot || 0) * Math.PI / 180, c = Math.cos(r), sn = Math.sin(r);
+          const b = { minx: 1e9, maxx: -1e9, miny: 1e9, maxy: -1e9 };
+          for (const poly of tpl.poly) for (const [x, y0] of poly) { const y = pt.flip ? -y0 : y0; const tx = pt.x + x * c - y * sn, ty = pt.y + x * sn + y * c; const lx = tx * ac + ty * as, ly = -tx * as + ty * ac; b.minx = Math.min(b.minx, lx); b.maxx = Math.max(b.maxx, lx); b.miny = Math.min(b.miny, ly); b.maxy = Math.max(b.maxy, ly); }
+          boxes.push(b);
           for (const poly of tpl.poly) svg('polygon', { class: `part ${pt.k}`, points: poly.map(([x, y0]) => { const y = pt.flip ? -y0 : y0; const [bx, by] = clip(pt.x + x * c - y * sn, pt.y + x * sn + y * c); return `${bx.toFixed(2)},${by.toFixed(2)}`; }).join(' ') }, pg);
           if (pt.label) { const t = svg('text', { class: 'part-label lbl', x: pt.x, y: pt.y, transform: `rotate(${-rot} ${pt.x} ${pt.y})` }, pg); t.textContent = pt.label; }
+        }
+        // corners no feature reaches: white corner marker (shows how far the terrain feature extends)
+        for (const [sx, sy] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) {
+          const cx = cx0 + sx * hw, cy = cy0 + sy * hh;
+          if (p.poly && p.poly.length >= 3 && !p.poly.some(([x, y]) => Math.abs(x - cx) < 0.3 && Math.abs(y - cy) < 0.3)) continue;
+          if (boxes.some(b => b.minx <= cx + 1.2 && b.maxx >= cx - 1.2 && b.miny <= cy + 1.2 && b.maxy >= cy - 1.2)) continue;
+          const L = Math.min(1.5, hw, hh);
+          svg('polyline', { class: 'part corner', points: `${cx - sx * L},${cy} ${cx},${cy} ${cx},${cy - sy * L}` }, g);
         }
       }
       if (kind === 'ruin' && p.w >= 4 && p.h >= 3) {

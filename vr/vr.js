@@ -389,6 +389,7 @@ function buildTerrain() {
       if (p.poly && p.poly.length >= 3) { const xs = p.poly.map(v => v[0]), ys = p.poly.map(v => v[1]); hw = (Math.max(...xs) - Math.min(...xs)) / 2; hh = (Math.max(...ys) - Math.min(...ys)) / 2; cx0 = (Math.min(...xs) + Math.max(...xs)) / 2; cy0 = (Math.min(...ys) + Math.max(...ys)) / 2; }
       // outline point (relative to the area centre) → clipped to the area: the plate is the feature's boundary
       const clip = (tx, ty) => { let lx = tx * ac + ty * as - cx0, ly = -tx * as + ty * ac - cy0; lx = Math.max(-hw, Math.min(hw, lx)) + cx0; ly = Math.max(-hh, Math.min(hh, ly)) + cy0; return [lx * ac - ly * as, lx * as + ly * ac]; };
+      const boxes = [];
       for (const pt of p.parts) {
         const tpl = PARTS11[pt.t]; if (!tpl) continue;
         const ph = pt.k === 'dense' ? 5 : 2;
@@ -405,8 +406,22 @@ function buildTerrain() {
           const fp = new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(shape.getPoints().map(v => new THREE.Vector3(v.x, 0.12 * IN, v.y))), new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.95 }));
           fp.position.copy(m.position);
           pg.add(m, e, fp);
+          const bb = { minx: 1e9, maxx: -1e9, miny: 1e9, maxy: -1e9 };
+          for (const [x, y0] of poly) { const y = pt.flip ? -y0 : y0; const tx = pt.x + x * c - y * sn, ty = pt.y + x * sn + y * c; const lx = tx * ac + ty * as, ly = -tx * as + ty * ac; bb.minx = Math.min(bb.minx, lx); bb.maxx = Math.max(bb.maxx, lx); bb.miny = Math.min(bb.miny, ly); bb.maxy = Math.max(bb.maxy, ly); }
+          boxes.push(bb);
         }
         if (pt.label) { const lb = labelSprite(pt.label); lb.scale.set(2.4 * IN, 0.6 * IN, 1); lb.position.set(pt.x * IN, (ph + 0.8) * IN, pt.y * IN); pg.add(lb); }
+      }
+      // corners no feature reaches: white corner marker in the plate's (rotated) group – shows how far the feature extends
+      const cmat = new THREE.MeshBasicMaterial({ color: 0xf2f5f8, transparent: true, opacity: 0.9 });
+      for (const [sx, sy] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) {
+        const cx = cx0 + sx * hw, cy = cy0 + sy * hh;
+        if (p.poly && p.poly.length >= 3 && !p.poly.some(([x, y]) => Math.abs(x - cx) < 0.3 && Math.abs(y - cy) < 0.3)) continue;
+        if (boxes.some(b => b.minx <= cx + 1.2 && b.maxx >= cx - 1.2 && b.miny <= cy + 1.2 && b.maxy >= cy - 1.2)) continue;
+        const Lc = Math.min(1.5, hw, hh), t = 0.25, hc = 0.5;
+        const bx = new THREE.Mesh(new THREE.BoxGeometry(Lc * IN, hc * IN, t * IN), cmat); bx.position.set((cx - sx * Lc / 2) * IN, (hc / 2 + 0.1) * IN, (cy - sy * t / 2) * IN);
+        const bz = new THREE.Mesh(new THREE.BoxGeometry(t * IN, hc * IN, Lc * IN), cmat); bz.position.set((cx - sx * t / 2) * IN, (hc / 2 + 0.1) * IN, (cy - sy * Lc / 2) * IN);
+        g.add(bx, bz);
       }
       terrainGroup.add(pg);
       return;
