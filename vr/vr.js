@@ -568,6 +568,14 @@ function applyEventLayout() {
   app.pieces = L.pieces.map((p, i) => Object.assign({ id: 'e' + i }, p));
   app.selected = -1;
   buildTerrain(); saveTerrain(); repaint();
+  // with a game: the choice is the game's setup (Force Dispositions, attacker, terrain layout) – the setup, the table
+  // view and the other devices show the same layout; the Deployment card gives way to the event layout
+  if (app.net && app.state && app.state.stage !== 'over') {
+    const idOf = name => (WH.DISPOSITIONS.find(d => d.name === name) || {}).id || null;
+    const att = app.state.mission && app.state.mission.attacker === 1 ? 1 : 0;
+    const dd = [null, null]; dd[att] = idOf(L.attacker.disposition); dd[1 - att] = idOf(L.defender.disposition);
+    app.net.dispatch({ type: 'mission.set', dispositions: dd, attacker: att, terrainLayout: L.id, deployment: null }).catch(e => toast(e.message));
+  }
   toast(`${L.attacker.disposition} vs ${L.defender.disposition} \– Layout ${L.variant} (${L.attacker.mission} / ${L.defender.mission})`);
 }
 function setLayout(id, { fromState = false } = {}) {
