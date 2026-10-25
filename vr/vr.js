@@ -106,7 +106,22 @@ const calibDots = new THREE.Group(); scene.add(calibDots);
 // in-headset UI: 3D panel (no dom-overlay in the Quest browser) + HUD text in front of the camera
 /** One button per layout (by name), four per row. */
 /** The 11th-edition Event Companion layout in use (local play aid): chosen by the two Force Dispositions + A/B/C. */
-const eventLayout = () => (!app.state && app.local.mission.layout11) ? LAYOUTS11.find(l => l.id === app.local.mission.layout11) || null : null;
+/** The 11th-edition Event Companion layout on the table: with a game the one the setup chose (mission.terrainLayout),
+ *  else the one for the game's Force Dispositions (layout A assumed, as the app's table view); without a game the
+ *  headset's own choice. */
+const dispName = id => (id && (WH.DISPOSITIONS.find(d => d.id === id) || {}).name) || null;
+function eventLayout() {
+  const s = app.state;
+  if (!s) return app.local.mission.layout11 ? LAYOUTS11.find(l => l.id === app.local.mission.layout11) || null : null;
+  const m = s.mission || {};
+  if (s.opts && s.opts.board === 'half') return null;
+  const byId = m.terrainLayout ? LAYOUTS11.find(l => l.id === m.terrainLayout) : null;
+  if (byId) return byId;
+  const att = m.attacker === 1 ? 1 : 0;
+  const d = Array.isArray(m.dispositions) ? m.dispositions : [];
+  if (d[att] && d[1 - att]) return findLayout11(dispName(d[att]), dispName(d[1 - att]), 'A') || null;
+  return null;
+}
 const dispRow = (key, who) => ({ tab: 'mission', key, buttons: DISPOSITIONS11.map(n => ({ label: n, a: { [who]: n } })) });
 function refreshLayoutRows() { /* layouts are chosen in the Mission tab now */ }
 const panel = new Panel(THREE, {
@@ -374,7 +389,7 @@ function repaint() {
     top.position.set(ob.pos[0] * IN, 4 * IN, ob.pos[1] * IN);
     objGroup.add(top);
   }
-  $('#mission').textContent = s ? [s.mission.deployment || 'No deployment card yet', s.mission.terrainLayout ? 'Terrain: ' + (layoutById(s.mission.terrainLayout) || {}).name : ''].filter(Boolean).join(' · ') : '';
+  $('#mission').textContent = s ? [s.mission.deployment || (L ? `Event layout ${L.attacker.disposition} vs ${L.defender.disposition} – ${L.variant}${s.mission.terrainLayout === L.id ? '' : ' (layout A assumed – pick the layout in the setup)'}` : 'No deployment card yet'), s.mission.terrainLayout && !L ? 'Terrain: ' + (layoutById(s.mission.terrainLayout) || {}).name : ''].filter(Boolean).join(' · ') : '';
 }
 
 const KIND_COLOR = { ruin: 0x8d99ae, wall: 0xc9a86a, crate: 0x7fb069, crater: 0x6b4f3a, wood: 0x3d8b5f };
@@ -1169,6 +1184,10 @@ function onState(s) {
       app.layoutId = id; app.pieces = s.mission.terrainPieces.map((p, i) => Object.assign({ id: 'g' + i }, p)); app.selected = -1; buildTerrain(); saveTerrain(); $('#layout').value = '';
     } else if (saved && saved.layout === id && Array.isArray(saved.pieces)) { app.layoutId = id; app.pieces = saved.pieces; app.selected = -1; buildTerrain(); $('#layout').value = id || ''; }
     else setLayout(id, { fromState: true });
+  }
+  if (!id && !app.pieces.length) {
+    const L = eventLayout();
+    if (L && app.layoutId !== L.id) { app.layoutId = L.id; app.pieces = L.pieces.map((p, i) => Object.assign({ id: 'e' + i }, p)); app.selected = -1; buildTerrain(); $('#layout').value = L.id; }
   }
   repaint();
 }
