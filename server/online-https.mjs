@@ -26,7 +26,7 @@ const HTTPS_PORT = Number(arg('https') || process.env.BR_ONLINE_HTTPS_PORT || 44
 const HTTP_PORT = Number(arg('http') || process.env.BR_ONLINE_HTTP_PORT || 80);     // 0 = no redirect listener
 const UPSTREAM = Number(arg('upstream') || process.env.BR_ONLINE_PORT || 8420);
 // IONOS Dynamic DNS: the record of HOST follows the router's public address. Once: put the IONOS API key (API portal,
-// 'prefix.secret') into tlsionos-api-key.txt and run  node serveronline-https.mjs --dyndns-register  → tlsdyndns-url.txt;
+// 'prefix.secret') into tls\ionos-api-key.txt and run  node server\online-https.mjs --dyndns-register  → tls\dyndns-url.txt;
 // afterwards this process calls that update URL at start and every 10 minutes (IONOS sets the A record to the caller's IPv4).
 const KEY_FILE = path.join(TLS_DIR, 'ionos-api-key.txt');
 const DYN_FILE = path.join(TLS_DIR, 'dyndns-url.txt');
