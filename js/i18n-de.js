@@ -41,13 +41,17 @@ export const EXACT_TERMS = {
 
 export const PHRASES = {
   // ── main menu / lobby
-  'Main menu': 'Hauptmenü', 'Menu': 'Menü', 'New game': 'Neues Spiel', 'Host a battle on this device': 'Eine Schlacht auf diesem Gerät hosten',
+  'Main menu': 'Hauptmenü', 'Menu': 'Menü', 'New game': 'Neues Spiel', 'Host a battle on this device': 'Eine Schlacht auf diesem Gerät hosten', 'Host a battle – local (Wi-Fi) or online': 'Eine Schlacht hosten – lokal (WLAN) oder online',
   'Join game': 'Spiel beitreten', 'Nearby or by code': 'In der Nähe oder per Code', 'My armies': 'Meine Armeen', 'Build your army lists': 'Armeelisten erstellen',
   'Rulebook': 'Regelwerk', 'Core rules & missions': 'Grundregeln & Missionen', 'Finished games': 'Beendete Spiele', 'Results & battle logs': 'Ergebnisse & Schlachtberichte',
   'VR table setup': 'VR-Tischaufbau', 'Meta Quest: zones & terrain on the table': 'Meta Quest: Zonen & Gelände auf dem Tisch',
   'Meta Quest 3 · Mixed reality': 'Meta Quest 3 · Mixed Reality', 'Start VR': 'VR starten', '3D preview': '3D-Vorschau', 'Table without a game': 'Tisch ohne Spiel', 'Live view': 'Live-Ansicht', 'Open live view': 'Live-Ansicht öffnen',
   'Opening the Quest browser …': 'Quest-Browser wird geöffnet …',
-  'Without an account': 'Ohne Konto', 'Continue without account': 'Ohne Konto weiter', 'Hosting here needs an account': 'Hosten hier braucht ein Konto',
+  'Without an account': 'Ohne Konto',
+  'Local – this device, Wi-Fi/LAN': 'Lokal – dieses Gerät, WLAN/LAN', 'Online – battlereport.jlpicture.de': 'Online – battlereport.jlpicture.de',
+  'The other devices join over the Wi-Fi or LAN you are in – it needs one, mobile data alone is not enough.': 'Die anderen Geräte treten über das WLAN oder LAN bei, in dem du bist – ohne Netzwerk geht es nicht, mobile Daten allein reichen nicht.',
+  'No Wi-Fi or LAN – a local game needs one so the other devices can join. Connect to a network (or a hotspot), or host online.': 'Kein WLAN oder LAN – ein lokales Spiel braucht eins, damit die anderen Geräte beitreten können. Mit einem Netzwerk (oder Hotspot) verbinden oder online hosten.',
+  'Sign in under Account first': 'Zuerst unter Konto anmelden', 'Continue without account': 'Ohne Konto weiter', 'Hosting here needs an account': 'Hosten hier braucht ein Konto',
   'Rulebook, army lists and joining a game by its code work without an account – everything is kept in this browser. An account adds hosting games here and the sync of your lists and finished games to your other devices; what you build without one is offered for upload when you sign in later.': 'Regelwerk, Armeelisten und das Beitreten zu einem Spiel per Code gehen ohne Konto – alles bleibt in diesem Browser. Ein Konto bringt das Hosten von Spielen hier und den Abgleich deiner Listen und beendeten Spiele mit deinen anderen Geräten; was du ohne Konto baust, wird beim späteren Anmelden zum Hochladen angeboten.',
   'You use this server without an account: your lists and finished games live in this browser only. ': 'Du nutzt diesen Server ohne Konto: Deine Listen und beendeten Spiele liegen nur in diesem Browser. ',
   ' Hosting games here needs the account too. Lists built without one are offered for upload when you sign in.': ' Spiele hier hosten braucht ebenfalls das Konto. Ohne Konto erstellte Listen werden beim Anmelden zum Hochladen angeboten.',

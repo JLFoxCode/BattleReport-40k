@@ -7,7 +7,7 @@ import { askDataUpdate, checkForUpdates } from './update-popup.js';
 import { armyChoices } from './armies.js';
 import { getLang, setLang, keepTerms, setKeepTerms } from '../i18n.js';
 import { guideOn, setGuideOn } from './tutorial.js';
-import { accountInfo } from '../account.js';
+import { accountInfo, canOnline, createOnlineGame, onlineUrl } from '../account.js';
 import { prepareQr, qrReady, qrSvg } from './qr.js';
 
 // the page comes from the online server (account session, games hosted there for players apart)
@@ -106,7 +106,7 @@ function homeHtml(last, lastExists) {
         <span class="cont-role">${esc(roleLabel(last))}</span><span class="cont-go" aria-hidden="true">›</span></button>` : ''}
     ${takeoverBanners(nearbyL)}
     <nav class="menu-grid" aria-label="Main menu">
-      ${tile({ action: 'new', icon: 'play', label: 'New game', sub: guestOnline() ? 'Hosting here needs an account' : online() ? 'Host a battle on the online server' : 'Host a battle on this device', main: true })}
+      ${tile({ action: 'new', icon: 'play', label: 'New game', sub: guestOnline() ? 'Hosting here needs an account' : online() ? 'Host a battle on the online server' : 'Host a battle – local (Wi-Fi) or online', main: true })}
       ${tile({ href: '#/play/join', icon: 'join', label: 'Join game', sub: nearby ? `${nearby} game${nearby === 1 ? '' : 's'} nearby` : 'Nearby or by code' })}
       ${tile({ href: '#/armies', icon: 'army', label: 'My armies', sub: armies ? `${armies} list${armies === 1 ? '' : 's'}` : 'Build your army lists' })}
       ${tile({ href: '#/learn', icon: 'learn', label: 'Learn to play', sub: 'Step by step, phase by phase' })}
@@ -472,16 +472,32 @@ function onSubmit(e) {
   e.preventDefault();
   const code = String(f.code.value || '').trim().toUpperCase();
   if (!/^[A-Z]{4}$/.test(code)) { toast('Code: 4 letters, e.g. KXWA', 'warn'); f.code.focus(); return; }
-  const remote = window.BR && !(games || []).some(g => g.code === code) && nearbyList().find(g => g.code === code);
+  const local = (games || []).some(g => g.code === code);
+  const remote = window.BR && !local && nearbyList().find(g => g.code === code);
   if (remote) { location.href = `http://${remote.host}:${remote.port}/index.html#/g/${code}/${f.role.value}`; return; }
+  // not here and not in the Wi-Fi: with an account the code may be a game on the online server
+  if (window.BR && !local && !online() && canOnline()) {
+    toast(`${code} is not in this network – opening it on the online server …`, 'ok');
+    onlineUrl(`#/g/${code}/${f.role.value}`).then(u => { location.href = u; }).catch(e => toast(e.message || String(e), 'bad'));
+    return;
+  }
   lastCtx.nav(`#/g/${code}/${f.role.value}`);
 }
 
+const lanAddrs = () => { try { return JSON.parse(window.BR.lanIps()) || []; } catch { return []; } };
 function newGame() {
   if (guestOnline()) { toast('Hosting a game on this server needs an account – sign in under Account, or join a game by its code', 'warn', 4000); lastCtx.nav('#/account'); return; }
+  // where the game lives: this device (Wi-Fi / LAN – the other devices find it there) or the online server (account)
+  const pick = !online();
+  const onlineOk = canOnline();
   sheet({
     title: 'New game',
     body: `
+      ${pick ? `<div class="chips host-pick" role="radiogroup" aria-label="Where the game is hosted">
+        <label class="chip on"><input type="radio" name="where" value="local" checked hidden>Local – this device, Wi-Fi/LAN</label>
+        <label class="chip${onlineOk ? '' : ' disabled'}"><input type="radio" name="where" value="online" hidden${onlineOk ? '' : ' disabled'}>Online – battlereport.jlpicture.de</label>
+      </div>
+      <p class="muted small" data-where-hint>The other devices join over the Wi-Fi or LAN you are in – it needs one, mobile data alone is not enough.</p>` : ''}
       <p class="muted">Names are optional and can be changed in setup.</p>
       <label class="field"><span>Player 1</span><input type="text" name="n0" placeholder="Name" maxlength="24" autocomplete="off"></label>
       <label class="field"><span>Player 2</span><input type="text" name="n1" placeholder="Name" maxlength="24" autocomplete="off"></label>`,
@@ -489,9 +505,19 @@ function newGame() {
       { label: 'Cancel', kind: 'ghost' },
       { label: 'Create game', kind: 'primary', cta: true, keep: true, onClick: async (close, el) => {
         const names = [el.querySelector('[name=n0]').value.trim(), el.querySelector('[name=n1]').value.trim()];
+        const where = (el.querySelector('input[name=where]:checked') || {}).value || 'local';
         const b = el.querySelector('[data-sheet-action="1"]');
+        if (where === 'local' && window.BR && !lanAddrs().length) { toast('No Wi-Fi or LAN – a local game needs one so the other devices can join. Connect to a network (or a hotspot), or host online.', 'warn', 5000); return; }
         if (b) b.disabled = true;
         try {
+          if (where === 'online') {
+            const r = await createOnlineGame(names.some(Boolean) ? names : []);
+            const url = await onlineUrl(`#/g/${r.code}/setup`);
+            close();
+            toast(`Game ${r.code} created on the online server – opening it …`, 'ok');
+            location.href = url;
+            return;
+          }
           const r = await api.createGame(names.some(Boolean) ? names : []);
           close();
           toast(`Game ${r.code} created`, 'ok');
@@ -504,6 +530,11 @@ function newGame() {
       } }
     ],
     onOpen: (el, close) => {
+      const hint = el.querySelector('[data-where-hint]');
+      el.querySelectorAll('input[name=where]').forEach(r => r.addEventListener('change', () => {
+        el.querySelectorAll('.host-pick .chip').forEach(c => c.classList.toggle('on', c.querySelector('input').checked));
+        if (hint) hint.textContent = r.value === 'online' ? 'Hosted on battlereport.jlpicture.de with your account – players anywhere join on the website with the code (internet needed).' : 'The other devices join over the Wi-Fi or LAN you are in – it needs one, mobile data alone is not enough.';
+      }));
       el.querySelectorAll('input').forEach(inp => inp.addEventListener('keydown', ev => {
         if (ev.key === 'Enter') { ev.preventDefault(); const b = el.querySelector('[data-sheet-action="1"]'); if (b) b.click(); }
       }));

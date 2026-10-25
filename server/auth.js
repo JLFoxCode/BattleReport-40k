@@ -232,6 +232,17 @@ export function createAuth(opts = {}) {
   }
 
   // ------------------------------------------------------------ sessions
+  // hand-off: the installed app (Bearer token) opens the website signed in – POST /api/handoff → one-time code (60 s),
+  // GET /handoff?c=<code>&to=<#/hash> sets the cookie session and redirects to the hash (e.g. the game it created)
+  const handoffs = new Map();
+  function newHandoff(user) {
+    const t = now();
+    for (const [k, h] of handoffs) if (h.expires < t) handoffs.delete(k);
+    if (handoffs.size > 1000) handoffs.clear();
+    const code = crypto.randomBytes(24).toString('base64url');
+    handoffs.set(code, { user, expires: t + 60 * 1000 });
+    return code;
+  }
   function newSession(name, kind) {
     const token = crypto.randomBytes(32).toString('base64url');
     const t = now();
@@ -392,7 +403,25 @@ export function createAuth(opts = {}) {
   async function handle(req, res, url) {
     const p = url.pathname, m = req.method;
     if (p === '/admin' || p.startsWith('/admin/')) { await handleAdmin(req, res, url); return true; }
+    if (p === '/handoff' && m === 'GET') {
+      const c = url.searchParams.get('c') || '', to = url.searchParams.get('to') || '';
+      const h = handoffs.get(c);
+      handoffs.delete(c);
+      if (!h || h.expires < now() || !users()[h.user]) { sendText(res, 400, 'text/plain; charset=utf-8', 'This sign-in link has expired - open the game again from the app.'); return true; }
+      const token = newSession(h.user, 'cookie');
+      res.setHeader('Set-Cookie', sessionCookie(req, token, Math.floor(SESSION_MS / 1000)));
+      res.writeHead(302, { Location: '/' + (/^#\/[A-Za-z0-9\/_.%-]*$/.test(to) ? to : ''), 'Cache-Control': 'no-store' });
+      res.end();
+      log.log('Hand-off: ' + h.user + ' (' + clientIp(req) + ')');
+      return true;
+    }
     if (!p.startsWith('/api/')) return false;
+    if (p === '/api/handoff' && m === 'POST') {
+      const s = identify(req);
+      if (!s) return sendJson(res, 401, { error: 'Please sign in', login: true }), true;
+      sendJson(res, 200, { code: newHandoff(s.user) });
+      return true;
+    }
     const parts = p.split('/').filter(Boolean);
 
     if (p === '/api/session' && m === 'GET') {

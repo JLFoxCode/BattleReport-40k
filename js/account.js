@@ -45,6 +45,20 @@ export function accountInfo() {
   return { mode: st.mode, user: st.user, guest: isGuest(), server: serverAddress(), syncing: st.syncing, lastSync: st.lastSync, error: st.error, offline: st.offline, localOnly: st.user ? localOnly().length : 0, lastUser: cfg.user || '' };
 }
 
+/** Signed in with the account from the installed app (token) – online games can be created and opened. */
+export const canOnline = () => !!(st.user && (st.mode === 'remote' || st.mode === 'same'));
+/** Create a game on the online server with the account. → { code } */
+export async function createOnlineGame(names) {
+  if (!canOnline()) throw new Error('Sign in under Account first');
+  return req('POST', '/api/games', names && names.length ? { names } : {});
+}
+/** Address that opens the website signed in at this hash (the app's token becomes a cookie session there). */
+export async function onlineUrl(hash) {
+  if (st.mode === 'same') return location.origin + '/' + (hash || '');
+  const r = await req('POST', '/api/handoff', {});
+  return cfg.server + '/handoff?c=' + encodeURIComponent(r.code) + '&to=' + encodeURIComponent(hash || '');
+}
+
 /** Normalised origin of a typed server address; http only for this PC itself (no passwords in clear text). */
 export function normServer(s) {
   s = String(s || '').trim().replace(/\/+$/, '');

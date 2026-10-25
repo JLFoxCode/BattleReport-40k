@@ -75,6 +75,7 @@ async function startServer() {
 }
 
 const localUrl = () => `http://127.0.0.1:${port}/index.html`;
+const ONLINE_ORIGIN = 'https://battlereport.jlpicture.de';   // the online server (js/account.js DEFAULT_SERVER): its pages stay in the app
 
 function createWindow() {
   win = new BrowserWindow({
@@ -88,11 +89,13 @@ function createWindow() {
   const wc = win.webContents;
   // External links (https) → system browser; LAN game hosts (http) stay in the app (joining a game of another device)
   wc.setWindowOpenHandler(({ url }) => {
+    if (url.startsWith(ONLINE_ORIGIN + '/')) { wc.loadURL(url); return { action: 'deny' }; }
     if (/^https:/i.test(url)) { shell.openExternal(url); return { action: 'deny' }; }
     if (/^http:/i.test(url)) { wc.loadURL(url); return { action: 'deny' }; }
     return { action: 'deny' };
   });
   wc.on('will-navigate', (e, url) => {
+    if (url.startsWith(ONLINE_ORIGIN + '/')) return;
     if (/^https:/i.test(url)) { e.preventDefault(); shell.openExternal(url); }
   });
   // The server needs a moment on first start – retry the start page
