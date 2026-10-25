@@ -731,3 +731,10 @@ Object.assign(EXACT, {
   'Table not set – choose a layout in the Table step': 'Tisch nicht gesetzt – im Schritt Tisch ein Layout wählen',
   'Dispositions or Attacker missing': 'Dispositions oder Angreifer fehlen', 'Half table: the Event Companion layouts are for the 44"×60" battlefield – generate a layout for this half table instead (it needs a Deployment card, chosen below).': 'Tischhälfte: Die Event-Companion-Layouts gelten für das 44"×60"-Spielfeld – stattdessen ein Layout für diese Tischhälfte erzeugen (braucht eine Aufstellungskarte, unten wählen).'
 });
+// Table step: 11th edition only – the layout is the table
+Object.assign(EXACT, {
+  'Warhammer Event Companion (11th edition): three official layouts per pairing of Force Dispositions – each is the table: deployment zones, objectives inside terrain areas and the terrain areas. Events usually play A, B, C in order. Pick one – the table below, the 3D battle table and the VR headset show it.': 'Warhammer Event Companion (11. Edition): drei offizielle Layouts je Paarung der Force Dispositions – jedes ist der Tisch: Aufstellungszonen, Missionsziele in Geländeflächen und die Geländeflächen. Auf Events meist A, B, C der Reihe nach. Eins wählen – der Tisch unten, der 3D-Spieltisch und die VR-Brille zeigen es.',
+  'Half table (unofficial): pick layout A, B or C of your pairing for its deployment zones – scaled to half length – then generate the terrain for this half table.': 'Tischhälfte (inoffiziell): Layout A, B oder C eurer Paarung für seine Aufstellungszonen wählen – auf halbe Länge skaliert – dann das Gelände für diese Tischhälfte erzeugen.',
+  'Generated layout: half the Armageddon set placed by the Event Companion principles around these zones.': 'Erzeugtes Layout: das halbe Armageddon-Set nach den Event-Companion-Prinzipien um diese Zonen gesetzt.',
+  'Choose a layout first – its deployment zones are needed.': 'Zuerst ein Layout wählen – seine Aufstellungszonen werden gebraucht.'
+});

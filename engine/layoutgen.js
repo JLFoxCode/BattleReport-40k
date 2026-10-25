@@ -17,7 +17,6 @@
  * optional centre piece ('centre': true) which sits on the central objective and is its own mirror image.
  *  armageddon – Warhammer 40,000 11th edition Event Companion (Oct 2026) terrain area footprints: 7"×11.5" ×4 and
  *               8"×11.5" ×2 (dense ruins, tall), 6"×4" ×4, 10"×2.5" ×2, 6"×2" ×4 (light, low) = 16 areas
- *  gw10       – Chapter Approved 2025-26 tournament set: 12"×6" ×6, 10"×5" ×2 (tall), 6"×4" ×4 (low)
  *  half       – half table 44"×30" (casual game on half a table): half a set */
 import { LAYOUTS11 } from '../data/layouts11.js';
 /* Calibrated on the 45 official layouts (measured 2026-10-23): 12 dense + 4 light areas – dense: 7×11.5 ×4,
@@ -26,7 +25,6 @@ import { LAYOUTS11 } from '../data/layouts11.js';
  * objectives (nearly) always inside dense areas, the central objective inside the interlocking 8×11.5 pair. */
 export const SETS = {
   armageddon: { size: [44, 60], centreBlock: true, pieces: [[7, 11.5, true], [7, 11.5, true], [10, 2.5, true], [6, 4, true], [6, 4, false], [6, 2, true], [6, 2, false]] },
-  gw10: { size: [44, 60], centre: [12, 6, true], pieces: [[12, 6, true], [12, 6, true], [10, 5, true], [6, 4, false], [6, 4, false]] },
   half: { size: [44, 30], centre: 'wedge', pieces: [[7, 11.5, true], [6, 4, true], [6, 2, false]] }   // half the Armageddon set: one wedge plate in the centre, 2× 7×11.5, 2× 6×4, 2× 6×2
 };
 SETS.full = SETS.armageddon;

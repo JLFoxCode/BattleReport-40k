@@ -231,7 +231,7 @@ export function createPhotoView(el, opts = {}) {
   const stage = q('[data-stage]'), zoomEl = q('[data-zoom]'), content = q('[data-content]');
   const img = q('[data-img]'), rect = q('[data-rect]'), mapwrap = q('[data-mapwrap]'), draw = q('[data-draw]');
   const hint = q('[data-hint]'), big = q('[data-big]');
-  const map = createMap(q('[data-map]'), { fill: true, rot: 0, interactive: false, terrain: o.data?.TERRAIN_LAYOUTS || [] });
+  const map = createMap(q('[data-map]'), { fill: true, rot: 0, interactive: false });
   if (state) map.update(state, derived);
 
   /* ── Koordinaten ── */

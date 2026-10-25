@@ -467,7 +467,7 @@ function createCamera(root, ctx0) {
       } catch (e) { log('Entzerrte Vorschau fehlgeschlagen: ' + e.message, 'warn'); }
       const gridEl = stage.querySelector('[data-grid]');
       miniMap?.destroy();
-      miniMap = createMap(gridEl, { fill: true, rot: 0, interactive: false, terrain: ctx.data?.TERRAIN_LAYOUTS || [] });
+      miniMap = createMap(gridEl, { fill: true, rot: 0, interactive: false });
       miniMap.update(ctx.state, ctx.derived);
       gridEl.querySelector('.map')?.style.setProperty('background', 'transparent');
       side.innerHTML = `<div class="card ${scaleDev > 0.02 ? 'warn' : 'ok'}"><div class="card-head"><span class="title">Ergebnis</span><span class="badge ${fit.rms <= 0.15 ? 'ok' : 'warn'}">±${fit.rms.toFixed(2)}"</span></div>

@@ -1287,7 +1287,9 @@ function applyAction(a, btn) {
     else { const p = $('#panels'); p.hidden = !p.hidden; if (btn) btn.textContent = p.hidden ? 'Menu' : 'Hide'; }
   }
   else if (a.act === 'layoutPrev' || a.act === 'layoutNext') {
-    const ids = [null].concat(TERRAIN_LAYOUTS.map(t => t.id));
+    // through the three layouts (A/B/C) of the current pairing
+    const cur = app.layoutId && LAYOUTS11.find(l => l.id === app.layoutId);
+    const ids = cur ? VARIANTS11.map(v => (findLayout11(cur.attacker.disposition, cur.defender.disposition, v) || {}).id).filter(Boolean) : LAYOUTS11.slice(0, 3).map(l => l.id);
     const i = Math.max(0, ids.indexOf(app.layoutId));
     setLayout(ids[(i + (a.act === 'layoutNext' ? 1 : ids.length - 1)) % ids.length]);
   }

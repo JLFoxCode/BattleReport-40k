@@ -2,7 +2,7 @@
  * Reine HTML-Erzeuger; Events werden in setup.js per Delegation abgefangen (data-action / data-field).
  * All texts English, card names/keywords 1:1 as printed by GW in uppercase. */
 import { esc, btn, chip, badge, sheet, confirmSheet, toast, playerLabel } from './components.js';
-import { mapThumb, createMap } from './map.js';
+import { createMap } from './map.js';
 import { tableData } from './table3d.js';
 import { radiusFor, parseArmyText } from '../../engine/reduce.js';
 import { loadOrig, origArmyRules, origDetachmentRule } from '../data/orig.js';
@@ -10,7 +10,7 @@ import { loadDatasheets, matchUnit, normName, ALLY_PACKS } from '../data/datashe
 import { armyChoices, armyForGame } from './armies.js';
 import { WH } from '../../data/rules.js';
 import { LAYOUTS11, VARIANTS11, findLayout11 } from '../../data/layouts11.js';
-import { TERRAIN_LAYOUTS } from '../../data/terrain.js';
+import { deploymentForLayout } from '../../engine/derive.js';
 
 /* Army rule + detachment rules: BSData (New Recruit) only – one source for everything about the army. */
 const BS = new Map(); // factionId → loaded data | null (loading) | false (none)
@@ -462,27 +462,28 @@ export function tableStep(ctx, ui) {
   const dispA = nameOf(m.dispositions[att]), dispD = nameOf(m.dispositions[1 - att]);
   const cur = m.terrainLayout || null;
   const curEc = cur ? LAYOUTS11.find(l => l.id === cur) || null : null;
-  const pairing = !half && dispA && dispD ? VARIANTS11.map(v => findLayout11(dispA, dispD, v)).filter(Boolean) : [];
+  const pairing = dispA && dispD ? VARIANTS11.map(v => findLayout11(dispA, dispD, v)).filter(Boolean) : [];
   const other = curEc && !pairing.some(l => l.id === curEc.id) ? curEc : null;
   const td = tableData(state);
-  const set = !!m.deployment;
   const isRnd = String(cur || '').startsWith('random-');
 
   let pick;
-  if (half) {
-    pick = `<p class="muted small">${esc('Half table: the Event Companion layouts are for the 44"×60" battlefield – generate a layout for this half table instead (it needs a Deployment card, chosen below).')}</p>
-    <div class="chips terrain-chips">
-      ${btn({ label: isRnd ? 'New random layout' : 'Random layout', kind: 'primary', small: true, action: 'terrain-random' })}
-      ${chip({ label: 'No terrain layout', cls: 'sm', on: !cur, action: 'terrain', data: { id: '' } })}
-      ${isRnd ? `<span class="muted small self-center">${esc('Generated layout: half the Armageddon set placed by the Event Companion principles around this Deployment card.')}</span>` : ''}
-    </div>`;
-  } else if (!pairing.length) {
+  if (!pairing.length) {
     pick = `<div class="card flat center table-hint">
       <p class="small muted">Choose both Force Dispositions first – the three official Event Companion layouts of that pairing appear here.</p>
       ${btn({ label: 'Back to Mission', kind: 'ghost', small: true, action: 'step', data: { i: 3 } })}
     </div>`;
+  } else if (half) {
+    // casual half table: the layout gives the deployment zones (scaled to half length), the terrain comes from the generator
+    pick = `<p class="muted small">${esc('Half table (unofficial): pick layout A, B or C of your pairing for its deployment zones – scaled to half length – then generate the terrain for this half table.')}</p>
+    <div class="layout-grid">${pairing.map(l => layoutCard(l, att, !!m.deployment && m.deployment === deploymentForLayout(l.id), { pieces: false })).join('')}</div>
+    <div class="chips terrain-chips mt">
+      ${btn({ label: isRnd ? 'New random layout' : 'Random layout', kind: 'primary', small: true, action: 'terrain-random', disabled: !m.deployment })}
+      ${chip({ label: 'No terrain layout', cls: 'sm', on: !cur, action: 'terrain', data: { id: '' } })}
+      ${isRnd ? `<span class="muted small self-center">${esc('Generated layout: half the Armageddon set placed by the Event Companion principles around these zones.')}</span>` : ''}
+    </div>`;
   } else {
-    pick = `<p class="muted small">Warhammer Event Companion (11th edition): three official layouts per pairing of Force Dispositions. Events usually play A, B, C in order. Pick one – the table below, the 3D battle table and the VR headset show it.</p>
+    pick = `<p class="muted small">Warhammer Event Companion (11th edition): three official layouts per pairing of Force Dispositions – each is the table: deployment zones, objectives inside terrain areas and the terrain areas. Events usually play A, B, C in order. Pick one – the table below, the 3D battle table and the VR headset show it.</p>
     <div class="layout-grid">${pairing.concat(other ? [other] : []).map(l => layoutCard(l, att, cur === l.id)).join('')}</div>`;
   }
 
@@ -493,7 +494,7 @@ export function tableStep(ctx, ui) {
       <span><i class="sw round"></i>objectives – inside a terrain area the whole area is the control range</span>
     </div>`;
   const title = td.terrainName ? `<span class="gw-name">${esc(td.terrainName)}</span>` : td.deployment ? `<span class="gw-name">${esc(td.deployment)}</span> · no terrain layout` : 'No layout yet';
-  const sub = [td.deployment ? `<span>Deployment card</span>: <span class="gw-name">${esc(td.deployment)}</span>` : '', '<span>Attacker’s edge at the top</span>'].filter(Boolean).join(' · ');
+  const sub = [td.deployment ? `<span>Deployment</span>: <span class="gw-name">${esc(td.deployment)}</span>` : '', '<span>Attacker’s edge at the top</span>'].filter(Boolean).join(' · ');
   const preview = `
     <h3 class="title mt">Table preview</h3>
     <div class="card table-card">
@@ -510,42 +511,23 @@ export function tableStep(ctx, ui) {
       <p class="xs muted">Without a headset: build the table by this preview – the 3D battle table has measurements for every piece.</p>
     </div>`;
 
-  const otherOpen = curEc ? '' : ' open';   // folded away once an Event Companion layout is chosen
-  const others = half ? `
-    <h3 class="title mt">Deployment card</h3>
-    ${depGrid(m, att, WH)}` : `
-    <details class="other-layouts"${otherOpen}>
-      <summary>Other layouts</summary>
-      <p class="muted small">Chapter Approved layouts, a random layout or no terrain – these need a Deployment card, chosen below.</p>
-      <div class="chips terrain-chips">
-        ${(TERRAIN_LAYOUTS || []).map(t => chip({ label: t.short || t.name, cls: 'sm', on: cur === t.id, action: 'terrain', data: { id: t.id } })).join('')}
-        ${chip({ label: 'No terrain layout', cls: 'sm', on: !cur, action: 'terrain', data: { id: '' } })}
-        ${btn({ label: isRnd ? 'New random layout' : 'Random layout', kind: 'ghost', small: true, action: 'terrain-random', title: 'The full Armageddon set placed by the Event Companion principles around the Deployment card' })}
-      </div>
-      ${cur && !curEc && !isRnd && !(TERRAIN_LAYOUTS || []).some(t => t.id === cur) ? `<p class="muted xs">Current: ${esc(cur)} (set by the VR headset).</p>` : ''}
-      <div class="label mt">Deployment card (only without an Event Companion layout – that layout brings its own zones)</div>
-      ${depGrid(m, att, WH)}
-    </details>`;
-
   return `
     <h3 class="title">Event Companion layout</h3>
     ${pick}
     ${preview}
-    ${others}
-    ${set ? '' : `<p class="small warn-text mt">Choose a layout to continue – the setup goes on once the table is set.</p>`}`;
+    ${tableSet(state) ? '' : `<p class="small warn-text mt">Choose a layout to continue – the setup goes on once the table is set.</p>`}`;
 }
 
-function depGrid(m, att, WH) {
-  return `<div class="dep-grid">${WH.DEPLOYMENTS.map(name => `
-      <div class="card dep-card ${m.deployment === name ? 'active' : ''}" data-action="dep" data-name="${esc(name)}" role="radio" aria-checked="${m.deployment === name}" tabindex="0">
-        ${mapThumb(name, att)}
-        <div class="dep-name">${esc(name)}</div>
-      </div>`).join('')}</div>`;
+/** The table is set: an Event Companion layout (full table), or – casual half table – a layout's deployment zones. */
+export function tableSet(state) {
+  const m = state.mission || {};
+  if (state.opts && state.opts.board === 'half') return !!m.deployment;
+  return !!(m.terrainLayout && LAYOUTS11.some(l => l.id === m.terrainLayout));
 }
 
-function layoutCard(l, att, on) {
+function layoutCard(l, att, on, { pieces = true } = {}) {
   return `<div class="card layout-card ${on ? 'active' : ''}" data-action="terrain" data-id="${esc(l.id)}" role="radio" aria-checked="${on}" tabindex="0">
-      ${terrainThumb(l, { zones: true, att })}
+      ${terrainThumb(l, { zones: true, att, pieces })}
       <div class="dep-name">Layout ${esc(l.variant)}</div>${on ? badge('chosen', 'ok') : ''}
       <div class="xs muted gw-name">${esc(l.attacker.disposition)} vs ${esc(l.defender.disposition)}</div>
     </div>`;
@@ -568,7 +550,7 @@ export function mountTablePreview(root, ctx) {
   const wide = el.clientWidth > 560;
   const [w, h] = td.size || [44, 60];
   el.style.aspectRatio = wide ? `${h} / ${w}` : `${w} / ${h}`;
-  const map = createMap(el, { fill: true, rot: wide ? 90 : 0, interactive: false, terrain: TERRAIN_LAYOUTS || [] });
+  const map = createMap(el, { fill: true, rot: wide ? 90 : 0, interactive: false });
   const objectives = td.objectives.map(o => ({ id: o.id, name: o.name, pos: o.pos, home: o.home, exp: o.exp, ctrl: null, terrainObj: !!o.area }));
   const st = Object.assign({}, s, { objectives, players: (s.players || []).map(p => Object.assign({}, p, { units: [] })), mission: Object.assign({}, s.mission, { terrainLayout: td.terrainId }) });
   map.update(st, td.zones ? { zones: { a: td.zones.a, d: td.zones.d, line: td.line || null, circle: td.circle || null } } : undefined);
@@ -592,7 +574,7 @@ const vpText = (vp, mode) => {
 
 /** Small SVG preview of a terrain layout (44×60, origin top left) – with { zones, att } also the layout's deployment
  *  zones (Attacker = player att) and its objectives. */
-export function terrainThumb(layout, { zones = false, att = 0 } = {}) {
+export function terrainThumb(layout, { zones = false, att = 0, pieces = true } = {}) {
   const pa = att === 1 ? 1 : 0, pd = 1 - pa;
   const poly = pts => pts.map(q => q.join(',')).join(' ');
   let s = `<svg class="map-thumb terrain-thumb" viewBox="0 0 44 60" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -602,7 +584,7 @@ export function terrainThumb(layout, { zones = false, att = 0 } = {}) {
     if (layout.zones.a) s += `<polygon class="map-zone p${pa}" style="--pc:var(--p${pa})" points="${poly(layout.zones.a)}"/>`;
     if (layout.zones.d) s += `<polygon class="map-zone p${pd}" style="--pc:var(--p${pd})" points="${poly(layout.zones.d)}"/>`;
   }
-  for (const p of (layout && layout.pieces) || []) {
+  for (const p of (pieces && layout && layout.pieces) || []) {
     const k = p.kind || 'ruin';
     const shape = k === 'crater' || k === 'wood'
       ? `<ellipse class="terrain ${esc(k)}" rx="${p.w / 2}" ry="${p.h / 2}"/>`

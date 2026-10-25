@@ -12,12 +12,11 @@
  *          #/rules | #/g/CODE/rules Regelbuch (globale Suche; ohne Spiel nutzbar)
  *
  * Jedes UI-Modul exportiert render(root, ctx) mit
- *   ctx = { state, derived, me, code, view, online, dispatch, undo, nav, net, rerender, data: { WH, FACTIONS, TERRAIN_LAYOUTS } }
+ *   ctx = { state, derived, me, code, view, online, dispatch, undo, nav, net, rerender, data: { WH, FACTIONS } }
  */
 import { derive } from '../engine/index.js';
 import { WH } from '../data/rules.js';
 import { FACTIONS } from '../data/factions/index.js';
-import { TERRAIN_LAYOUTS } from '../data/terrain.js';
 import { createNet, api } from './net.js';
 import { saveFinished, archiveHref } from './archive.js';
 import * as archiveView from './ui/archive-view.js';
@@ -44,7 +43,7 @@ import { initAccount, needsLogin, onAccount } from './account.js';
 
 const LS_KEY = 'sb40k.last';
 const MODULES = { lobby, setup, player, desktop, map, table3d, table, camera, markers, photo, rules: rulebook, archive: archiveView, armies, learn: tutorial, account };
-const data = Object.freeze({ WH, FACTIONS, TERRAIN_LAYOUTS });
+const data = Object.freeze({ WH, FACTIONS });
 
 // ---------------------------------------------------------------- Store
 export const store = {

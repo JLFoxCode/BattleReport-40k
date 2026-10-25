@@ -278,7 +278,7 @@ export function createMap(el, opts = {}) {
       setAttrs(e.g, { transform: `translate(${p.x} ${p.y})` });
       const c = ctrlOf(ob);
       cls(e.g, 'c0', c === 0); cls(e.g, 'c1', c === 1);
-      cls(e.g, 'terrain-obj', !!ob.terrainObj);   // 11th edition: inside a terrain area the whole area is the range, not 3"
+      cls(e.g, 'terrain-obj', !!(ob.terrainObj || ob.area));   // 11th edition: inside a terrain area the whole area is the range, not 3"
       const isHome = ob.home === 0 || ob.home === 1;
       e.home.style.display = isHome ? '' : 'none';
       e.icon.style.display = isHome ? '' : 'none';

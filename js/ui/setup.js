@@ -6,7 +6,7 @@ import { esc, btn, chip, badge, confirmSheet, toast, colorOf, playerLabel } from
 import { prepareQr, qrReady, joinUrl } from './qr.js';
 import { randomLayoutAction } from './random-layout.js';
 import { sequenceStrip } from './sequence.js';
-import { armyStep, unitsStep, missionStep, tableStep, mountTablePreview, tableLabel, secStep, facListHtml, openUnitSheet, openImportSheet, importSavedArmy, dpLimit, dpOf, SIZE_LABEL } from './setup-steps.js';
+import { armyStep, unitsStep, missionStep, tableStep, tableSet, mountTablePreview, tableLabel, secStep, facListHtml, openUnitSheet, openImportSheet, importSavedArmy, dpLimit, dpOf, SIZE_LABEL } from './setup-steps.js';
 
 const STEPS = [
   { id: 'players', label: 'Players' },
@@ -164,11 +164,10 @@ function missionState(s) {
   const parts = [m.dispositions.every(Boolean), m.attacker === 0 || m.attacker === 1, m.primary.every(Boolean)];
   return parts.every(Boolean) ? 'ok' : parts.some(Boolean) ? 'warn' : '';
 }
-/** The table is set once the game has its Deployment card – an Event Companion layout brings it, the other layouts need
- *  it chosen by hand. The setup only goes on from the Table step once that is the case. */
+/** The table is set once an Event Companion layout is chosen (it brings zones, objectives, terrain and its Deployment
+ *  card); on the casual half table once a layout's zones are. The setup only goes on from the Table step then. */
 function tableState(s) {
-  const m = s.mission;
-  return m.deployment ? 'ok' : m.dispositions.every(Boolean) ? 'warn' : '';
+  return tableSet(s) ? 'ok' : s.mission.dispositions.every(Boolean) ? 'warn' : '';
 }
 function secOk(ctx, ui, p) {
   const sec = ctx.state.players[p].secondaries;
@@ -218,7 +217,7 @@ function playerCard(ctx, p) {
 function optionsCard(ctx) {
   const o = ctx.state.opts, WH = ctx.data.WH;
   // 11th edition: both battle sizes are played on the 44"×60" battlefield with the same Deployment cards and layouts (Chapter
-  // Approved 2026-27 / Event Companion name no Incursion maps – unlike the 10th edition's 44"×30" Incursion cards)
+  // Approved 2026-27 / Event Companion name no Incursion maps)
   const sizeNote = { strike: 'Strike Force · 2000 points · 3 Detachment Points · battlefield 44"×60"', incursion: 'Incursion · 1000 points · 2 Detachment Points · same 44"×60" battlefield, Deployment cards and layouts as Strike Force' };
   const dp = dpLimit(ctx.state), dpAuto = o.dp == null;
   return `
@@ -416,13 +415,12 @@ async function onClick(e) {
     case 'unit-edit': return openUnitSheet(ctx, p, s.players[p].units.find(u => u.id === d.id) || null);
     case 'import': return openImportSheet(ctx, p);
 
-    case 'dep': return ctx.dispatch({ type: 'mission.set', deployment: d.name });
     case 'attacker': return ctx.dispatch({ type: 'mission.set', attacker: s.mission.attacker === p ? null : p });
     case 'disp': { if (s.mission.dispositions[p] === d.id) return;   // null = „behalten“ im Reducer, Abwählen gibt es nicht
       const disp = [null, null]; disp[p] = d.id; return ctx.dispatch({ type: 'mission.set', dispositions: disp }); }
     case 'terrain': return ctx.dispatch({ type: 'mission.set', terrainLayout: d.id || null });
     case 'terrain-random': {
-      if (!s.mission.deployment) return toast('Choose the Deployment card first.', 'warn');
+      if (!s.mission.deployment) return toast('Choose a layout first – its deployment zones are needed.', 'warn');
       const a = randomLayoutAction(s);
       return a ? ctx.dispatch(a) : toast('No fair layout found – try again', 'warn');
     }

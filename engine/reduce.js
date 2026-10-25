@@ -4,7 +4,7 @@ import { WH } from '../data/rules.js';
 import { factionById, detachmentById } from '../data/factions/index.js';
 import { shuffle } from './rng.js';
 import { dist, pointInPolygon, round2 } from './geometry.js';
-import { deriveBase, zoneOf, activePlayer, deploymentMapOf, boardSize, deploymentForLayout } from './derive.js';
+import { deriveBase, zoneOf, activePlayer, deploymentMapOf, boardSize, deploymentForLayout, objectiveArea } from './derive.js';
 import { checkpointItems, checkpointKey, applyCaps, vpTotals, CAPS } from './scoring.js';
 import { stratById, stratCheck, useKeyPhase } from './stratagems.js';
 
@@ -200,6 +200,10 @@ function buildObjectives(s) {
     mk('o4', 'Expansion 2', 'exp', map.exp[1], null),
     mk('o5', 'Center', 'central', map.centre || [22, 30], null)
   ];
+  // 11th edition: an objective inside a terrain area is a terrain objective – that area is its control range
+  const m = s.mission || {};
+  const pieces = map.pieces || (String(m.terrainLayout || '').startsWith('random-') && Array.isArray(m.terrainPieces) ? m.terrainPieces : []);
+  for (const o of objs) { const area = objectiveArea(o.pos, pieces); if (area) o.area = area.map(q => [round2(q[0]), round2(q[1])]); }
   return objs;
 }
 
@@ -674,7 +678,7 @@ H['player.ready'] = (s, a) => {
 H['mission.set'] = (s, a) => {
   const m = s.mission;
   const changes = [];
-  const before = { deployment: m.deployment, attacker: m.attacker };
+  const before = { deployment: m.deployment, attacker: m.attacker, terrainLayout: m.terrainLayout, terrainPieces: m.terrainPieces };
   if ('deployment' in a) {
     if (a.deployment != null && !WH.DEPLOYMENT_MAPS[a.deployment]) fail('Unknown deployment map');
     m.deployment = a.deployment || null; changes.push('deployment ' + (m.deployment || '–'));
@@ -722,7 +726,7 @@ H['mission.set'] = (s, a) => {
     }
   }
   computePrimary(s);
-  if (m.deployment && (before.deployment !== m.deployment || before.attacker !== m.attacker || !s.objectives.length)) {
+  if (m.deployment && (before.deployment !== m.deployment || before.attacker !== m.attacker || before.terrainLayout !== m.terrainLayout || before.terrainPieces !== m.terrainPieces || !s.objectives.length)) {
     s.objectives = buildObjectives(s);
     recalcControl(s);
   }

@@ -4,7 +4,7 @@ import { WH } from '../data/rules.js';
 import { halfMap } from '../data/half-table.js';
 import { LAYOUTS11 } from '../data/layouts11.js';
 import { factionById, detachmentById } from '../data/factions/index.js';
-import { dist, pointInPolygon, centroid, sideOfLine } from './geometry.js';
+import { pt, dist, pointInPolygon, centroid, sideOfLine } from './geometry.js';
 import { stratsWithAvailability, fitsPhase } from './stratagems.js';
 import { autoContext, evalCard, playerCards, currentMoment, checkpointKey, checkpointItems, capUsage, vpTotals, CAPS, turnNo } from './scoring.js';
 
@@ -22,7 +22,50 @@ export function attackerOf(state) { return state.mission && state.mission.attack
 export function boardSize(state) { return state && state.opts && state.opts.board === 'half' ? [44, 30] : (WH.MAP_SIZE || [44, 60]); }
 /** The game's Deployment card as { zones: { a, d }, line, circle, home: { a, d }, exp: [..], centre } – the Chapter Approved
  *  card, or the same card scaled to half length for a half-table game. */
+/** The 11th-edition Event Companion layout of the game (mission.terrainLayout): the table – deployment zones, the
+ *  objectives (inside terrain areas) and the terrain areas. null without one (half table, generated layout). */
+export function eventLayoutOf(state) {
+  const id = state && state.mission && state.mission.terrainLayout;
+  if (!id || (state.opts && state.opts.board === 'half')) return null;
+  return LAYOUTS11.find(l => l.id === id) || null;
+}
+/** Footprint of a terrain area in table inches: the rotated rectangle or its irregular outline. */
+export function footprint(p) {
+  const r = (p.rot || 0) * Math.PI / 180, c = Math.cos(r), sn = Math.sin(r);
+  const pts = p.poly && p.poly.length >= 3 ? p.poly : [[-p.w / 2, -p.h / 2], [p.w / 2, -p.h / 2], [p.w / 2, p.h / 2], [-p.w / 2, p.h / 2]];
+  return pts.map(([x, y]) => [p.x + x * c - y * sn, p.y + x * sn + y * c]);
+}
+/** The terrain area an objective marker sits in – a terrain objective's range is that whole area (11th edition) – as
+ *  its outline, or null when the marker is in the open (then: within 3" horizontally). */
+export function objectiveArea(pos, pieces) {
+  const p = (pieces || []).find(q => q && q.w > 0 && pointInPolygon(pos, footprint(q)));
+  return p ? footprint(p) : null;
+}
+function distToPoly(pos, poly) {
+  const q = pt(pos); let best = Infinity;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const ax = poly[j][0], ay = poly[j][1], bx = poly[i][0], by = poly[i][1];
+    const dx = bx - ax, dy = by - ay, l2 = dx * dx + dy * dy;
+    const t = l2 ? Math.max(0, Math.min(1, ((q.x - ax) * dx + (q.y - ay) * dy) / l2)) : 0;
+    best = Math.min(best, Math.hypot(q.x - (ax + t * dx), q.y - (ay + t * dy)));
+  }
+  return best;
+}
+
 export function deploymentMapOf(state) {
+  const L = eventLayoutOf(state);
+  if (L) {
+    // the layout is the table: its zones and its objectives; the territory line of the Deployment card with the same
+    // zone shape (the layouts carry none)
+    const card = WH.DEPLOYMENT_MAPS[deploymentForLayout(L.id)] || null;
+    const home = { a: null, d: null }, exp = []; let centre = null;
+    for (const o of L.objectives || []) {
+      if (o.kind === 'home') home[o.owner === 'a' ? 'a' : 'd'] = o.pos;
+      else if (o.kind === 'central') centre = o.pos;
+      else exp.push(o.pos);
+    }
+    return { zones: { a: L.zones.a, d: L.zones.d }, line: card ? ((card.zones && card.zones.line) || card.line || null) : null, circle: null, home, exp, centre: centre || [22, 30], pieces: L.pieces, layout: L };
+  }
   const name = state && state.mission && state.mission.deployment;
   if (!name) return null;
   if (state.opts && state.opts.board === 'half') { const m = halfMap(name); return m ? Object.assign({}, m, { zones: m.zones }) : null; }
@@ -95,6 +138,9 @@ export function nmlFn(state) {
 export function unitInRange(unit, obj) {
   if (!unit || !unit.pos || !obj || !obj.pos) return false;
   if (unit.status === 'destroyed') return false;
+  // 11th edition terrain objective: a unit is within range of it while it is within that terrain area – here: the unit's
+  // centre inside the area or its base touching the outline
+  if (Array.isArray(obj.area) && obj.area.length >= 3) return pointInPolygon(unit.pos, obj.area) || distToPoly(unit.pos, obj.area) <= (Number(unit.r) || 0) + 1e-9;
   return dist(unit.pos, obj.pos) <= OBJ_RANGE + (Number(unit.r) || 0) + 1e-9;
 }
 

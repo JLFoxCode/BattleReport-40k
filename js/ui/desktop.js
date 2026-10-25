@@ -12,6 +12,7 @@
    ═══════════════════════════════════════════════════════════════════ */
 import { esc, colorOf } from './components.js';
 import { createMap } from './map.js';
+import { LAYOUTS11 } from '../../data/layouts11.js';
 
 const ROUNDS = 5;
 const MEASURE_MS = 10000;
@@ -109,7 +110,7 @@ function build(root, ctx) {
       cap: el.querySelector('.desk-photo-cap')
     }
   };
-  d.map = createMap(d.mapEl, { fill: true, rot: 90, interactive: false, terrain: ctx.data.TERRAIN_LAYOUTS || [] });
+  d.map = createMap(d.mapEl, { fill: true, rot: 90, interactive: false });
   d.photo.img.addEventListener('load', () => layoutPhoto(d));
   d.photo.img.addEventListener('error', () => { d.photo.cap.textContent = 'Foto konnte nicht geladen werden'; });
   root.__desk = d;
@@ -295,7 +296,7 @@ function layoutPhoto(d) {
   p.ov.style.top = oy.toFixed(1) + 'px';
   p.ov.style.transform = css;
   if (!p.ovMap) {
-    p.ovMap = createMap(p.ovMapEl, { fill: true, rot: 0, interactive: false, terrain: d.ctx.data.TERRAIN_LAYOUTS || [] });
+    p.ovMap = createMap(p.ovMapEl, { fill: true, rot: 0, interactive: false });
   }
   p.ovMap.update(d.ctx.state, d.ctx.derived || {});
 }
@@ -502,7 +503,8 @@ function renderLegend(d) {
   const WH = ctx.data.WH;
   const att = state.mission && state.mission.attacker === 1 ? 1 : 0;
   const dep = state.mission && state.mission.deployment;
-  const terrain = state.mission && state.mission.terrainLayout ? (ctx.data.TERRAIN_LAYOUTS || []).find(t => t.id === state.mission.terrainLayout) : null;
+  const L11 = state.mission && state.mission.terrainLayout ? LAYOUTS11.find(t => t.id === state.mission.terrainLayout) : null;
+  const terrain = L11 ? { name: `${L11.attacker.disposition} vs ${L11.defender.disposition} · Layout ${L11.variant}` } : null;
   const twist = state.mission && state.mission.twist ? (WH.TWISTS || []).find(t => t.id === state.mission.twist) : null;
   const parts = [
     `<span class="lg p0"><i class="sw"></i>${esc(nameOf(state, 0))}</span>`,

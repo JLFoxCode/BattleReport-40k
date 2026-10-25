@@ -1,7 +1,8 @@
 /* VR remote control (phone / PC): sends UI actions to the headset through the game server (signal { type: 'vr', … },
  * the same keys as the buttons in vr/index.html) and shows what the headset reports back (signal 'vr.status').
  * Part of the separate VR module – nothing of the app loads it. */
-import { TERRAIN_LAYOUTS } from '../data/terrain.js';
+import { LAYOUTS11 } from '../data/layouts11.js';
+const layoutName = l => `${l.attacker.disposition} vs ${l.defender.disposition} · ${l.variant}`;
 import { connect } from './net.js';
 
 const $ = s => document.querySelector(s);
@@ -18,12 +19,12 @@ function setStatus(s) {
   $('#login').hidden = s !== 'login';
 }
 function showHeadset(st) {
-  const layout = TERRAIN_LAYOUTS.find(t => t.id === st.layout);
+  const layout = LAYOUTS11.find(t => t.id === st.layout);
   $('#hs-text').textContent = [
     st.xr ? (st.xr === 'ar' ? 'In mixed reality' : 'In VR') : 'Page open, not in the headset yet',
     st.calibrated ? `calibrated (edge ${st.edge}")` : 'not calibrated',
     'tool: ' + st.tool + (st.tool === 'ring' ? ' ' + st.ringR + '"' : ''),
-    (layout ? layout.name : 'no layout') + ', ' + st.pieces + ' pieces',
+    (layout ? layoutName(layout) : String(st.layout || '').startsWith('random-') ? 'random layout' : 'no layout') + ', ' + st.pieces + ' pieces',
     st.band === 'infiltrate' ? '9" band on' : '', st.grid ? 'grid on' : '', st.mirror ? 'mirrored' : ''
   ].filter(Boolean).join(' · ');
   $$('[data-tool]').forEach(b => b.classList.toggle('on', b.dataset.tool === st.tool));
@@ -52,7 +53,7 @@ function openGame(c) {
   });
 }
 
-$('#layout').innerHTML = '<option value="">No terrain layout</option>' + TERRAIN_LAYOUTS.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
+$('#layout').innerHTML = '<option value="">No terrain layout</option>' + LAYOUTS11.map(t => `<option value="${t.id}">${layoutName(t)}</option>`).join('');
 $('#layout').addEventListener('change', e => send({ layout: e.target.value || '' }));
 document.addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return;

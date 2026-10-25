@@ -9,7 +9,6 @@
    Battlefield inches (44 × 60), origin top left, Attacker's edge at y = 0 like data/rules.js; table x → X, y → Z, up = Y.
    ═══════════════════════════════════════════════════════════════════ */
 import { WH } from '../../data/rules.js';
-import { TERRAIN_LAYOUTS } from '../../data/terrain.js';
 import { LAYOUTS11, PARTS11, DISPOSITIONS11, VARIANTS11, findLayout11 } from '../../data/layouts11.js';
 import { esc, btn, chip, toast, colorOf } from './components.js';
 import { deploymentMapOf, boardSize } from '../../engine/derive.js';
@@ -65,7 +64,6 @@ export function tableData(state) {
     const L = findLayout11(nameOf(m.dispositions[att]), nameOf(m.dispositions[1 - att]), 'A');
     if (L) { ec = L; tl = L.id; assumed = true; }
   }
-  const ca = !ec && tl ? TERRAIN_LAYOUTS.find(l => l.id === tl) || null : null;
   const rnd = tl && String(tl).startsWith('random-') && Array.isArray(m.terrainPieces) ? m.terrainPieces : null;
   const dep = deploymentMapOf(state);                      // the card, scaled to half length on a half table
   const zones = ec ? ec.zones : dep ? dep.zones : null;
@@ -90,16 +88,16 @@ export function tableData(state) {
   } else {
     objectives = stObjs.filter(o => o && o.pos).map(o => ({ id: o.id, name: o.name || o.id, pos: { x: o.pos.x ?? o.pos[0], y: o.pos.y ?? o.pos[1] }, home: o.home === 0 || o.home === 1 ? o.home : null, exp: !!o.exp, ctrl: ctrlOf(o) }));
   }
-  const pieces = ec ? ec.pieces : ca ? ca.pieces : rnd ? rnd : [];
+  const pieces = ec ? ec.pieces : rnd ? rnd : [];
   // 11th edition: an objective inside a terrain area is a terrain objective – a model is within range of it while it is
   // within that terrain area (otherwise: within 3" horizontally). → area = footprint of that terrain area, or null
   for (const o of objectives) { const i = pieces.findIndex(p => inPiece(o.pos, p)); o.area = i >= 0 ? footprint(pieces[i]) : null; }
-  const terrainName = ec ? `${ec.attacker.disposition} vs ${ec.defender.disposition} · Layout ${ec.variant}${assumed ? ' (assumed)' : ''}` : ca ? ca.name : tl && String(tl).startsWith('random-') ? `Random layout #${String(tl).slice(7)}${half ? ' · half table 44"×30"' : ''}` : null;
+  const terrainName = ec ? `${ec.attacker.disposition} vs ${ec.defender.disposition} · Layout ${ec.variant}${assumed ? ' (assumed)' : ''}` : tl && String(tl).startsWith('random-') ? `Random layout #${String(tl).slice(7)}${half ? ' · half table 44"×30"' : ''}` : null;
   const units = [];
   ((state && state.players) || []).forEach((pl, pi) => (pl && pl.units || []).forEach(u => {
     if (u && u.pos && u.status !== 'destroyed') units.push({ id: u.id, player: pi, name: u.name || '?', models: u.models, r: Math.max(.5, +u.r || 1), pos: { x: u.pos.x ?? u.pos[0], y: u.pos.y ?? u.pos[1] }, shocked: u.status === 'shocked' });
   }));
-  return { att, size, half, zones, line, circle, objectives, pieces, terrainName, terrainId: tl, assumed, random: !!(tl && !ec && !ca && String(tl).startsWith('random-')), randomKnown: !!rnd, deployment: m.deployment || null, units,
+  return { att, size, half, zones, line, circle, objectives, pieces, terrainName, terrainId: tl, assumed, random: !!(tl && !ec && String(tl).startsWith('random-')), randomKnown: !!rnd, deployment: m.deployment || null, units,
     names: ((state && state.players) || []).map(p => (p && p.name) || '?'), colors: ((state && state.players) || []).map(p => colorOf(p && p.color)) };
 }
 
@@ -156,7 +154,7 @@ function createInstance(root, ctx) {
     }
     if (act === 'pick-random') {
       if (c.spectator) { toast('Spectator – view only', 'warn', 1800); return; }
-      if (!c.state.mission.deployment) { toast('Choose the Deployment card first.', 'warn'); return; }
+      if (!c.state.mission.deployment) { toast('Choose a layout first – its deployment zones are needed.', 'warn'); return; }
       const a = randomLayoutAction(c.state);
       if (!a) { toast('No fair layout found – try again', 'warn'); return; }
       c.dispatch(a).then(() => { inst.pick = false; paintPicker(inst); }).catch(err => toast(err.message, 'bad'));
@@ -245,8 +243,7 @@ function paintPicker(inst) {
       ${btn({ label: 'Apply event layout', kind: 'primary', small: true, action: 'pick-set', disabled: !!c.spectator })}
     </div>
     <div class="t3d-pick-hint xs muted" data-pick-hint></div>
-    <div class="t3d-pick-row chips">${(TERRAIN_LAYOUTS || []).map(t => chip({ label: t.short || t.name, on: m.terrainLayout === t.id, action: 'pick-ca', data: { id: t.id }, cls: 'sm' })).join('')}${chip({ label: 'No terrain', on: !m.terrainLayout, action: 'pick-ca', data: { id: '' }, cls: 'sm' })}
-      ${btn({ label: (m.terrainLayout || '').startsWith('random-') ? 'New random layout' : 'Random layout', kind: 'ghost', small: true, action: 'pick-random', disabled: !!c.spectator, title: 'The full Armageddon set placed by the Event Companion principles around the Deployment card' })}</div>`;
+`;
   paintPickHint(inst);
 }
 function paintPickHint(inst) {
