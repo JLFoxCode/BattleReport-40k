@@ -451,7 +451,7 @@ export async function startGameServer(opts = {}) {
       const code = String(parts[2]).toUpperCase();
       const sub = parts[3] || null;
       // online server: opening a game by its code joins it (it then shows up in this account's game list)
-      if (auth && isCode(code) && games.has(code)) auth.onGameSeen(user, code);
+      if (auth && user && isCode(code) && games.has(code)) auth.onGameSeen(user, code);
 
       // The game was handed over to another device: the old host only keeps a read-only copy
       if (sub && sub !== 'moved' && m !== 'GET' && m !== 'HEAD') {
@@ -722,6 +722,15 @@ export async function startGameServer(opts = {}) {
     throw httpError(404, 'Unknown route');
   }
 
+  // guests trying unknown game codes: at most 30 misses per address in 10 minutes
+  const guestMisses = new Map();
+  function guestMiss(ip) {
+    const t = Date.now(), arr = (guestMisses.get(ip) || []).filter(x => t - x < 10 * 60 * 1000);
+    arr.push(t); guestMisses.set(ip, arr);
+    if (guestMisses.size > 10000) guestMisses.clear();
+    return arr.length > 30;
+  }
+
   // ---------------------------------------------------------------- server
   async function handler(req, res) {
     const url = new URL(req.url || '/', 'http://localhost');
@@ -743,9 +752,19 @@ export async function startGameServer(opts = {}) {
         if (auth.cors(req, res)) return;                    // preflight of the installed apps (Bearer token)
         if (await auth.handle(req, res, url)) return;       // session, login, register, armies, archive, admin page
         if (url.pathname === '/api' || url.pathname.startsWith('/api/')) {
-          const user = auth.requireUser(req, res);           // sends 401 / 403 itself
-          if (!user) return;
-          req.user = user;
+          // a guest (no account) may open and play a game whose code they know – the website's "Continue without
+          // account"; everything else (list, create, delete, armies, archive) needs the account
+          const gm = url.pathname.match(/^\/api\/games\/([A-Z]{4})(?:\/(?!moved\b)[a-z]+)?\/?$/);
+          const guestOk = gm && (req.method === 'GET' || req.method === 'POST' || req.method === 'HEAD');
+          const s = guestOk ? auth.identify(req) : null;
+          if (guestOk && !s) {
+            if (!games.has(gm[1]) && guestMiss(auth.clientIp(req))) { sendJson(res, 429, { error: 'Too many unknown game codes – wait a few minutes' }); return; }
+            req.user = null;
+          } else {
+            const user = auth.requireUser(req, res);           // sends 401 / 403 itself
+            if (!user) return;
+            req.user = user;
+          }
         }
       }
       if (url.pathname === '/api' || url.pathname.startsWith('/api/')) {

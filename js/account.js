@@ -32,10 +32,18 @@ function emit(ev) { for (const fn of subs) { try { fn(ev, accountInfo()); } catc
 /** fn(event, info) – events: 'login', 'logout', 'sync', 'change', 'offer' (local lists could be uploaded). */
 export function onAccount(fn) { subs.add(fn); return () => subs.delete(fn); }
 
-export const needsLogin = () => st.mode === 'same' && !st.user;
+// "Continue without account" on the online server's website: the page runs from the browser's storage like the app
+const GUEST_KEY = 'br40k.guest';
+let guest = false;
+try { guest = localStorage.getItem(GUEST_KEY) === '1'; } catch {}
+function setGuest(v) { guest = !!v; try { if (v) localStorage.setItem(GUEST_KEY, '1'); else localStorage.removeItem(GUEST_KEY); } catch {} }
+export function continueAsGuest() { setGuest(true); emit('guest'); }
+export const needsLogin = () => st.mode === 'same' && !st.user && !guest;
+/** On the online server without an account (after "Continue without account"). */
+export const isGuest = () => st.mode === 'same' && !st.user && guest;
 export const serverAddress = () => (st.mode === 'same' ? location.origin : cfg.server || DEFAULT_SERVER || '');
 export function accountInfo() {
-  return { mode: st.mode, user: st.user, server: serverAddress(), syncing: st.syncing, lastSync: st.lastSync, error: st.error, offline: st.offline, localOnly: st.user ? localOnly().length : 0, lastUser: cfg.user || '' };
+  return { mode: st.mode, user: st.user, guest: isGuest(), server: serverAddress(), syncing: st.syncing, lastSync: st.lastSync, error: st.error, offline: st.offline, localOnly: st.user ? localOnly().length : 0, lastUser: cfg.user || '' };
 }
 
 /** Normalised origin of a typed server address; http only for this PC itself (no passwords in clear text). */
@@ -123,6 +131,7 @@ async function signIn(path, body, server) {
     adopt(origin, r.user, r.token);
   }
   st.error = null;
+  setGuest(false);
   emit('login');
   sync().catch(() => {});
   return st.user;

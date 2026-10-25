@@ -12,6 +12,8 @@ import { prepareQr, qrReady, qrSvg } from './qr.js';
 
 // the page comes from the online server (account session, games hosted there for players apart)
 const online = () => accountInfo().mode === 'same';
+// on the online server without an account ("Continue without account"): no games of your own there – join by code
+const guestOnline = () => online() && accountInfo().guest;
 
 let games = null;      // zuletzt geladene Liste
 let loading = false;
@@ -53,7 +55,7 @@ export function render(root, ctx) {
   lastRoot = root;
   lastCtx = ctx;
   const page = PAGES[ctx.me] ? ctx.me : null;
-  if (games === null && !loading) load(!page);
+  if (games === null && !loading) { if (guestOnline()) games = []; else load(!page); }
   const last = ctx.lastGame ? ctx.lastGame() : null;
   // a finished game is under 'Finished games', not 'Continue game'
   const lastExists = last && games && games.some(g => g.code === last.code && g.stage !== 'over');
@@ -104,7 +106,7 @@ function homeHtml(last, lastExists) {
         <span class="cont-role">${esc(roleLabel(last))}</span><span class="cont-go" aria-hidden="true">›</span></button>` : ''}
     ${takeoverBanners(nearbyL)}
     <nav class="menu-grid" aria-label="Main menu">
-      ${tile({ action: 'new', icon: 'play', label: 'New game', sub: online() ? 'Host a battle on the online server' : 'Host a battle on this device', main: true })}
+      ${tile({ action: 'new', icon: 'play', label: 'New game', sub: guestOnline() ? 'Hosting here needs an account' : online() ? 'Host a battle on the online server' : 'Host a battle on this device', main: true })}
       ${tile({ href: '#/play/join', icon: 'join', label: 'Join game', sub: nearby ? `${nearby} game${nearby === 1 ? '' : 's'} nearby` : 'Nearby or by code' })}
       ${tile({ href: '#/armies', icon: 'army', label: 'My armies', sub: armies ? `${armies} list${armies === 1 ? '' : 's'}` : 'Build your army lists' })}
       ${tile({ href: '#/learn', icon: 'learn', label: 'Learn to play', sub: 'Step by step, phase by phase' })}
@@ -360,7 +362,7 @@ function roleLabel(last) {
 function renderList(host) {
   if (loadErr) return `<div class="card bad"><p>Could not load the list: ${esc(loadErr)}</p></div>`;
   if (games === null) return `<div class="card muted">Loading …</div>`;
-  if (!games.length) return `<div class="card muted empty">${online() ? 'No games yet – create one, or join a game by its code.' : onHost() ? 'No games on this device yet.' : 'No games on the host device yet.'}</div>`;
+  if (!games.length) return `<div class="card muted empty">${guestOnline() ? 'Without an account there is no game list here – join a game by its code (Join game), or sign in under Account to host games.' : online() ? 'No games yet – create one, or join a game by its code.' : onHost() ? 'No games on this device yet.' : 'No games on the host device yet.'}</div>`;
   // a game handed over to another device: read-only here, the role buttons open it on the new host
   const mv = g => g.movedTo && g.movedTo.host && g.movedTo.port ? g.movedTo : null;
   return `<div class="grid game-grid">${games.map(g => `
@@ -476,6 +478,7 @@ function onSubmit(e) {
 }
 
 function newGame() {
+  if (guestOnline()) { toast('Hosting a game on this server needs an account – sign in under Account, or join a game by its code', 'warn', 4000); lastCtx.nav('#/account'); return; }
   sheet({
     title: 'New game',
     body: `

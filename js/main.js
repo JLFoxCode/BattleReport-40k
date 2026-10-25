@@ -507,7 +507,7 @@ window.addEventListener('hashchange', () => { route(); });
 // account → redraw the screens that show them
 account.installAccountPrompts();
 onAccount(ev => {
-  if (ev === 'login' || ev === 'logout') route();
+  if (ev === 'login' || ev === 'logout' || ev === 'guest') route();
   else if (ev === 'sync' && ['lobby', 'armies', 'rules'].includes(store.view)) render();
 });
 initAccount().catch(e => console.warn('account', e)).then(() => route());

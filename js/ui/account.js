@@ -2,7 +2,7 @@
  * behind it, a join link continues after signing in) and the Account page (#/account) in the menu: sign in with server
  * address (installed apps), sync status, upload this device's lists, change password, sign out. */
 import { esc, btn, toast, confirmSheet } from './components.js';
-import { accountInfo, onAccount, login, register, logout, changePassword, sync, uploadLocal, needsLogin, DEFAULT_SERVER } from '../account.js';
+import { accountInfo, onAccount, login, register, logout, changePassword, sync, uploadLocal, needsLogin, continueAsGuest, DEFAULT_SERVER } from '../account.js';
 
 let lastRoot = null, tab = 'login', pwOpen = false, busy = false, err = '';
 let bound = new WeakSet();
@@ -46,6 +46,11 @@ function gateHtml(i) {
       <p class="muted">Online server – sign in with your account. New here? Create an account with the invite code you got from the host.</p>
       ${formHtml(i, false)}
     </section>
+    <section class="card acct-card">
+      <div class="title">Without an account</div>
+      <p class="muted">Rulebook, army lists and joining a game by its code work without an account – everything is kept in this browser. An account adds hosting games here and the sync of your lists and finished games to your other devices; what you build without one is offered for upload when you sign in later.</p>
+      ${btn({ label: 'Continue without account', kind: 'ghost', action: 'acct-guest' })}
+    </section>
   </div>`;
 }
 
@@ -55,7 +60,7 @@ function pageHtml(i) {
   if (!i.user) {
     return `<div class="lobby page">${head}
       <section class="card acct-card">
-        <p class="muted">With an account on the online server your army lists and finished games are kept in the account and synced to every device you sign in on – build a list on the PC, use it on your phone. Games at the table still run on this device as before.</p>
+        <p class="muted">${i.guest ? 'You use this server without an account: your lists and finished games live in this browser only. ' : ''}With an account on the online server your army lists and finished games are kept in the account and synced to every device you sign in on – build a list on the PC, use it on your phone.${i.guest ? ' Hosting games here needs the account too. Lists built without one are offered for upload when you sign in.' : ' Games at the table still run on this device as before.'}</p>
         ${formHtml(i, i.mode !== 'same')}
       </section></div>`;
   }
@@ -149,6 +154,7 @@ async function onClick(e) {
   if (a === 'acct-pw') { pwOpen = true; err = ''; draw(); return; }
   if (a === 'acct-pw-cancel') { pwOpen = false; err = ''; draw(); return; }
   if (a === 'acct-sync') { sync().then(() => toast('Synced', 'ok', 1500)).catch(ex => toast(ex.message, 'bad')); return; }
+  if (a === 'acct-guest') { continueAsGuest(); location.hash = '#/'; return; }
   if (a === 'acct-upload') { b.disabled = true; uploadLocal().then(n => toast(n === 1 ? '1 list uploaded' : n + ' lists uploaded', 'ok')).catch(ex => toast(ex.message, 'bad')); return; }
   if (a === 'acct-logout') {
     const ok = await confirmSheet({ title: 'Sign out?', text: 'Lists and finished games that are in the account are removed from this device – they come back when you sign in again.', ok: 'Sign out', kind: 'danger' });
