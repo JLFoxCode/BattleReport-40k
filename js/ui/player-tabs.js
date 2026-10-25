@@ -991,10 +991,25 @@ export function renderSide(ctx, ui) {
 
 /* ═══════════════ Stages: setup / deployment / over ═══════════════ */
 export function renderSetupStage(ctx) {
-  return `<div class="pl-body"><div class="card center">
+  // the player's own army can be added from this phone while the host sets the game up (the host sees it at once)
+  const { state, me } = ctx;
+  const pl = (state.players || [])[me] || {};
+  const units = Array.isArray(pl.units) ? pl.units : [];
+  const pts = units.reduce((t, u) => t + (Number(u.points) || 0), 0);
+  const F = (ctx.data && ctx.data.FACTIONS) || [];
+  const fac = pl.faction ? F.find(f => f.id === pl.faction) : null;
+  const dets = (pl.detachments || []).map(id => { const d = fac && (fac.detachments || []).find(x => x.id === id); return d ? d.name : null; }).filter(Boolean);
+  const armyLine = fac ? `<p data-no-i18n><b>${esc(fac.name)}</b>${dets.length ? ' · ' + esc(dets.join(', ')) : ''}${units.length ? ` · ${units.length} ${units.length === 1 ? 'unit' : 'units'} · ${pts} pts` : ''}</p>` : '';
+  return `<div class="pl-body">
+    <div class="card p${me}">
+      <div class="title">Your army – <span data-no-i18n>${esc(pName(state, me))}</span></div>
+      ${units.length ? armyLine : armyLine + '<p class="muted small">No list yet. Add your list from this device (My armies) or paste a text export – the host sees it in the setup right away.</p>'}
+      ${btn({ label: units.length ? 'Replace my army list' : 'Add my army list', kind: `p${me}`, cta: !units.length, action: 'army-import' })}
+    </div>
+    <div class="card center">
       <div class="title">The game is still in setup</div>
-      <p class="muted">Players, armies and mission are set in the setup. Your army, stratagems and army list will appear here afterwards.</p>
-      ${btn({ label: 'Go to setup', kind: 'primary', cta: true, action: 'nav', data: { href: ctx.roleHash(ctx.code, ctx.me, 'setup') } })}
+      <p class="muted">Players, mission and the rest are set in the setup. Your stratagems and army list appear here afterwards.</p>
+      ${btn({ label: 'Go to setup', kind: 'ghost', action: 'nav', data: { href: ctx.roleHash(ctx.code, ctx.me, 'setup') } })}
       <p class="mt">${btn({ label: 'Lobby', kind: 'ghost', small: true, action: 'nav', data: { href: '#/' } })}</p>
     </div></div>`;
 }
