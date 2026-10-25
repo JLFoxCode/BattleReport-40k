@@ -2,7 +2,7 @@
  * (js/builder/store.js) and finished games (js/archive.js) in sync with the account – build a list on the PC, use it on
  * the phone at the game night. Games themselves still run where they are hosted (the host device's app on the LAN, or
  * the online server for players apart).
- *   mode 'same'   – the page comes from the online server itself (e.g. an iPhone browser through the tunnel): cookie
+ *   mode 'same'   – the page comes from the online server itself (e.g. an iPhone browser on the domain): cookie
  *                   session (HttpOnly, SameSite=Strict); without a session the app shows the sign-in screen first.
  *   mode 'remote' – any other page (installed app on 127.0.0.1, LAN test server): the online server is reached by its
  *                   address with a Bearer token, kept in localStorage like the other settings.
@@ -13,8 +13,7 @@
 import { listArmies, saveArmy, deleteArmy, onArmyChange } from './builder/store.js';
 import { listFinished, loadFinished, saveFinished, deleteFinished, onArchiveChange, archiveId } from './archive.js';
 
-/** Address of the online server offered in the installed apps (editable there). Put the fixed domain of the named
- *  tunnel here (see ONLINE.md); a quick tunnel's random trycloudflare.com address has to be typed in. */
+/** Address of the online server offered in the installed apps (editable there): the PC's own domain (ONLINE.md). */
 export const DEFAULT_SERVER = 'https://battlereport.jlpicture.de';   // the online server for the account sync (Online-Https.cmd on the PC, own domain)
 
 const LS = 'br40k.account';

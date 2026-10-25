@@ -100,7 +100,7 @@ export function createNet(code, opts = {}) {
     for (const fn of stateSubs) { try { fn(state); } catch (e) { console.error(e); } }
   }
 
-  /* Polling-Fallback: manche Proxys (z. B. der Cloudflare-Quick-Tunnel des Dev-Servers) puffern SSE komplett.
+  /* Polling-Fallback: manche Proxys puffern SSE komplett.
    * Kommt nach dem Verbinden 4 s lang kein "state"-Event, wird der Stand alle 2 s per GET geholt, bis SSE wieder liefert. */
   let sseSeen = false, pollTimer = null, sseCheck = null, lastPolled = '';
   function startPolling() {

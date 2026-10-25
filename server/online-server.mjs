@@ -1,11 +1,11 @@
-// Battle Report 40k – ONLINE server: runs on this Windows PC, reachable from the internet only through a Cloudflare
-// Tunnel (HTTPS ends at Cloudflare; this server listens on 127.0.0.1 only). Every player signs in with an account
+// Battle Report 40k – ONLINE server: runs on this Windows PC, reachable from the internet through the https front
+// server/online-https.mjs (own domain + certificate; this server listens on 127.0.0.1 only). Every player signs in with an account
 // (invite code from the admin): army lists and finished games live in the account, games are hosted here.
 //
 //   node server/online-server.mjs [--port 8420] [--data <dir>]       (or Online-Server.cmd in the repo root)
 //   env: BR_ONLINE_PORT, BR_ONLINE_DATA (default B:\BattleReportServer\data)
 //   admin: node server/online-admin.mjs invite | users | reset-password <user> | delete-user <user> | status | reload | update
-//          or http://127.0.0.1:<port>/admin on this PC (never through the tunnel)
+//          or http://127.0.0.1:<port>/admin on this PC (never from outside)
 // Normally started by server/online-supervisor.mjs (Online-Server.cmd) as a child with an IPC channel: the supervisor
 // owns the public port and forwards connections; this process listens on an ephemeral loopback port and reports it.
 // A rolling restart (reload) starts a successor, drains this process (SSE clients get 'server.reload') and exits it.
@@ -28,7 +28,7 @@ export async function startOnlineServer(o = {}) {
   const srv = await startGameServer({
     root: ROOT,
     port: o.port == null ? 8420 : Number(o.port),
-    host: '127.0.0.1',                                   // never on the LAN / internet directly – only via the tunnel
+    host: '127.0.0.1',                                   // never on the LAN / internet directly – only via the https front
     gamesDir: path.join(dataDir, 'games'),
     bsdataDir: path.join(ROOT, 'vendor-data', 'bsdata', 'wh40k-11e-main'),
     // only the web app itself – not the repo (server, tests, dev, desktop, android, docs …)
@@ -76,9 +76,7 @@ if (isMain && typeof process.send === 'function') {
   console.log('  Local:     http://127.0.0.1:' + s.port + '/          (this PC only)');
   console.log('  Admin:     http://127.0.0.1:' + s.port + '/admin     (invite codes, users – this PC only)');
   console.log('  Data:      ' + s.dataDir);
-  console.log('\n  Internet:  start the Cloudflare tunnel in a second window:');
-  console.log('               Online-Tunnel.cmd        (quick tunnel → random https://….trycloudflare.com address)');
-  console.log('             or a named tunnel with your own domain (see ONLINE.md).');
+  console.log('\n  Internet:  start the https front in a second window: Online-Https.cmd (https://battlereport.jlpicture.de, see ONLINE.md).');
   console.log('  Invite:    node server/online-admin.mjs invite   → give the code to a player for "Create account".\n');
   const bye = async () => { await s.stop(); process.exit(0); };
   process.on('SIGINT', bye);

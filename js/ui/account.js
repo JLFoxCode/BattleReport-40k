@@ -109,7 +109,7 @@ function formHtml(i, withServer) {
       <button type="button" class="chip${reg ? ' on' : ''}" data-action="acct-tab" data-tab="register" role="tab" aria-selected="${reg}">Create account</button>
     </div>
     <form class="acct-form" data-form="${reg ? 'register' : 'login'}" autocomplete="on">
-      ${withServer ? `<label class="field"><span>Server address</span><input type="url" name="server" inputmode="url" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="https://….trycloudflare.com" value="${esc(i.server || DEFAULT_SERVER)}" required></label>` : ''}
+      ${withServer ? `<label class="field"><span>Server address</span><input type="url" name="server" inputmode="url" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="https://battlereport.jlpicture.de" value="${esc(i.server || DEFAULT_SERVER)}" required></label>` : ''}
       <label class="field"><span>User name</span><input type="text" name="username" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" maxlength="24" value="${esc(i.lastUser || '')}" required></label>
       <label class="field"><span>Password</span><input type="password" name="password" autocomplete="${reg ? 'new-password' : 'current-password'}" ${reg ? 'minlength="8" ' : ''}required></label>
       ${reg ? `<label class="field"><span>Invite code</span><input type="text" name="invite" autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false" maxlength="12" placeholder="XXXX-XXXX" required></label>

@@ -4,7 +4,7 @@
 //   env: BR_ONLINE_PORT, BR_ONLINE_DATA, BR_ONLINE_RESTART_AT ('off' = no scheduled restart)
 //
 // How it works (Windows cannot share a listening port between processes, so the supervisor owns it):
-//   - This process listens on 127.0.0.1:<port> (the Cloudflare tunnel's target) and forwards every TCP connection
+//   - This process listens on 127.0.0.1:<port> (the https front's target, server/online-https.mjs) and forwards every TCP connection
 //     unchanged to the current child (server/online-server.mjs, forked with IPC, ephemeral loopback port).
 //   - reload = rolling restart: start a successor child (it loads games + accounts, binds, reports 'ready');
 //     hold new connections for a moment; drain the old child (no new requests, SSE clients get 'server.reload',
@@ -351,7 +351,7 @@ if (isMain) {
   console.log('  Restart:   ' + (s.nextRestartAt ? 'daily at ' + restartAt + ' when no game is active (rolling, no downtime)' : 'no scheduled restart') + '; now: node server/online-admin.mjs reload');
   console.log('  Update:    Online-Update.cmd  (git pull + reload only if the server code changed; web files are live at once)');
   console.log('  Status:    node server/online-admin.mjs status');
-  console.log('\n  Internet:  start the Cloudflare tunnel in a second window (Online-Tunnel.cmd / named tunnel, see ONLINE.md).\n');
+  console.log('\n  Internet:  start the https front in a second window (Online-Https.cmd – https://battlereport.jlpicture.de, see ONLINE.md).\n');
   let leaving = false;
   const bye = async () => { if (leaving) return; leaving = true; console.log('\nShutting down …'); await s.stop(); process.exit(0); };
   process.on('SIGINT', bye);
