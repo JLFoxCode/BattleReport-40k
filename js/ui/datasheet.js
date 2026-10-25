@@ -60,21 +60,73 @@ function statRow(p, m = null) {
   return `<div class="ds-stats">${STAT_KEYS.map(([k, label]) => `<div class="ds-stat${c(k)}"><span class="ds-stat-k">${label}</span><span class="ds-stat-v">${esc(String(v(k) ?? '–'))}</span></div>`).join('')}${inv ? `<div class="ds-stat inv${c('INV')}"><span class="ds-stat-k">INV</span><span class="ds-stat-v">${esc(String(inv))}</span></div>` : ''}</div>${m && (m.notes || []).length ? `<div class="ds-mod-notes">${m.notes.map(n => `<span class="ds-mod-src">★ ${esc(n)}</span>`).join('')}</div>` : ''}`;
 }
 
-function weaponName(w, count, m = null) {
-  return `<span class="ds-wname">${esc(w.name)}${count > 1 ? ` <span class="ds-wcount">×${count}</span>` : ''}${w.profile ? ` <span class="ds-wprofile">– ${esc(w.profile)}</span>` : ''}</span>${(w.abilities || []).length ? `<span class="ds-wabil">${kwList(w.abilities)}</span>` : ''}${modTags(m)}`;
+/** Name cell of a weapon row. A profile of a multi-profile weapon (prof = true) shows only "↳ <profile>" – the weapon's
+ *  name and count stand on the group head above it (weaponGroups). */
+function weaponName(w, count, m = null, prof = false) {
+  return `<span class="ds-wname${prof ? ' ds-wprof' : ''}">${prof ? `<span class="ds-wprofile">${esc(w.profile)}</span>` : `${esc(w.name)}${count > 1 ? ` <span class="ds-wcount">×${count}</span>` : ''}`}</span>${(w.abilities || []).length ? `<span class="ds-wabil">${kwList(w.abilities)}</span>` : ''}${modTags(m)}`;
 }
 
-function weaponTable(list, kind, chosen, mods = null) {
+/* ── Which models carry a weapon ──
+ * ds.models = [{ name, min, max, weapons: [names] }] (BSData). A weapon only some model entries carry (the Shas'ui's
+ * twin pulse carbine, the Sergeant's power fist) is marked with those models' names in the model's colour – like a
+ * Leader's rows – so the reader sees who may fire it. Weapons every model has (pulse pistol) carry no mark. */
+function weaponBearers(ds, w) {
+  const ms = (ds && ds.models) || [];
+  if (ms.length < 2) return null;
+  const k = normName(w.name);
+  const own = ms.filter(m => (m.weapons || []).some(n => normName(n) === k)).map(m => m.name);
+  return own.length && own.length < ms.length ? own : null;
+}
+/** Row class + style + tag for a weapon only some models carry (null → ['', '', '']). When most model entries carry
+ *  it (pulse carbine: every Pathfinder but the ion/rail rifle ones) the tag names the exceptions instead – without a
+ *  model colour, as the row belongs to no single model. */
+function bearerMark(ds, w) {
+  const own = weaponBearers(ds, w);
+  if (!own) return ['', '', ''];
+  const others = ((ds && ds.models) || []).map(m => m.name).filter(n => !own.includes(n));
+  if (own.length > 2 && others.length < own.length) return [' from-model not', ' style="--mdl:var(--muted)"', `<span class="ds-tag mdl not">not: ${others.map(esc).join(', ')}</span>`];
+  return [' from-model', mdlStyle(ds, own), own.map(n => `<span class="ds-tag mdl"${mdlStyle(ds, [n])}>${esc(n)}</span>`).join('')];
+}
+
+/* ── Multi-profile weapons ──
+ * Rows of the same weapon with a profile (Ion rifle – standard / overcharge) are ONE weapon: a group head row with the
+ * name, the count, the bearers and "pick one profile", the profiles indented underneath. The rules let the model choose
+ * one profile each time it attacks with the weapon – not both. entries = [{ w, ... }], key(e) tells the group. */
+function weaponGroups(entries, key = e => normName(e.w.name)) {
+  const out = [], byKey = new Map();
+  for (const e of entries) {
+    if (!e.w.profile) { out.push({ one: e }); continue; }
+    const k = key(e);
+    if (!byKey.has(k)) { const g = { head: e, rows: [] }; byKey.set(k, g); out.push(g); }
+    byKey.get(k).rows.push(e);
+  }
+  // a lone "profile" row (data quirk) is shown as a plain weapon
+  return out.map(g => (g.rows && g.rows.length === 1 ? { one: g.rows[0] } : g));
+}
+const pickText = kind => (kind === 'ranged' ? 'one weapon – pick one profile when shooting' : 'one weapon – pick one profile when fighting');
+/** Group head row: weapon name + count, the bearers' tag, "pick one profile" (tags = bearer / leader tags). */
+function groupHead(w, count, kind, cls, style, tags) {
+  return `<tr class="ds-wgroup-h${cls}"${style}><td colspan="7" class="ds-wcell-name"><span class="ds-wname">${esc(w.name)}${count > 1 ? ` <span class="ds-wcount">×${count}</span>` : ''}</span><span class="ds-wpick">${pickText(kind)}</span>${tags}</td></tr>`;
+}
+
+function weaponTable(list, kind, chosen, mods = null, ds = null) {
   if (!list || !list.length) return '';
   const skill = kind === 'ranged' ? 'BS' : 'WS';
   // With an army list only the chosen weapons are shown (options not taken are left out)
   const shown = chosen && chosen.size ? list.filter(w => chosen.get(normName(w.name))) : list;
   if (!shown.length) return '';
-  const rows = shown.map(w => {
+  const sel = chosen && chosen.size ? ' sel' : '';
+  const row = (w, prof) => {
     const n = chosen ? chosen.get(normName(w.name)) : undefined;
-    const sel = chosen && chosen.size ? ' sel' : '';
     const m = weaponMod(mods, w);
-    return `<tr class="ds-wrow${sel}${m && Object.keys(m.chars || {}).length ? ' ds-wmod' : ''}"><td class="ds-wcell-name">${weaponName(w, n || 0, m)}</td>${cell(w.range, m, 'range')}${cell(w.A, m, 'A')}${cell(w[skill], m, skill)}${cell(w.S, m, 'S')}${cell(w.AP, m, 'AP')}${cell(w.D, m, 'D')}</tr>`;
+    const [mc, ms, mt] = prof ? ['', '', ''] : bearerMark(ds, w);
+    return `<tr class="ds-wrow${sel}${prof ? ' ds-wprof-row' : ''}${mc}${m && Object.keys(m.chars || {}).length ? ' ds-wmod' : ''}"${ms}><td class="ds-wcell-name">${weaponName(w, n || 0, m, prof)}${mt}</td>${cell(w.range, m, 'range')}${cell(w.A, m, 'A')}${cell(w[skill], m, skill)}${cell(w.S, m, 'S')}${cell(w.AP, m, 'AP')}${cell(w.D, m, 'D')}</tr>`;
+  };
+  const rows = weaponGroups(shown.map(w => ({ w }))).map(g => {
+    if (g.one) return row(g.one.w, false);
+    const w = g.head.w, n = chosen ? chosen.get(normName(w.name)) : 0;
+    const [mc, ms, mt] = bearerMark(ds, w);
+    return groupHead(w, n || 0, kind, sel + mc, ms, mt) + g.rows.map(e => row(e.w, true)).join('');
   }).join('');
   return `<div class="ds-section"><div class="ds-section-h">${kind === 'ranged' ? 'RANGED WEAPONS' : 'MELEE WEAPONS'}</div>
     <table class="ds-weapons"><thead><tr><th></th><th>RANGE</th><th>A</th><th>${skill}</th><th>S</th><th>AP</th><th>D</th></tr></thead><tbody>${rows}</tbody></table></div>`;
@@ -148,8 +200,8 @@ export function datasheetCard(ds, opt = {}) {
   const body = `${opt.top || ''}
     ${profiles.map(p => `${profiles.length > 1 ? `<div class="ds-profile-name">${esc(p.name)}</div>` : ''}${statRow(p, modelMod(unit && unit.mods, p, profiles.length === 1))}`).join('')}
     ${attach && attach.role === 'bodyguard' && attach.resolved ? buffsBlock(attach) : ''}
-    ${weaponTable(ds.ranged, 'ranged', chosen, unit && unit.mods)}
-    ${weaponTable(ds.melee, 'melee', chosen, unit && unit.mods)}
+    ${weaponTable(ds.ranged, 'ranged', chosen, unit && unit.mods, ds)}
+    ${weaponTable(ds.melee, 'melee', chosen, unit && unit.mods, ds)}
     <div class="ds-section"><div class="ds-section-h">ABILITIES</div>
       ${(ab.core || []).length ? `<div class="ds-ab"><b>CORE:</b> ${kwList(ab.core)}</div>` : ''}
       ${(ab.faction || []).length ? `<div class="ds-ab"><b>FACTION:</b> ${ab.faction.map(a => facAbChip(ds, a)).join(' ')}</div>` : ''}
@@ -341,14 +393,24 @@ export function datasheetGroupCard(group, opt = {}) {
     const rows = weaponRows(kind);
     if (!rows.length) return '';
     const skill = kind === 'ranged' ? 'BS' : 'WS';
-    const html = rows.map(r => {
+    const rowHtml = (r, prof) => {
       const own = (r.w.abilities || []).map(a => `[${String(a).toUpperCase()}]`);
       const marks = buffs.filter(b => b.scope === 'all' || b.scope === kind).flatMap(b => (clean(b.buff.text).match(WEAPON_AB()) || [])
         .map(x => x.toUpperCase()).filter(x => !own.includes(x)).map(x => `<span class="ds-wbuff"${st(colorById.get(b.leaderId))}>${esc(x)}*${info(b)}</span>`));
       const leaderOnly = r.owner !== 'unit' && r.owner !== 'both';
       const ownerUnit = leaderOnly ? (leaders.find(l => l.ds.name === r.owner) || {}).unit : body.unit;
+      const ownerDs = leaderOnly ? (leaders.find(l => l.ds.name === r.owner) || {}).ds : body.ds;
       const m = weaponMod(ownerUnit && ownerUnit.mods, r.w) || (r.owner === 'both' ? leaders.map(l => weaponMod(l.unit.mods, r.w)).find(Boolean) : null);
-      return `<tr class="ds-wrow${leaderOnly ? ' from-leader' : ''}"${leaderOnly ? st(colorByName.get(r.owner)) : ''}><td class="ds-wcell-name">${weaponName(r.w, r.n, m)}${leaderOnly ? tagOf(r.owner) : ''}${marks.length ? `<span class="ds-wbuffs">${[...new Set(marks)].join('')}</span>` : ''}</td>${cell(r.w.range, m, 'range')}${cell(r.w.A, m, 'A')}${cell(r.w[skill], m, skill)}${cell(r.w.S, m, 'S')}${cell(r.w.AP, m, 'AP')}${cell(r.w.D, m, 'D')}</tr>`;
+      // a weapon only some models of the unit carry: the model's colour and name (a Leader's rows keep his colour)
+      const [mc, ms, mt] = leaderOnly || prof ? ['', '', ''] : bearerMark(ownerDs, r.w);
+      return `<tr class="ds-wrow${leaderOnly ? ' from-leader' : ''}${prof ? ' ds-wprof-row' : ''}${mc}"${leaderOnly ? st(colorByName.get(r.owner)) : ms}><td class="ds-wcell-name">${weaponName(r.w, r.n, m, prof)}${leaderOnly && !prof ? tagOf(r.owner) : ''}${mt}${marks.length ? `<span class="ds-wbuffs">${[...new Set(marks)].join('')}</span>` : ''}</td>${cell(r.w.range, m, 'range')}${cell(r.w.A, m, 'A')}${cell(r.w[skill], m, skill)}${cell(r.w.S, m, 'S')}${cell(r.w.AP, m, 'AP')}${cell(r.w.D, m, 'D')}</tr>`;
+    };
+    const html = weaponGroups(rows, r => r.owner + '|' + normName(r.w.name)).map(g => {
+      if (g.one) return rowHtml(g.one, false);
+      const r = g.head, leaderOnly = r.owner !== 'unit' && r.owner !== 'both';
+      const ownerDs = leaderOnly ? (leaders.find(l => l.ds.name === r.owner) || {}).ds : body.ds;
+      const [mc, ms, mt] = leaderOnly ? ['', '', ''] : bearerMark(ownerDs, r.w);
+      return groupHead(r.w, r.n, kind, (leaderOnly ? ' from-leader' : '') + mc, leaderOnly ? st(colorByName.get(r.owner)) : ms, leaderOnly ? tagOf(r.owner) : mt) + g.rows.map(x => rowHtml(x, true)).join('');
     }).join('');
     return `<div class="ds-section"><div class="ds-section-h">${kind === 'ranged' ? 'RANGED WEAPONS' : 'MELEE WEAPONS'}</div>
       <table class="ds-weapons"><thead><tr><th></th><th>RANGE</th><th>A</th><th>${skill}</th><th>S</th><th>AP</th><th>D</th></tr></thead><tbody>${html}</tbody></table></div>`;

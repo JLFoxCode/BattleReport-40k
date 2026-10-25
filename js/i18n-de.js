@@ -740,6 +740,8 @@ Object.assign(EXACT, {
   'Scan with the phone camera (same Wi-Fi): a phone with the app opens the game in the app, any other in the browser. Devices with the app also find the game under "Games nearby".': 'Mit der Handykamera scannen (gleiches WLAN): Ein Handy mit der App öffnet das Spiel in der App, jedes andere im Browser. Geräte mit der App finden das Spiel auch unter „Spiele in der Nähe“.',
   'No internet at the table? Type the address under the code into the browser – it is the game’s own address in this Wi-Fi.': 'Kein Internet am Tisch? Die Adresse unter dem Code in den Browser tippen – das ist die eigene Adresse des Spiels in diesem WLAN.',
   'Wi-Fi games on your devices': 'WLAN-Spiele auf deinen Geräten',
+  'one weapon – pick one profile when shooting': 'eine Waffe – beim Schießen ein Profil wählen',
+  'one weapon – pick one profile when fighting': 'eine Waffe – beim Kämpfen ein Profil wählen',
   'These games run on your devices in their Wi-Fi – this browser must be in the same Wi-Fi to open them.': 'Diese Spiele laufen auf deinen Geräten in deren WLAN – dieser Browser muss im selben WLAN sein, um sie zu öffnen.',
   'None right now. A device with the installed app that is signed in with this account reports the games it hosts in its Wi-Fi here – every minute while the app is open.': 'Gerade keine. Ein Gerät mit der installierten App, das mit diesem Konto angemeldet ist, meldet hier die Spiele, die es in seinem WLAN hostet – jede Minute, solange die App offen ist.'
 });

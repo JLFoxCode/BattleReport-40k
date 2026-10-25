@@ -25,6 +25,23 @@
 .ds-wprofile { font-weight: 400; color: var(--muted); }
 .ds-wabil { display: block; font-size: .72rem; color: var(--muted); letter-spacing: .02em; }
 .ds-wrow.dim { opacity: .45; }
+/* a weapon with several profiles: ONE weapon – group head row (name, count, bearers, "pick one profile"), the profiles
+   indented underneath, joined by a line on the left */
+.ds-wgroup-h td { padding: 7px 2px 2px; border-bottom: 0; text-align: left; }
+.ds-wgroup-h .ds-wname { display: inline; }
+.ds-wpick { display: inline-block; margin-left: 8px; font-size: .68rem; letter-spacing: .04em; text-transform: uppercase; color: var(--warn); border: 1px solid color-mix(in srgb, var(--warn) 60%, transparent); border-radius: 4px; padding: 1px 6px; vertical-align: middle; }
+.ds-wrow.ds-wprof-row td.ds-wcell-name { padding-left: 14px; box-shadow: inset 2px 0 0 color-mix(in srgb, var(--warn) 55%, transparent); }
+.ds-wrow.ds-wprof-row .ds-wname.ds-wprof { font-weight: 600; }
+/* the profile's connector: a small └ drawn in CSS (the title font has no arrow glyph) */
+.ds-wname.ds-wprof::before { content: ""; display: inline-block; width: 7px; height: 8px; margin: 0 6px 1px 1px; border-left: 2px solid color-mix(in srgb, var(--warn) 70%, transparent); border-bottom: 2px solid color-mix(in srgb, var(--warn) 70%, transparent); border-radius: 0 0 0 3px; vertical-align: baseline; }
+.ds-wrow.ds-wprof-row .ds-wprofile { color: var(--text, inherit); }
+/* a weapon only some models carry: the model's colour (--mdl) and its name – like a Leader's rows */
+.ds-wrow.from-model td { background: color-mix(in srgb, var(--mdl) 10%, transparent); }
+.ds-wrow.from-model td.ds-wcell-name, .ds-wrow.sel.from-model td.ds-wcell-name { box-shadow: inset 3px 0 0 var(--mdl); padding-left: 6px; }
+.ds-wgroup-h.from-model td { background: color-mix(in srgb, var(--mdl) 10%, transparent); box-shadow: inset 3px 0 0 var(--mdl); padding-left: 6px; }
+.ds-wrow.from-model.not td { background: transparent; }
+.ds-tag.mdl.not { text-transform: none; letter-spacing: .02em; }
+.ds-wgroup-h.from-leader td { background: color-mix(in srgb, var(--ldr) 10%, transparent); box-shadow: inset 3px 0 0 var(--ldr); padding-left: 6px; }
 .ds-wrow.sel td.ds-wcell-name { box-shadow: inset 3px 0 0 var(--ok); padding-left: 6px; }
 .ds-ab { font-size: .9rem; line-height: 1.4; margin: 4px 0; }
 .ds-ab b { font-weight: 700; }
