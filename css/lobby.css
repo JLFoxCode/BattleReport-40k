@@ -96,3 +96,6 @@
 .acct-actions { flex-wrap: wrap; gap: 10px; }
 .acct-status { margin: 0; }
 .acct-user { color: var(--text); }
+
+.app-ver { gap: 12px; align-items: center; margin-bottom: 10px; }
+.app-ver .title { margin: 0 0 2px; }

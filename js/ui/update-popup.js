@@ -165,8 +165,10 @@ export async function checkForUpdates() {
   if (!navigator.onLine) { toast('No internet – the app keeps working with what it has.', 'warn'); return; }
   toast('Checking for updates …', 'ok', 2000);
   closeDataBanner();   // its pending offer ends – this check asks again (popup)
-  try { if (await checkAppUpdate()) return; } catch (e) { console.warn('app update check', e); }
+  let appErr = false;
+  try { if (await checkAppUpdate()) return; } catch (e) { console.warn('app update check', e); appErr = true; toast('Could not check for a new app version (GitHub not reachable) – trying the unit data.', 'warn', 5000); }
   const st = await checkDataUpdate({ ask: askDataUpdate });
+  if (appErr) return;
   if (appState === 'current' && st.state === 'current') toast('Everything is up to date – app and unit data.', 'ok', 4000);
   else if (st.state === 'error') toast('Could not check for new unit data.', 'warn', 4000);
 }

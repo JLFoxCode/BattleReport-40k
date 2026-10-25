@@ -332,7 +332,7 @@ function devInfoHtml() {
   let i = null;
   try { i = window.BR && window.BR.devInfo ? JSON.parse(window.BR.devInfo()) : null; } catch { i = null; }
   if (!i) return '';
-  if (!i.dev) return '<p class="muted hint">App version ' + esc(i.versionCode) + ' · new versions and unit data are offered when the app opens with internet. ' + btn({ label: 'Check for updates', kind: 'ghost', small: true, action: 'app-update-check' }) + '</p>';
+  if (!i.dev) return `<div class="row between app-ver"><div><div class="title">App version ${esc(i.versionCode)}</div><div class="muted small">New versions and unit data are offered when the app opens with internet – or check now.</div></div>${btn({ label: 'Check for updates', kind: 'primary', action: 'app-update-check' })}</div>`;
   const ago = t => (t ? Math.round((Date.now() - t) / 1000) + ' s ago' : 'never');
   const ok = i.lastOk && Date.now() - i.lastOk < 30000;
   return `<p class="hint ${ok ? 'text-ok' : 'text-warn'}">DEV app ${esc(i.versionCode)} · auto-update from ${esc(i.server)} · last contact: ${esc(ago(i.lastOk))}${i.lastError && !ok ? ' · error: ' + esc(i.lastError) : ''}</p>`;
