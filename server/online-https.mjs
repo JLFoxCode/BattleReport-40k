@@ -25,6 +25,31 @@ const HOST = arg('host') || process.env.BR_ONLINE_HOST || '';                 //
 const HTTPS_PORT = Number(arg('https') || process.env.BR_ONLINE_HTTPS_PORT || 443);
 const HTTP_PORT = Number(arg('http') || process.env.BR_ONLINE_HTTP_PORT || 80);     // 0 = no redirect listener
 const UPSTREAM = Number(arg('upstream') || process.env.BR_ONLINE_PORT || 8420);
+// IONOS Dynamic DNS: the record of HOST follows the router's public address. Once: put the IONOS API key (API portal,
+// 'prefix.secret') into tlsionos-api-key.txt and run  node serveronline-https.mjs --dyndns-register  → tlsdyndns-url.txt;
+// afterwards this process calls that update URL at start and every 10 minutes (IONOS sets the A record to the caller's IPv4).
+const KEY_FILE = path.join(TLS_DIR, 'ionos-api-key.txt');
+const DYN_FILE = path.join(TLS_DIR, 'dyndns-url.txt');
+if (process.argv.includes('--dyndns-register')) {
+  const key = fs.existsSync(KEY_FILE) ? fs.readFileSync(KEY_FILE, 'utf8').trim() : '';
+  if (!key || !HOST) { console.error('Needs the host name (--host) and the IONOS API key in ' + KEY_FILE); process.exit(1); }
+  const r = await fetch('https://api.hosting.ionos.com/dns/v1/dyndns', { method: 'POST', headers: { 'X-API-Key': key, 'Content-Type': 'application/json' }, body: JSON.stringify({ domains: [HOST], description: 'Battle Report 40k online server' }) });
+  const body = await r.text();
+  if (!r.ok) { console.error('IONOS answered ' + r.status + ': ' + body); process.exit(1); }
+  const url = JSON.parse(body).updateUrl;
+  fs.writeFileSync(DYN_FILE, url + '\n');
+  console.log('Dynamic DNS registered for ' + HOST + ' – update URL stored in ' + DYN_FILE + '. Start Online-Https.cmd; the first update runs at once.');
+  process.exit(0);
+}
+async function dyndns(why) {
+  if (!fs.existsSync(DYN_FILE)) return;
+  const url = fs.readFileSync(DYN_FILE, 'utf8').trim();
+  if (!url) return;
+  try {
+    const r = await fetch(url, { signal: AbortSignal.timeout(15000) });
+    log('dyndns (' + why + '): ' + (r.ok ? 'ok' : 'HTTP ' + r.status));
+  } catch (e) { log('dyndns (' + why + ') failed: ' + e.message); }
+}
 const HOP = new Set(['connection', 'keep-alive', 'proxy-authenticate', 'proxy-authorization', 'te', 'trailer', 'transfer-encoding', 'upgrade']);
 const log = (...a) => console.log(new Date().toISOString().slice(11, 19), ...a);
 
@@ -86,6 +111,8 @@ function reload(why) {
 }
 setInterval(() => { if (tlsChanged()) reload('file changed'); }, 10 * 60 * 1000).unref();
 process.on('SIGHUP', () => reload('SIGHUP'));
+dyndns('start');
+setInterval(() => dyndns('timer'), 10 * 60 * 1000).unref();
 try {
   const { X509Certificate } = await import('node:crypto');
   const x = new X509Certificate(tls.cert);
