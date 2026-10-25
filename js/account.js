@@ -15,7 +15,7 @@ import { listFinished, loadFinished, saveFinished, deleteFinished, onArchiveChan
 
 /** Address of the online server offered in the installed apps (editable there). Put the fixed domain of the named
  *  tunnel here (see ONLINE.md); a quick tunnel's random trycloudflare.com address has to be typed in. */
-export const DEFAULT_SERVER = '';
+export const DEFAULT_SERVER = 'https://battlereport.jlpicture.de';   // the online server for the account sync (Online-Https.cmd on the PC, own domain)
 
 const LS = 'br40k.account';
 const fresh = () => ({ synced: {}, pending: [], pendingDel: [], arch: {}, archDel: [], offered: false });
