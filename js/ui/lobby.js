@@ -60,7 +60,7 @@ export function render(root, ctx) {
   // keep what is being typed when the page refreshes itself (nearby games, game list)
   const form = root.querySelector('[data-form=join]');
   const keep = form ? { code: form.code.value, role: (form.querySelector('input[name=role]:checked') || {}).value, focus: document.activeElement === form.code } : null;
-  root.innerHTML = page ? pageHtml(page) : homeHtml(last, lastExists);
+  root.innerHTML = page ? pageHtml(page, last) : homeHtml(last, lastExists);
   const nf = root.querySelector('[data-form=join]');
   if (nf && keep) {
     nf.code.value = keep.code;
@@ -117,7 +117,7 @@ function homeHtml(last, lastExists) {
   </div>`;
 }
 
-function pageHtml(page) {
+function pageHtml(page, last) {
   const host = location.host;
   const head = `<header class="page-head"><a class="btn ghost sm" href="#/">‹ Menu</a><h1 class="title">${esc(PAGES[page])}</h1>${page === 'join' ? btn({ label: 'Refresh', kind: 'ghost', small: true, action: 'reload', disabled: loading }) : '<span></span>'}</header>`;
   if (page === 'join') {
