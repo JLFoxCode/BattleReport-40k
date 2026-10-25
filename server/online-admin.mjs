@@ -55,14 +55,27 @@ function printStatus(s) {
 }
 
 /** git pull --ff-only, then a rolling restart only when server code changed. Static web files are live at once. */
-export async function update({ repo = repoDir, reloadFn = () => control('POST', 'reload'), log = console.log } = {}) {
+export async function update({ repo = repoDir, reloadFn = () => control('POST', 'reload'), statusFn = () => control('GET', 'status'), log = console.log } = {}) {
   const git = (...a) => execFileSync('git', a, { cwd: repo, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true }).trim();
   const dirty = git('status', '--porcelain', '--untracked-files=no');
   if (dirty) throw new Error('The working copy has local changes to tracked files – not updating:\n' + dirty);
   const before = git('rev-parse', 'HEAD');
   const out = git('pull', '--ff-only');
   const after = git('rev-parse', 'HEAD');
-  if (before === after) { log('Already up to date (' + after.slice(0, 7) + ').'); return { updated: false, before, after, files: [], reloaded: false }; }
+  if (before === after) {
+    log('Already up to date (' + after.slice(0, 7) + ').');
+    // the server runs this working copy: a commit made here (nothing to pull) still needs the restart when the running
+    // server process is older than that commit – otherwise old server / engine code keeps running
+    const headAt = Number(git('log', '-1', '--format=%ct')) * 1000;
+    let st = null; try { st = await statusFn(); } catch {}
+    const up = st && st.server && Number(st.server.uptime) || 0;
+    if (up && Date.now() - up < headAt) {
+      log('The running server started before the last commit – rolling restart …');
+      try { await reloadFn(); log('Restart done – the current code is running.'); return { updated: false, before, after, files: [], reloaded: true }; }
+      catch (e) { log('Restart not done: ' + e.message); }
+    }
+    return { updated: false, before, after, files: [], reloaded: false };
+  }
   const files = git('diff', '--name-only', before, after).split(/\r?\n/).filter(Boolean);
   log(`Updated ${before.slice(0, 7)} → ${after.slice(0, 7)}: ${files.length} file(s) changed.` + (out.includes('Fast-forward') ? '' : '\n' + out));
   // the server process imports server/*.js and engine/* once – only those need a restart; everything else is read per request
