@@ -7,7 +7,7 @@ import { askDataUpdate, checkForUpdates } from './update-popup.js';
 import { armyChoices } from './armies.js';
 import { getLang, setLang, keepTerms, setKeepTerms } from '../i18n.js';
 import { guideOn, setGuideOn } from './tutorial.js';
-import { accountInfo, canOnline, createOnlineGame, onlineUrl } from '../account.js';
+import { accountInfo, canOnline, createOnlineGame, onlineUrl, localGamesOfAccount } from '../account.js';
 import { prepareQr, qrReady, qrSvg } from './qr.js';
 
 // the page comes from the online server (account session, games hosted there for players apart)
@@ -125,6 +125,7 @@ function pageHtml(page, last) {
   if (page === 'join') {
     return `<div class="lobby page">${head}
     ${nearbySection()}
+    ${localGamesSection()}
     <section class="card join">
       <div class="title">Join by code</div>
       <form class="join-form" data-form="join" autocomplete="off">
@@ -235,6 +236,32 @@ function watchNearby() {
     const key = JSON.stringify(nearbyList());
     if (key !== nearbyKey && lastRoot && lastCtx) render(lastRoot, lastCtx);
   }, 2000);
+}
+/* Website: the Wi-Fi games of the account's devices (reported by the installed apps) – links into the Wi-Fi. */
+let localHosts = null, localKey = '', localTimer = null;
+function localGamesSection() {
+  if (window.BR || !online() || !accountInfo().user) return '';
+  if (localHosts === null) { localHosts = []; refreshLocalGames(); }
+  if (!localTimer) localTimer = setInterval(() => { if (document.body.dataset.view !== 'lobby') { clearInterval(localTimer); localTimer = null; return; } refreshLocalGames(); }, 15000);
+  const hosts = localHosts.filter(h => h.games && h.games.length);
+  return `
+    <section class="card nearby local-games">
+      <div class="title">Wi-Fi games on your devices</div>
+      ${hosts.length ? `<div class="grid game-grid">${hosts.flatMap(h => h.games.map(g => `
+        <div class="game-card">
+          <div class="row between"><b class="code" data-no-i18n>${esc(g.code)}</b><span class="xs muted" data-no-i18n>${esc(h.host)}</span></div>
+          <div class="small">${esc((g.players || []).filter(Boolean).join(' vs ') || 'Game')}</div>
+          <div class="row wrap mt-s">${[['p/0', (g.players || [])[0] || 'Player 1', 'p0'], ['p/1', (g.players || [])[1] || 'Player 2', 'p1'], ['table', 'Score', ''], ['setup', 'Setup', '']].map(([r, l, c]) => `<a class="btn sm ${c}" href="http://${esc(h.host)}/index.html#/g/${esc(g.code)}/${r}" data-no-i18n>${esc(l)}</a>`).join('')}</div>
+        </div>`)).join('')}</div>
+        <p class="xs muted">These games run on your devices in their Wi-Fi – this browser must be in the same Wi-Fi to open them.</p>`
+      : `<p class="muted small">None right now. A device with the installed app that is signed in with this account reports the games it hosts in its Wi-Fi here – every minute while the app is open.</p>`}
+    </section>`;
+}
+async function refreshLocalGames() {
+  let hosts = [];
+  try { hosts = await localGamesOfAccount(); } catch { hosts = localHosts || []; }
+  const key = JSON.stringify(hosts);
+  if (key !== localKey) { localKey = key; localHosts = hosts; if (lastRoot && lastCtx && document.body.dataset.view === 'lobby') render(lastRoot, lastCtx); }
 }
 function nearbySection() {
   if (!window.BR) return '';

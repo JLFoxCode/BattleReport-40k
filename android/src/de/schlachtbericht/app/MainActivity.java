@@ -179,7 +179,14 @@ public class MainActivity extends Activity {
         setContentView(web);
         hideBars();
         if (savedInstanceState != null) web.restoreState(savedInstanceState);
-        else web.postDelayed(() -> web.loadUrl(LOCAL), 300);
+        else web.postDelayed(() -> web.loadUrl(startUrl(getIntent())), 300);
+    }
+
+    /** A join link (QR code: https://battlereport.jlpicture.de/j/CODE/…) opened this app: the web app's #/join route takes
+     *  the phone into that game – on the LAN host named in the link, or online. Otherwise the start page. */
+    private static String startUrl(Intent intent) {
+        android.net.Uri u = intent != null && Intent.ACTION_VIEW.equals(intent.getAction()) ? intent.getData() : null;
+        return u == null ? LOCAL : LOCAL + "#/join?u=" + android.net.Uri.encode(u.toString());
     }
 
     /** DEV update: show the new web files. */
@@ -188,6 +195,11 @@ public class MainActivity extends Activity {
     /** DEV update: the system installer needs the user's confirmation for the new APK. */
     @Override protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
+        if (Intent.ACTION_VIEW.equals(intent.getAction()) && intent.getData() != null) {   // a join link while the app runs
+            setIntent(intent);
+            if (web != null) web.loadUrl(startUrl(intent));
+            return;
+        }
         if (!ACTION_INSTALL_STATUS.equals(intent.getAction())) return;
         int status = intent.getIntExtra(android.content.pm.PackageInstaller.EXTRA_STATUS, -999);
         if (status == android.content.pm.PackageInstaller.STATUS_PENDING_USER_ACTION) {

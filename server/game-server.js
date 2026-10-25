@@ -116,6 +116,8 @@ export async function startGameServer(opts = {}) {
     throw new Error('No free game code');
   }
   const isCode = c => typeof c === 'string' && /^[A-Z]{4}$/.test(c);
+  // Android App Links: the installed app (android/debug.keystore, alias app) may open this host's /j/ links itself
+  const ASSET_LINKS = [{ relation: ['delegate_permission/common.handle_all_urls'], target: { namespace: 'android_app', package_name: 'de.schlachtbericht.app', sha256_cert_fingerprints: ['04:BE:8F:19:2D:AF:3C:41:77:00:29:8E:7D:5B:3B:11:6F:BB:FE:70:1A:F7:64:73:2F:04:6E:26:ED:4A:0F:BB'] } }];
 
   function replay(code, actions) {
     let state = initialState(code, 0);
@@ -772,6 +774,16 @@ export async function startGameServer(opts = {}) {
         return;
       }
       if (req.method !== 'GET' && req.method !== 'HEAD') throw httpError(405, 'Method not allowed');
+      // join links (QR codes): https://<online server>/j/CODE/p/0?at=192.168.1.5:8417 – the installed Android app opens
+      // them itself (verified App Link via /.well-known/assetlinks.json), a browser is sent on to the game's host
+      if (url.pathname === '/.well-known/assetlinks.json') { sendJson(res, 200, ASSET_LINKS); return; }
+      const jm = url.pathname.match(/^\/j\/([A-Za-z]{4})(?:\/(.*))?$/);
+      if (jm) {
+        const at = url.searchParams.get('at') || '';
+        const okAt = /^[A-Za-z0-9.\-]+(:\d{1,5})?$/.test(at);
+        const target = (okAt ? 'http://' + at : '') + '/index.html#/g/' + jm[1].toUpperCase() + (jm[2] ? '/' + jm[2].replace(/[^A-Za-z0-9/]/g, '') : '');
+        res.writeHead(302, { Location: target, 'Cache-Control': 'no-store' }); res.end(); return;
+      }
       await serveStatic(req, res, url.pathname);
     } catch (e) {
       const status = e && e.status ? e.status : 500;

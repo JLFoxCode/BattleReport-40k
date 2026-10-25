@@ -129,7 +129,7 @@ export async function initAccount() {
     st.mode = 'remote';
     st.user = cfg.user;   // offline: still signed in, the lists on the device keep working
   }
-  if (st.user) setTimeout(() => sync().catch(() => {}), 50);
+  if (st.user) setTimeout(() => { sync().catch(() => {}); reportLocalGames(true).catch(() => {}); }, 50);
 }
 /** The device's sync records belong to one account on one server; another account starts fresh. */
 function adopt(server, user, token) {
@@ -206,6 +206,33 @@ onArchiveChange((kind, e) => {
 });
 window.addEventListener('online', () => { if (st.user) later(300); });
 document.addEventListener('visibilitychange', () => { if (st.user && document.visibilityState === 'visible' && (!st.lastSync || Date.now() - st.lastSync > 60000)) later(300); });
+
+/* The installed app reports the games it hosts in its Wi-Fi (LAN address + codes) to the online server while signed
+ * in, every minute while the app is visible – the website then lists them under "Join game" with links into the Wi-Fi
+ * (a browser cannot discover Wi-Fi games itself). Nothing is reported without an account or without a Wi-Fi address. */
+let lastLocalKey = '';
+export async function reportLocalGames(force = false) {
+  if (!window.BR || st.mode !== 'remote' || !st.user || !cfg.token) return;
+  let info = null, list = null;
+  try {
+    [info, list] = await Promise.all([fetch('/api/info', { cache: 'no-store' }).then(r => r.json()), fetch('/api/games', { cache: 'no-store' }).then(r => r.json())]);
+  } catch { return; }
+  const lan = info && Array.isArray(info.lan) && info.lan[0];
+  if (!lan || !info.port) return;
+  const games = (Array.isArray(list) ? list : []).filter(g => g && g.stage !== 'over').map(g => ({ code: g.code, stage: g.stage, players: g.players || [] }));
+  const body = { host: `${lan}:${info.port}`, device: (window.BR.platform && window.BR.platform()) || 'app', games };
+  const key = JSON.stringify(body);
+  if (!force && key === lastLocalKey && Date.now() - (reportLocalGames.at || 0) < 55000) return;
+  try { await req('POST', '/api/local-games', body, { timeout: 8000, noSignout: true }); lastLocalKey = key; reportLocalGames.at = Date.now(); } catch {}
+}
+setInterval(() => { if (document.visibilityState === 'visible') reportLocalGames().catch(() => {}); }, 60000);
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') reportLocalGames().catch(() => {}); });
+/** The signed-in account's Wi-Fi games on its other devices (website) → [{ host, device, games: [{ code, stage, players }] }] */
+export async function localGamesOfAccount() {
+  if (st.mode !== 'same' || !st.user) return [];
+  const r = await req('GET', '/api/local-games', undefined, { timeout: 8000, noSignout: true });
+  return (r && r.hosts) || [];
+}
 
 /** Lists on this device that are not in the account (and were not made while signed in). */
 export function localOnly() {

@@ -39,7 +39,7 @@ import * as rulebook from './ui/rulebook.js';
 import * as armies from './ui/armies.js';
 import * as tutorial from './ui/tutorial.js';
 import * as account from './ui/account.js';
-import { initAccount, needsLogin, onAccount } from './account.js';
+import { initAccount, needsLogin, onAccount, onlineUrl } from './account.js';
 
 const LS_KEY = 'sb40k.last';
 const MODULES = { lobby, setup, player, desktop, map, table3d, table, camera, markers, photo, rules: rulebook, archive: archiveView, armies, learn: tutorial, account };
@@ -153,9 +153,22 @@ function updateStatusbar() {
 }
 
 // ---------------------------------------------------------------- Routing
+/** #/join?u=<join link> (the app opened a QR link): into that game – the LAN host named in the link directly, an online
+ *  game signed in via hand-off (or as it is – the website offers "Continue without account"). */
+function joinLink(h) {
+  const q = new URLSearchParams(h.split('?')[1] || '');
+  let u; try { u = new URL(q.get('u') || ''); } catch { return; }
+  const m = u.pathname.match(/^\/j\/([A-Za-z]{4})(?:\/(.*))?$/);
+  if (!m) return;
+  const hash = `#/g/${m[1].toUpperCase()}${m[2] ? '/' + m[2].replace(/[^A-Za-z0-9/]/g, '') : ''}`;
+  const at = u.searchParams.get('at') || '';
+  if (/^[A-Za-z0-9.\-]+(:\d{1,5})?$/.test(at)) { location.replace(`http://${at}/index.html${hash}`); return; }
+  onlineUrl(hash).then(url => location.replace(url)).catch(() => location.replace(`${u.origin}/index.html${hash}`));
+}
 export function parseHash(hash = location.hash) {
   const h = (hash || '').replace(/^#/, '');
   const parts = h.split('?')[0].split('/').filter(Boolean);
+  if (parts[0] === 'join') { joinLink(h); return { view: 'lobby', code: null, me: null }; }
   if (parts[0] === 'print' && parts[1] === 'markers') return { view: 'markers', code: null, me: null };
   if (parts[0] === 'rules') return { view: 'rules', code: null, me: null };
   // army builder: list of saved armies / one army in the editor

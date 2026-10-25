@@ -3,7 +3,7 @@
  * Lokaler UI-Zustand (Schritt, Suche, Fixed-Auswahl) liegt je Spielcode in UI, damit State-Pushes ihn nicht verlieren.
  * Events: einmalige Delegation auf root (root.__setupBound), Aktionen über data-action / data-field. */
 import { esc, btn, chip, badge, confirmSheet, toast, colorOf, playerLabel } from './components.js';
-import { prepareQr, qrReady, joinUrl } from './qr.js';
+import { prepareQr, qrReady, directUrl } from './qr.js';
 import { randomLayoutAction } from './random-layout.js';
 import { sequenceStrip } from './sequence.js';
 import { armyStep, unitsStep, missionStep, tableStep, tableSet, mountTablePreview, tableLabel, secStep, facListHtml, openUnitSheet, openImportSheet, importSavedArmy, dpLimit, dpOf, SIZE_LABEL } from './setup-steps.js';
@@ -287,7 +287,7 @@ function summary(ctx) {
   const s = ctx.state, m = s.mission, WH = ctx.data.WH, code = ctx.code;
   // opened via localhost: the LAN address (as the QR codes use it), so other devices can open the links
   if (!qrReady()) prepareQr().then(ch => { if (ch && ctx.rerender) ctx.rerender(); }).catch(() => {});
-  const host = joinUrl(code, 0).replace(/^https?:\/\//, '').replace(/\/index\.html#.*$/, '');
+  const host = directUrl(code, 'p/0').replace(/^https?:\/\//, '').replace(/\/index\.html#.*$/, '');
   const facName = p => { const f = ctx.data.FACTIONS.find(x => x.id === s.players[p].faction); return f ? f.name : 'no faction'; };
   return `
     <div class="setup wrap summary">

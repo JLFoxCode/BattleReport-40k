@@ -235,6 +235,8 @@ export function createAuth(opts = {}) {
   // hand-off: the installed app (Bearer token) opens the website signed in – POST /api/handoff → one-time code (60 s),
   // GET /handoff?c=<code>&to=<#/hash> sets the cookie session and redirects to the hash (e.g. the game it created)
   const handoffs = new Map();
+  const localGames = new Map();           // user → Map(host → { device, games, at }) – the devices' Wi-Fi games (memory only)
+  const LOCAL_GAMES_TTL = 3 * 60 * 1000;
   function newHandoff(user) {
     const t = now();
     for (const [k, h] of handoffs) if (h.expires < t) handoffs.delete(k);
@@ -420,6 +422,27 @@ export function createAuth(opts = {}) {
       const s = identify(req);
       if (!s) return sendJson(res, 401, { error: 'Please sign in', login: true }), true;
       sendJson(res, 200, { code: newHandoff(s.user) });
+      return true;
+    }
+    // local games of the account's devices: an installed app that hosts games in its Wi-Fi reports them every minute
+    // (POST), the website lists them with their LAN address (GET) – a browser cannot discover Wi-Fi games itself.
+    // Kept in memory only, gone after 3 minutes without a report.
+    if (p === '/api/local-games' && (m === 'POST' || m === 'GET')) {
+      const s = identify(req);
+      if (!s) return sendJson(res, 401, { error: 'Please sign in', login: true }), true;
+      const t = now();
+      const mine = localGames.get(s.user) || new Map();
+      for (const [h, v] of mine) if (v.at < t - LOCAL_GAMES_TTL) mine.delete(h);
+      if (m === 'GET') { sendJson(res, 200, { hosts: [...mine].map(([host, v]) => ({ host, device: v.device, games: v.games, at: v.at })) }); return true; }
+      const body = await readJson(req, LIMIT_AUTH_BODY);
+      const host = String((body && body.host) || '');
+      if (!/^[A-Za-z0-9.\-]+:\d{1,5}$/.test(host)) return sendJson(res, 400, { error: 'Invalid host' }), true;
+      const games = (Array.isArray(body.games) ? body.games : []).slice(0, 30)
+        .filter(g => g && /^[A-Z]{4}$/.test(String(g.code || '')))
+        .map(g => ({ code: String(g.code), stage: String(g.stage || '').slice(0, 10), players: (Array.isArray(g.players) ? g.players : []).slice(0, 2).map(n => String(n || '').slice(0, 40)) }));
+      if (games.length) mine.set(host, { device: String(body.device || '').slice(0, 20), games, at: t }); else mine.delete(host);
+      if (mine.size) localGames.set(s.user, mine); else localGames.delete(s.user);
+      sendJson(res, 200, { ok: true, hosts: mine.size });
       return true;
     }
     const parts = p.split('/').filter(Boolean);

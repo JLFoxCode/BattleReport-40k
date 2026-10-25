@@ -32,6 +32,14 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <!-- join links from QR codes (https://battlereport.jlpicture.de/j/CODE/…) open the installed app: verified
+                 App Link, the server answers /.well-known/assetlinks.json with this app's signing key -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="battlereport.jlpicture.de" android:pathPrefix="/j/" />
+            </intent-filter>
         </activity>
         <meta-data android:name="com.oculus.vrshell.supports_free_resizing" android:value="true" />
         <meta-data android:name="com.oculus.vrshell.free_resizing_lock_aspect_ratio" android:value="false" />
