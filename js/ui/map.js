@@ -181,7 +181,7 @@ export function createMap(el, opts = {}) {
   function patchZones() {
     const dep = deploymentOf(state);
     const zones = derived?.zones || dep?.zones;
-    const key = `${state?.mission?.deployment}|${attackerIdx()}|${o.player}|${o.zoneOnly}`;
+    const key = `${state?.mission?.deployment}|${attackerIdx()}|${o.player}|${o.zoneOnly}|${derived?.zones ? 'd' : ''}`;
     if (key === zoneKey) return;
     zoneKey = key;
     gZones.innerHTML = '';
@@ -191,9 +191,10 @@ export function createMap(el, opts = {}) {
       const p = zonePlayer(z);
       svg('polygon', { class: `map-zone p${p}${o.zoneOnly && o.player === p ? ' own' : ''}`, points: zones[z].map(q => q.join(',')).join(' ') }, gZones);
     }
-    const circle = zones.circle || dep?.circle;
+    // zones given from outside (an Event Companion layout) bring their own line / circle – none means none
+    const circle = derived?.zones ? zones.circle : (zones.circle || dep?.circle);
     if (circle) svg('circle', { class: 'map-zone-circle', cx: circle[0], cy: circle[1], r: circle[2] }, gZones);
-    const line = zones.line || dep?.line;
+    const line = derived?.zones ? zones.line : (zones.line || dep?.line);
     if (line) svg('polyline', { class: 'map-line', points: line.map(q => q.join(',')).join(' ') }, gZones);
   }
   function patchTerrain() {
@@ -277,6 +278,7 @@ export function createMap(el, opts = {}) {
       setAttrs(e.g, { transform: `translate(${p.x} ${p.y})` });
       const c = ctrlOf(ob);
       cls(e.g, 'c0', c === 0); cls(e.g, 'c1', c === 1);
+      cls(e.g, 'terrain-obj', !!ob.terrainObj);   // 11th edition: inside a terrain area the whole area is the range, not 3"
       const isHome = ob.home === 0 || ob.home === 1;
       e.home.style.display = isHome ? '' : 'none';
       e.icon.style.display = isHome ? '' : 'none';

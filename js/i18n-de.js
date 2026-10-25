@@ -88,7 +88,7 @@ export const PHRASES = {
   // ── setup
   'Prepare the battle': 'Schlacht vorbereiten', 'Players': 'Spieler', 'Army list (optional)': 'Armeeliste (optional)', 'Army list': 'Armeeliste',
   'Review & start': 'Prüfen & starten', 'Next: Army ›': 'Weiter: Armee ›', 'Next: Army list (optional) ›': 'Weiter: Armeeliste (optional) ›',
-  'Next: Mission ›': 'Weiter: Mission ›', 'Next: Secondary ›': 'Weiter: Sekundär ›', 'Next: Review & start ›': 'Weiter: Prüfen & starten ›',
+  'Next: Mission ›': 'Weiter: Mission ›', 'Next: Table ›': 'Weiter: Tisch ›', 'Table': 'Tisch', 'Next: Secondary ›': 'Weiter: Sekundär ›', 'Next: Review & start ›': 'Weiter: Prüfen & starten ›',
   'Game options': 'Spieloptionen', 'Game size': 'Spielgröße', 'Points limit': 'Punktelimit', 'Detachment Points': 'Detachment Points', 'By game size': 'Nach Spielgröße',
   'Stratagem lock': 'Stratagem-Sperre', 'Per phase (rule)': 'Pro Phase (Regel)', 'Per round (house rule)': 'Pro Runde (Hausregel)', 'Colour': 'Farbe',
   '– light/dark depending on the theme': '– hell/dunkel je nach Design', '(taken by opponent)': '(vom Gegner gewählt)',
@@ -695,8 +695,8 @@ Object.assign(PHRASES, {
   'Determine mission': 'Mission bestimmen',
   'Each player finds the opponent\'s Force Disposition on their own card: the Primary Mission listed there is theirs. The app shows both once both Dispositions are chosen.': 'Jeder Spieler sucht die Force Disposition des Gegners auf seiner eigenen Karte: Die dort genannte Primary Mission ist seine. Die App zeigt beide, sobald beide Dispositions gewählt sind.',
   'Determine a layout': 'Layout bestimmen',
-  'Choose layout A, B or C of your two Force Dispositions (Mission step → Terrain layout). Events usually go A, B, C in order.': 'Layout A, B oder C eurer beiden Force Dispositions wählen (Schritt Mission → Terrain layout). Auf Events meist A, B, C der Reihe nach.',
-  'Half table: generate the layout for this half table (Mission step → Random layout).': 'Tischhälfte: das Layout für diese Tischhälfte erzeugen (Schritt Mission → Random layout).',
+  'Choose layout A, B or C of your two Force Dispositions (Table step). Events usually go A, B, C in order.': 'Layout A, B oder C eurer beiden Force Dispositions wählen (Schritt Tisch). Auf Events meist A, B, C der Reihe nach.',
+  'Half table: generate the layout for this half table (Table step → Random layout).': 'Tischhälfte: das Layout für diese Tischhälfte erzeugen (Schritt Mission → Random layout).',
   'Create the battlefield': 'Spielfeld aufbauen',
   'Set up the terrain areas and the terrain features on them exactly as the layout shows – open the Battle table (3D), turn on Measurements, and place the real pieces by the distances shown. Confirm when the table is built.': 'Geländeflächen und die Geländeteile darauf genau wie im Layout aufstellen – Spieltisch (3D) öffnen, Maße einschalten und die echten Teile nach den Abständen setzen. Bestätigen, wenn der Tisch steht.',
   'Determine Attacker and Defender': 'Angreifer und Verteidiger bestimmen',
@@ -713,4 +713,21 @@ Object.assign(PHRASES, {
   'Resolve pre-battle rules': 'Vor-Schlacht-Regeln abhandeln',
   'Alternating, starting with the player who takes the first turn, resolve pre-battle rules of your units. Confirm when done.': 'Abwechselnd, beginnend mit dem Spieler mit dem ersten Zug, die Vor-Schlacht-Regeln eurer Einheiten abhandeln. Bestätigen, wenn fertig.',
   'Begin the battle': 'Schlacht beginnen', 'The first battle round begins – “Start battle” on the score display.': 'Die erste Schlachtrunde beginnt – „Start battle“ auf dem Spielstand-Tablet.'
+});
+// Setup step "Table": Event Companion layout cards, the live table preview, the VR headset
+Object.assign(EXACT, {
+  'Event Companion layout': 'Event-Companion-Layout', 'Table preview': 'Tischvorschau', 'Other layouts': 'Andere Layouts',
+  'Layout A': 'Layout A', 'Layout B': 'Layout B', 'Layout C': 'Layout C', 'chosen': 'gewählt', 'Back to Mission': 'Zurück zur Mission',
+  'Choose both Force Dispositions first – the three official Event Companion layouts of that pairing appear here.': 'Zuerst beide Force Dispositions wählen – dann erscheinen hier die drei offiziellen Event-Companion-Layouts dieser Paarung.',
+  'Warhammer Event Companion (11th edition): three official layouts per pairing of Force Dispositions. Events usually play A, B, C in order. Pick one – the table below, the 3D battle table and the VR headset show it.': 'Warhammer Event Companion (11. Edition): drei offizielle Layouts je Paarung der Force Dispositions. Auf Events meist A, B, C der Reihe nach. Eins wählen – der Tisch unten, der 3D-Spieltisch und die VR-Brille zeigen es.',
+  'No layout yet': 'Noch kein Layout', 'assumed – not chosen yet': 'angenommen – noch nicht gewählt', 'Deployment card': 'Aufstellungskarte',
+  'Attacker’s edge at the top': 'Kante des Angreifers oben', 'dense terrain (blocks line of sight)': 'dichtes Gelände (blockiert Sichtlinie)', 'light terrain (cover)': 'leichtes Gelände (Deckung)',
+  'deployment zones': 'Aufstellungszonen', 'objectives – inside a terrain area the whole area is the control range': 'Missionsziele – in einer Geländefläche zählt die ganze Fläche als Kontrollbereich',
+  'The VR headset shows this table live: every choice here appears on the real table in the headset, and a layout applied in the headset appears here.': 'Die VR-Brille zeigt diesen Tisch live: Jede Wahl hier erscheint auf dem echten Tisch in der Brille, und ein in der Brille angewendetes Layout erscheint hier.',
+  'Without a headset: build the table by this preview – the 3D battle table has measurements for every piece.': 'Ohne Brille: den Tisch nach dieser Vorschau aufbauen – der 3D-Spieltisch hat Maße für jedes Stück.',
+  'Chapter Approved layouts, a random layout or no terrain – these need a Deployment card, chosen below.': 'Chapter-Approved-Layouts, ein Zufallslayout oder kein Gelände – dafür braucht es eine Aufstellungskarte, unten wählen.',
+  'Deployment card (only without an Event Companion layout – that layout brings its own zones)': 'Aufstellungskarte (nur ohne Event-Companion-Layout – das Layout bringt eigene Zonen mit)',
+  'Choose a layout to continue – the setup goes on once the table is set.': 'Zum Weitermachen ein Layout wählen – das Setup geht weiter, sobald der Tisch steht.',
+  'Table not set – choose a layout in the Table step': 'Tisch nicht gesetzt – im Schritt Tisch ein Layout wählen',
+  'Dispositions or Attacker missing': 'Dispositions oder Angreifer fehlen', 'Half table: the Event Companion layouts are for the 44"×60" battlefield – generate a layout for this half table instead (it needs a Deployment card, chosen below).': 'Tischhälfte: Die Event-Companion-Layouts gelten für das 44"×60"-Spielfeld – stattdessen ein Layout für diese Tischhälfte erzeugen (braucht eine Aufstellungskarte, unten wählen).'
 });

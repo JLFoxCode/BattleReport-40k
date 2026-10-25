@@ -64,6 +64,7 @@
 .obj.c0 { --oc: var(--p0); }
 .obj.c1 { --oc: var(--p1); }
 .obj-range { fill: var(--oc); fill-opacity: .07; stroke: var(--oc); stroke-width: .1; stroke-dasharray: .5 .35; stroke-opacity: .75; }
+.obj.terrain-obj .obj-range { display: none; }   /* terrain objective: the terrain area itself is the control range */
 .obj-marker { fill: var(--oc); stroke: var(--map-label); stroke-width: .12; }
 .obj-home { fill: none; stroke: var(--oc); stroke-width: .12; }
 .obj-home-icon { fill: var(--map-label); stroke: none; pointer-events: none; }

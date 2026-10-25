@@ -17,7 +17,7 @@ export function sequenceSteps(state) {
     { n: 2, key: 'mission', stage: SETUP, auto: true, done: !!disp && !!(m.primary && m.primary[0] && m.primary[1]),
       title: 'Determine mission', text: 'Each player finds the opponent\'s Force Disposition on their own card: the Primary Mission listed there is theirs. The app shows both once both Dispositions are chosen.' },
     { n: 3, key: 'layout', stage: SETUP, auto: true, done: layout,
-      title: 'Determine a layout', text: half ? 'Half table: generate the layout for this half table (Mission step → Random layout).' : 'Choose layout A, B or C of your two Force Dispositions (Mission step → Terrain layout). Events usually go A, B, C in order.' },
+      title: 'Determine a layout', text: half ? 'Half table: generate the layout for this half table (Table step → Random layout).' : 'Choose layout A, B or C of your two Force Dispositions (Table step). Events usually go A, B, C in order.' },
     { n: 4, key: 'battlefield', stage: SETUP, auto: false, done: !!seq.battlefield,
       title: 'Create the battlefield', text: 'Set up the terrain areas and the terrain features on them exactly as the layout shows – open the Battle table (3D), turn on Measurements, and place the real pieces by the distances shown. Confirm when the table is built.' },
     { n: 5, key: 'attacker', stage: SETUP, auto: true, done: m.attacker === 0 || m.attacker === 1,

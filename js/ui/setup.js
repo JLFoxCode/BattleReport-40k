@@ -1,4 +1,4 @@
-/* Setup-Assistent (SPEC §7): Spieler · Armee · Armeeliste · Mission · Sekundär · Prüfen & Start.
+/* Setup-Assistent (SPEC §7): Spieler · Armee · Armeeliste · Mission · Tisch · Sekundär · Prüfen & Start.
  * Route #/g/CODE/setup[/0|/1] – ctx.me = 0/1 (eigenes Handy) oder null (Desktop/Lobby: beide Spieler).
  * Lokaler UI-Zustand (Schritt, Suche, Fixed-Auswahl) liegt je Spielcode in UI, damit State-Pushes ihn nicht verlieren.
  * Events: einmalige Delegation auf root (root.__setupBound), Aktionen über data-action / data-field. */
@@ -6,13 +6,14 @@ import { esc, btn, chip, badge, confirmSheet, toast, colorOf, playerLabel } from
 import { prepareQr, qrReady, joinUrl } from './qr.js';
 import { randomLayoutAction } from './random-layout.js';
 import { sequenceStrip } from './sequence.js';
-import { armyStep, unitsStep, missionStep, secStep, facListHtml, openUnitSheet, openImportSheet, importSavedArmy, dpLimit, dpOf, SIZE_LABEL } from './setup-steps.js';
+import { armyStep, unitsStep, missionStep, tableStep, mountTablePreview, tableLabel, secStep, facListHtml, openUnitSheet, openImportSheet, importSavedArmy, dpLimit, dpOf, SIZE_LABEL } from './setup-steps.js';
 
 const STEPS = [
   { id: 'players', label: 'Players' },
   { id: 'army', label: 'Army' },
   { id: 'units', label: 'Army list' },
   { id: 'mission', label: 'Mission' },
+  { id: 'table', label: 'Table' },
   { id: 'secondary', label: 'Secondary' },
   { id: 'check', label: 'Review & start' }
 ];
@@ -101,9 +102,10 @@ function paint() {
       <div class="step-nav sticky-bottom">
         ${btn({ label: '‹ Back', kind: 'ghost', action: 'prev', disabled: ui.step === 0 })}
         <span class="spacer"></span>
-        ${ui.step < STEPS.length - 1 ? btn({ label: `Next: ${STEPS[ui.step + 1].label} ›`, kind: 'primary', action: 'next' }) : ''}
+        ${ui.step < STEPS.length - 1 ? btn({ label: `Next: ${STEPS[ui.step + 1].label} ›`, kind: 'primary', action: 'next', disabled: STEPS[ui.step].id === 'table' && tableState(s) !== 'ok', title: STEPS[ui.step].id === 'table' && tableState(s) !== 'ok' ? 'Choose a layout to continue – the setup goes on once the table is set.' : '' }) : ''}
       </div>
     </div>`;
+  if (STEPS[ui.step].id === 'table') mountTablePreview(root, ctx);   // the live 2D table (SVG) into its box
 }
 
 /* ═══════════════ Kopf: Schritte / Fortschritt ═══════════════ */
@@ -150,7 +152,8 @@ function stepDone(ctx, ui, i) {
     case 'players': return all(p => !!s.players[p].name) ? 'ok' : 'warn';
     case 'army': { const f = p => !!s.players[p].faction && s.players[p].detachments.length > 0; return all(f) ? 'ok' : any(f) ? 'warn' : ''; }
     case 'units': return all(p => s.players[p].units.length > 0) ? 'ok' : 'warn';   // not required to start, but it powers the phone
-    case 'mission': return missionState(s) === 'ok' ? 'ok' : missionState(s);
+    case 'mission': return missionState(s);
+    case 'table': return tableState(s);
     case 'secondary': return all(p => secOk(ctx, ui, p)) ? 'ok' : 'warn';
     case 'check': return all(p => s.players[p].ready) ? 'ok' : any(p => s.players[p].ready) ? 'warn' : '';
   }
@@ -158,8 +161,14 @@ function stepDone(ctx, ui, i) {
 }
 function missionState(s) {
   const m = s.mission;
-  const parts = [!!m.deployment, m.dispositions.every(Boolean), m.attacker === 0 || m.attacker === 1, m.primary.every(Boolean)];
+  const parts = [m.dispositions.every(Boolean), m.attacker === 0 || m.attacker === 1, m.primary.every(Boolean)];
   return parts.every(Boolean) ? 'ok' : parts.some(Boolean) ? 'warn' : '';
+}
+/** The table is set once the game has its Deployment card – an Event Companion layout brings it, the other layouts need
+ *  it chosen by hand. The setup only goes on from the Table step once that is the case. */
+function tableState(s) {
+  const m = s.mission;
+  return m.deployment ? 'ok' : m.dispositions.every(Boolean) ? 'warn' : '';
 }
 function secOk(ctx, ui, p) {
   const sec = ctx.state.players[p].secondaries;
@@ -174,6 +183,7 @@ function stepHtml(ctx, ui) {
     case 'army': return cols(ctx, ui, p => armyStep(ctx, ui, p));
     case 'units': return cols(ctx, ui, p => unitsStep(ctx, ui, p));
     case 'mission': return missionStep(ctx, ui);
+    case 'table': return tableStep(ctx, ui);
     case 'secondary': return cols(ctx, ui, p => secStep(ctx, ui, p));
     case 'check': return checkStep(ctx, ui);
   }
@@ -251,9 +261,10 @@ function checkStep(ctx, ui) {
     const sec = pl.secondaries;
     items.push([secOk(ctx, ui, p), `${name}: Secondary`, sec.mode === 'fixed' ? `Fixed – ${(sec.fixed || []).map(id => (WH.SECONDARY[id] || { name: id }).name).join(', ') || 'no cards yet'}` : 'Tactical (deck will be shuffled)']);
   }
-  items.push([missionState(s) === 'ok', 'Mission', m.deployment
-    ? `${m.deployment} · ${m.attacker != null ? playerLabel(s, m.attacker) + ' is the Attacker' : 'Attacker missing'} · Primary: ${m.primary.map(id => id ? (WH.PRIMARY[id] || {}).name : '–').join(' / ')}${m.twist ? ' · Twist: ' + ((WH.TWISTS.find(t => t.id === m.twist) || {}).name || m.twist) : ''}`
-    : 'Deployment map missing']);
+  items.push([missionState(s) === 'ok', 'Mission', missionState(s) === 'ok'
+    ? `${m.attacker != null ? playerLabel(s, m.attacker) + ' is the Attacker' : 'Attacker missing'} · Primary: ${m.primary.map(id => id ? (WH.PRIMARY[id] || {}).name : '–').join(' / ')}${m.twist ? ' · Twist: ' + ((WH.TWISTS.find(t => t.id === m.twist) || {}).name || m.twist) : ''}`
+    : 'Dispositions or Attacker missing']);
+  items.push([tableState(s) === 'ok', 'Table', tableState(s) === 'ok' ? tableLabel(ctx) : 'Table not set – choose a layout in the Table step']);
   items.push([s.players.every(p => p.ready), 'Both players ready', s.players.map(p => `${p.name}: ${p.ready ? 'ready' : 'not ready'}`).join(' · ')]);
   const allOk = items.every(i => i[0]);
   return `

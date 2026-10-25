@@ -23,7 +23,16 @@ const st = { mode: 'none', user: null, syncing: false, lastSync: null, error: nu
 const subs = new Set();
 
 function readCfg() {
-  try { const v = JSON.parse(localStorage.getItem(LS) || 'null'); if (v && typeof v === 'object') return Object.assign(fresh(), v); } catch {}
+  try {
+    const v = JSON.parse(localStorage.getItem(LS) || 'null');
+    if (v && typeof v === 'object') {
+      const c = Object.assign(fresh(), v);
+      // the online server moved (tunnel address → own domain): the account and its token are the same server's – they
+      // move with it, nobody has to sign in again after an update
+      if (c.server && c.server !== DEFAULT_SERVER && !/^http:\/\/(127\.0\.0\.1|localhost)(:|$)/i.test(c.server)) { c.server = DEFAULT_SERVER; try { localStorage.setItem(LS, JSON.stringify(c)); } catch {} }
+      return c;
+    }
+  } catch {}
   return Object.assign(fresh(), { server: '', user: null, token: null });
 }
 function saveCfg() { try { localStorage.setItem(LS, JSON.stringify(cfg)); } catch (e) { console.warn('account settings', e); } }
@@ -102,10 +111,16 @@ window.addEventListener('br-auth-required', () => { if (st.mode === 'same') sign
 // ------------------------------------------------------------ start
 export async function initAccount() {
   let s = null;
-  try {
-    const r = await fetch('/api/session', { cache: 'no-store', credentials: 'same-origin', signal: AbortSignal.timeout ? AbortSignal.timeout(4000) : undefined });
-    if (r.ok) s = await r.json();
-  } catch {}
+  // the server may be restarting right now (an update): a failed or 5xx answer is retried a few times before the device
+  // counts as not signed in – the session cookie / token is still there
+  for (let i = 0; i < 4 && !s; i++) {
+    if (i) await new Promise(r => setTimeout(r, 1500));
+    try {
+      const r = await fetch('/api/session', { cache: 'no-store', credentials: 'same-origin', signal: AbortSignal.timeout ? AbortSignal.timeout(4000) : undefined });
+      if (r.ok) s = await r.json();
+      else if (r.status < 500) break;
+    } catch {}
+  }
   if (s && s.auth) {
     st.mode = 'same';
     st.user = s.user || null;

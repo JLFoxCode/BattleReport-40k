@@ -4,7 +4,7 @@ import { WH } from '../data/rules.js';
 import { factionById, detachmentById } from '../data/factions/index.js';
 import { shuffle } from './rng.js';
 import { dist, pointInPolygon, round2 } from './geometry.js';
-import { deriveBase, zoneOf, activePlayer, deploymentMapOf, boardSize } from './derive.js';
+import { deriveBase, zoneOf, activePlayer, deploymentMapOf, boardSize, deploymentForLayout } from './derive.js';
 import { checkpointItems, checkpointKey, applyCaps, vpTotals, CAPS } from './scoring.js';
 import { stratById, stratCheck, useKeyPhase } from './stratagems.js';
 
@@ -697,6 +697,15 @@ H['mission.set'] = (s, a) => {
   if ('attacker' in a) { if (a.attacker != null && !isIdx(a.attacker)) fail('Invalid Attacker'); m.attacker = a.attacker == null ? null : a.attacker; changes.push('Attacker ' + (m.attacker == null ? '–' : pName(s, m.attacker))); }
   if ('first' in a) { if (a.first != null && !isIdx(a.first)) fail('Invalid first player'); m.first = a.first == null ? null : a.first; changes.push('first turn ' + (m.first == null ? '–' : pName(s, m.first))); }
   if ('terrainLayout' in a) { m.terrainLayout = a.terrainLayout == null ? null : String(a.terrainLayout); changes.push('terrain ' + (m.terrainLayout || '–')); if (!('terrainPieces' in a) && !String(m.terrainLayout || '').startsWith('random-')) m.terrainPieces = null; }
+  // an Event Companion layout dictates the deployment zones: its Deployment card follows it (chosen in the Table step or
+  // applied in the VR headset); a card picked by hand that does not fit the chosen layout ends that layout
+  if ('terrainLayout' in a && m.terrainLayout) {
+    const dep = deploymentForLayout(m.terrainLayout);
+    if (dep && m.deployment !== dep) { m.deployment = dep; changes.push('deployment ' + dep); }
+  } else if ('deployment' in a && m.deployment && m.terrainLayout) {
+    const dep = deploymentForLayout(m.terrainLayout);
+    if (dep && dep !== m.deployment) { m.terrainLayout = null; m.terrainPieces = null; changes.push('terrain –'); }
+  }
   // a generated (random) layout travels with the game: its plates incl. their features – every device and the VR headset show the same table
   if ('terrainPieces' in a) {
     if (a.terrainPieces == null) m.terrainPieces = null;

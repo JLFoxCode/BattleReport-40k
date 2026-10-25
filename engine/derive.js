@@ -2,6 +2,7 @@
  * derive() = vollständiges Objekt für den Client. */
 import { WH } from '../data/rules.js';
 import { halfMap } from '../data/half-table.js';
+import { LAYOUTS11 } from '../data/layouts11.js';
 import { factionById, detachmentById } from '../data/factions/index.js';
 import { dist, pointInPolygon, centroid, sideOfLine } from './geometry.js';
 import { stratsWithAvailability, fitsPhase } from './stratagems.js';
@@ -28,6 +29,33 @@ export function deploymentMapOf(state) {
   const m = WH.DEPLOYMENT_MAPS[name];
   if (!m) return null;
   return { zones: { a: m.zones.a, d: m.zones.d }, line: (m.zones && m.zones.line) || m.line || null, circle: (m.zones && m.zones.circle) || m.circle || null, home: m.home, exp: m.exp, centre: [22, 30] };
+}
+
+/** The Chapter Approved Deployment card whose zones an 11th-edition Event Companion layout uses – the layouts carry the
+ *  same six zone shapes (inset by ¼" from the edges), found by the overlap of the Attacker's zone on a 1" grid. The game
+ *  engine (objectives, "within your deployment zone") works with that card; null when no card fits. */
+const DEP_OF_LAYOUT = new Map();
+export function deploymentForLayout(layoutId) {
+  if (!layoutId) return null;
+  if (DEP_OF_LAYOUT.has(layoutId)) return DEP_OF_LAYOUT.get(layoutId);
+  const L = LAYOUTS11.find(l => l.id === layoutId);
+  let best = null;
+  if (L && L.zones && L.zones.a) {
+    // the cards' polygons repeat a point here and there – a zero-length edge would count every point as "on the edge"
+    const clean = poly => { const c = poly.filter((q, i) => !i || q[0] !== poly[i - 1][0] || q[1] !== poly[i - 1][1]); const l = c[c.length - 1]; return c.length > 3 && l[0] === c[0][0] && l[1] === c[0][1] ? c.slice(0, -1) : c; };
+    const grid = poly => { const g = new Set(); poly = clean(poly); for (let x = .5; x < 44; x++) for (let y = .5; y < 60; y++) if (pointInPolygon({ x, y }, poly)) g.add(x + ',' + y); return g; };
+    const A = grid(L.zones.a);
+    let bestIou = 0;
+    for (const name of Object.keys(WH.DEPLOYMENT_MAPS || {})) {
+      const B = grid(WH.DEPLOYMENT_MAPS[name].zones.a);
+      let inter = 0; for (const k of A) if (B.has(k)) inter++;
+      const iou = inter / (A.size + B.size - inter || 1);
+      if (iou > bestIou) { bestIou = iou; best = name; }
+    }
+    if (bestIou < .85) best = null;
+  }
+  DEP_OF_LAYOUT.set(layoutId, best);
+  return best;
 }
 
 export function zonesOf(state) {

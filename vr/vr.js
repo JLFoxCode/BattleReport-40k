@@ -574,7 +574,7 @@ function applyEventLayout() {
     const idOf = name => (WH.DISPOSITIONS.find(d => d.name === name) || {}).id || null;
     const att = app.state.mission && app.state.mission.attacker === 1 ? 1 : 0;
     const dd = [null, null]; dd[att] = idOf(L.attacker.disposition); dd[1 - att] = idOf(L.defender.disposition);
-    app.net.dispatch({ type: 'mission.set', dispositions: dd, attacker: att, terrainLayout: L.id, deployment: null }).catch(e => toast(e.message));
+    app.net.dispatch({ type: 'mission.set', dispositions: dd, attacker: att, terrainLayout: L.id }).catch(e => toast(e.message));
   }
   toast(`${L.attacker.disposition} vs ${L.defender.disposition} \– Layout ${L.variant} (${L.attacker.mission} / ${L.defender.mission})`);
 }
