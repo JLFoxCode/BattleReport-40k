@@ -357,7 +357,8 @@ function repaint() {
   const halfObjectives = halfLayers.flatMap(l => l.objectives);
   paintBoard(boardCanvas.getContext('2d'), {
     map: half ? null : map, attacker: s && s.mission ? s.mission.attacker : null, colors, names: players.map(p => p.name),
-    objectives: half ? halfObjectives : objectives, band: app.band, grid: app.grid, marks: app.marks, field, fields: fields(), layers: halfLayers
+    objectives: half ? halfObjectives : objectives, band: app.band, grid: app.grid, marks: app.marks, field, fields: fields(), layers: halfLayers,
+    pieces: app.pieces   // terrain objectives: an objective inside a terrain area is controlled from the whole area
   });
   boardTex.needsUpdate = true;
 
@@ -515,6 +516,8 @@ function buildTerrain() {
     terrainGroup.add(g);
   });
   $('#pieces').textContent = app.pieces.length ? app.pieces.length + ' pieces' + (app.selected >= 0 ? ' · selected: ' + describe(app.pieces[app.selected]) : '') : 'No terrain';
+  // the board overlay depends on the terrain too: an objective inside a terrain area is controlled from the whole area
+  repaint();
 }
 const describe = p => `${p.tall === true ? 'tall' : p.tall === false ? 'low' : (TERRAIN_KINDS[p.kind] || p.kind)} ${p.w}"×${p.h}" @ ${p.x.toFixed(1)}/${p.y.toFixed(1)} ${p.rot | 0}°`;
 const layoutById = id => { const L = id && LAYOUTS11.find(l => l.id === id); return L ? { id, name: `${L.attacker.disposition} vs ${L.defender.disposition} ${L.variant}`, pieces: L.pieces } : (id && String(id).startsWith('random-') ? { id, name: 'Random layout #' + id.slice(7), pieces: [] } : null); };

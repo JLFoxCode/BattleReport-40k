@@ -13,6 +13,29 @@ export function rectCorners(p) {
   return [[-hw, -hh], [hw, -hh], [hw, hh], [-hw, hh]].map(([dx, dy]) => [p.x + dx * c - dy * s, p.y + dx * s + dy * c]);
 }
 
+/** Footprint of a piece (its polygon, else the rotated rectangle) in battlefield inches. */
+export function footprint(p) {
+  if (p.poly && p.poly.length >= 3) {
+    const r = (p.rot || 0) * Math.PI / 180, c = Math.cos(r), s = Math.sin(r);
+    return p.poly.map(([x, y]) => [p.x + x * c - y * s, p.y + x * s + y * c]);
+  }
+  return rectCorners(p);
+}
+export function inPoly(pt, poly) {
+  let inside = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const [xi, yi] = poly[i], [xj, yj] = poly[j];
+    if ((yi > pt[1]) !== (yj > pt[1]) && pt[0] < ((xj - xi) * (pt[1] - yi)) / (yj - yi) + xi) inside = !inside;
+  }
+  return inside;
+}
+/** 11th edition: an objective inside a terrain area is a terrain objective – a model controls it from anywhere within
+ *  that area (no 3" range). → the area's footprint, or null for an objective in the open. */
+export function objectiveArea(pos, pieces) {
+  for (const q of pieces || []) { const f = footprint(q); if (inPoly(pos, f)) return f; }
+  return null;
+}
+
 /** Point inside the rotated rectangle? */
 export function inRect(p, q) {
   const r = -(q.rot || 0) * Math.PI / 180, c = Math.cos(r), s = Math.sin(r);
@@ -139,17 +162,24 @@ export function paintBoard(ctx, o) {
   if (o.map) drawMap(o.map, o.attacker);
   for (const l of o.layers || []) if (l.map) drawMap(l.map, l.attacker);      // half-table fields: one card each
 
-  // objectives: 40 mm marker + 3" control range
+  // objectives: 40 mm marker; control range = the terrain area it lies in (11th ed. terrain objective), else 3"
   for (const ob of o.objectives || []) {
     const [x, y] = ob.pos;
     const col = ob.home != null && o.colors && o.colors[ob.home] ? o.colors[ob.home] : '#F2C94C';
-    ctx.beginPath(); ctx.arc(x, y, OBJ_RANGE, 0, Math.PI * 2);
-    ctx.fillStyle = hex(col, 0.12); ctx.fill();
-    ctx.setLineDash([0.5, 0.35]); ctx.strokeStyle = hex(col, 0.85); ctx.lineWidth = 0.12; ctx.stroke(); ctx.setLineDash([]);
+    const area = objectiveArea(ob.pos, o.pieces);
+    if (area) {
+      ctx.beginPath(); area.forEach(([ax, ay], i) => (i ? ctx.lineTo(ax, ay) : ctx.moveTo(ax, ay))); ctx.closePath();
+      ctx.fillStyle = hex(col, 0.14); ctx.fill();
+      ctx.setLineDash([0.5, 0.35]); ctx.strokeStyle = hex(col, 0.9); ctx.lineWidth = 0.14; ctx.stroke(); ctx.setLineDash([]);
+    } else {
+      ctx.beginPath(); ctx.arc(x, y, OBJ_RANGE, 0, Math.PI * 2);
+      ctx.fillStyle = hex(col, 0.12); ctx.fill();
+      ctx.setLineDash([0.5, 0.35]); ctx.strokeStyle = hex(col, 0.85); ctx.lineWidth = 0.12; ctx.stroke(); ctx.setLineDash([]);
+    }
     ctx.beginPath(); ctx.arc(x, y, OBJ_RADIUS, 0, Math.PI * 2);
     ctx.fillStyle = hex(col, 0.9); ctx.fill(); ctx.strokeStyle = '#000'; ctx.lineWidth = 0.08; ctx.stroke();
     ctx.font = 'bold 1.1px sans-serif'; ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText(ob.name || '', x, y + OBJ_RANGE + 0.9);
+    ctx.fillText((ob.name || '') + (area ? ' · terrain objective' : ''), x, y + OBJ_RANGE + 0.9);
   }
 
   // measuring marks
