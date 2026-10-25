@@ -38,8 +38,13 @@
 .ds-wrow.from-model td { background: color-mix(in srgb, var(--mdl) 10%, transparent); }
 .ds-wrow.from-model td.ds-wcell-name, .ds-wrow.sel.from-model td.ds-wcell-name { box-shadow: inset 3px 0 0 var(--mdl); padding-left: 6px; }
 .ds-wgroup-h.from-model td { background: color-mix(in srgb, var(--mdl) 10%, transparent); box-shadow: inset 3px 0 0 var(--mdl); padding-left: 6px; }
-.ds-wrow.from-model.not td { background: transparent; }
-.ds-tag.mdl.not { text-transform: none; letter-spacing: .02em; }
+/* model legend above the weapons: the models with weapons of their own, each in its colour; a coloured weapon row
+ * carries a dot per bearer in that colour (names only here) */
+.ds-models { display: flex; flex-wrap: wrap; gap: 4px 12px; margin: -4px 0 8px; font-size: .78rem; }
+.ds-mdl { display: inline-flex; align-items: center; gap: 5px; color: var(--mdl); font-weight: 600; }
+.ds-mdl-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: var(--mdl); box-shadow: 0 0 0 1px color-mix(in srgb, var(--mdl) 50%, transparent); }
+.ds-mdl-dots { display: inline-flex; gap: 3px; margin-left: 6px; vertical-align: middle; }
+.ds-profile-name.mdl { color: var(--mdl); }
 .ds-wgroup-h.from-leader td { background: color-mix(in srgb, var(--ldr) 10%, transparent); box-shadow: inset 3px 0 0 var(--ldr); padding-left: 6px; }
 .ds-wrow.sel td.ds-wcell-name { box-shadow: inset 3px 0 0 var(--ok); padding-left: 6px; }
 .ds-ab { font-size: .9rem; line-height: 1.4; margin: 4px 0; }
