@@ -67,7 +67,6 @@ function pageHtml(i) {
   return `<div class="lobby page">${head}
     <section class="card acct-card">
       <div class="title">Signed in as <span class="acct-user" data-no-i18n>${esc(i.user)}</span></div>
-      ${i.mode === 'remote' ? `<p class="muted small">Online server: <span data-no-i18n>${esc(i.server)}</span></p>` : ''}
       <p class="acct-status" data-acct-status>${statusHtml(i)}</p>
       <div class="row acct-actions">
         ${btn({ label: 'Sync now', kind: 'ghost', action: 'acct-sync' })}
@@ -109,7 +108,6 @@ function formHtml(i, withServer) {
       <button type="button" class="chip${reg ? ' on' : ''}" data-action="acct-tab" data-tab="register" role="tab" aria-selected="${reg}">Create account</button>
     </div>
     <form class="acct-form" data-form="${reg ? 'register' : 'login'}" autocomplete="on">
-      ${withServer ? `<label class="field"><span>Server address</span><input type="url" name="server" inputmode="url" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="https://battlereport.jlpicture.de" value="${esc(i.server || DEFAULT_SERVER)}" required></label>` : ''}
       <label class="field"><span>User name</span><input type="text" name="username" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" maxlength="24" value="${esc(i.lastUser || '')}" required></label>
       <label class="field"><span>Password</span><input type="password" name="password" autocomplete="${reg ? 'new-password' : 'current-password'}" ${reg ? 'minlength="8" ' : ''}required></label>
       ${reg ? `<label class="field"><span>Invite code</span><input type="text" name="invite" autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false" maxlength="12" placeholder="XXXX-XXXX" required></label>
@@ -132,7 +130,7 @@ async function onSubmit(e) {
       pwOpen = false;
       toast('Password changed', 'ok');
     } else {
-      const o = { username: v('username').trim(), password: v('password'), server: v('server') };
+      const o = { username: v('username').trim(), password: v('password'), server: DEFAULT_SERVER };   // the one online server – fixed, no address field
       if (f.dataset.form === 'register') await register(Object.assign(o, { invite: v('invite') }));
       else await login(o);
       toast('Signed in as ' + accountInfo().user, 'ok');
