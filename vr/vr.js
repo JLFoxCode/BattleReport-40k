@@ -24,6 +24,7 @@ import { createFeed } from './feed.js';
 import { Panel, Hud } from './panel.js';
 import { createCamera } from './camera.js';
 import { generate as generateLayout } from '../engine/layoutgen.js';
+import { deploymentForLayout } from '../engine/derive.js';
 import { guessLayout, solveAll, fromRT, toRT, apply as mApply, fitPlane, setMarkerScale } from './markercal.js';
 
 const $ = s => document.querySelector(s);
@@ -127,7 +128,8 @@ function refreshLayoutRows() { /* layouts are chosen in the Mission tab now */ }
 const panel = new Panel(THREE, {
   tabs: [{ id: 'table', label: 'Table' }, { id: 'mission', label: 'Mission' }, { id: 'terrain', label: 'Terrain' }, { id: 'deploy', label: 'Deploy' }, { id: 'camera', label: 'Camera' }, { id: 'system', label: 'System' }],
   rows: [
-    // Mission: pick the game, then its Deployment card (zones + objectives on the table)
+    // Mission: pick the game, then its Event Companion layout (zones, objectives and terrain on the table) – with a game
+    // the rows show the game's setup and every button changes the game
     { tab: 'mission', title: 'Game' },
     { tab: 'mission', key: 'games', buttons: [{ label: 'Loading games…', a: { act: 'games' } }] },
     { tab: 'mission', title: 'Event layout (11th ed. Event Companion): Attacker\'s Force Disposition' },
@@ -135,9 +137,6 @@ const panel = new Panel(THREE, {
     { tab: 'mission', title: 'Defender\'s Force Disposition' },
     dispRow('dispD', 'dispD'),
     { tab: 'mission', buttons: [{ label: 'Layout A', a: { variant: 'A' } }, { label: 'Layout B', a: { variant: 'B' } }, { label: 'Layout C', a: { variant: 'C' } }, { label: 'Apply event layout', a: { act: 'applyLayout11' }, w: 1.6 }, { label: 'Clear', a: { act: 'clearLayout11' } }] },
-    { tab: 'mission', title: 'Pick-up game instead: deployment card of the mission deck' },
-    { tab: 'mission', buttons: WH.DEPLOYMENTS.slice(0, 3).map(n => ({ label: n, a: { deployment: n } })) },
-    { tab: 'mission', buttons: WH.DEPLOYMENTS.slice(3, 6).map(n => ({ label: n, a: { deployment: n } })) },
     { tab: 'mission', title: 'Attacker' },
     { tab: 'mission', buttons: [{ label: 'Player 1 attacks', a: { attacker: 0 } }, { label: 'Player 2 attacks', a: { attacker: 1 } }] },
     // Table: calibration, fine adjustment, tracking
@@ -152,7 +151,7 @@ const panel = new Panel(THREE, {
     { tab: 'table', title: 'Tracking' },
     { tab: 'table', buttons: [{ label: 'Room anchor', a: { act: 'track', v: 'room' } }, { label: 'Local (fixed)', a: { act: 'track', v: 'local' } }, { label: '6" grid', a: { act: 'grid' } }] },
     // Terrain
-    { tab: 'terrain', title: 'Layout (✓ = recommended for the chosen deployment card)' },
+    { tab: 'terrain', title: 'Terrain areas on the table' },
     { tab: 'terrain', buttons: [{ label: 'Terrain of the event layout', a: { act: 'reset' }, w: 1.5 }, { label: 'No terrain', a: { layout: '' } }, { label: 'Capture piece', a: { tool: 'capture' }, w: 1.3 }] },
     { tab: 'terrain', title: 'Random layout, 11th ed. style: point-symmetric, every objective inside a terrain area, sightlines broken' },
     { tab: 'terrain', buttons: [{ label: 'Generate random layout', a: { act: 'gen' }, w: 1.6 }, { label: 'Re-roll', a: { act: 'gen' } }, { label: '★ Favourite', a: { act: 'fav' } }] },
@@ -560,7 +559,15 @@ function applyEventLayout() {
   const m = app.local.mission;
   const L = findLayout11(m.dispA, m.dispD, m.variant);
   if (!L) { toast('No layout for this pairing'); return; }
-  if (app.board !== 'full') { toast('Event layouts are 44\×60 \– switch the battlefield to Strike Force'); return; }
+  if (app.board !== 'full') {
+    // half table: the layout's deployment zones (scaled to half length) – the terrain comes from the generator
+    const dep = deploymentForLayout(L.id);
+    if (!dep) { toast('No zones for this layout'); return; }
+    pushUndo('half-table zones');
+    app.halves[app.editHalf].deployment = dep; store.set('halves', app.halves);
+    buildTerrain(); repaint(); toast(`${L.attacker.disposition} vs ${L.defender.disposition} \– Layout ${L.variant}: zones on the ${app.editHalf} half`);
+    return;
+  }
   pushUndo('event layout');
   m.layout11 = L.id; m.deployment = null; saveLocal();
   // attacker's edge is y = 0 in the data; the layout is used as printed (swap sides with Mirror / attacker choice)
@@ -1185,6 +1192,19 @@ function onState(s) {
   // a half-table game (opts.board 'half'): the headset shows the near half unless a half is chosen already
   if (s.opts && s.opts.board === 'half' && app.board === 'full') { app.board = 'near'; app.editHalf = 'near'; }
   const id = s.mission && s.mission.terrainLayout ? s.mission.terrainLayout : null;
+  // the Mission tab shows the game's Force Dispositions (Attacker's / Defender's) and the chosen layout variant
+  {
+    const m = s.mission || {}, att = m.attacker === 1 ? 1 : 0, lm = app.local.mission;
+    const nameOf = x => (x && (WH.DISPOSITIONS.find(d => d.id === x) || {}).name) || null;
+    const d = Array.isArray(m.dispositions) ? m.dispositions : [];
+    const L = id && LAYOUTS11.find(l => l.id === id);
+    const a = nameOf(d[att]) || (L ? L.attacker.disposition : null), dd = nameOf(d[1 - att]) || (L ? L.defender.disposition : null);
+    let ch = false;
+    if (a && lm.dispA !== a) { lm.dispA = a; ch = true; }
+    if (dd && lm.dispD !== dd) { lm.dispD = dd; ch = true; }
+    if (L && lm.variant !== L.variant) { lm.variant = L.variant; ch = true; }
+    if (ch) saveLocal();
+  }
   if (id !== app.layoutId) {
     const saved = store.get('terrain.' + app.code, null);
     if (id && String(id).startsWith('random-') && Array.isArray(s.mission.terrainPieces)) {
@@ -1249,6 +1269,17 @@ function applyAction(a, btn) {
     if (a.dispD !== undefined) app.local.mission.dispD = a.dispD;
     if (a.variant !== undefined) app.local.mission.variant = a.variant;
     saveLocal();
+    // with a game: the choice is the game's setup right away (the setup and every device follow)
+    if (app.net && app.state && app.state.stage !== 'over' && app.board === 'full') {
+      const m = app.local.mission, st = app.state.mission || {};
+      const idOf = name => (WH.DISPOSITIONS.find(d => d.name === name) || {}).id || null;
+      const att = st.attacker === 1 ? 1 : 0;
+      const dd = [null, null]; dd[att] = idOf(m.dispA); dd[1 - att] = idOf(m.dispD);
+      const L = findLayout11(m.dispA, m.dispD, m.variant);
+      const act = { type: 'mission.set', dispositions: dd, attacker: att };
+      if (L) act.terrainLayout = L.id;
+      app.net.dispatch(act).catch(e => toast(e.message));
+    }
   }
   else if (a.act === 'applyLayout11') applyEventLayout();
   else if (a.act === 'clearLayout11') { app.local.mission.layout11 = null; saveLocal(); }

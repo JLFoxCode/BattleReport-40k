@@ -4,6 +4,7 @@ import { WH } from '../data/rules.js';
 import { factionById, detachmentById } from '../data/factions/index.js';
 import { shuffle } from './rng.js';
 import { dist, pointInPolygon, round2 } from './geometry.js';
+import { LAYOUTS11 } from '../data/layouts11.js';
 import { deriveBase, zoneOf, activePlayer, deploymentMapOf, boardSize, deploymentForLayout, objectiveArea } from './derive.js';
 import { checkpointItems, checkpointKey, applyCaps, vpTotals, CAPS } from './scoring.js';
 import { stratById, stratCheck, useKeyPhase } from './stratagems.js';
@@ -700,7 +701,10 @@ H['mission.set'] = (s, a) => {
   }
   if ('attacker' in a) { if (a.attacker != null && !isIdx(a.attacker)) fail('Invalid Attacker'); m.attacker = a.attacker == null ? null : a.attacker; changes.push('Attacker ' + (m.attacker == null ? '–' : pName(s, m.attacker))); }
   if ('first' in a) { if (a.first != null && !isIdx(a.first)) fail('Invalid first player'); m.first = a.first == null ? null : a.first; changes.push('first turn ' + (m.first == null ? '–' : pName(s, m.first))); }
-  if ('terrainLayout' in a) { m.terrainLayout = a.terrainLayout == null ? null : String(a.terrainLayout); changes.push('terrain ' + (m.terrainLayout || '–')); if (!('terrainPieces' in a) && !String(m.terrainLayout || '').startsWith('random-')) m.terrainPieces = null; }
+  if ('terrainLayout' in a) {
+    // 11th edition: an Event Companion layout or a generated one – nothing else
+    if (a.terrainLayout != null && !String(a.terrainLayout).startsWith('random-') && !LAYOUTS11.some(l => l.id === String(a.terrainLayout))) fail('Unknown terrain layout');
+    m.terrainLayout = a.terrainLayout == null ? null : String(a.terrainLayout); changes.push('terrain ' + (m.terrainLayout || '–')); if (!('terrainPieces' in a) && !String(m.terrainLayout || '').startsWith('random-')) m.terrainPieces = null; }
   // an Event Companion layout dictates the deployment zones: its Deployment card follows it (chosen in the Table step or
   // applied in the VR headset); a card picked by hand that does not fit the chosen layout ends that layout
   if ('terrainLayout' in a && m.terrainLayout) {
