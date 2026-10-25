@@ -204,7 +204,7 @@ const isQuest = () => { try { return !!(window.BR && window.BR.isQuest && window
  *  page's server; ?host= when the game lives on another device of the Wi-Fi. */
 function vrUrl(page, code, host) {
   const base = isQuest() ? `http://127.0.0.1:${window.BR.port()}/vr/` : '/vr/';
-  return base + page + (host ? '?host=' + encodeURIComponent(host) : '') + (code ? '#/g/' + code : '');
+  return base + (page || 'index.html') + (host ? '?host=' + encodeURIComponent(host) : '') + (code ? '#/g/' + code : '');   // index.html: the app's server (older APKs) has no directory index
 }
 function openVr(page, code, host) {
   const url = vrUrl(page, code, host);

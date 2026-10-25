@@ -647,6 +647,7 @@ class GameServer {
     private void serveStatic(Req r, OutputStream out) throws Exception {
         String rel = URLDecoder.decode(r.path, "UTF-8");
         if (rel.equals("/") || rel.isEmpty()) rel = "/index.html";
+        if (rel.endsWith("/")) rel += "index.html";   // /vr/ → the VR table setup's page
         if (rel.contains("..") || rel.indexOf('\0') >= 0) throw new HttpErr(404, "Not found");
         String asset = "www" + rel;
         byte[] data;
