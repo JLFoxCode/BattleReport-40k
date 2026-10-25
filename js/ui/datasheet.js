@@ -90,7 +90,7 @@ function bearerMark(ds, w) {
 
 /* ── Multi-profile weapons ──
  * Rows of the same weapon with a profile (Ion rifle – standard / overcharge) are ONE weapon: a group head row with the
- * name, the count, the bearers and "pick one profile", the profiles indented underneath. The rules let the model choose
+ * name, the count and the bearers, the profiles indented underneath (the connector shows they are its profiles). The rules let the model choose
  * one profile each time it attacks with the weapon – not both. entries = [{ w, ... }], key(e) tells the group. */
 function weaponGroups(entries, key = e => normName(e.w.name)) {
   const out = [], byKey = new Map();
@@ -103,10 +103,9 @@ function weaponGroups(entries, key = e => normName(e.w.name)) {
   // a lone "profile" row (data quirk) is shown as a plain weapon
   return out.map(g => (g.rows && g.rows.length === 1 ? { one: g.rows[0] } : g));
 }
-const pickText = kind => (kind === 'ranged' ? 'one weapon – pick one profile when shooting' : 'one weapon – pick one profile when fighting');
-/** Group head row: weapon name + count, the bearers' tag, "pick one profile" (tags = bearer / leader tags). */
+/** Group head row: weapon name + count, the bearers' / leader tags. */
 function groupHead(w, count, kind, cls, style, tags) {
-  return `<tr class="ds-wgroup-h${cls}"${style}><td colspan="7" class="ds-wcell-name"><span class="ds-wname">${esc(w.name)}${count > 1 ? ` <span class="ds-wcount">×${count}</span>` : ''}</span><span class="ds-wpick">${pickText(kind)}</span>${tags}</td></tr>`;
+  return `<tr class="ds-wgroup-h${cls}"${style}><td colspan="7" class="ds-wcell-name"><span class="ds-wname">${esc(w.name)}${count > 1 ? ` <span class="ds-wcount">×${count}</span>` : ''}</span>${tags}</td></tr>`;
 }
 
 function weaponTable(list, kind, chosen, mods = null, ds = null) {
