@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Battle Report 40k – VR live view</title>
+<link rel="icon" href="../icons/icon-192.png">
+<link rel="stylesheet" href="vr.css">
+<style>
+  body { overflow: auto; }
+  #ui { position: static; min-height: 100%; display: flex; flex-direction: column; }
+  .view { position: relative; flex: 1; min-height: 60vh; background: #000; display: flex; align-items: center; justify-content: center; }
+  .view video { width: 100%; height: 100%; max-height: 92vh; object-fit: contain; background: #000; }
+  .view .wait { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; text-align: center; padding: 20px; color: var(--fg); }
+  .view .wait[hidden] { display: none; }
+  .foot { padding: 8px 12px; font-size: 13px; }
+  .bar a.back { color: var(--fg); text-decoration: none; opacity: .8; margin-right: 10px; }
+</style>
+</head>
+<body>
+<div id="ui">
+  <header class="bar">
+    <div class="brand"><a class="back" id="back" href="../#/play/vr">‹</a>BR40k <span class="muted">live view</span></div>
+    <div class="game">
+      <input id="code" maxlength="8" placeholder="CODE" autocapitalize="characters" spellcheck="false" aria-label="Game code">
+      <button data-act="open" class="sm">Open</button>
+      <span id="status" data-s="idle">No game</span>
+    </div>
+    <div class="right">
+      <button data-act="full" class="sm ghost">Fullscreen</button>
+    </div>
+  </header>
+  <div id="login" class="note" hidden>Sign in on the <a href="../#/account">main page</a> of this server first, then open the game again.</div>
+  <div class="view">
+    <video id="video" autoplay playsinline muted></video>
+    <div id="wait" class="wait">
+      <div id="wait-text">Waiting for the headset …</div>
+      <div class="muted small">The person in the headset turns the live view on under System → Live view (or it starts by itself when the headset has this game open). Both devices must be in the same Wi-Fi.</div>
+      <button data-act="ask" class="sm">Ask again</button>
+    </div>
+  </div>
+  <div class="foot muted" id="info"></div>
+  <div id="toast"></div>
+</div>
+<script type="module" src="feed-view.js"></script>
+</body>
+</html>

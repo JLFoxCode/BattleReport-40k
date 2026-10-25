@@ -1,5 +1,7 @@
 /* Battle Report 40k – VR / Mixed Reality table setup (Meta Quest 3, WebXR in the Quest browser).
- * A separate "app in the app": served from /vr/ by the online server, opened on the headset with a game code.
+ * A separate "app in the app": served from /vr/ – by the online server, or on the Meta Quest by the installed app's own
+ * server (http://127.0.0.1 is a secure context, so WebXR works in the Wi-Fi without https); ?host= points to the
+ * game's host in the LAN (phone / PC / another headset, vr/net.js). Live view for phones: vr/feed.js.
  * Shares only the server API (vr/net.js) and the read-only data files (data/rules.js, data/terrain.js) with the app;
  * nothing of the app loads anything from here.
  *
@@ -17,7 +19,8 @@ import { LAYOUTS11, PARTS11, DISPOSITIONS11, VARIANTS11, findLayout11 } from '..
 import { HALF_MAPS, halfMapAt } from '../data/half-table.js';
 import { IN, BOARD, frameFromCorners, frameMatrix, packFrame, unpackFrame, snap, onBoard } from './calib.js';
 import { PX, paintBoard, rectCorners, pieceAt, layoutPieces, pieceHeight } from './board.js';
-import { connect, session as apiSession, listGames } from './net.js';
+import { connect, session as apiSession, listGames, HOST } from './net.js';
+import { createFeed } from './feed.js';
 import { Panel, Hud } from './panel.js';
 import { createCamera } from './camera.js';
 import { generate as generateLayout } from '../engine/layoutgen.js';
@@ -160,7 +163,9 @@ const panel = new Panel(THREE, {
     { tab: 'camera', buttons: [{ label: 'Square − 5 mm', a: { act: 'mscaleStep', v: -5 } }, { label: 'Square + 5 mm', a: { act: 'mscaleStep', v: 5 } }] },
     // System
     { tab: 'system', title: 'Panel & session' },
-    { tab: 'system', buttons: [{ label: 'Panel here', a: { act: 'panel' } }, { label: 'Undo', a: { act: 'undo' } }, { label: 'Leave headset', a: { act: 'enter' } }] }
+    { tab: 'system', buttons: [{ label: 'Panel here', a: { act: 'panel' } }, { label: 'Undo', a: { act: 'undo' } }, { label: 'Leave headset', a: { act: 'enter' } }] },
+    { tab: 'system', title: 'Live view: phones / PC follow what you see (VR table setup → Live view, same Wi-Fi)' },
+    { tab: 'system', buttons: [{ label: 'Live view on', a: { act: 'live', v: 'on' } }, { label: 'Live view off', a: { act: 'live', v: 'off' } }, { label: 'Picture wider', a: { act: 'liveFov', v: 4 } }, { label: 'Picture narrower', a: { act: 'liveFov', v: -4 } }] }
   ]
 }, { width: 0.55 });
 panel.mesh.visible = false;
@@ -170,6 +175,7 @@ panel.setState(a => (a.tool && a.tool === app.tool) || (a.ring && app.tool === '
   || (a.act === 'track' && a.v === app.track) || (a.act === 'scan' && app.scan) || (a.act === 'step' && a.v === app.step)
   || (a.base !== undefined && Number(a.base) === app.base)
   || (a.act === 'cam' && ((a.v === 'on') === cam.state().on))
+  || (a.act === 'live' && ((a.v === 'on') === feed.on))
   || (a.act === 'mcal' && !!app.mcal) || (a.act === 'mtrack' && app.mtrack) || (a.act === 'board' && a.v === app.board) || (a.act === 'editHalf' && a.v === app.editHalf)
   || (a.act === 'mscale' && Math.abs(Number(a.v) - app.markerScale) < 0.02)
   || (a.layout !== undefined && (a.layout || null) === app.layoutId)
@@ -241,6 +247,8 @@ function snapToScan(p) {
 }
 // passthrough camera + marker detection (vr/camera.js); frames are consumed by the marker calibration (later)
 const cam = createCamera({ onFrame: f => { app.camFrame = f; } });
+// live view for the phones (vr/feed.js): the passthrough picture + this scene from the head's pose, WebRTC in the LAN
+const feed = createFeed({ THREE, scene, store });
 /** Put the panel 0.75 m in front of the head, a little below eye level, facing the user. */
 function placePanel() {
   const pos = new THREE.Vector3(), dir = new THREE.Vector3();
@@ -1076,6 +1084,7 @@ renderer.setAnimationLoop(() => {
     hudRefresh();
   } else placeCamera();
   renderer.render(scene, camera);
+  if (feed.on) feed.tick(renderer.xr.isPresenting ? renderer.xr.getCamera() : camera);
   perf.loopMs = perf.loopMs * 0.95 + (performance.now() - tStart) * 0.05;
 });
 
@@ -1163,8 +1172,8 @@ function onState(s) {
 /** The account's open games as buttons in the Mission tab (needs the sign-in on the main page of this server). */
 async function refreshGames() {
   let games = null, ses = null;
-  try { ses = await apiSession(); if (ses && ses.user) games = await listGames(); } catch (e) { games = null; }
-  app.signedIn = !!(ses && ses.user);
+  try { ses = await apiSession(); if ((ses && ses.user) || (ses && ses.auth === false)) games = await listGames(); } catch (e) { games = null; }
+  app.signedIn = !!(ses && (ses.user || ses.auth === false));   // auth:false = a LAN host without accounts (app / PC)
   if (!app.signedIn) { panel.setRow('games', [{ label: 'Not signed in – sign in on the main page of this server, then reload', a: { act: 'games' }, w: 3 }]); return; }
   const open = (games || []).filter(g => g.stage !== 'over').slice(0, 8);
   if (!open.length) { panel.setRow('games', [{ label: 'No open games – create one on the tablet, then refresh', a: { act: 'games' }, w: 3 }]); return; }
@@ -1281,6 +1290,11 @@ function applyAction(a, btn) {
     store.set('markerScale', app.markerScale); setMarkerScale(app.markerScale);
     toast(`Sheets: black square ${(52.5 * app.markerScale).toFixed(1)} mm, centre ${(50 * app.markerScale).toFixed(1)} mm from the corner`);
   }
+  else if (a.act === 'live') {
+    if (a.v === 'on') feed.start().then(() => toast(feed.state().cam ? 'Live view on – phones: VR table setup → Live view' : 'Live view on without the camera (' + feed.state().error + ') – the overlay alone is sent')).catch(e => toast('Live view: ' + (e && e.message || e)));
+    else { feed.stop(); toast('Live view off'); }
+  }
+  else if (a.act === 'liveFov') toast('Live picture: ' + feed.fov(Number(a.v)) + '° – adjust until the overlay sits on the real table in the phone\'s picture');
   else if (a.act === 'cam') {
     if (a.v === 'on') cam.start().then(() => toast('Camera: ' + cam.state().label + ' ' + cam.state().w + '×' + cam.state().h)).catch(e => toast('Camera: ' + (e && e.message || e)));
     else cam.stop();
@@ -1304,10 +1318,22 @@ function sendStatus() {
   clearTimeout(statusTimer);
   statusTimer = setTimeout(() => app.net.signal({
     type: 'vr.status', xr: app.xr.mode, calibrated: !!app.frame, edge: app.frame ? +app.frame.edge.toFixed(1) : null,
-    tool: app.tool, ringR: app.ringR, layout: app.layoutId, pieces: app.pieces.length, selected: app.selected, band: app.band, grid: app.grid, mirror: app.mirror
+    tool: app.tool, ringR: app.ringR, layout: app.layoutId, pieces: app.pieces.length, selected: app.selected, band: app.band, grid: app.grid, mirror: app.mirror,
+    live: feed.on, viewers: feed.state().viewers
   }), 150);
 }
 function onSignal(sig) {
+  if (sig && sig.type === 'vr.feed') {
+    if (sig.role === 'want' && !feed.on && !app.feedAsked) {
+      // a phone opened the live view: start it (the camera prompt was answered once; in the headset the browser
+      // remembers the permission) – if it fails, the viewer keeps asking and the System tab has the button
+      app.feedAsked = true;
+      feed.start().then(() => { toast('Live view on – a phone is watching'); feed.onSignal(sig, s => app.net && app.net.signal(s)); }).catch(e => toast('Live view: ' + (e && e.message || e)));
+      return;
+    }
+    feed.onSignal(sig, s => app.net && app.net.signal(s));
+    return;
+  }
   if (!sig || sig.type !== 'vr') return;
   const a = Object.assign({}, sig); delete a.type; delete a.ts;
   applyAction(a);
@@ -1325,8 +1351,11 @@ async function main() {
   $('#enter').hidden = !(xrOk || vrOk);
   if (!(xrOk || vrOk)) panel.setTab('mission');   // no headset: nothing to calibrate – start with the game / deployment card
   $('#xr-note').textContent = xrOk ? 'Mixed reality (passthrough) available' : vrOk ? 'VR available (no passthrough – the table is shown at 75 cm height)' : 'No headset detected – 3D preview. Open this page in the Meta Quest browser.';
+  // a Quest browser on a plain http page of another device (not 127.0.0.1, not https): WebXR is off there – say why
+  $('#xr-http').hidden = !(/OculusBrowser|Quest/i.test(navigator.userAgent) && !window.isSecureContext);
   const ses = await apiSession();
   if (ses && ses.user) $('#user').textContent = ses.user;
+  else if (HOST) $('#user').textContent = 'host ' + HOST.replace(/^https?:\/\//, '');
   app.signedIn = !!(ses && ses.user);
   refreshGames();
   const m = location.hash.match(/#\/g\/([A-Z0-9]{3,8})/i);

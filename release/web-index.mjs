@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 // What the app serves; unit data (data/datasheets) has its own updater (js/data-update.js)
-export const WEB = ['index.html', 'engine-host.html', 'manifest.webmanifest', 'sw.js', 'js', 'css', 'engine', 'data', 'vendor', 'icons'];
+export const WEB = ['index.html', 'engine-host.html', 'manifest.webmanifest', 'sw.js', 'js', 'css', 'engine', 'data', 'vendor', 'icons', 'vr'];   // vr: the VR table setup (Quest app serves it at 127.0.0.1)
 const SKIP = rel => rel.startsWith('data/datasheets/') || /(^|\/)\./.test(rel) || /-report\.md$/.test(rel);
 
 export function webIndex(version) {

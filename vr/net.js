@@ -1,8 +1,23 @@
 /* Minimal client for the game server: GET state, SSE "state" events, POST actions. Deliberately independent of
- * js/net.js – the VR module shares nothing with the app but the server API (and the read-only data files). */
+ * js/net.js – the VR module shares nothing with the app but the server API (and the read-only data files).
+ * ?host=http://192.168.x.y:8417 – the game lives on another device of the Wi-Fi (phone / PC / another Quest): the
+ * page itself comes from the headset's own app (127.0.0.1 = a secure context, so WebXR works without https), the API
+ * calls go to that host (its LAN server answers cross-origin). Without the parameter: the page's own server. */
+
+/** Origin of the game's host ('' = the page's own server). */
+export const HOST = (() => {
+  try {
+    const h = new URL(location.href).searchParams.get('host');
+    if (!h) return '';
+    const u = new URL(/^https?:\/\//i.test(h) ? h : 'http://' + h);
+    return u.origin;
+  } catch { return ''; }
+})();
+/** The same ?host= for links to the module's other pages (remote control, live view). */
+export const hostQuery = () => (HOST ? '?host=' + encodeURIComponent(HOST) : '');
 
 async function request(method, url, body) {
-  const res = await fetch(url, {
+  const res = await fetch(HOST + url, {
     method, cache: 'no-store',
     headers: body !== undefined ? { 'Content-Type': 'application/json' } : undefined,
     body: body !== undefined ? JSON.stringify(body) : undefined
@@ -30,7 +45,7 @@ export function connect(code, h = {}) {
   const status = s => { if (h.onStatus) h.onStatus(s); };
   const open = () => {
     if (closed) return;
-    es = new EventSource(`${base}/events`);
+    es = new EventSource(`${HOST}${base}/events`);
     es.addEventListener('state', e => { try { set(JSON.parse(e.data)); } catch {} });
     es.addEventListener('signal', e => { if (!h.onSignal) return; try { h.onSignal(JSON.parse(e.data)); } catch {} });
     es.onopen = () => status('online');

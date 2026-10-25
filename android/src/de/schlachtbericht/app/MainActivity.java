@@ -60,6 +60,17 @@ public class MainActivity extends Activity {
             } catch (Exception e) { return "{}"; }
         }
         @JavascriptInterface public String platform() { return "android"; }
+        /** Meta Quest (Horizon OS): the VR table setup is opened from this app's own server in the headset browser. */
+        @JavascriptInterface public boolean isQuest() {
+            String s = (android.os.Build.MANUFACTURER + " " + android.os.Build.MODEL + " " + android.os.Build.BRAND).toLowerCase();
+            return s.contains("oculus") || s.contains("quest") || s.contains("meta");
+        }
+        /** Open a page in the system browser – only this app's own server or http(s) addresses in the Wi-Fi. */
+        @JavascriptInterface public void openBrowser(String url) {
+            if (url == null || !url.matches("https?://[A-Za-z0-9.\\-]+(:\\d+)?/.*")) return;
+            try { startActivity(new Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); }
+            catch (Exception e) { android.util.Log.e("BR", "openBrowser " + url, e); }
+        }
         // Partial app update (js/ui/update-popup.js): store one changed web file (base64), then the version, then apply
         @JavascriptInterface public boolean saveWeb(String rel, String base64) { return WebUpdate.save(MainActivity.this, rel, base64); }
         @JavascriptInterface public void setWebVersion(String code) { try { pendingWebVersion = Long.parseLong(code); } catch (Exception ignored) {} }

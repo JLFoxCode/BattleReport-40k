@@ -8,7 +8,7 @@ SDK="${ANDROID_HOME:-/c/Android/sdk}"; BT="$SDK/build-tools/35.0.0"; PLAT="$SDK/
 export JAVA_HOME="${JAVA_HOME:-C:/Program Files/Microsoft/jdk-17.0.19.10-hotspot}"; export PATH="$JAVA_HOME/bin:$PATH"
 rm -rf build && mkdir -p build/res build/classes build/gen build/assets/www/bsdata
 # Web app + raw BSData (New Recruit's unit data – the app converts updates itself, js/data/bsdata-convert-core.js)
-( cd .. && cp -r index.html engine-host.html manifest.webmanifest sw.js js css engine data vendor icons android/build/assets/www/ )
+( cd .. && cp -r index.html engine-host.html manifest.webmanifest sw.js js css engine data vendor icons vr android/build/assets/www/ )   # vr: VR table setup – on the Quest the app's own server serves it (127.0.0.1 = secure context for WebXR)
 cp ../vendor-data/bsdata/wh40k-11e-main/*.json build/assets/www/bsdata/
 cp AndroidManifest.xml build/AndroidManifest.xml
 CODE=${VERSION_CODE:-$(( ($(date +%s) - 1767225600) / 60 ))}   # minutes since 2026-01-01 → always increasing

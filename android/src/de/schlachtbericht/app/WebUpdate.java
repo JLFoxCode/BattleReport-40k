@@ -16,7 +16,7 @@ class WebUpdate {
     static boolean allowed(String rel) {
         if (rel == null || rel.contains("..") || rel.contains("\\") || rel.startsWith("/")) return false;
         return rel.matches("(index\\.html|engine-host\\.html|manifest\\.webmanifest|sw\\.js|web-index\\.json)")
-            || rel.matches("(js|css|engine|data|vendor|icons)/[A-Za-z0-9_./ '’()+,-]+");
+            || rel.matches("(js|css|engine|data|vendor|icons|vr)/[A-Za-z0-9_./ '’()+,-]+");
     }
 
     static boolean save(Context ctx, String rel, String base64) {

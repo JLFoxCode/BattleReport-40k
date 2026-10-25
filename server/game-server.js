@@ -727,6 +727,16 @@ export async function startGameServer(opts = {}) {
     const url = new URL(req.url || '/', 'http://localhost');
     try {
       if (draining) res.setHeader('Connection', 'close');   // keep-alive connections end after this response, the new server takes over
+      if (!auth) {
+        // LAN host without accounts: the API is open to pages of other origins – the VR module on the headset is
+        // served by the Quest app's own server (127.0.0.1) and connects to the game's host in the Wi-Fi (vr/net.js)
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        if (req.method === 'OPTIONS') {
+          res.writeHead(204, { 'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE', 'Access-Control-Allow-Headers': 'Content-Type', 'Access-Control-Max-Age': '600', 'Content-Length': 0 });
+          res.end();
+          return;
+        }
+      }
       if (auth) {
         for (const [k, v] of secHeaders()) res.setHeader(k, v);
         if (auth.isHttps(req)) res.setHeader('Strict-Transport-Security', 'max-age=15552000');

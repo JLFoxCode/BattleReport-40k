@@ -39,7 +39,7 @@ const VERSION_CODE = Number(String(app.getVersion()).split('.')[2]) || 0;
 const WEB_VERSION_FILE = path.join(USER, 'web-version.txt');
 const webVersion = () => { try { const v = Number(fs.readFileSync(WEB_VERSION_FILE, 'utf8').trim()) || 0; return v > VERSION_CODE ? v : 0; } catch { return 0; } };
 const WEB_PATH_OK = rel => typeof rel === 'string' && !rel.includes('..') && !rel.includes('\\') && !rel.startsWith('/') && !rel.startsWith('data/datasheets/')
-  && (/^(index\.html|engine-host\.html|manifest\.webmanifest|sw\.js|web-index\.json)$/.test(rel) || /^(js|css|engine|data|vendor|icons)\/[A-Za-z0-9_./ '’()+,-]+$/.test(rel));
+  && (/^(index\.html|engine-host\.html|manifest\.webmanifest|sw\.js|web-index\.json)$/.test(rel) || /^(js|css|engine|data|vendor|icons|vr)\/[A-Za-z0-9_./ '’()+,-]+$/.test(rel));
 
 let win = null, srv = null, mdns = null, lanIps = () => [];
 let port = PORT0;
@@ -197,6 +197,7 @@ sync('deleteArmy', id => { if (isArmyId(id)) { try { fs.unlinkSync(path.join(ARM
 
 // Release app update (update popup, GitHub Releases): download the setup, run it silently (/S, no setup window) and let it
 // start the new version afterwards (--force-run), then quit so the files can be replaced. Errors → window.__appUpdateError
+ipcMain.on('br:openBrowser', (e, url) => { if (/^https?:\/\/[A-Za-z0-9.\-]+(:\d+)?\//.test(String(url))) shell.openExternal(String(url)); });
 ipcMain.on('br:installUpdate', (e, url) => {
   if (typeof url !== 'string' || !url.startsWith('https://')) return;
   const sender = e.sender;

@@ -9,6 +9,8 @@ contextBridge.exposeInMainWorld('BR', {
   lanIps: () => s('lanIps'),                                   // JSON: ["192.168.…"]
   port: () => s('port'),                                       // number
   platform: () => 'windows',
+  isQuest: () => false,
+  openBrowser: url => { ipcRenderer.send('br:openBrowser', str(url)); },   // system browser (http://127.0.0.1 … / LAN)
   releaseInfo: () => s('releaseInfo'),                         // JSON: { repo }
   devInfo: () => s('devInfo'),                                 // JSON: { versionCode, installed, shell, dev: false }
   saveData: (rel, text) => s('saveData', str(rel), str(text)), // boolean

@@ -9,7 +9,7 @@ cd "$(dirname "$0")"
 rm -rf www server dist
 mkdir -p www/bsdata server
 # Web app + raw BSData (New Recruit's unit data – the app converts updates itself, js/data/bsdata-convert-core.js)
-( cd .. && cp -r index.html engine-host.html manifest.webmanifest sw.js js css engine data vendor icons desktop/www/ )
+( cd .. && cp -r index.html engine-host.html manifest.webmanifest sw.js js css engine data vendor icons vr desktop/www/ )   # vr: 3D preview / live view of the headset on the PC
 cp ../vendor-data/bsdata/wh40k-11e-main/*.json www/bsdata/
 cp ../server/*.js server/
 CODE=${VERSION_CODE:-$(( ($(date +%s) - 1767225600) / 60 ))}   # minutes since 2026-01-01 → always increasing (as android/build.sh)

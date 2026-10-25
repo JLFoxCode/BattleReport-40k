@@ -298,6 +298,13 @@ class GameServer {
             OutputStream out = new BufferedOutputStream(s.getOutputStream());
             Req r = parse(in);
             if (r == null) { s.close(); return; }
+            // CORS preflight: the VR module on the headset (served by the Quest's own app at 127.0.0.1) talks to this
+            // host's API from another origin (vr/net.js)
+            if (r.method.equals("OPTIONS")) {
+                out.write(("HTTP/1.1 204 No Content\r\nAccess-Control-Allow-Origin: *\r\nAccess-Control-Allow-Methods: GET, POST, PUT, DELETE\r\n"
+                    + "Access-Control-Allow-Headers: Content-Type\r\nAccess-Control-Max-Age: 600\r\nContent-Length: 0\r\nConnection: close\r\n\r\n").getBytes(StandardCharsets.UTF_8));
+                out.flush(); s.close(); return;
+            }
             try {
                 if (r.path.equals("/api") || r.path.startsWith("/api/")) {
                     if (api(r, out, s)) return; // SSE keeps the socket open
@@ -350,7 +357,7 @@ class GameServer {
 
     private static void head(OutputStream out, int status, String type, long len, boolean sse) throws IOException {
         StringBuilder h = new StringBuilder("HTTP/1.1 ").append(status).append(status < 300 ? " OK" : " Error").append("\r\n");
-        h.append("Content-Type: ").append(type).append("\r\nCache-Control: no-store\r\n");
+        h.append("Content-Type: ").append(type).append("\r\nCache-Control: no-store\r\nAccess-Control-Allow-Origin: *\r\n");
         if (sse) h.append("Connection: keep-alive\r\nX-Accel-Buffering: no\r\n");
         else h.append("Content-Length: ").append(len).append("\r\nConnection: close\r\n");
         h.append("\r\n");

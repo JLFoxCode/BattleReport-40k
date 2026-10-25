@@ -158,38 +158,63 @@ function pageHtml(page, last) {
   </div>`;
 }
 
-/* VR table setup (vr/ – a separate web module, served by the online server only; the headset opens it in its own
- * browser). The page here only shows where to open it and a QR code with the current game's code. */
+/* VR table setup (vr/ – a separate web module). Where it runs:
+ *  - on a Meta Quest with the installed app: the app's own server serves it at http://127.0.0.1 (a secure context, so
+ *    WebXR works without https) and the game may live on any device of the Wi-Fi (?host=, vr/net.js) – no internet
+ *  - on the online server (https) in the headset's browser – the old way, for games hosted online
+ *  - on phones / PCs the same page is a 3D preview, and vr/feed.html shows the headset's live picture (WebRTC). */
 function vrPageHtml(last) {
   const code = last && last.code ? last.code : '';
-  const games_ = (games || []).filter(g => g.stage !== 'over');
-  // on the online server itself (headset browser, phone through the tunnel): enter the code, start in this tab
-  if (online()) {
-    return `<section class="card vr-card">
-      <div class="title">Meta Quest 3 · Mixed reality</div>
-      <form class="join-form" data-form="vr" autocomplete="off">
-        <input class="code-input" name="code" maxlength="4" placeholder="CODE" value="${esc(code)}" inputmode="latin" autocapitalize="characters" spellcheck="false" aria-label="Game code">
-        ${btn({ label: 'Start VR', kind: 'primary', cta: true, type: 'submit' })}
-      </form>
-      ${games_.length ? `<div class="chips">${games_.map(g => `<a class="chip" href="/vr/#/g/${esc(g.code)}">${esc(g.code)} · ${esc((g.players || []).filter(Boolean).join(' vs ') || 'Game')}</a>`).join('')}</div>` : ''}
-      <p class="muted small"><a href="/vr/remote.html${code ? '#/g/' + esc(code) : ''}">Remote control</a> – from a phone or PC: send messages to the headset, choose the layout, switch tools.</p>
-      <p class="muted small">Calibrate the real table by touching three corners, then see the deployment zones, the territory line and the five objectives of the game's Deployment card on the table, plan terrain with the GW layouts and use tape, range rings and the 9" band while deploying. Needs a Meta Quest browser; elsewhere a 3D preview is shown.</p>
-    </section>`;
-  }
-  // installed app: the headset has to open the online server's address – show it as a QR code
-  const server = accountInfo().server;
-  if (!server) {
-    return `<section class="card"><div class="title">Meta Quest 3</div>
-      <p class="muted">The VR table setup runs on the online server (https is required for WebXR). Set the server address under <a href="#/account">Account</a> first.</p></section>`;
-  }
-  const url = `${server.replace(/\/+$/, '')}/${code ? '#/play/vr' : ''}`;
-  if (!qrReady()) prepareQr().then(changed => { if (changed && lastRoot && lastCtx && document.body.dataset.view === 'lobby') render(lastRoot, lastCtx); }).catch(() => {});
+  const quest = isQuest();
+  const own = (games || []).filter(g => g.stage !== 'over').map(g => ({ code: g.code, label: (g.players || []).filter(Boolean).join(' vs ') || 'Game', host: '' }));
+  const near = window.BR ? nearbyList().filter(g => g.stage !== 'over' && !own.some(o => o.code === g.code)).map(g => ({ code: g.code, label: [g.p0, g.p1].filter(Boolean).join(' vs ') || 'Game', host: `http://${g.host}:${g.port}` })) : [];
+  const chips = own.concat(near).slice(0, 12);   // the newest games (the list page has them all)
+  const chipRow = chips.length ? `<div class="chips vr-games">${chips.map(g => `<button type="button" class="chip${g.code === code ? ' on' : ''}" data-vrpick="${esc(g.code)}" data-vrhost="${esc(g.host)}" data-no-i18n>${esc(g.code)} · ${esc(g.label)}${g.host ? ' <span class="muted">· nearby</span>' : ''}</button>`).join('')}</div>` : '';
+  const codeInput = () => `<input class="code-input" name="code" maxlength="4" placeholder="CODE" value="${esc(code)}" inputmode="latin" autocapitalize="characters" spellcheck="false" aria-label="Game code"><input type="hidden" name="host" value="">`;
   return `<section class="card vr-card">
     <div class="title">Meta Quest 3 · Mixed reality</div>
-    <p>In the headset's browser open the online server, sign in, then Menu → <b>VR table setup</b> and enter the game code${code ? ` (<b>${esc(code)}</b>)` : ''}:</p>
-    <div class="join-card">${qrReady() ? qrSvg(url, 200) : ''}<div class="join-url xs muted">${esc(url)}</div></div>
-    <p class="muted xs">The VR module is loaded only there – nothing of it is part of this app.</p>
+    ${quest
+      ? `<p>Enter the game code (or tap a game) and start: the Quest browser opens the table setup. Calibrate the real table by touching three corners, then the deployment zones, the territory line and the five objectives of the game's Deployment card lie on the table; plan terrain with the GW layouts, use tape, range rings and the 9" band while deploying.</p>`
+      : online()
+        ? `<p>Open this page in the Meta Quest browser, sign in, then enter the game code and start the table setup.</p>`
+        : `<p>On the Meta Quest: install this app on the headset (sideload the APK from the <a class="apk" href="https://github.com/JLFoxCode/BattleReport-40k/releases/latest" target="_blank" rel="noopener">releases page</a>, developer mode + SideQuest or adb), open Menu → <b>VR table setup</b> there and enter the game code${code ? ` (<b>${esc(code)}</b>)` : ''}. Games hosted here and on nearby devices are found over the Wi-Fi – no internet needed.</p>`}
+    <form class="join-form" data-form="vr" autocomplete="off">
+      ${codeInput()}
+      ${btn({ label: quest ? 'Start VR' : online() ? 'Start VR' : '3D preview', kind: 'primary', cta: true, type: 'submit' })}
+      ${btn({ label: 'Table without a game', kind: 'ghost', action: 'vr-free' })}
+    </form>
+    ${chipRow}
+    ${quest ? '' : '<p class="muted small">Without a headset this device shows the same table as a 3D preview (deployment card, layout, terrain, rings).</p>'}
+    <p class="muted small"><a href="/vr/remote.html${code ? '#/g/' + esc(code) : ''}" data-vrlink="remote">Remote control</a> – from a phone or PC: send messages to the headset, choose the layout, switch tools.</p>
+  </section>
+  <section class="card vr-card">
+    <div class="title">Live view</div>
+    <p>Follow the headset on this device: what the person in the headset sees – the real table with the overlay – as a live picture. Both devices in the same Wi-Fi; the headset turns the live view on by itself when asked (System → Live view).</p>
+    <form class="join-form" data-form="vrfeed" autocomplete="off">
+      ${codeInput()}
+      ${btn({ label: 'Open live view', kind: 'primary', cta: true, type: 'submit' })}
+    </form>
   </section>`;
+}
+/** The installed app on a Meta Quest (Bridge.isQuest): the headset browser can open the VR module from the app's server. */
+const isQuest = () => { try { return !!(window.BR && window.BR.isQuest && window.BR.isQuest()); } catch { return false; } };
+/** Address of a VR page for a game: on the Quest the app's own server (absolute, for the headset browser), else this
+ *  page's server; ?host= when the game lives on another device of the Wi-Fi. */
+function vrUrl(page, code, host) {
+  const base = isQuest() ? `http://127.0.0.1:${window.BR.port()}/vr/` : '/vr/';
+  return base + page + (host ? '?host=' + encodeURIComponent(host) : '') + (code ? '#/g/' + code : '');
+}
+function openVr(page, code, host) {
+  const url = vrUrl(page, code, host);
+  if (isQuest() && page === '') { window.BR.openBrowser(url); toast('Opening the Quest browser …', 'ok'); return; }
+  location.href = url;
+}
+/** The host of a typed code: a nearby game (another device) gets its address, else the page's own server. */
+function vrHostFor(form, code) {
+  const typed = form.host && form.host.value;
+  if (typed && form.dataset.hostCode === code) return typed;
+  if (window.BR && !(games || []).some(g => g.code === code)) { const n = nearbyList().find(g => g.code === code); if (n) return `http://${n.host}:${n.port}`; }
+  return '';
 }
 
 /** The game's own player colours on its card – without them the defaults (player 1 / player 2), never the colours the
@@ -390,9 +415,18 @@ function hashFor(code, view, me) {
 }
 
 function onClick(e) {
+  const pick = e.target.closest('[data-vrpick]');
+  if (pick) {
+    const c = pick.dataset.vrpick, h = pick.dataset.vrhost || '';
+    for (const f of lastRoot.querySelectorAll('[data-form="vr"], [data-form="vrfeed"]')) { f.code.value = c; f.host.value = h; f.dataset.hostCode = c; }
+    for (const x of lastRoot.querySelectorAll('[data-vrpick]')) x.classList.toggle('on', x === pick);
+    const r = lastRoot.querySelector('[data-vrlink="remote"]'); if (r) r.href = vrUrl('remote.html', c, h);
+    return;
+  }
   const b = e.target.closest('[data-action]');
   if (!b || !lastCtx) return;
   const action = b.dataset.action;
+  if (action === 'vr-free') return openVr('', '', '');
   const card = b.closest('[data-code]');
   const code = card ? card.dataset.code : null;
   if (action === 'new') return newGame();
@@ -423,12 +457,12 @@ function onClick(e) {
 }
 
 function onSubmit(e) {
-  const v = e.target.closest('[data-form="vr"]');
+  const v = e.target.closest('[data-form="vr"], [data-form="vrfeed"]');
   if (v) {
     e.preventDefault();
     const code = String(v.code.value || '').trim().toUpperCase();
     if (!/^[A-Z]{4}$/.test(code)) { toast('Code: 4 letters, e.g. KXWA', 'warn'); v.code.focus(); return; }
-    location.href = `/vr/#/g/${code}`;
+    openVr(v.dataset.form === 'vrfeed' ? 'feed.html' : '', code, vrHostFor(v, code));
     return;
   }
   const f = e.target.closest('[data-form="join"]');
