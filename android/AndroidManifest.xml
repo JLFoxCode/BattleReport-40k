@@ -24,12 +24,17 @@
             android:name="de.schlachtbericht.app.MainActivity"
             android:exported="true"
             android:configChanges="orientation|screenSize|keyboardHidden|screenLayout|smallestScreenSize|uiMode"
-            android:launchMode="singleTask">
+            android:launchMode="singleTask"
+            android:resizeableActivity="true">
+            <!-- Meta Quest: a wide panel in the headset (desktop layout) instead of the phone-sized default, user-resizable -->
+            <layout android:defaultWidth="1400dp" android:defaultHeight="900dp" android:minWidth="480dp" android:minHeight="400dp" />
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <meta-data android:name="com.oculus.vrshell.supports_free_resizing" android:value="true" />
+        <meta-data android:name="com.oculus.vrshell.free_resizing_lock_aspect_ratio" android:value="false" />
         <service
             android:name="de.schlachtbericht.app.HostService"
             android:exported="false"
